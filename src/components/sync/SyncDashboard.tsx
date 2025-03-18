@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database } from 'lucide-react';
+import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
 import { GlSyncStatus, GlRecentLog } from '@/types/glsync';
+import { Link } from 'react-router-dom';
 
 const SyncDashboard = () => {
   const [syncStatus, setSyncStatus] = useState<GlSyncStatus[]>([]);
@@ -21,7 +21,6 @@ const SyncDashboard = () => {
     setIsLoading(true);
     setHasError(false);
     try {
-      // Fetch data in parallel
       const [statusData, logsData] = await Promise.all([
         glSyncApi.getSyncStatus().catch(error => {
           console.error('Error fetching sync status:', error);
@@ -51,7 +50,6 @@ const SyncDashboard = () => {
   useEffect(() => {
     fetchData();
     
-    // Poll for updates every 10 seconds
     const interval = setInterval(() => {
       fetchData();
     }, 10000);
@@ -71,7 +69,6 @@ const SyncDashboard = () => {
           description: 'The synchronization process has been initiated.',
         });
         
-        // Refresh data after a short delay
         setTimeout(() => {
           fetchData();
         }, 2000);
@@ -212,23 +209,34 @@ const SyncDashboard = () => {
                     <div className="text-sm text-muted-foreground">
                       Last sync: {formatDate(status.last_sync_completed_at)}
                     </div>
-                    <Button 
-                      size="sm"
-                      onClick={() => handleSync(status.connection_id, status.mapping_id)}
-                      disabled={isSyncing[status.mapping_id]}
-                    >
-                      {isSyncing[status.mapping_id] ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Syncing...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowRight className="h-4 w-4 mr-2" />
-                          Sync Now
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Link to={`/sync/products/${status.mapping_id}`}>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Details
+                        </Button>
+                      </Link>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleSync(status.connection_id, status.mapping_id)}
+                        disabled={isSyncing[status.mapping_id]}
+                      >
+                        {isSyncing[status.mapping_id] ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            Sync Now
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}

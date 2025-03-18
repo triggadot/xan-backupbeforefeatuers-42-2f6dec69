@@ -14,6 +14,7 @@ import Sync from '@/pages/Sync';
 import ProductSync from '@/pages/ProductSync';
 import { AuthProvider } from '@/contexts/AuthProvider';
 import Index from '@/pages/Index';
+import { Toaster } from '@/components/ui/toaster';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App: React.FC = () => {
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Toaster />
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>

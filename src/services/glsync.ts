@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -240,11 +239,15 @@ export const glSyncApi = {
 
   // Edge function interaction
   async callSyncFunction(payload: SyncRequestPayload): Promise<any> {
+    console.log('Calling sync function with payload:', payload);
     const { data, error } = await supabase.functions.invoke('glsync', {
       body: payload,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error('Error calling sync function:', error);
+      throw new Error(error.message);
+    }
     return data;
   },
 
@@ -285,6 +288,7 @@ export const glSyncApi = {
   },
 
   async syncData(connectionId: string, mappingId: string): Promise<{ success: boolean; recordsProcessed?: number; failedRecords?: number; errors?: any[]; error?: string }> {
+    console.log(`Starting sync for mapping ${mappingId} of connection ${connectionId}`);
     try {
       const result = await this.callSyncFunction({
         action: 'syncData',
@@ -292,6 +296,7 @@ export const glSyncApi = {
         mappingId,
       });
       
+      console.log('Sync result:', result);
       return { 
         success: result.success ?? true, 
         recordsProcessed: result.recordsProcessed,
@@ -299,16 +304,21 @@ export const glSyncApi = {
         errors: result.errors
       };
     } catch (error) {
+      console.error('Error syncing data:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
   async getSyncErrors(mappingId: string): Promise<GlSyncRecord[]> {
+    console.log(`Fetching sync errors for mapping ${mappingId}`);
     try {
       const { data, error } = await supabase
         .rpc('gl_get_sync_errors', { p_mapping_id: mappingId, p_limit: 100 });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('RPC error:', error);
+        throw new Error(error.message);
+      }
       
       if (!data) return [];
       

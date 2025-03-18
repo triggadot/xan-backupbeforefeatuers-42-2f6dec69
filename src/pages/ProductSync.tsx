@@ -4,7 +4,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge'; 
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 interface ProductSyncProps {}
 
 const ProductSync: React.FC<ProductSyncProps> = () => {
-  const { mappingId } = useParams<{ mappingId: string }>();
+  const { mappingId = '' } = useParams<{ mappingId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -29,8 +28,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     refetch 
   } = useQuery({
     queryKey: ['glsync-mapping', mappingId],
-    queryFn: () => glSyncApi.getMapping(mappingId!),
-    enabled: !!mappingId,
+    queryFn: () => glSyncApi.getMapping(mappingId),
+    enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {
       onError: (error: any) => {
         toast({
@@ -58,7 +57,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   });
 
   useEffect(() => {
-    if (mappingId) {
+    if (mappingId && mappingId !== ':mappingId') {
       refetch();
     }
   }, [mappingId, refetch]);
@@ -73,11 +72,12 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   };
 
   const fetchSyncErrors = async () => {
-    if (mappingId) {
+    if (mappingId && mappingId !== ':mappingId') {
       try {
         const errors = await glSyncApi.getSyncErrors(mappingId);
         setSyncErrors(errors);
       } catch (error: any) {
+        console.error('Error fetching sync errors:', error);
         toast({
           title: 'Error fetching sync errors',
           description: error.message,
@@ -88,8 +88,26 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   };
 
   useEffect(() => {
-    fetchSyncErrors();
+    if (mappingId && mappingId !== ':mappingId') {
+      fetchSyncErrors();
+    }
   }, [mappingId]);
+
+  if (!mappingId || mappingId === ':mappingId') {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="p-6">
+            <p>Invalid mapping ID. Please select a valid mapping.</p>
+            <Button variant="outline" onClick={handleBackClick} className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Sync
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading || isConnectionLoading) {
     return (
@@ -116,8 +134,12 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     return (
       <div className="container mx-auto p-4">
         <Card>
-          <CardContent>
-            Mapping not found.
+          <CardContent className="p-6">
+            <p>Mapping not found.</p>
+            <Button variant="outline" onClick={handleBackClick} className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Sync
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -149,7 +171,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
               <SyncErrorDisplay syncErrors={syncErrors} onRefresh={fetchSyncErrors} />
             ) : (
               <Card>
-                <CardContent className="text-center">
+                <CardContent className="text-center p-6">
                   No sync errors found.
                 </CardContent>
               </Card>
