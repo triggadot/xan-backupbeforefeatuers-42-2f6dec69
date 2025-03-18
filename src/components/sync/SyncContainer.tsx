@@ -2,8 +2,8 @@
 import React from 'react';
 import { GlMapping } from '@/types/glsync';
 
-interface SyncContainerProps {
-  children: React.ReactNode;
+export interface SyncContainerProps {
+  children?: React.ReactNode;
   mapping?: GlMapping;
   onSyncComplete?: () => void;
 }

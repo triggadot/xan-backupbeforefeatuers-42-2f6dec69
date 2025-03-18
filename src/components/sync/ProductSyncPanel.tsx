@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Database, ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 import { GlMapping } from '@/types/glsync';
 import { SyncContainer } from './SyncContainer';
+import SyncProductsButton from './SyncProductsButton';
 
 interface ProductSyncPanelProps {
   mapping: GlMapping;
@@ -61,7 +62,12 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
             </div>
           </div>
           
-          <SyncContainer mapping={mapping} onSyncComplete={onSyncComplete} />
+          <div>
+            <SyncProductsButton 
+              mapping={mapping}
+              onSyncComplete={onSyncComplete}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

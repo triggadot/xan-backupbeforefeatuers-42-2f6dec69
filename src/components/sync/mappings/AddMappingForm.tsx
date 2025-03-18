@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { GlColumnMapping } from '@/types/glsync';
 
 interface AddMappingFormProps {
   onSuccess?: () => Promise<void>;
@@ -17,9 +18,9 @@ interface AddMappingFormProps {
 
 const formSchema = z.object({
   connection_id: z.string().uuid(),
-  glide_table: z.string(),
-  glide_table_display_name: z.string(),
-  supabase_table: z.string(),
+  glide_table: z.string().min(1, "Glide table ID is required"),
+  glide_table_display_name: z.string().min(1, "Glide table name is required"),
+  supabase_table: z.string().min(1, "Supabase table is required"),
   sync_direction: z.enum(['to_supabase', 'to_glide', 'both']),
 });
 
@@ -89,7 +90,7 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
     setIsSubmitting(true);
     try {
       // Create a default column mapping with $rowID
-      const defaultMapping = {
+      const defaultMapping: Record<string, GlColumnMapping> = {
         "$rowID": {
           "glide_column_name": "$rowID",
           "supabase_column_name": "glide_row_id",
@@ -100,8 +101,12 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
       const { data, error } = await supabase
         .from('gl_mappings')
         .insert({
-          ...values,
+          connection_id: values.connection_id,
+          glide_table: values.glide_table,
+          glide_table_display_name: values.glide_table_display_name,
+          supabase_table: values.supabase_table,
           column_mappings: defaultMapping,
+          sync_direction: values.sync_direction,
           enabled: true
         })
         .select()

@@ -1,114 +1,63 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GlMapping } from '@/types/glsync';
+import { Mapping } from '@/types/syncLog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Mapping } from '@/types/syncLog';
-import MappingCard from './MappingCard';
 import { supabase } from '@/integrations/supabase/client';
 import { AddMappingButton } from './AddMappingButton';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { Json } from '@/integrations/supabase/types';
-import { GlMapping, GlColumnMapping } from '@/types/glsync';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Eye, Trash2, Play, Pause } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { convertToGlMapping } from '@/utils/gl-mapping-converters';
 
-const MappingsList = () => {
-  const [mappings, setMappings] = useState<Mapping[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+// Type guard to convert string data_type to the specific union type
+function isValidDataType(type: string): type is "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" {
+  return ["string", "number", "boolean", "date-time", "image-uri", "email-address"].includes(type);
+}
+
+interface MappingsListProps {
+  mappings: Mapping[];
+  onDelete: (id: string) => Promise<void>;
+  onToggleEnabled: (mapping: Mapping) => Promise<void>;
+  onEdit: (mapping: GlMapping) => void;
+  isLoading: boolean;
+}
+
+export function MappingsList({
+  mappings,
+  onDelete,
+  onToggleEnabled,
+  onEdit,
+  isLoading
+}: MappingsListProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchMappings();
-  }, []);
-
-  const fetchMappings = async () => {
-    setIsLoading(true);
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    
+    setIsDeleting(true);
     try {
-      const { data, error } = await supabase
-        .from('gl_mappings')
-        .select(`
-          *,
-          gl_connections (*)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Convert the data to the expected Mapping type
-      const formattedMappings = data.map(item => {
-        return {
-          ...item,
-          app_name: item.gl_connections?.app_name || 'Unknown App',
-          column_mappings: item.column_mappings as unknown as Record<string, {
-            glide_column_name: string;
-            supabase_column_name: string;
-            data_type: string;
-          }>
-        } as Mapping;
-      });
-      
-      setMappings(formattedMappings);
-    } catch (error) {
-      console.error('Error fetching mappings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load mappings',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleToggleMapping = async (mapping: Mapping) => {
-    try {
-      const { data, error } = await supabase
-        .from('gl_mappings')
-        .update({ enabled: !mapping.enabled })
-        .eq('id', mapping.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Update the local state with the updated mapping
-      setMappings(prevMappings => 
-        prevMappings.map(m => 
-          m.id === mapping.id ? { ...m, enabled: !mapping.enabled } : m
-        )
-      );
-      
-      toast({
-        title: `Mapping ${!mapping.enabled ? 'enabled' : 'disabled'}`,
-        description: `The table mapping has been ${!mapping.enabled ? 'enabled' : 'disabled'}.`,
-      });
-    } catch (error) {
-      console.error('Error toggling mapping:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update mapping status',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteMapping = async (mappingId: string) => {
-    try {
-      const { error } = await supabase
-        .from('gl_mappings')
-        .delete()
-        .eq('id', mappingId);
-      
-      if (error) throw error;
-      
-      // Remove the deleted mapping from the local state
-      setMappings(prevMappings => prevMappings.filter(m => m.id !== mappingId));
-      
+      await onDelete(deletingId);
       toast({
         title: 'Mapping deleted',
-        description: 'The table mapping has been deleted successfully.',
+        description: 'The mapping has been deleted successfully',
       });
+      setDeletingId(null);
     } catch (error) {
       console.error('Error deleting mapping:', error);
       toast({
@@ -116,62 +65,160 @@ const MappingsList = () => {
         description: 'Failed to delete mapping',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Table Mappings</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={fetchMappings}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <AddMappingButton onSuccess={fetchMappings} />
-        </div>
+        <h2 className="text-2xl font-bold">Table Mappings</h2>
+        <AddMappingButton onSuccess={async () => {
+          // Reload mappings after adding a new one
+          window.location.reload();
+        }} />
       </div>
       
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-              <div className="flex justify-end space-x-2">
-                <div className="h-9 bg-gray-200 rounded w-24"></div>
-                <div className="h-9 bg-gray-200 rounded w-24"></div>
-              </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-1/3"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+              </CardContent>
             </Card>
           ))}
         </div>
       ) : mappings.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">No mappings found.</p>
-          <p className="mt-2">
-            Create a new mapping to define how tables sync between Glide and Supabase.
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>No Mappings Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CardDescription>
+              Create a table mapping to sync data between Glide and Supabase.
+            </CardDescription>
+          </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {mappings.map((mapping) => (
-            <MappingCard
-              key={mapping.id}
-              mapping={mapping}
-              onView={() => navigate(`/sync/mappings/${mapping.id}`)}
-              onToggle={() => handleToggleMapping(mapping)}
-              onDelete={() => handleDeleteMapping(mapping.id)}
-            />
-          ))}
-        </div>
+        mappings.map(mapping => {
+          // Convert the mapping to GlMapping with properly typed column_mappings
+          const glMapping = convertToGlMapping(mapping);
+          
+          return (
+            <Card key={mapping.id} className={mapping.enabled ? '' : 'opacity-70'}>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-xl flex items-center">
+                    {mapping.glide_table_display_name || mapping.glide_table}
+                    {!mapping.enabled && (
+                      <Badge variant="outline" className="ml-2">
+                        Disabled
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onToggleEnabled(mapping)}
+                    >
+                      {mapping.enabled ? (
+                        <Pause className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Play className="h-4 w-4 mr-1" />
+                      )}
+                      {mapping.enabled ? 'Disable' : 'Enable'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(glMapping)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeletingId(mapping.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Mapping</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this mapping? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel onClick={() => setDeletingId(null)}>
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDelete();
+                            }}
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? 'Deleting...' : 'Delete'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+                <CardDescription>
+                  Maps <span className="font-medium">{mapping.glide_table}</span> to <span className="font-medium">{mapping.supabase_table}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Direction:</span>{' '}
+                  {mapping.sync_direction === 'to_supabase'
+                    ? 'Glide → Supabase'
+                    : mapping.sync_direction === 'to_glide'
+                    ? 'Supabase → Glide'
+                    : 'Bidirectional'}
+                </div>
+                {mapping.supabase_table === 'gl_products' && (
+                  <Button
+                    className="mt-4"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/sync/products/${mapping.id}`)}
+                  >
+                    Go to Product Sync
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })
       )}
+      
+      <AlertDialog>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deleting Mapping</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+            <span className="ml-2">Deleting...</span>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
-
-export default MappingsList;
+}
