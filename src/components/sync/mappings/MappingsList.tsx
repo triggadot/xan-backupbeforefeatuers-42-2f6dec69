@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRight, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react';
@@ -33,14 +32,13 @@ const MappingsList: React.FC = () => {
       
       if (error) throw error;
       
-      // Transform to ensure all required Mapping properties are present
       const transformedMappings: Mapping[] = (data || []).map(item => ({
         id: item.mapping_id,
         connection_id: item.connection_id,
         glide_table: item.glide_table,
         glide_table_display_name: item.glide_table_display_name,
         supabase_table: item.supabase_table,
-        column_mappings: {}, // Default empty as it's not in gl_mapping_status
+        column_mappings: {},
         sync_direction: item.sync_direction,
         enabled: item.enabled,
         app_name: item.app_name,
@@ -66,7 +64,6 @@ const MappingsList: React.FC = () => {
   useEffect(() => {
     fetchMappings();
     
-    // Set up realtime subscription for mapping changes
     const mappingsChannel = supabase
       .channel('gl_mappings_changes')
       .on('postgres_changes', 
@@ -91,13 +88,11 @@ const MappingsList: React.FC = () => {
       
       if (error) throw error;
       
-      // Show toast
       toast({
         title: 'Mapping updated',
         description: `Mapping ${currentEnabled ? 'disabled' : 'enabled'} successfully`,
       });
       
-      // Refresh mappings
       fetchMappings();
     } catch (error) {
       console.error('Error toggling mapping:', error);
@@ -117,9 +112,31 @@ const MappingsList: React.FC = () => {
     navigate(`/sync/mappings/${id}`);
   };
 
-  const handleDeleteMapping = (mapping: Mapping) => {
-    setSelectedMapping(mapping);
-    setShowDeleteDialog(true);
+  const handleDeleteMapping = async (mapping: Mapping): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('gl_mappings')
+        .delete()
+        .eq('id', mapping.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Mapping deleted',
+        description: 'Mapping deleted successfully',
+      });
+      
+      fetchMappings();
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error deleting mapping:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete mapping',
+        variant: 'destructive',
+      });
+      return Promise.reject(error);
+    }
   };
 
   const handleAddSuccess = () => {
@@ -261,7 +278,7 @@ const MappingsList: React.FC = () => {
           onOpenChange={setShowDeleteDialog}
           mapping={selectedMapping}
           onSuccess={handleDeleteSuccess}
-          onDelete={() => {}}
+          onDelete={() => handleDeleteMapping(selectedMapping)}
         />
       )}
     </div>

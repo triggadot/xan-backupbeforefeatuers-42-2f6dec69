@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,6 @@ const ConnectionsList: React.FC = () => {
       
       if (error) throw error;
       
-      // Transform data to ensure correct types
       const transformedConnections: GlConnection[] = (data || []).map(conn => ({
         id: conn.id,
         app_id: conn.app_id,
@@ -90,7 +88,7 @@ const ConnectionsList: React.FC = () => {
           title: 'Connection successful',
           description: 'Successfully connected to Glide API',
         });
-        fetchConnections(); // Refresh to get updated status
+        fetchConnections();
       } else {
         toast({
           title: 'Connection failed',
@@ -186,8 +184,8 @@ const ConnectionsList: React.FC = () => {
             <ConnectionCard
               key={connection.id}
               connection={connection}
-              onEdit={() => handleEdit(connection)}
-              onDelete={() => handleDelete(connection.id)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
               onTest={() => handleTest(connection.id)}
               isTestingConnection={isTestingConnection}
             />

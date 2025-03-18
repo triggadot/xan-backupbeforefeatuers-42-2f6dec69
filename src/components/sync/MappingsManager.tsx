@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, RefreshCw } from 'lucide-react';
@@ -43,6 +42,8 @@ const MappingsManager = () => {
   });
   const [editMapping, setEditMapping] = useState<GlMapping | null>(null);
   const [customGlideTables, setCustomGlideTables] = useState<GlideTable[]>([]);
+  const [mappingToDelete, setMappingToDelete] = useState<GlMapping | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -496,14 +497,29 @@ const MappingsManager = () => {
                   setAvailableGlideColumns(columns);
                   setIsDialogOpen(true);
                 }}
-                onDelete={() => {}}
+                onDelete={() => {
+                  setMappingToDelete(mapping);
+                  setIsDeleteDialogOpen(true);
+                }}
                 onToggle={handleToggleMapping}
                 onGoToProductSync={mapping.supabase_table === 'gl_products' ? handleGoToProductSync : undefined}
               />
-              <DeleteMappingDialog onDelete={() => handleDeleteMapping(mapping.id)} />
             </div>
           ))}
         </div>
+      )}
+
+      {mappingToDelete && (
+        <DeleteMappingDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          mapping={mappingToDelete}
+          onSuccess={() => {
+            setMappingToDelete(null);
+            setIsDeleteDialogOpen(false);
+          }}
+          onDelete={() => handleDeleteMapping(mappingToDelete.id)}
+        />
       )}
     </div>
   );
