@@ -83,7 +83,8 @@ export function SyncControlPanel({
 
   const handleRetry = async () => {
     if (status?.current_status === 'failed') {
-      const success = await retryFailedSync(mapping.id);
+      // Updated to pass both connectionId and mappingId
+      const success = await retryFailedSync(mapping.connection_id, mapping.id);
       if (success && onSyncComplete) {
         onSyncComplete();
       }
