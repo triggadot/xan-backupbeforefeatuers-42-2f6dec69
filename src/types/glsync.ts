@@ -147,7 +147,7 @@ export interface ProductSyncResult {
 
 export interface GlideTable {
   id: string;
-  display_name: string;
+  displayName: string;
 }
 
 // Adding interfaces to match our new database functions
@@ -167,4 +167,17 @@ export interface SyncErrorDisplayProps {
   syncErrors: GlSyncRecord[];
   onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
   className?: string;
+}
+
+export interface GlAccount {
+  id?: string;
+  glide_row_id: string;
+  accounts_uid?: string;
+  client_type?: string;
+  account_name?: string;
+  email_of_who_added?: string;
+  photo?: string;
+  date_added_client?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }

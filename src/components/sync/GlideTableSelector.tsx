@@ -1,181 +1,147 @@
 
-import React, { useState, useEffect } from 'react';
-import { PlusCircle } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import React, { useState } from 'react';
+import { Search } from "lucide-react";
 import { GlideTable } from '@/types/glsync';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface GlideTableSelectorProps {
   tables: GlideTable[];
   value: string;
   onTableChange: (tableId: string, displayName: string) => void;
-  onAddTable?: (newTable: GlideTable) => void;
+  onAddTable?: (table: GlideTable) => void;
   disabled?: boolean;
-  placeholder?: string;
   isLoading?: boolean;
+  placeholder?: string;
 }
 
-export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
+const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({ 
   tables,
   value,
   onTableChange,
   onAddTable,
   disabled = false,
-  placeholder = 'Select a table',
   isLoading = false,
+  placeholder = 'Select a table'
 }) => {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newTableId, setNewTableId] = useState('');
   const [newTableName, setNewTableName] = useState('');
-  const [newTableDisplayName, setNewTableDisplayName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddTable, setShowAddTable] = useState(false);
 
-  // When tables are loaded, if we have a value but it doesn't match any table, 
-  // we need to find it and call onTableChange with its display name
-  useEffect(() => {
-    if (tables.length > 0 && value) {
-      const selectedTable = tables.find(table => table.id === value);
-      if (selectedTable) {
-        // Make sure the parent has the display name
-        console.log('Selected table from useEffect:', selectedTable);
-      }
-    }
-  }, [tables, value]);
+  // Filter tables based on search term
+  const filteredTables = tables.filter(table => 
+    table.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    table.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleSelectChange = (tableId: string) => {
-    if (tableId === 'add-new') {
-      setIsAddDialogOpen(true);
-      return;
-    }
-    
-    const table = tables.find(t => t.id === tableId);
-    if (table) {
-      console.log('Selected table:', table);
-      onTableChange(table.id, table.display_name);
+  const handleTableChange = (tableId: string) => {
+    const selectedTable = tables.find(t => t.id === tableId);
+    if (selectedTable) {
+      onTableChange(selectedTable.id, selectedTable.displayName);
     }
   };
 
-  const handleAddTable = () => {
-    if (!newTableName || !newTableDisplayName) return;
-    
-    // Prefix with 'native' if needed
-    const tableId = newTableName.startsWith('native') ? newTableName : `native${newTableName}`;
-    
-    const newTable = {
-      id: tableId,
-      display_name: newTableDisplayName,
-    };
-    
-    console.log('Adding new table:', newTable);
-    onAddTable?.(newTable);
-    setNewTableName('');
-    setNewTableDisplayName('');
-    setIsAddDialogOpen(false);
-    
-    // Select the newly added table
-    onTableChange(newTable.id, newTable.display_name);
+  const handleAddNewTable = () => {
+    if (newTableId && newTableName && onAddTable) {
+      const newTable: GlideTable = {
+        id: newTableId,
+        displayName: newTableName
+      };
+      onAddTable(newTable);
+      setNewTableId('');
+      setNewTableName('');
+      setShowAddTable(false);
+    }
   };
 
   return (
     <div className="space-y-2">
-      <Select
-        value={value}
-        onValueChange={handleSelectChange}
-        disabled={disabled || isLoading}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={isLoading ? 'Loading...' : placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>Glide Tables</SelectLabel>
-            {tables.map((table) => (
-              <SelectItem key={table.id} value={table.id}>
-                {table.display_name}
-              </SelectItem>
-            ))}
-            {onAddTable && (
-              <SelectItem value="add-new" className="text-primary">
-                <div className="flex items-center">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add New Table
+      <div className="flex flex-col gap-2">
+        <Select
+          value={value}
+          onValueChange={handleTableChange}
+          disabled={disabled || isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-2">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </div>
+            ) : filteredTables.length === 0 ? (
+              <div className="p-2 text-muted-foreground text-center">
+                {searchTerm ? 'No tables found' : 'No tables available'}
+              </div>
+            ) : (
+              <>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center border rounded-md px-2">
+                    <Search className="h-4 w-4 text-muted-foreground mr-2" />
+                    <Input 
+                      className="border-0 p-1 h-8 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                      placeholder="Search tables..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </SelectItem>
+                {filteredTables.map((table) => (
+                  <SelectItem key={table.id} value={table.id}>
+                    {table.displayName}
+                  </SelectItem>
+                ))}
+              </>
             )}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-        setIsAddDialogOpen(open);
-        if (!open) {
-          // Only reset form when dialog is explicitly closed
-          setNewTableName('');
-          setNewTableDisplayName('');
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Glide Table</DialogTitle>
-            <DialogDescription>
-              Enter details for the new Glide table.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="table-id" className="col-span-4">
-                Table ID <span className="text-sm text-muted-foreground">(Will be prefixed with 'native' if needed)</span>
-              </Label>
-              <Input
-                id="table-id"
-                value={newTableName}
-                onChange={(e) => setNewTableName(e.target.value)}
-                className="col-span-4"
-                placeholder="Enter table ID"
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="display-name" className="col-span-4">
-                Display Name
-              </Label>
-              <Input
-                id="display-name"
-                value={newTableDisplayName}
-                onChange={(e) => setNewTableDisplayName(e.target.value)}
-                className="col-span-4"
-                placeholder="Enter display name"
-              />
-            </div>
+      {showAddTable && onAddTable && (
+        <div className="space-y-2 p-2 border rounded-md">
+          <div className="space-y-1">
+            <Input
+              placeholder="Table ID"
+              value={newTableId}
+              onChange={(e) => setNewTableId(e.target.value)}
+            />
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddTable}>
-              Add Table
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1">
+            <Input
+              placeholder="Display Name"
+              value={newTableName}
+              onChange={(e) => setNewTableName(e.target.value)}
+            />
+          </div>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleAddNewTable}
+            disabled={!newTableId || !newTableName}
+            className="w-full"
+          >
+            Add Table
+          </Button>
+        </div>
+      )}
+
+      {onAddTable && !showAddTable && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAddTable(true)}
+          className="w-full"
+        >
+          Can't find your table? Add manually
+        </Button>
+      )}
     </div>
   );
 };
+
+export default GlideTableSelector;

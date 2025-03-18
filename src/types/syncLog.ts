@@ -35,3 +35,12 @@ export interface Mapping {
   created_at?: string | null;
   updated_at?: string | null;
 }
+
+export interface MappingToValidate {
+  supabase_table: string;
+  column_mappings: Record<string, {
+    glide_column_name: string;
+    supabase_column_name: string;
+    data_type: string;
+  }>;
+}
