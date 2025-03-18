@@ -186,7 +186,7 @@ const ConnectionsList: React.FC = () => {
               connection={connection}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onTest={() => handleTest(connection.id)}
+              onTest={handleTest}
               isTestingConnection={isTestingConnection}
             />
           ))}

@@ -8,7 +8,7 @@ import { formatDateTime } from '@/utils/date-utils';
 interface ConnectionCardProps {
   connection: GlConnection;
   onEdit: (connection: GlConnection) => void;
-  onDelete: (id: string) => void;
+  onDelete: (connection: GlConnection) => void;
   onTest: (id: string) => void;
   isTestingConnection: boolean;
 }
@@ -60,7 +60,7 @@ const ConnectionCard = ({
             Edit
           </Button>
           
-          <Button variant="outline" size="sm" onClick={() => onDelete(connection.id)}>
+          <Button variant="outline" size="sm" onClick={() => onDelete(connection)}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
