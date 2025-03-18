@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -459,7 +460,7 @@ function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Recor
   
   const errors: any[] = []
   
-  // Apply column mappings
+  // Apply column mappings with the new structure
   Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
     try {
       const glideColumnName = mapping.glide_column_name;
@@ -586,7 +587,7 @@ async function pullFromGlideToSupabase(
         glide_row_id: row.id || row.rowId, // Ensure we capture the Glide row ID
       }
       
-      // Apply column mappings from the JSONB structure
+      // Apply column mappings with the new structure
       Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
         if (row[glideColumnId] !== undefined) {
           transformedRow[mapping.supabase_column_name] = row[glideColumnId]

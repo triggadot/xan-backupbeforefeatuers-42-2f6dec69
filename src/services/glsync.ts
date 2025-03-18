@@ -84,11 +84,7 @@ export const glSyncApi = {
       throw new Error(error.message);
     }
     
-    // Transform the JSONB data to the proper TypeScript type
-    return data.map(item => ({
-      ...item,
-      column_mappings: item.column_mappings ? (item.column_mappings as Record<string, any>) : {}
-    })) as GlMapping[];
+    return data as GlMapping[];
   },
 
   async getMapping(id: string): Promise<GlMapping> {
@@ -99,12 +95,7 @@ export const glSyncApi = {
       .single();
     
     if (error) throw new Error(error.message);
-    
-    // Transform the JSONB data to the proper TypeScript type
-    return {
-      ...data,
-      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
-    } as GlMapping;
+    return data as GlMapping;
   },
 
   async addMapping(mapping: Omit<GlMapping, 'id' | 'created_at'>): Promise<GlMapping> {
@@ -123,31 +114,19 @@ export const glSyncApi = {
       .single();
     
     if (error) throw new Error(error.message);
-    
-    // Transform the JSONB data to the proper TypeScript type
-    return {
-      ...data,
-      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
-    } as GlMapping;
+    return data as GlMapping;
   },
 
   async updateMapping(id: string, mapping: Partial<GlMapping>): Promise<GlMapping> {
-    const updateData: any = { ...mapping };
-    
     const { data, error } = await supabase
       .from('gl_mappings')
-      .update(updateData)
+      .update(mapping)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw new Error(error.message);
-    
-    // Transform the JSONB data to the proper TypeScript type
-    return {
-      ...data,
-      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
-    } as GlMapping;
+    return data as GlMapping;
   },
 
   async deleteMapping(id: string): Promise<void> {
@@ -157,6 +136,15 @@ export const glSyncApi = {
       .eq('id', id);
     
     if (error) throw new Error(error.message);
+  },
+
+  // Get Supabase table columns
+  async getSupabaseTableColumns(tableName: string): Promise<{ column_name: string, data_type: string }[]> {
+    const { data, error } = await supabase
+      .rpc('get_table_columns', { table_name: tableName });
+    
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   // Sync logs

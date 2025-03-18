@@ -48,50 +48,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gl_column_mappings: {
-        Row: {
-          connection_id: string
-          created_at: string | null
-          data_type: string
-          glide_column_id: string
-          glide_column_name: string
-          id: string
-          supabase_column_name: string
-          supabase_table: string
-          updated_at: string | null
-        }
-        Insert: {
-          connection_id: string
-          created_at?: string | null
-          data_type: string
-          glide_column_id: string
-          glide_column_name: string
-          id?: string
-          supabase_column_name: string
-          supabase_table: string
-          updated_at?: string | null
-        }
-        Update: {
-          connection_id?: string
-          created_at?: string | null
-          data_type?: string
-          glide_column_id?: string
-          glide_column_name?: string
-          id?: string
-          supabase_column_name?: string
-          supabase_table?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "gl_column_mappings_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "gl_connections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       gl_connections: {
         Row: {
           api_key: string
@@ -773,7 +729,15 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_table_columns: {
+        Args: {
+          table_name: string
+        }
+        Returns: {
+          column_name: string
+          data_type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
