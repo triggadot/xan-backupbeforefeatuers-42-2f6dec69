@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RefreshCw, Edit, Trash2, CheckCircle } from 'lucide-react';
 import { GlConnection } from '@/types/glsync';
-import { formatDate } from '@/utils/format-utils';
+import { formatDateTime } from '@/utils/date-utils';
 
 interface ConnectionCardProps {
   connection: GlConnection;
@@ -31,7 +31,7 @@ const ConnectionCard = ({
             App ID: {connection.app_id}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Last Synced: {formatDate(connection.last_sync)}
+            Last Synced: {formatDateTime(connection.last_sync)}
           </p>
         </div>
         
@@ -60,7 +60,7 @@ const ConnectionCard = ({
             Edit
           </Button>
           
-          <Button variant="outline" size="sm" onClick={() => onDelete(connection.id)}>
+          <Button variant="outline" size="sm" onClick={() => onDelete(connection)}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>

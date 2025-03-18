@@ -1,4 +1,5 @@
 
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,38 +9,92 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { GlConnection } from '@/types/glsync';
 
 interface DeleteConnectionDialogProps {
-  onDelete: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  connection: GlConnection;
+  onSuccess: () => void;
 }
 
-const DeleteConnectionDialog = ({ onDelete }: DeleteConnectionDialogProps) => {
+const DeleteConnectionDialog: React.FC<DeleteConnectionDialogProps> = ({ 
+  open, 
+  onOpenChange,
+  connection,
+  onSuccess 
+}) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      // Check if there are any mappings using this connection
+      const { data: mappings, error: mappingsError } = await supabase
+        .from('gl_mappings')
+        .select('id')
+        .eq('connection_id', connection.id);
+      
+      if (mappingsError) throw mappingsError;
+      
+      if (mappings && mappings.length > 0) {
+        // Delete all mappings for this connection
+        const { error: deleteMappingsError } = await supabase
+          .from('gl_mappings')
+          .delete()
+          .eq('connection_id', connection.id);
+        
+        if (deleteMappingsError) throw deleteMappingsError;
+      }
+      
+      // Delete the connection
+      const { error } = await supabase
+        .from('gl_connections')
+        .delete()
+        .eq('id', connection.id);
+      
+      if (error) throw error;
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error deleting connection:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete connection',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Connection</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this connection? This will also delete all associated mappings and sync configurations.
+            Are you sure you want to delete the connection "{connection.app_name || 'Unnamed App'}"?
+            This will also delete all mappings associated with this connection.
+            This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onDelete}
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleDelete();
+            }}
+            disabled={isDeleting}
             className="bg-red-500 hover:bg-red-600"
           >
-            Delete
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
