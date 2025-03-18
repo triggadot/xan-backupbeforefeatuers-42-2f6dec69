@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -117,10 +116,10 @@ const ConnectionsManager = () => {
     }
   };
 
-  const handleDeleteConnection = async (id: string) => {
+  const handleDeleteConnection = async (connection: GlConnection) => {
     try {
-      await glSyncApi.deleteConnection(id);
-      setConnections(connections.filter(conn => conn.id !== id));
+      await glSyncApi.deleteConnection(connection.id);
+      setConnections(connections.filter(conn => conn.id !== connection.id));
       
       toast({
         title: 'Connection deleted',
