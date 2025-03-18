@@ -20,6 +20,13 @@ export interface GlMapping {
   created_at: string | null;
 }
 
+export interface GlColumnMapping {
+  glide_column_id: string;
+  glide_column_name: string;
+  supabase_column_name: string;
+  data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+}
+
 export interface GlSyncLog {
   id: string;
   mapping_id: string | null;
@@ -58,7 +65,52 @@ export interface GlRecentLog {
 }
 
 export interface SyncRequestPayload {
-  action: 'testConnection' | 'listGlideTables' | 'syncData';
+  action: 'testConnection' | 'listGlideTables' | 'syncData' | 'getColumnMappings';
   connectionId: string;
   mappingId?: string;
+  tableId?: string;
+}
+
+export interface GlProduct {
+  id?: string;
+  glide_row_id: string;
+  rowid_accounts?: string;
+  rowid_vendor_payments?: string;
+  rowid_purchase_orders?: string;
+  po_poui_dfrom_add_prod?: string;
+  po_po_date?: string | null;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  product_purchase_date?: string | null;
+  total_qty_purchased?: number | null;
+  cost?: number | null;
+  samples_or_fronted?: boolean;
+  fronted?: boolean;
+  samples?: boolean;
+  terms_for_fronted_product?: string;
+  total_units_behind_sample?: number | null;
+  purchase_notes?: string;
+  miscellaneous_items?: boolean;
+  category?: string;
+  product_image1?: string;
+  date_timestamp_subm?: string | null;
+  email_email_of_user_who_added_product?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SyncErrorRecord {
+  type: 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR';
+  message: string;
+  record?: any;
+  timestamp: string;
+  retryable: boolean;
+}
+
+export interface ProductSyncResult {
+  total_records: number;
+  processed_records: number;
+  failed_records: number;
+  error_records?: SyncErrorRecord[];
+  success: boolean;
 }

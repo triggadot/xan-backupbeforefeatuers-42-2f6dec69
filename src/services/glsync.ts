@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -5,7 +6,9 @@ import {
   GlSyncLog, 
   GlSyncStatus,
   GlRecentLog,
-  SyncRequestPayload 
+  SyncRequestPayload,
+  GlColumnMapping,
+  ProductSyncResult
 } from '@/types/glsync';
 
 export const glSyncApi = {
@@ -119,6 +122,29 @@ export const glSyncApi = {
     if (error) throw new Error(error.message);
   },
 
+  // Column mappings
+  async getColumnMappings(connectionId: string, tableId: string): Promise<GlColumnMapping[]> {
+    const { data, error } = await supabase
+      .from('gl_column_mappings')
+      .select('*')
+      .eq('connection_id', connectionId)
+      .eq('supabase_table', tableId);
+    
+    if (error) throw new Error(error.message);
+    return data as GlColumnMapping[];
+  },
+
+  async addColumnMapping(mapping: Omit<GlColumnMapping, 'id'>): Promise<GlColumnMapping> {
+    const { data, error } = await supabase
+      .from('gl_column_mappings')
+      .insert(mapping)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data as GlColumnMapping;
+  },
+
   // Sync logs
   async getSyncLogs(mappingId?: string, limit: number = 20): Promise<GlSyncLog[]> {
     let query = supabase
@@ -193,8 +219,20 @@ export const glSyncApi = {
       return { error: error.message };
     }
   },
+  
+  async getGlideTableColumns(connectionId: string, tableId: string): Promise<{ columns: any[] } | { error: string }> {
+    try {
+      return await this.callSyncFunction({
+        action: 'getColumnMappings',
+        connectionId,
+        tableId,
+      });
+    } catch (error) {
+      return { error: error.message };
+    }
+  },
 
-  async syncData(connectionId: string, mappingId: string): Promise<{ success: boolean; recordsProcessed?: number; error?: string }> {
+  async syncData(connectionId: string, mappingId: string): Promise<{ success: boolean; recordsProcessed?: number; failedRecords?: number; errors?: any[]; error?: string }> {
     try {
       const result = await this.callSyncFunction({
         action: 'syncData',
@@ -203,8 +241,10 @@ export const glSyncApi = {
       });
       
       return { 
-        success: true, 
-        recordsProcessed: result.recordsProcessed 
+        success: result.success ?? true, 
+        recordsProcessed: result.recordsProcessed,
+        failedRecords: result.failedRecords,
+        errors: result.errors
       };
     } catch (error) {
       return { success: false, error: error.message };

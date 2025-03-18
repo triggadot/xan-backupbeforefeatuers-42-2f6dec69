@@ -27,7 +27,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Parse request data
-    const { action, connectionId, mappingId } = await req.json()
+    const { action, connectionId, mappingId, tableId } = await req.json()
 
     // Create a sync log entry
     const { data: logData, error: logError } = await supabase
@@ -92,6 +92,16 @@ serve(async (req) => {
         break
       case 'listGlideTables':
         result = await listGlideTables(connection.api_key, connection.app_id)
+        break
+      case 'getColumnMappings':
+        if (!tableId) {
+          await updateSyncLog(supabase, logId, 'failed', 'Table ID is required for getColumnMappings')
+          return new Response(
+            JSON.stringify({ error: 'Table ID is required for getColumnMappings' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          )
+        }
+        result = await getGlideTableColumns(connection.api_key, connection.app_id, tableId)
         break
       case 'syncData':
         if (!mapping) {
@@ -239,6 +249,52 @@ async function listGlideTables(apiKey: string, appId: string) {
   }
 }
 
+// Function to get column metadata for a Glide table
+async function getGlideTableColumns(apiKey: string, appId: string, tableId: string) {
+  try {
+    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        appID: appId,
+        queries: [{ 
+          tableName: tableId,
+          limit: 1 
+        }]
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return {
+        error: `Failed to fetch Glide table schema: ${response.status} ${response.statusText}`,
+        details: errorData
+      }
+    }
+
+    const data = await response.json()
+    
+    if (!data || !data[0] || !data[0].rows || !data[0].rows[0]) {
+      return { error: 'No data returned from Glide table' }
+    }
+    
+    // Extract column names from the first record
+    const sampleRecord = data[0].rows[0]
+    const columns = Object.keys(sampleRecord).map(key => ({
+      id: key,
+      name: key,
+      type: typeof sampleRecord[key]
+    }))
+    
+    return { columns }
+  } catch (error) {
+    return { error: `Error fetching Glide table columns: ${error.message}` }
+  }
+}
+
 // Function to handle data synchronization between Glide and Supabase
 async function syncGlideData(supabase: any, connection: any, mapping: any, logId: string) {
   const { glide_table, supabase_table, column_mappings, sync_direction } = mapping
@@ -252,21 +308,252 @@ async function syncGlideData(supabase: any, connection: any, mapping: any, logId
   // If sync_direction is 'to_supabase' or 'both', we need to pull from Glide to Supabase
   if (sync_direction === 'to_supabase' || sync_direction === 'both') {
     try {
-      return await pullFromGlideToSupabase(
-        supabase,
-        connection.api_key,
-        connection.app_id,
-        glide_table,
-        supabase_table,
-        column_mappings,
-        logId
-      )
+      // Special handling for products table
+      if (supabase_table === 'gl_products') {
+        return await syncProductsFromGlide(
+          supabase,
+          connection.api_key,
+          connection.app_id,
+          glide_table,
+          column_mappings,
+          logId
+        )
+      } else {
+        return await pullFromGlideToSupabase(
+          supabase,
+          connection.api_key,
+          connection.app_id,
+          glide_table,
+          supabase_table,
+          column_mappings,
+          logId
+        )
+      }
     } catch (error) {
       return { error: `Error syncing data from Glide to Supabase: ${error.message}` }
     }
   }
   
   return { error: `Invalid sync direction: ${sync_direction}` }
+}
+
+// Special function to sync products with additional validation
+async function syncProductsFromGlide(
+  supabase: any,
+  apiKey: string,
+  appId: string,
+  glideTable: string,
+  columnMappings: Record<string, string>,
+  logId: string
+) {
+  let continuationToken = null
+  let totalRecordsProcessed = 0
+  let totalFailedRecords = 0
+  let hasMore = true
+  let errorRecords: any[] = []
+  
+  // Get column mapping from database for validation
+  const { data: mappingColumns, error: mappingError } = await supabase
+    .from('gl_column_mappings')
+    .select('*')
+    .eq('connection_id', appId)
+    .eq('supabase_table', 'gl_products')
+  
+  if (mappingError) {
+    return { error: `Error fetching column mappings: ${mappingError.message}` }
+  }
+  
+  // Prepare column mapping dictionary for faster lookups
+  const columnMappingDict = mappingColumns.reduce((acc: any, mapping: any) => {
+    acc[mapping.glide_column_id] = mapping
+    return acc
+  }, {})
+  
+  // Loop until we have processed all data
+  while (hasMore) {
+    // Update log with progress
+    await updateSyncLog(
+      supabase,
+      logId,
+      'processing',
+      `Processing batch from Glide. Total records so far: ${totalRecordsProcessed}`,
+      totalRecordsProcessed
+    )
+    
+    // Fetch a batch of data from Glide
+    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken)
+    
+    if (glideData.error) {
+      return { error: glideData.error }
+    }
+    
+    const { rows, next } = glideData
+    
+    if (!rows || rows.length === 0) {
+      break
+    }
+    
+    // Transform the data using the column mappings and perform validation
+    const transformedRecords = []
+    
+    for (const row of rows) {
+      const { product, errors } = transformGlideToSupabaseProduct(row, columnMappings)
+      
+      if (errors.length > 0) {
+        totalFailedRecords += 1
+        errorRecords = [...errorRecords, ...errors]
+        continue
+      }
+      
+      // Additional validation
+      const validationErrors = validateProduct(product)
+      
+      if (validationErrors.length > 0) {
+        totalFailedRecords += 1
+        errorRecords = [...errorRecords, ...validationErrors]
+        continue
+      }
+      
+      transformedRecords.push(product)
+    }
+    
+    // Insert or update the data in Supabase
+    for (let i = 0; i < transformedRecords.length; i += MAX_BATCH_SIZE) {
+      const batch = transformedRecords.slice(i, i + MAX_BATCH_SIZE)
+      
+      if (batch.length === 0) continue
+      
+      // Upsert data to Supabase
+      const { error } = await supabase
+        .from('gl_products')
+        .upsert(batch, { onConflict: 'glide_row_id' })
+      
+      if (error) {
+        totalFailedRecords += batch.length
+        errorRecords.push({
+          type: 'API_ERROR',
+          message: `Error upserting data to Supabase: ${error.message}`,
+          record: null,
+          timestamp: new Date().toISOString(),
+          retryable: false
+        })
+      } else {
+        totalRecordsProcessed += batch.length
+      }
+    }
+    
+    // Check if there's more data to fetch
+    continuationToken = next
+    hasMore = !!continuationToken
+    
+    // Add a small delay to avoid hitting rate limits
+    if (hasMore) {
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  }
+  
+  // Update the connection's last_sync timestamp
+  await supabase
+    .from('gl_connections')
+    .update({ last_sync: new Date().toISOString() })
+    .eq('id', mapping.connection_id)
+  
+  // Store sync results with errors
+  const syncResult = {
+    success: totalFailedRecords === 0,
+    recordsProcessed: totalRecordsProcessed,
+    failedRecords: totalFailedRecords,
+    errors: errorRecords.length > 20 ? errorRecords.slice(0, 20) : errorRecords // Limit error records
+  }
+  
+  return syncResult
+}
+
+// Function to transform a product record for validation
+function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Record<string, string>) {
+  const product: any = {
+    glide_row_id: glideRecord.id || glideRecord.rowId || '',
+  }
+  
+  const errors: any[] = []
+  
+  // Apply column mappings
+  Object.entries(columnMappings).forEach(([glideColumn, supabaseColumn]) => {
+    try {
+      let value = glideRecord[glideColumn]
+      
+      // Skip undefined values
+      if (value === undefined) {
+        return
+      }
+      
+      // Basic type handling
+      if (typeof value === 'string' && !isNaN(Number(value)) && supabaseColumn.includes('_qty_') || supabaseColumn === 'cost') {
+        value = Number(value)
+      }
+      
+      // Handle boolean values
+      if (typeof value === 'string' && (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') && 
+          (supabaseColumn.includes('samples') || supabaseColumn.includes('fronted') || supabaseColumn.includes('miscellaneous'))) {
+        value = value.toLowerCase() === 'true'
+      }
+      
+      product[supabaseColumn] = value
+    } catch (error) {
+      errors.push({
+        type: 'TRANSFORM_ERROR',
+        message: `Error transforming column ${glideColumn} to ${supabaseColumn}: ${error.message}`,
+        record: { glideColumn, supabaseColumn, value: glideRecord[glideColumn] },
+        timestamp: new Date().toISOString(),
+        retryable: false
+      })
+    }
+  })
+  
+  return { product, errors }
+}
+
+// Basic validation for a product record
+function validateProduct(product: any) {
+  const errors: any[] = []
+  
+  // Check for required glide_row_id
+  if (!product.glide_row_id) {
+    errors.push({
+      type: 'VALIDATION_ERROR',
+      message: 'Missing required glide_row_id',
+      record: product,
+      timestamp: new Date().toISOString(),
+      retryable: false
+    })
+  }
+  
+  // Validate numeric fields if present
+  if (product.cost !== undefined && product.cost !== null) {
+    if (isNaN(Number(product.cost))) {
+      errors.push({
+        type: 'VALIDATION_ERROR',
+        message: 'Invalid cost value',
+        record: { field: 'cost', value: product.cost },
+        timestamp: new Date().toISOString(),
+        retryable: false
+      })
+    }
+  }
+  
+  if (product.total_qty_purchased !== undefined && product.total_qty_purchased !== null) {
+    if (isNaN(Number(product.total_qty_purchased))) {
+      errors.push({
+        type: 'VALIDATION_ERROR',
+        message: 'Invalid total_qty_purchased value',
+        record: { field: 'total_qty_purchased', value: product.total_qty_purchased },
+        timestamp: new Date().toISOString(),
+        retryable: false
+      })
+    }
+  }
+  
+  return errors
 }
 
 // Function to pull data from Glide to Supabase
