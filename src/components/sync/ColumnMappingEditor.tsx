@@ -57,18 +57,20 @@ export function ColumnMappingEditor({
     
     async function fetchColumns() {
       try {
-        // Get columns from the current table
-        const { data, error } = await supabase
-          .from('information_schema.columns')
-          .select('column_name')
-          .eq('table_name', supabaseTable)
-          .eq('table_schema', 'public');
+        // Use a direct RPC call to get table columns
+        const { data, error } = await supabase.rpc('get_table_columns', {
+          table_name: supabaseTable
+        });
         
         if (error) throw error;
         
-        const columns = data.map(col => col.column_name);
-        setSupabaseColumns(columns);
-        setError(null);
+        if (data && Array.isArray(data)) {
+          const columns = data.map(col => col.column_name);
+          setSupabaseColumns(columns);
+          setError(null);
+        } else {
+          throw new Error('Invalid response format from get_table_columns');
+        }
       } catch (err) {
         console.error('Error fetching table columns:', err);
         setError('Could not fetch table columns. Using default mappings.');

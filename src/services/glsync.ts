@@ -83,7 +83,12 @@ export const glSyncApi = {
       }
       throw new Error(error.message);
     }
-    return data as GlMapping[];
+    
+    // Transform the JSONB data to the proper TypeScript type
+    return data.map(item => ({
+      ...item,
+      column_mappings: item.column_mappings ? (item.column_mappings as Record<string, any>) : {}
+    })) as GlMapping[];
   },
 
   async getMapping(id: string): Promise<GlMapping> {
@@ -94,30 +99,55 @@ export const glSyncApi = {
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Transform the JSONB data to the proper TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
+    } as GlMapping;
   },
 
   async addMapping(mapping: Omit<GlMapping, 'id' | 'created_at'>): Promise<GlMapping> {
     const { data, error } = await supabase
       .from('gl_mappings')
-      .insert(mapping)
+      .insert({
+        connection_id: mapping.connection_id,
+        glide_table: mapping.glide_table,
+        glide_table_display_name: mapping.glide_table_display_name,
+        supabase_table: mapping.supabase_table,
+        column_mappings: mapping.column_mappings || {},
+        sync_direction: mapping.sync_direction,
+        enabled: mapping.enabled
+      })
       .select()
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Transform the JSONB data to the proper TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
+    } as GlMapping;
   },
 
   async updateMapping(id: string, mapping: Partial<GlMapping>): Promise<GlMapping> {
+    const updateData: any = { ...mapping };
+    
     const { data, error } = await supabase
       .from('gl_mappings')
-      .update(mapping)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Transform the JSONB data to the proper TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings ? (data.column_mappings as Record<string, any>) : {}
+    } as GlMapping;
   },
 
   async deleteMapping(id: string): Promise<void> {
