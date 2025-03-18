@@ -7,7 +7,6 @@ import {
   GlSyncStatus,
   GlRecentLog,
   SyncRequestPayload,
-  GlColumnMapping,
   ProductSyncResult
 } from '@/types/glsync';
 
@@ -127,36 +126,6 @@ export const glSyncApi = {
       .eq('id', id);
     
     if (error) throw new Error(error.message);
-  },
-
-  // Column mappings
-  async getColumnMappings(connectionId: string, tableId: string): Promise<GlColumnMapping[]> {
-    const { data, error } = await supabase
-      .from('gl_column_mappings')
-      .select('*')
-      .eq('connection_id', connectionId)
-      .eq('supabase_table', tableId);
-    
-    if (error) {
-      // Check if it's a "relation does not exist" error
-      if (error.code === '42P01') {
-        // Return empty array instead of throwing error when table doesn't exist yet
-        return [];
-      }
-      throw new Error(error.message);
-    }
-    return data as GlColumnMapping[];
-  },
-
-  async addColumnMapping(mapping: Omit<GlColumnMapping, 'id'>): Promise<GlColumnMapping> {
-    const { data, error } = await supabase
-      .from('gl_column_mappings')
-      .insert(mapping)
-      .select()
-      .single();
-    
-    if (error) throw new Error(error.message);
-    return data as GlColumnMapping;
   },
 
   // Sync logs

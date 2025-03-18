@@ -343,7 +343,7 @@ async function syncProductsFromGlide(
   apiKey: string,
   appId: string,
   glideTable: string,
-  columnMappings: Record<string, string>,
+  columnMappings: Record<string, any>,
   logId: string
 ) {
   let continuationToken = null
@@ -351,23 +351,6 @@ async function syncProductsFromGlide(
   let totalFailedRecords = 0
   let hasMore = true
   let errorRecords: any[] = []
-  
-  // Get column mapping from database for validation
-  const { data: mappingColumns, error: mappingError } = await supabase
-    .from('gl_column_mappings')
-    .select('*')
-    .eq('connection_id', appId)
-    .eq('supabase_table', 'gl_products')
-  
-  if (mappingError) {
-    return { error: `Error fetching column mappings: ${mappingError.message}` }
-  }
-  
-  // Prepare column mapping dictionary for faster lookups
-  const columnMappingDict = mappingColumns.reduce((acc: any, mapping: any) => {
-    acc[mapping.glide_column_id] = mapping
-    return acc
-  }, {})
   
   // Loop until we have processed all data
   while (hasMore) {
@@ -456,7 +439,7 @@ async function syncProductsFromGlide(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', mapping.connection_id)
+    .eq('id', connection.id)
   
   // Store sync results with errors
   const syncResult = {
@@ -470,7 +453,7 @@ async function syncProductsFromGlide(
 }
 
 // Function to transform a product record for validation
-function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Record<string, string>) {
+function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Record<string, any>) {
   const product: any = {
     glide_row_id: glideRecord.id || glideRecord.rowId || '',
   }
@@ -478,39 +461,43 @@ function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Recor
   const errors: any[] = []
   
   // Apply column mappings
-  Object.entries(columnMappings).forEach(([glideColumn, supabaseColumn]) => {
+  Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
     try {
-      let value = glideRecord[glideColumn]
+      const glideColumnName = mapping.glide_column_id;
+      const supabaseColumnName = mapping.supabase_column_name;
+      let value = glideRecord[glideColumnId];
       
       // Skip undefined values
       if (value === undefined) {
-        return
+        return;
       }
       
       // Basic type handling
-      if (typeof value === 'string' && !isNaN(Number(value)) && supabaseColumn.includes('_qty_') || supabaseColumn === 'cost') {
-        value = Number(value)
+      if (typeof value === 'string' && !isNaN(Number(value)) && 
+          (supabaseColumnName.includes('_qty_') || supabaseColumnName === 'cost')) {
+        value = Number(value);
       }
       
       // Handle boolean values
       if (typeof value === 'string' && (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') && 
-          (supabaseColumn.includes('samples') || supabaseColumn.includes('fronted') || supabaseColumn.includes('miscellaneous'))) {
-        value = value.toLowerCase() === 'true'
+          (supabaseColumnName.includes('samples') || supabaseColumnName.includes('fronted') || 
+           supabaseColumnName.includes('miscellaneous'))) {
+        value = value.toLowerCase() === 'true';
       }
       
-      product[supabaseColumn] = value
+      product[supabaseColumnName] = value;
     } catch (error) {
       errors.push({
         type: 'TRANSFORM_ERROR',
-        message: `Error transforming column ${glideColumn} to ${supabaseColumn}: ${error.message}`,
-        record: { glideColumn, supabaseColumn, value: glideRecord[glideColumn] },
+        message: `Error transforming column ${glideColumnId} to ${mapping.supabase_column_name}: ${error.message}`,
+        record: { glideColumn: glideColumnId, supabaseColumn: mapping.supabase_column_name, value: glideRecord[glideColumnId] },
         timestamp: new Date().toISOString(),
         retryable: false
-      })
+      });
     }
-  })
+  });
   
-  return { product, errors }
+  return { product, errors };
 }
 
 // Basic validation for a product record
@@ -563,7 +550,7 @@ async function pullFromGlideToSupabase(
   appId: string,
   glideTable: string,
   supabaseTable: string,
-  columnMappings: any,
+  columnMappings: any, // Use the column mappings stored in gl_mappings
   logId: string
 ) {
   let continuationToken = null
@@ -600,10 +587,10 @@ async function pullFromGlideToSupabase(
         glide_row_id: row.id || row.rowId, // Ensure we capture the Glide row ID
       }
       
-      // Apply column mappings
-      Object.entries(columnMappings).forEach(([glideColumn, supabaseColumn]) => {
-        if (row[glideColumn] !== undefined) {
-          transformedRow[supabaseColumn] = row[glideColumn]
+      // Apply column mappings from the new structure
+      Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
+        if (row[glideColumnId] !== undefined) {
+          transformedRow[mapping.supabase_column_name] = row[glideColumnId]
         }
       })
       
@@ -640,7 +627,7 @@ async function pullFromGlideToSupabase(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', mapping.connection_id)
+    .eq('id', connection.id)
   
   return { success: true, recordsProcessed: totalRecordsProcessed }
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
@@ -152,7 +153,7 @@ const MappingsManager = () => {
     fetchGlideTables(connectionId);
   };
 
-  const handleGlideTableChange = (value: string) => {
+  const handleGlideTableChange = async (value: string) => {
     if (editMapping) {
       setEditMapping({
         ...editMapping,
@@ -163,6 +164,39 @@ const MappingsManager = () => {
         ...newMapping,
         glide_table: value,
       });
+    }
+
+    // If a Glide table is selected, try to fetch its columns to prepare for mapping
+    if (value && selectedConnection) {
+      try {
+        const result = await glSyncApi.getGlideTableColumns(selectedConnection, value);
+        if ('columns' in result) {
+          // Automatically create initial column mappings based on column names
+          const initialColumnMappings = {};
+          result.columns.forEach(column => {
+            initialColumnMappings[column.id] = {
+              glide_column_id: column.id,
+              glide_column_name: column.name,
+              supabase_column_name: column.name.toLowerCase().replace(/\s+/g, '_'),
+              data_type: typeof column.type === 'string' ? column.type : 'string'
+            };
+          });
+          
+          if (editMapping) {
+            setEditMapping({
+              ...editMapping,
+              column_mappings: initialColumnMappings,
+            });
+          } else {
+            setNewMapping({
+              ...newMapping,
+              column_mappings: initialColumnMappings,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching column data:', error);
+      }
     }
   };
 
