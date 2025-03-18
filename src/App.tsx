@@ -5,7 +5,6 @@ import Layout from '@/components/layout/Layout';
 import Dashboard from '@/pages/Dashboard';
 import Sync from '@/pages/Sync';
 import ProductSync from '@/pages/ProductSync';
-import BusinessData from '@/pages/BusinessData';
 import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -32,7 +31,6 @@ const App: React.FC = () => {
                 <Route path=":tab" element={<Sync />} />
               </Route>
               <Route path="sync/products/:mappingId" element={<ProductSync />} />
-              <Route path="business" element={<BusinessData />} />
             </Route>
           </Routes>
         </BrowserRouter>
