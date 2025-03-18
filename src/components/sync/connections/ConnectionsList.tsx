@@ -31,7 +31,22 @@ const ConnectionsList: React.FC = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setConnections(data || []);
+      
+      // Transform data to ensure correct types
+      const transformedConnections: GlConnection[] = (data || []).map(conn => ({
+        id: conn.id,
+        app_id: conn.app_id,
+        api_key: conn.api_key,
+        app_name: conn.app_name,
+        last_sync: conn.last_sync,
+        created_at: conn.created_at,
+        status: conn.status,
+        settings: conn.settings ? 
+          (typeof conn.settings === 'string' ? JSON.parse(conn.settings) : conn.settings) 
+          : {}
+      }));
+      
+      setConnections(transformedConnections);
     } catch (error) {
       console.error('Error fetching connections:', error);
       toast({
@@ -172,7 +187,7 @@ const ConnectionsList: React.FC = () => {
               key={connection.id}
               connection={connection}
               onEdit={() => handleEdit(connection)}
-              onDelete={() => handleDelete(connection)}
+              onDelete={() => handleDelete(connection.id)}
               onTest={() => handleTest(connection.id)}
               isTestingConnection={isTestingConnection}
             />

@@ -1,81 +1,50 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, RefreshCw, Edit, Play, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  ArrowLeft, 
-  RefreshCw, 
-  Edit,
-  AlertCircle, 
-  CheckCircle,
-  ArrowRight,
-  ToggleLeft,
-  ToggleRight,
-} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SyncLogsTable } from '../logs/SyncLogsTable';
+import { SyncStatusBadge } from '@/components/sync/ui/SyncStatusBadge';
+import { Mapping } from '@/types/syncLog';
 import { formatDateTime } from '@/utils/date-utils';
-import { SyncStatusBadge } from '../ui/SyncStatusBadge';
-
-interface Mapping {
-  id: string;
-  connection_id: string;
-  app_name: string;
-  glide_table: string;
-  glide_table_display_name: string;
-  supabase_table: string;
-  enabled: boolean;
-  sync_direction: string;
-  column_mappings: Record<string, { 
-    glide_column_name: string;
-    supabase_column_name: string;
-    data_type: string;
-  }>;
-}
-
-interface SyncStatus {
-  current_status: string;
-  last_sync_completed_at: string | null;
-  records_processed: number;
-  total_records: number;
-  error_count: number;
-}
-
-interface SyncLog {
-  id: string;
-  mapping_id: string;
-  started_at: string;
-  completed_at: string | null;
-  status: string;
-  message: string | null;
-  records_processed: number | null;
-}
 
 const MappingDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mapping, setMapping] = useState<Mapping | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
+  const [mapping, setMapping] = useState<Mapping>({
+    id: '',
+    connection_id: '',
+    glide_table: '',
+    glide_table_display_name: '',
+    supabase_table: '',
+    column_mappings: {},
+    sync_direction: '',
+    enabled: false
+  });
+  const [statusInfo, setStatusInfo] = useState({
+    current_status: '',
+    last_sync_completed_at: null as string | null,
+    records_processed: 0,
+    error_count: 0,
+    total_records: 0
+  });
 
   const fetchMapping = async () => {
     if (!id) return;
     
     setIsLoading(true);
     try {
-      // Fetch the mapping
+      // Fetch the mapping data
       const { data: mappingData, error: mappingError } = await supabase
         .from('gl_mappings')
         .select('*')
@@ -84,31 +53,40 @@ const MappingDetails: React.FC = () => {
       
       if (mappingError) throw mappingError;
       
-      // Fetch the connection details to get the app name
-      const { data: connectionData, error: connectionError } = await supabase
-        .from('gl_connections')
-        .select('app_name')
-        .eq('id', mappingData.connection_id)
-        .single();
-      
-      if (connectionError) throw connectionError;
-      
-      // Fetch the sync status
+      // Fetch the status information
       const { data: statusData, error: statusError } = await supabase
         .from('gl_mapping_status')
         .select('*')
         .eq('mapping_id', id)
-        .maybeSingle();
+        .single();
       
-      if (statusError) throw statusError;
+      // Transform data to ensure correct types
+      const transformedMapping: Mapping = {
+        id: mappingData.id,
+        connection_id: mappingData.connection_id,
+        glide_table: mappingData.glide_table,
+        glide_table_display_name: mappingData.glide_table_display_name,
+        supabase_table: mappingData.supabase_table,
+        column_mappings: typeof mappingData.column_mappings === 'string' 
+          ? JSON.parse(mappingData.column_mappings) 
+          : mappingData.column_mappings,
+        sync_direction: mappingData.sync_direction,
+        enabled: mappingData.enabled,
+        created_at: mappingData.created_at,
+        updated_at: mappingData.updated_at
+      };
       
-      // Combine data
-      setMapping({
-        ...mappingData,
-        app_name: connectionData.app_name
-      });
+      setMapping(transformedMapping);
       
-      setSyncStatus(statusData || null);
+      if (!statusError && statusData) {
+        setStatusInfo({
+          current_status: statusData.current_status || '',
+          last_sync_completed_at: statusData.last_sync_completed_at,
+          records_processed: statusData.records_processed || 0,
+          error_count: statusData.error_count || 0,
+          total_records: statusData.total_records || 0
+        });
+      }
     } catch (error) {
       console.error('Error fetching mapping details:', error);
       toast({
@@ -121,89 +99,56 @@ const MappingDetails: React.FC = () => {
     }
   };
 
-  const fetchSyncLogs = async () => {
-    if (!id) return;
-    
-    setIsLoadingLogs(true);
-    try {
-      const { data, error } = await supabase
-        .from('gl_sync_logs')
-        .select('*')
-        .eq('mapping_id', id)
-        .order('started_at', { ascending: false })
-        .limit(20);
-      
-      if (error) throw error;
-      setSyncLogs(data || []);
-    } catch (error) {
-      console.error('Error fetching sync logs:', error);
-    } finally {
-      setIsLoadingLogs(false);
-    }
-  };
-
   useEffect(() => {
     fetchMapping();
-    fetchSyncLogs();
     
-    // Set up realtime subscriptions
-    if (id) {
-      const statusChannel = supabase
-        .channel('gl_mapping_status_changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'gl_mapping_status', filter: `mapping_id=eq.${id}` }, 
-          () => {
-            fetchMapping();
-          }
-        )
-        .subscribe();
-      
-      const logsChannel = supabase
-        .channel('gl_logs_changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'gl_sync_logs', filter: `mapping_id=eq.${id}` }, 
-          () => {
-            fetchSyncLogs();
-          }
-        )
-        .subscribe();
-      
-      return () => {
-        supabase.removeChannel(statusChannel);
-        supabase.removeChannel(logsChannel);
-      };
-    }
+    // Set up realtime subscription for mapping status updates
+    const statusChannel = supabase
+      .channel('mapping_status_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'gl_mapping_status', filter: `mapping_id=eq.${id}` }, 
+        () => {
+          fetchMapping();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(statusChannel);
+    };
   }, [id]);
 
-  const handleSync = async () => {
-    if (!mapping) return;
+  const triggerSync = async () => {
+    if (!id) return;
     
     setIsSyncing(true);
     try {
-      const { error } = await supabase.functions.invoke('glsync', {
+      const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'syncData',
-          mappingId: mapping.id,
+          mappingId: id
         },
       });
-      
+
       if (error) throw error;
       
-      toast({
-        title: 'Sync started',
-        description: 'Data synchronization has been initiated',
-      });
-      
-      // Refresh the data after a short delay
-      setTimeout(() => {
-        fetchMapping();
-        fetchSyncLogs();
-      }, 2000);
+      if (data.success) {
+        toast({
+          title: 'Sync started',
+          description: 'Synchronization has been initiated',
+        });
+      } else {
+        toast({
+          title: 'Sync failed to start',
+          description: data.error || 'An error occurred',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
-      console.error('Error syncing data:', error);
+      console.error('Error starting sync:', error);
       toast({
         title: 'Error',
-        description: 'Failed to start sync operation',
+        description: error instanceof Error ? error.message : 'An error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -211,102 +156,22 @@ const MappingDetails: React.FC = () => {
     }
   };
 
-  const handleToggleEnabled = async () => {
-    if (!mapping) return;
-    
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from('gl_mappings')
-        .update({ enabled: !mapping.enabled })
-        .eq('id', mapping.id);
-      
-      if (error) throw error;
-      
-      // Show toast
-      toast({
-        title: mapping.enabled ? 'Mapping disabled' : 'Mapping enabled',
-        description: `Sync for ${mapping.glide_table_display_name} has been ${mapping.enabled ? 'disabled' : 'enabled'}`,
-      });
-      
-      // Refresh mapping
-      fetchMapping();
-    } catch (error) {
-      console.error('Error toggling mapping:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update mapping',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdating(false);
-    }
+  const handleGoBack = () => {
+    navigate('/sync/mappings');
   };
 
-  const renderSyncProgress = () => {
-    if (!syncStatus) return null;
-    
-    const progress = syncStatus.total_records 
-      ? Math.min(Math.round((syncStatus.records_processed / syncStatus.total_records) * 100), 100) 
-      : 0;
-    
-    return (
-      <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700 mt-2">
-        <div 
-          className="bg-blue-600 h-2 rounded-full" 
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    );
+  const handleEdit = () => {
+    navigate(`/sync/mappings/${id}/edit`);
   };
 
-  const renderColumnMappings = () => {
-    if (!mapping || !mapping.column_mappings) return null;
-    
-    return (
-      <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Glide Column
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Supabase Column
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Data Type
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {Object.entries(mapping.column_mappings).map(([glideColumnId, columnMapping]) => (
-              <tr key={glideColumnId}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {columnMapping.glide_column_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {columnMapping.supabase_column_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {columnMapping.data_type}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  const renderSyncDirection = (direction: string) => {
+  const getSyncDirectionLabel = (direction: string) => {
     switch (direction) {
       case 'to_supabase':
-        return <Badge>Glide → Supabase</Badge>;
+        return <Badge className="bg-blue-500">Glide → Supabase</Badge>;
       case 'to_glide':
-        return <Badge>Supabase → Glide</Badge>;
+        return <Badge className="bg-purple-500">Supabase → Glide</Badge>;
       case 'both':
-        return <Badge>Bidirectional</Badge>;
+        return <Badge className="bg-green-500">Bidirectional</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -315,36 +180,25 @@ const MappingDetails: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-32 mb-4" />
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" onClick={handleGoBack} className="mr-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-1/2 mb-2" />
+            <Skeleton className="h-6 w-1/3 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-4 w-3/4 mb-2" />
-            <Skeleton className="h-4 w-1/2 mb-2" />
-            <Skeleton className="h-4 w-2/3 mb-6" />
-            <div className="flex justify-end">
-              <Skeleton className="h-10 w-28 ml-2" />
-              <Skeleton className="h-10 w-28 ml-2" />
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
           </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!mapping) {
-    return (
-      <div>
-        <Button variant="ghost" onClick={() => navigate('/sync/mappings')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Mappings
-        </Button>
-        <Card className="mt-4 p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium">Mapping not found</h3>
-          <p className="text-muted-foreground mt-2">The mapping you're looking for does not exist or has been deleted.</p>
         </Card>
       </div>
     );
@@ -352,164 +206,187 @@ const MappingDetails: React.FC = () => {
 
   return (
     <div>
-      <Button variant="ghost" onClick={() => navigate('/sync/mappings')}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Mappings
-      </Button>
-      
-      <div className="mt-4">
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-              <div className="flex items-center gap-3">
-                <CardTitle>{mapping.glide_table_display_name}</CardTitle>
-                {renderSyncDirection(mapping.sync_direction)}
-                <SyncStatusBadge status={syncStatus?.current_status || null} />
-              </div>
-              <div className="flex items-center mt-2 md:mt-0">
-                <div className="flex items-center mr-4">
-                  <Switch
-                    checked={mapping.enabled}
-                    onCheckedChange={handleToggleEnabled}
-                    disabled={isUpdating}
-                    className="mr-2"
-                  />
-                  <span className="text-sm flex items-center">
-                    {mapping.enabled ? (
-                      <>
-                        <ToggleRight className="h-5 w-5 text-green-500 mr-1" />
-                        Enabled
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="h-5 w-5 text-gray-400 mr-1" />
-                        Disabled
-                      </>
-                    )}
-                  </span>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/sync/mappings/edit/${mapping.id}`)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-muted-foreground mb-1">
-              App: {mapping.app_name || 'Unnamed App'}
-            </div>
-            <div className="text-sm text-muted-foreground mb-1">
-              Supabase Table: {mapping.supabase_table}
-            </div>
-            <div className="text-sm text-muted-foreground mb-3">
-              Last Sync: {syncStatus?.last_sync_completed_at ? formatDateTime(syncStatus.last_sync_completed_at) : 'Never'}
-            </div>
-            
-            {renderSyncProgress()}
-            
-            <div className="flex justify-between items-center mt-4">
-              <div className="text-sm text-muted-foreground">
-                {syncStatus?.error_count ? (
-                  <span className="text-red-500 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {syncStatus.error_count} error{syncStatus.error_count !== 1 ? 's' : ''}
-                  </span>
-                ) : syncStatus?.records_processed ? (
-                  <span className="text-green-500 flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    {syncStatus.records_processed} record{syncStatus.records_processed !== 1 ? 's' : ''} processed
-                  </span>
-                ) : null}
-              </div>
-              <Button 
-                onClick={handleSync}
-                disabled={isSyncing || !mapping.enabled || syncStatus?.current_status === 'processing'}
-              >
-                {isSyncing ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Sync Now
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <Button variant="ghost" onClick={handleGoBack} className="mr-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <h2 className="text-2xl font-semibold">
+            {mapping.glide_table_display_name || mapping.glide_table} → {mapping.supabase_table}
+          </h2>
+        </div>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="columnMappings">Column Mappings</TabsTrigger>
-            <TabsTrigger value="syncLogs">Sync Logs</TabsTrigger>
-          </TabsList>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={fetchMapping}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
           
-          <TabsContent value="overview" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Button variant="outline" onClick={handleEdit}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          
+          <Button 
+            onClick={triggerSync} 
+            disabled={isSyncing || !mapping.enabled}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {isSyncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="mappings">Field Mappings</TabsTrigger>
+          <TabsTrigger value="logs">Sync Logs</TabsTrigger>
+          <TabsTrigger value="errors">Errors</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mapping Details</CardTitle>
+              <CardDescription>
+                Configuration and status information for this table mapping
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Sync Details</h3>
-                    <p><strong>Glide Table:</strong> {mapping.glide_table_display_name}</p>
-                    <p><strong>Supabase Table:</strong> {mapping.supabase_table}</p>
-                    <p><strong>Sync Direction:</strong> {mapping.sync_direction}</p>
-                    <p><strong>Status:</strong> {mapping.enabled ? 'Enabled' : 'Disabled'}</p>
+                    <h3 className="font-medium mb-1">Sync Configuration</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Direction:</div>
+                      <div>{getSyncDirectionLabel(mapping.sync_direction)}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Status:</div>
+                      <div>
+                        {mapping.enabled ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            Enabled
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                            Disabled
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground">Created:</div>
+                      <div className="text-sm">{formatDateTime(mapping.created_at)}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Last Updated:</div>
+                      <div className="text-sm">{formatDateTime(mapping.updated_at)}</div>
+                    </div>
                   </div>
+                  
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Sync Status</h3>
-                    <p><strong>Current Status:</strong> {syncStatus?.current_status || 'Unknown'}</p>
-                    <p><strong>Last Sync:</strong> {syncStatus?.last_sync_completed_at ? formatDateTime(syncStatus.last_sync_completed_at) : 'Never'}</p>
-                    <p><strong>Records Processed:</strong> {syncStatus?.records_processed || 0}</p>
-                    <p><strong>Errors:</strong> {syncStatus?.error_count || 0}</p>
+                    <h3 className="font-medium mb-1">Table Information</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Glide Table:</div>
+                      <div className="text-sm">{mapping.glide_table_display_name || mapping.glide_table}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Glide Table ID:</div>
+                      <div className="text-sm">{mapping.glide_table}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Supabase Table:</div>
+                      <div className="text-sm">{mapping.supabase_table}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Mapped Fields:</div>
+                      <div className="text-sm">{Object.keys(mapping.column_mappings).length}</div>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="columnMappings" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Column Mappings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderColumnMappings()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="syncLogs" className="mt-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Sync Logs</CardTitle>
-                <Button variant="outline" size="sm" onClick={fetchSyncLogs} disabled={isLoadingLogs}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {isLoadingLogs ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
+                
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium mb-1">Sync Status</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-sm text-muted-foreground">Current Status:</div>
+                      <div><SyncStatusBadge status={statusInfo.current_status} /></div>
+                      
+                      <div className="text-sm text-muted-foreground">Last Sync:</div>
+                      <div className="text-sm">{formatDateTime(statusInfo.last_sync_completed_at)}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Records Processed:</div>
+                      <div className="text-sm">{statusInfo.records_processed}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Total Records:</div>
+                      <div className="text-sm">{statusInfo.total_records}</div>
+                      
+                      <div className="text-sm text-muted-foreground">Errors:</div>
+                      <div className="text-sm">{statusInfo.error_count}</div>
+                    </div>
                   </div>
-                ) : (
-                  <SyncLogsTable logs={syncLogs} />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                  
+                  {!mapping.enabled && (
+                    <Card className="bg-amber-50 border border-amber-200">
+                      <CardContent className="p-4 flex items-start space-x-2">
+                        <HelpCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-900">Mapping Disabled</h4>
+                          <p className="text-sm text-amber-700">
+                            This mapping is currently disabled. Enable it to allow synchronization.
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="mappings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Field Mappings</CardTitle>
+              <CardDescription>
+                Configuration for how fields are mapped between Glide and Supabase
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Field mappings content will go here */}
+              <p className="text-muted-foreground">Field mapping details will be shown here</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="logs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sync Logs</CardTitle>
+              <CardDescription>
+                History of synchronization operations for this mapping
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Logs content will go here */}
+              <p className="text-muted-foreground">Sync logs will be shown here</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="errors">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sync Errors</CardTitle>
+              <CardDescription>
+                Error details and resolution options
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Errors content will go here */}
+              <p className="text-muted-foreground">Sync errors will be shown here</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

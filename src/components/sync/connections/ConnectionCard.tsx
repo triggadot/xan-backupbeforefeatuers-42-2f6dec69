@@ -60,7 +60,7 @@ const ConnectionCard = ({
             Edit
           </Button>
           
-          <Button variant="outline" size="sm" onClick={() => onDelete(connection)}>
+          <Button variant="outline" size="sm" onClick={() => onDelete(connection.id)}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>

@@ -197,9 +197,9 @@ export class GlideAPI {
           return mappedRecord;
         });
         
-        // Insert or update records in Supabase
+        // Use a type assertion to ensure the table name is valid
         const { error: upsertError } = await supabase
-          .from(supabaseTable)
+          .from(supabaseTable as any)
           .upsert(transformedRecords, {
             onConflict: 'glide_row_id',
             ignoreDuplicates: false

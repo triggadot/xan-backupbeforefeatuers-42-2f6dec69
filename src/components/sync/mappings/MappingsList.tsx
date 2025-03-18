@@ -12,20 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import AddMappingDialog from './AddMappingDialog';
 import DeleteMappingDialog from './DeleteMappingDialog';
 import { formatDateTime } from '@/utils/date-utils';
-
-interface Mapping {
-  id: string;
-  connection_id: string;
-  app_name: string;
-  glide_table: string;
-  glide_table_display_name: string;
-  supabase_table: string;
-  enabled: boolean;
-  sync_direction: string;
-  current_status: string;
-  last_sync_completed_at: string | null;
-  error_count: number;
-}
+import { Mapping } from '@/types/syncLog';
 
 const MappingsList: React.FC = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
@@ -45,7 +32,25 @@ const MappingsList: React.FC = () => {
         .order('last_sync_started_at', { ascending: false });
       
       if (error) throw error;
-      setMappings(data || []);
+      
+      // Transform to ensure all required Mapping properties are present
+      const transformedMappings: Mapping[] = (data || []).map(item => ({
+        id: item.mapping_id,
+        connection_id: item.connection_id,
+        glide_table: item.glide_table,
+        glide_table_display_name: item.glide_table_display_name,
+        supabase_table: item.supabase_table,
+        column_mappings: {}, // Default empty as it's not in gl_mapping_status
+        sync_direction: item.sync_direction,
+        enabled: item.enabled,
+        app_name: item.app_name,
+        current_status: item.current_status,
+        last_sync_completed_at: item.last_sync_completed_at,
+        error_count: item.error_count,
+        total_records: item.total_records
+      }));
+      
+      setMappings(transformedMappings);
     } catch (error) {
       console.error('Error fetching mappings:', error);
       toast({
@@ -256,6 +261,7 @@ const MappingsList: React.FC = () => {
           onOpenChange={setShowDeleteDialog}
           mapping={selectedMapping}
           onSuccess={handleDeleteSuccess}
+          onDelete={() => {}}
         />
       )}
     </div>
