@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import { corsHeaders } from '../shared/cors.ts'
-import { fetchGlideTableData, testGlideConnection } from '../shared/glide-api.ts'
+import { fetchGlideTableData, testGlideConnection, listGlideTables, getGlideTableColumns } from '../shared/glide-api.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, connectionId, mappingId } = await req.json()
+    const { action, connectionId, mappingId, tableId } = await req.json()
     
     // Initialize Supabase client with service role for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
@@ -31,9 +31,73 @@ serve(async (req) => {
         throw new Error(`Connection not found: ${connectionError.message}`)
       }
       
+      console.log(`Testing connection for app ID: ${connection.app_id}`)
       const result = await testGlideConnection(connection.api_key, connection.app_id)
       
+      // Update connection status based on test result
+      if (result.success) {
+        await supabase
+          .from('gl_connections')
+          .update({ status: 'active', last_tested: new Date().toISOString() })
+          .eq('id', connectionId)
+      } else {
+        await supabase
+          .from('gl_connections')
+          .update({ status: 'error', last_tested: new Date().toISOString() })
+          .eq('id', connectionId)
+      }
+      
       return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    if (action === 'listGlideTables') {
+      if (!connectionId) {
+        throw new Error('Connection ID is required')
+      }
+      
+      // Get connection details
+      const { data: connection, error: connectionError } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', connectionId)
+        .single()
+      
+      if (connectionError) {
+        throw new Error(`Connection not found: ${connectionError.message}`)
+      }
+      
+      // List Glide tables
+      console.log(`Listing tables for app ID: ${connection.app_id}`)
+      const tables = await listGlideTables(connection.api_key, connection.app_id)
+      
+      return new Response(JSON.stringify({ tables }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    if (action === 'getColumnMappings') {
+      if (!connectionId || !tableId) {
+        throw new Error('Connection ID and Table ID are required')
+      }
+      
+      // Get connection details
+      const { data: connection, error: connectionError } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', connectionId)
+        .single()
+      
+      if (connectionError) {
+        throw new Error(`Connection not found: ${connectionError.message}`)
+      }
+      
+      // Get table columns
+      console.log(`Getting columns for table: ${tableId}`)
+      const columns = await getGlideTableColumns(connection.api_key, connection.app_id, tableId)
+      
+      return new Response(JSON.stringify({ columns }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

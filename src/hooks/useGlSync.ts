@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSyncResult } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
+import { glSyncApi } from '@/services/glsync';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,26 +17,20 @@ export function useGlSync() {
     try {
       console.log(`Starting sync for mapping ${mappingId} with connection ${connectionId}`);
       
-      // Call the edge function directly with minimal parameters
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'syncData',
-          connectionId,
-          mappingId,
-        },
-      });
+      // Call the glSyncApi which uses the edge function
+      const result = await glSyncApi.syncData(connectionId, mappingId);
       
-      if (error) {
-        throw new Error(error.message);
+      if (!result.success) {
+        throw new Error(result.error || 'Sync failed');
       }
       
-      console.log('Sync result:', data);
+      console.log('Sync result:', result);
       
-      const syncResult = {
-        success: data.success ?? false,
-        recordsProcessed: data.recordsProcessed || 0,
-        failedRecords: data.failedRecords || 0,
-        errors: data.errors || [],
+      const syncResult: ProductSyncResult = {
+        success: result.success ?? false,
+        recordsProcessed: result.recordsProcessed || 0,
+        failedRecords: result.failedRecords || 0,
+        errors: result.errors || [],
       };
       
       setLastResult(syncResult);
@@ -48,7 +43,7 @@ export function useGlSync() {
       } else {
         toast({
           title: 'Sync completed with issues',
-          description: data.error || `Processed ${syncResult.recordsProcessed} records with ${syncResult.failedRecords} failures.`,
+          description: result.error || `Processed ${syncResult.recordsProcessed} records with ${syncResult.failedRecords} failures.`,
           variant: 'destructive',
         });
       }
@@ -57,7 +52,7 @@ export function useGlSync() {
     } catch (error) {
       console.error('Error during sync:', error);
       
-      const failedResult = {
+      const failedResult: ProductSyncResult = {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         recordsProcessed: 0,
@@ -119,14 +114,10 @@ export function useGlSync() {
     setIsLoading(true);
     
     try {
-      const result = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'testConnection',
-          connectionId: connectionId,
-        },
-      });
+      console.log(`Validating connection ${connectionId}`);
+      const result = await glSyncApi.testConnection(connectionId);
       
-      const success = !result.error && result.data && result.data.success;
+      const success = result.success;
       
       if (success) {
         // Update connection status to active

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -16,7 +17,8 @@ export const glSyncApi = {
   async getConnections(): Promise<GlConnection[]> {
     const { data, error } = await supabase
       .from('gl_connections')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
     
     if (error) throw new Error(error.message);
     return data as GlConnection[];
@@ -36,7 +38,12 @@ export const glSyncApi = {
   async addConnection(connection: Omit<GlConnection, 'id' | 'created_at'>): Promise<GlConnection> {
     const { data, error } = await supabase
       .from('gl_connections')
-      .insert(connection)
+      .insert({
+        app_name: connection.app_name || 'Unnamed Glide App',
+        app_id: connection.app_id,
+        api_key: connection.api_key,
+        status: 'pending'
+      })
       .select()
       .single();
     
@@ -67,7 +74,7 @@ export const glSyncApi = {
 
   // Mapping management
   async getMappings(connectionId?: string): Promise<GlMapping[]> {
-    let query = supabase.from('gl_mappings').select('*');
+    let query = supabase.from('gl_mappings').select('*').order('created_at', { ascending: false });
     
     if (connectionId) {
       query = query.eq('connection_id', connectionId);
@@ -112,6 +119,15 @@ export const glSyncApi = {
   },
 
   async addMapping(mapping: Omit<GlMapping, 'id' | 'created_at'>): Promise<GlMapping> {
+    // Ensure we have a default $rowID mapping if not provided
+    if (!mapping.column_mappings['$rowID']) {
+      mapping.column_mappings['$rowID'] = {
+        glide_column_name: '$rowID',
+        supabase_column_name: 'glide_row_id',
+        data_type: 'string'
+      };
+    }
+    
     const { data, error } = await supabase
       .from('gl_mappings')
       .insert({
@@ -253,36 +269,60 @@ export const glSyncApi = {
 
   async testConnection(connectionId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      console.log(`Testing connection ${connectionId}`);
       const result = await this.callSyncFunction({
         action: 'testConnection',
         connectionId,
       });
       
-      return { success: true };
+      return { 
+        success: result.success === true,
+        error: result.error
+      };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error('Connection test failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   },
 
   async listGlideTables(connectionId: string): Promise<{ tables: GlideTable[] } | { error: string }> {
     try {
-      return await this.callSyncFunction({
+      console.log(`Listing tables for connection ${connectionId}`);
+      const result = await this.callSyncFunction({
         action: 'listGlideTables',
         connectionId,
       });
+      
+      if (result.tables) {
+        return { tables: result.tables };
+      }
+      
+      return { error: result.error || 'Failed to list tables' };
     } catch (error) {
+      console.error('Error listing tables:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
   
   async getGlideTableColumns(connectionId: string, tableId: string): Promise<{ columns: any[] } | { error: string }> {
     try {
-      return await this.callSyncFunction({
+      console.log(`Getting columns for table ${tableId}`);
+      const result = await this.callSyncFunction({
         action: 'getColumnMappings',
         connectionId,
         tableId,
       });
+      
+      if (result.columns) {
+        return { columns: result.columns };
+      }
+      
+      return { error: result.error || 'Failed to get columns' };
     } catch (error) {
+      console.error('Error getting columns:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
