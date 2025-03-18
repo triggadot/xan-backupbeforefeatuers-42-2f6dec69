@@ -90,6 +90,22 @@ export function validateGlideValue(value: any, dataType: string): boolean {
 }
 
 /**
+ * Extracts the Glide row ID from a record
+ * Glide uses $rowID as the primary identifier
+ */
+export function extractGlideRowId(glideRecord: Record<string, any>): string | null {
+  // Check for all possible Glide row ID field names
+  const rowId = glideRecord.$rowID || glideRecord.id || glideRecord.rowId;
+  
+  if (!rowId) {
+    console.error('Missing required Glide row ID in record:', glideRecord);
+    return null;
+  }
+  
+  return String(rowId);
+}
+
+/**
  * Transforms a Glide record to a Supabase product
  */
 export function transformGlideToProduct(
@@ -111,13 +127,13 @@ export function transformGlideToProduct(
 
   const errors: GlSyncRecord[] = [...existingErrors];
   
-  // Extract the Glide row ID - check different possible fields
-  const glideRowId = glideRecord.$rowID || glideRecord.id || glideRecord.rowId || '';
+  // Extract the Glide row ID using the new helper function
+  const glideRowId = extractGlideRowId(glideRecord);
   
   if (!glideRowId) {
     errors.push({
       type: 'VALIDATION_ERROR',
-      message: 'Missing required glide_row_id field ($rowID, id, or rowId)',
+      message: 'Missing required Glide row ID ($rowID, id, or rowId)',
       record: { recordData: glideRecord },
       timestamp: new Date().toISOString(),
       retryable: false
@@ -132,7 +148,7 @@ export function transformGlideToProduct(
   // Apply column mappings
   Object.entries(mapping.column_mappings).forEach(([glideColumnId, mappingObj]) => {
     try {
-      // Skip special Glide system fields
+      // Skip special Glide system fields that are handled separately
       if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
         return;
       }

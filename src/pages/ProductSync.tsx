@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, Info } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { glSyncApi } from '@/services/glsync';
@@ -12,6 +12,7 @@ import { GlMapping, GlSyncRecord } from '@/types/glsync';
 import MappingDetailsCard from '@/components/sync/MappingDetailsCard';
 import SyncErrorDisplay from '@/components/sync/SyncErrorDisplay';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ProductSyncProps {}
 
@@ -21,6 +22,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   const { toast } = useToast();
 
   const [syncErrors, setSyncErrors] = useState<GlSyncRecord[]>([]);
+  const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
 
   const { 
     data: mapping, 
@@ -64,6 +66,18 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
       refetch();
     }
   }, [mappingId, refetch]);
+
+  // Check if the mapping has $rowID explicitly mapped
+  useEffect(() => {
+    if (mapping) {
+      // Check if there's a direct mapping from $rowID to glide_row_id
+      const hasExplicitRowIdMapping = Object.entries(mapping.column_mappings).some(
+        ([glideColumnId, mapping]) => glideColumnId === '$rowID' && mapping.supabase_column_name === 'glide_row_id'
+      );
+      
+      setHasRowIdMapping(hasExplicitRowIdMapping);
+    }
+  }, [mapping]);
 
   const handleBackClick = () => {
     navigate('/sync');
@@ -160,6 +174,17 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
         </Button>
       </div>
 
+      {!hasRowIdMapping && (
+        <Alert variant="warning" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Row ID Mapping Missing</AlertTitle>
+          <AlertDescription>
+            No explicit mapping from Glide's <code>$rowID</code> to <code>glide_row_id</code> is defined. 
+            The system will automatically use <code>$rowID</code>, but for clarity, consider adding this mapping.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <MappingDetailsCard 
         mapping={mapping} 
         connectionName={connection.app_name}
@@ -188,6 +213,9 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>Column Mapping Details</CardTitle>
+              <CardDescription>
+                The mapping between Glide columns and Supabase fields.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -195,7 +223,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
                   <p className="text-sm font-medium mb-2">Glide Row ID Mapping</p>
                   <p className="text-sm text-muted-foreground">
                     Records from Glide are identified by their <code>$rowID</code> field, 
-                    which is mapped to <code>glide_row_id</code> in Supabase.
+                    which is mapped to <code>glide_row_id</code> in Supabase. 
+                    {!hasRowIdMapping && " This mapping is handled automatically."}
                   </p>
                 </div>
                 
@@ -209,9 +238,16 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
+                      {!hasRowIdMapping && (
+                        <tr className="bg-amber-50">
+                          <td className="p-2 font-medium">$rowID (automatic)</td>
+                          <td className="p-2">glide_row_id</td>
+                          <td className="p-2">string</td>
+                        </tr>
+                      )}
                       {Object.entries(mapping.column_mappings).map(([glideCol, mappingObj]) => (
                         <tr key={glideCol} className="hover:bg-muted/50">
-                          <td className="p-2">{mappingObj.glide_column_name}</td>
+                          <td className="p-2">{mappingObj.glide_column_name} {glideCol === '$rowID' && '(ID)'}</td>
                           <td className="p-2">{mappingObj.supabase_column_name}</td>
                           <td className="p-2">{mappingObj.data_type}</td>
                         </tr>

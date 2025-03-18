@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { glSyncApi } from '@/services/glsync';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Create a more specific interface for column mapping only
 interface ColumnMappingOnly {
@@ -43,6 +44,7 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
   const [newDataType, setNewDataType] = useState<string>('string');
   const [supabaseColumns, setSupabaseColumns] = useState<SupabaseColumn[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
   const { toast } = useToast();
   
   // Get the column mappings as an array for easier rendering
@@ -52,6 +54,14 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
       ...columnMapping,
     })
   );
+
+  // Check if there's a $rowID mapping
+  useEffect(() => {
+    const rowIdMapping = Object.entries(mapping.column_mappings || {}).find(
+      ([glideColumnId]) => glideColumnId === '$rowID'
+    );
+    setHasRowIdMapping(!!rowIdMapping);
+  }, [mapping.column_mappings]);
 
   useEffect(() => {
     async function fetchSupabaseColumns() {
@@ -105,6 +115,26 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
     setNewDataType('string');
   };
 
+  const handleAddRowIdMapping = () => {
+    const updatedMapping = { ...mapping };
+    updatedMapping.column_mappings = {
+      ...updatedMapping.column_mappings,
+      ['$rowID']: {
+        glide_column_name: 'Row ID',
+        supabase_column_name: 'glide_row_id',
+        data_type: 'string',
+      },
+    };
+
+    onUpdate(updatedMapping);
+    setHasRowIdMapping(true);
+    
+    toast({
+      title: 'Success',
+      description: 'Row ID mapping has been added',
+    });
+  };
+
   const handleRemoveColumnMapping = (glideColumnId: string) => {
     const updatedMapping = { ...mapping };
     const updatedColumnMappings = { ...updatedMapping.column_mappings };
@@ -113,10 +143,29 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
     updatedMapping.column_mappings = updatedColumnMappings;
     
     onUpdate(updatedMapping);
+    
+    if (glideColumnId === '$rowID') {
+      setHasRowIdMapping(false);
+    }
   };
 
   return (
     <div className="space-y-4">
+      {!hasRowIdMapping && mapping.supabase_table === 'gl_products' && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Row ID Mapping Recommended</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">
+              For Glide synchronization, it's recommended to explicitly map Glide's <code>$rowID</code> to <code>glide_row_id</code> in Supabase.
+            </p>
+            <Button variant="outline" size="sm" onClick={handleAddRowIdMapping}>
+              Add Row ID Mapping
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -199,8 +248,16 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
               </TableRow>
             ) : (
               columnMappings.map((columnMapping) => (
-                <TableRow key={columnMapping.glideColumnId}>
-                  <TableCell>{columnMapping.glideColumnId}</TableCell>
+                <TableRow 
+                  key={columnMapping.glideColumnId} 
+                  className={columnMapping.glideColumnId === '$rowID' ? 'bg-amber-50' : ''}
+                >
+                  <TableCell>
+                    {columnMapping.glideColumnId}
+                    {columnMapping.glideColumnId === '$rowID' && (
+                      <span className="ml-2 text-xs px-2 py-0.5 bg-amber-200 rounded-full">Glide ID</span>
+                    )}
+                  </TableCell>
                   <TableCell>{columnMapping.glide_column_name}</TableCell>
                   <TableCell>{columnMapping.supabase_column_name}</TableCell>
                   <TableCell>

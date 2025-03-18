@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -348,18 +347,18 @@ async function syncProductsFromGlide(
   mappingId: string,
   logId: string
 ) {
-  let continuationToken = null
-  let totalRecordsProcessed = 0
-  let totalFailedRecords = 0
-  let hasMore = true
-  let errorRecords: any[] = []
+  let continuationToken = null;
+  let totalRecordsProcessed = 0;
+  let totalFailedRecords = 0;
+  let hasMore = true;
+  let errorRecords: any[] = [];
   
   // Clear existing errors for this sync run
   await supabase
     .from('gl_sync_errors')
     .delete()
     .eq('mapping_id', mappingId)
-    .is('resolved_at', null)
+    .is('resolved_at', null);
   
   // Loop until we have processed all data
   while (hasMore) {
@@ -370,10 +369,10 @@ async function syncProductsFromGlide(
       'processing',
       `Processing batch from Glide. Total records so far: ${totalRecordsProcessed}`,
       totalRecordsProcessed
-    )
+    );
     
     // Fetch a batch of data from Glide
-    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken)
+    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken);
     
     if (glideData.error) {
       // Record the API error
@@ -382,190 +381,190 @@ async function syncProductsFromGlide(
         p_error_type: 'API_ERROR',
         p_error_message: glideData.error,
         p_retryable: true
-      })
+      });
       
       return { 
         error: glideData.error,
         recordsProcessed: totalRecordsProcessed,
         failedRecords: totalFailedRecords + 1
-      }
+      };
     }
     
-    const { rows, next } = glideData
+    const { rows, next } = glideData;
     
     if (!rows || rows.length === 0) {
-      break
+      break;
     }
     
-    console.log(`Processing ${rows.length} records from Glide`)
+    console.log(`Processing ${rows.length} records from Glide`);
     
     // Transform the data using the column mappings and perform validation
-    const transformedRecords = []
+    const transformedRecords = [];
     
     for (const row of rows) {
       try {
-        // Check for Glide's row identifier which could be $rowID, id, or rowId
-        const glideRowId = row.$rowID || row.id || row.rowId
+        // Extract the Glide row ID - explicitly check for $rowID first
+        const glideRowId = row.$rowID || row.id || row.rowId;
         
         if (!glideRowId) {
-          console.error('Missing glide_row_id in record:', row)
-          recordValidationError(supabase, mappingId, 'Missing required glide_row_id', {
+          console.error('Missing glide_row_id in record:', row);
+          recordValidationError(supabase, mappingId, 'Missing required glide_row_id ($rowID)', {
             rowData: row
-          })
-          totalFailedRecords++
-          continue
+          });
+          totalFailedRecords++;
+          continue;
         }
         
         const product = {
           glide_row_id: glideRowId,
-        }
+        };
         
         // Flag to track if we encountered any errors for this record
-        let hasErrors = false
+        let hasErrors = false;
         
         // Apply column mappings
         Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
           try {
             // Skip special Glide system columns
             if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
-              return
+              return;
             }
             
-            const glideColumnName = mapping.glide_column_name
-            const supabaseColumnName = mapping.supabase_column_name
-            const dataType = mapping.data_type
-            let value = row[glideColumnId]
+            const glideColumnName = mapping.glide_column_name;
+            const supabaseColumnName = mapping.supabase_column_name;
+            const dataType = mapping.data_type;
+            let value = row[glideColumnId];
             
             // Skip undefined values
             if (value === undefined) {
-              return
+              return;
             }
             
             // Transform value based on data type
             switch (dataType) {
               case 'number':
                 if (typeof value === 'string') {
-                  const num = parseFloat(value)
+                  const num = parseFloat(value);
                   if (isNaN(num)) {
-                    hasErrors = true
+                    hasErrors = true;
                     recordValidationError(supabase, mappingId, 'Invalid number format', {
                       glideColumnId,
                       glideColumnName,
                       supabaseColumnName,
                       value,
                       rowId: product.glide_row_id
-                    })
-                    totalFailedRecords++
-                    return
+                    });
+                    totalFailedRecords++;
+                    return;
                   }
-                  value = num
+                  value = num;
                 } else if (typeof value !== 'number') {
-                  hasErrors = true
+                  hasErrors = true;
                   recordValidationError(supabase, mappingId, 'Expected number value', {
                     glideColumnId,
                     glideColumnName,
                     supabaseColumnName,
                     value,
                     rowId: product.glide_row_id
-                  })
-                  totalFailedRecords++
-                  return
+                  });
+                  totalFailedRecords++;
+                  return;
                 }
-                break
+                break;
                 
               case 'boolean':
                 if (typeof value === 'string') {
-                  const lowered = value.toLowerCase()
+                  const lowered = value.toLowerCase();
                   if (lowered === 'true' || lowered === 'yes' || lowered === '1') {
-                    value = true
+                    value = true;
                   } else if (lowered === 'false' || lowered === 'no' || lowered === '0') {
-                    value = false
+                    value = false;
                   } else {
-                    hasErrors = true
+                    hasErrors = true;
                     recordValidationError(supabase, mappingId, 'Invalid boolean value', {
                       glideColumnId,
                       glideColumnName,
                       supabaseColumnName,
                       value,
                       rowId: product.glide_row_id
-                    })
-                    totalFailedRecords++
-                    return
+                    });
+                    totalFailedRecords++;
+                    return;
                   }
                 } else if (typeof value !== 'boolean') {
-                  hasErrors = true
+                  hasErrors = true;
                   recordValidationError(supabase, mappingId, 'Expected boolean value', {
                     glideColumnId,
                     glideColumnName,
                     supabaseColumnName,
                     value,
                     rowId: product.glide_row_id
-                  })
-                  totalFailedRecords++
-                  return
+                  });
+                  totalFailedRecords++;
+                  return;
                 }
-                break
+                break;
                 
               case 'date-time':
                 if (value instanceof Date) {
-                  value = value.toISOString()
+                  value = value.toISOString();
                 } else if (typeof value === 'string') {
-                  const date = new Date(value)
+                  const date = new Date(value);
                   if (isNaN(date.getTime())) {
-                    hasErrors = true
+                    hasErrors = true;
                     recordValidationError(supabase, mappingId, 'Invalid date format', {
                       glideColumnId,
                       glideColumnName,
                       supabaseColumnName,
                       value,
                       rowId: product.glide_row_id
-                    })
-                    totalFailedRecords++
-                    return
+                    });
+                    totalFailedRecords++;
+                    return;
                   }
-                  value = date.toISOString()
+                  value = date.toISOString();
                 } else {
-                  hasErrors = true
+                  hasErrors = true;
                   recordValidationError(supabase, mappingId, 'Expected date value', {
                     glideColumnId,
                     glideColumnName,
                     supabaseColumnName,
                     value,
                     rowId: product.glide_row_id
-                  })
-                  totalFailedRecords++
-                  return
+                  });
+                  totalFailedRecords++;
+                  return;
                 }
-                break
+                break;
               
               // For strings and other types, basic validation
               case 'string':
               case 'image-uri':
               case 'email-address':
-                value = value === null ? null : String(value)
+                value = value === null ? null : String(value);
                 
                 // Additional validation for specific types
                 if (dataType === 'image-uri' && value && 
                     !(value.startsWith('http://') || value.startsWith('https://'))) {
                   // Just log a warning, don't fail the record
-                  console.warn(`Warning: Invalid image URI format for ${glideColumnName}: ${value}`)
+                  console.warn(`Warning: Invalid image URI format for ${glideColumnName}: ${value}`);
                 }
                 
                 if (dataType === 'email-address' && value && 
                     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
                   // Just log a warning, don't fail the record
-                  console.warn(`Warning: Invalid email format for ${glideColumnName}: ${value}`)
+                  console.warn(`Warning: Invalid email format for ${glideColumnName}: ${value}`);
                 }
-                break
+                break;
             }
             
             // Set the value in the product object if no errors
             if (!hasErrors) {
-              product[supabaseColumnName] = value
+              product[supabaseColumnName] = value;
             }
             
           } catch (error) {
-            hasErrors = true
+            hasErrors = true;
             recordTransformError(supabase, mappingId, 
               `Error transforming column ${glideColumnId}: ${error.message}`, {
               glideColumnId,
@@ -573,44 +572,44 @@ async function syncProductsFromGlide(
               supabaseColumnName: mapping.supabase_column_name,
               value: row[glideColumnId],
               rowId: product.glide_row_id
-            })
-            totalFailedRecords++
+            });
+            totalFailedRecords++;
           }
-        })
+        });
         
         // If no errors and we have a valid product, add it to the batch
         if (!hasErrors && product.glide_row_id) {
-          transformedRecords.push(product)
+          transformedRecords.push(product);
         } else if (!product.glide_row_id) {
           recordValidationError(supabase, mappingId, 'Missing required glide_row_id', {
             rowData: row
-          })
-          totalFailedRecords++
+          });
+          totalFailedRecords++;
         }
         
       } catch (error) {
         recordTransformError(supabase, mappingId, 
           `Unexpected error processing record: ${error.message}`, {
           rowData: row
-        })
-        totalFailedRecords++
+        });
+        totalFailedRecords++;
       }
     }
     
     // Insert or update the data in Supabase
     for (let i = 0; i < transformedRecords.length; i += MAX_BATCH_SIZE) {
-      const batch = transformedRecords.slice(i, i + MAX_BATCH_SIZE)
+      const batch = transformedRecords.slice(i, i + MAX_BATCH_SIZE);
       
-      if (batch.length === 0) continue
+      if (batch.length === 0) continue;
       
       try {
         // Upsert data to Supabase
         const { error } = await supabase
           .from('gl_products')
-          .upsert(batch, { onConflict: 'glide_row_id' })
+          .upsert(batch, { onConflict: 'glide_row_id' });
         
         if (error) {
-          console.error('Error upserting batch to Supabase:', error)
+          console.error('Error upserting batch to Supabase:', error);
           
           // Record the error
           await supabase.rpc('gl_record_sync_error', {
@@ -619,14 +618,14 @@ async function syncProductsFromGlide(
             p_error_message: `Error upserting data to Supabase: ${error.message}`,
             p_record_data: { batchSize: batch.length },
             p_retryable: true
-          })
+          });
           
-          totalFailedRecords += batch.length
+          totalFailedRecords += batch.length;
         } else {
-          totalRecordsProcessed += batch.length
+          totalRecordsProcessed += batch.length;
         }
       } catch (error) {
-        console.error('Unexpected error during upsert:', error)
+        console.error('Unexpected error during upsert:', error);
         
         // Record the error
         await supabase.rpc('gl_record_sync_error', {
@@ -635,19 +634,19 @@ async function syncProductsFromGlide(
           p_error_message: `Unexpected error during upsert: ${error.message}`,
           p_record_data: { batchSize: batch.length },
           p_retryable: true
-        })
+        });
         
-        totalFailedRecords += batch.length
+        totalFailedRecords += batch.length;
       }
     }
     
     // Check if there's more data to fetch
-    continuationToken = next
-    hasMore = !!continuationToken
+    continuationToken = next;
+    hasMore = !!continuationToken;
     
     // Add a small delay to avoid hitting rate limits
     if (hasMore) {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   
@@ -655,7 +654,7 @@ async function syncProductsFromGlide(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', connection.id)
+    .eq('id', connection.id);
   
   // Get the errors for this sync
   const { data: errors } = await supabase
@@ -664,7 +663,7 @@ async function syncProductsFromGlide(
     .eq('mapping_id', mappingId)
     .is('resolved_at', null)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(20);
   
   // Convert to the expected format for frontend
   const formattedErrors = (errors || []).map(error => ({
@@ -673,7 +672,7 @@ async function syncProductsFromGlide(
     record: error.record_data,
     timestamp: error.created_at,
     retryable: error.retryable
-  }))
+  }));
   
   // Store sync results
   const syncResult = {
@@ -681,9 +680,9 @@ async function syncProductsFromGlide(
     recordsProcessed: totalRecordsProcessed,
     failedRecords: totalFailedRecords,
     errors: formattedErrors
-  }
+  };
   
-  return syncResult
+  return syncResult;
 }
 
 // Helper function to record validation errors
@@ -738,9 +737,9 @@ async function pullFromGlideToSupabase(
   columnMappings: Record<string, any>,
   logId: string
 ) {
-  let continuationToken = null
-  let totalRecordsProcessed = 0
-  let hasMore = true
+  let continuationToken = null;
+  let totalRecordsProcessed = 0;
+  let hasMore = true;
   
   // Loop until we have processed all data
   while (hasMore) {
@@ -751,75 +750,75 @@ async function pullFromGlideToSupabase(
       'processing',
       `Processing batch from Glide. Total records so far: ${totalRecordsProcessed}`,
       totalRecordsProcessed
-    )
+    );
     
     // Fetch a batch of data from Glide
-    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken)
+    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken);
     
     if (glideData.error) {
-      return { error: glideData.error }
+      return { error: glideData.error };
     }
     
-    const { rows, next } = glideData
+    const { rows, next } = glideData;
     
     if (!rows || rows.length === 0) {
-      break
+      break;
     }
     
     // Transform the data using the column mappings
     const transformedRows = rows.map(row => {
       // Check for Glide's row identifier which could be $rowID, id, or rowId
-      const glideRowId = row.$rowID || row.id || row.rowId
+      const glideRowId = row.$rowID || row.id || row.rowId;
       
       if (!glideRowId) {
-        console.error('Missing glide_row_id in record:', row)
-        return null
+        console.error('Missing glide_row_id in record:', row);
+        return null;
       }
       
       const transformedRow: Record<string, any> = {
         glide_row_id: glideRowId,
-      }
+      };
       
       // Apply column mappings with the new structure
       Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
         // Skip special Glide system columns
         if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
-          return
+          return;
         }
         
         if (row[glideColumnId] !== undefined) {
-          transformedRow[mapping.supabase_column_name] = row[glideColumnId]
+          transformedRow[mapping.supabase_column_name] = row[glideColumnId];
         }
-      })
+      });
       
-      return transformedRow
-    }).filter(row => row !== null)
+      return transformedRow;
+    }).filter(row => row !== null);
     
     // Insert or update the data in Supabase
     for (let i = 0; i < transformedRows.length; i += MAX_BATCH_SIZE) {
-      const batch = transformedRows.slice(i, i + MAX_BATCH_SIZE)
+      const batch = transformedRows.slice(i, i + MAX_BATCH_SIZE);
       
-      if (batch.length === 0) continue
+      if (batch.length === 0) continue;
       
       // Upsert data to Supabase
       const { error } = await supabase
         .from(supabaseTable)
-        .upsert(batch, { onConflict: 'glide_row_id' })
+        .upsert(batch, { onConflict: 'glide_row_id' });
       
       if (error) {
-        return { error: `Error upserting data to Supabase: ${error.message}` }
+        return { error: `Error upserting data to Supabase: ${error.message}` };
       }
       
-      totalRecordsProcessed += batch.length
+      totalRecordsProcessed += batch.length;
     }
     
     // Check if there's more data to fetch
-    continuationToken = next
-    hasMore = !!continuationToken
+    continuationToken = next;
+    hasMore = !!continuationToken;
     
     // Add a small delay to avoid hitting rate limits
     if (hasMore) {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   
@@ -827,9 +826,9 @@ async function pullFromGlideToSupabase(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', connection.id)
+    .eq('id', connection.id);
   
-  return { success: true, recordsProcessed: totalRecordsProcessed }
+  return { success: true, recordsProcessed: totalRecordsProcessed };
 }
 
 // Function to fetch data from a Glide table with pagination
@@ -839,21 +838,21 @@ async function fetchGlideTableData(
   tableName: string,
   continuationToken: string | null
 ) {
-  let retries = 0
-  let success = false
-  let lastError = null
-  let result = null
+  let retries = 0;
+  let success = false;
+  let lastError = null;
+  let result = null;
   
   // Implement retry logic with exponential backoff
   while (!success && retries < MAX_RETRIES) {
     try {
-      const query: any = { tableName }
+      const query: any = { tableName };
       
       if (continuationToken) {
-        query.startAt = continuationToken
+        query.startAt = continuationToken;
       }
       
-      console.log(`Fetching Glide data for table: ${tableName}, continuation: ${continuationToken ? 'yes' : 'no'}`)
+      console.log(`Fetching Glide data for table: ${tableName}, continuation: ${continuationToken ? 'yes' : 'no'}`);
       
       const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
         method: 'POST',
@@ -865,73 +864,107 @@ async function fetchGlideTableData(
           appID: appId,
           queries: [query]
         })
-      })
+      });
       
       if (response.status === 429) {
         // Rate limited, wait and retry
         const retryAfter = response.headers.get('retry-after') || 
-                          (RETRY_DELAY_MS * Math.pow(2, retries)) / 1000
+                          (RETRY_DELAY_MS * Math.pow(2, retries)) / 1000;
         
         await new Promise(resolve => 
-          setTimeout(resolve, parseInt(retryAfter) * 1000 || RETRY_DELAY_MS * Math.pow(2, retries))
-        )
-        retries++
-        continue
+          setTimeout(resolve, parseInt(retryAfter as string) * 1000 || RETRY_DELAY_MS * Math.pow(2, retries))
+        );
+        retries++;
+        continue;
       }
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(`Glide API error: ${response.status} ${response.statusText}`)
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Glide API error: ${response.status} ${response.statusText}`);
       }
       
-      const data = await response.json()
+      const data = await response.json();
       
-      // Handle the Glide response format - extract the first query result 
-      // and properly format the rows and pagination token
+      // Log the entire response for debugging
+      console.log(`Glide response structure: ${JSON.stringify(Object.keys(data))}`);
+      
+      // Handle different formats of Glide API responses
       if (data && Array.isArray(data) && data.length > 0) {
-        const tableData = data[0]
+        const tableData = data[0];
         
-        // Log the structure of the response for debugging
-        console.log(`Glide response structure: ${JSON.stringify(Object.keys(tableData))}`)
-        
-        // Handle the standard Glide response format
-        if (tableData.rows) {
+        // Check if rows array exists directly
+        if (tableData.rows && Array.isArray(tableData.rows)) {
           result = { 
             rows: tableData.rows,
             next: tableData.next || null
-          }
+          };
         }
-        // Fallback for alternative response formats
-        else {
-          // Some Glide responses might have a different structure
-          const rowsData = Object.values(tableData)[0] || []
+        // Sometimes Glide returns a direct array without the rows property
+        else if (Array.isArray(tableData)) {
           result = {
-            rows: Array.isArray(rowsData) ? rowsData : [],
+            rows: tableData,
+            next: data.next || null
+          };
+        }
+        // Handle case where data is returned in a property matching the table name
+        else if (tableData[tableName] && Array.isArray(tableData[tableName])) {
+          result = {
+            rows: tableData[tableName],
             next: tableData.next || null
+          };
+        }
+        // Fallback for other response formats
+        else {
+          // Look for the first array in the response
+          for (const key of Object.keys(tableData)) {
+            if (Array.isArray(tableData[key]) && key !== 'next') {
+              result = {
+                rows: tableData[key],
+                next: tableData.next || null
+              };
+              break;
+            }
+          }
+          
+          // If still no array found, try to extract from the data
+          if (!result) {
+            result = {
+              rows: Array.isArray(Object.values(tableData)[0]) ? Object.values(tableData)[0] : [],
+              next: tableData.next || null
+            };
           }
         }
       } else {
         // If no data returned, return empty result
-        result = { rows: [], next: null }
+        result = { rows: [], next: null };
       }
       
-      success = true
+      // Log the extracted rows
+      console.log(`Extracted ${result.rows.length} rows, next token: ${result.next ? 'exists' : 'none'}`);
+      
+      // Do a final check to ensure rows is always an array
+      if (!Array.isArray(result.rows)) {
+        console.warn('Expected rows to be an array, got:', typeof result.rows);
+        result.rows = [];
+      }
+      
+      success = true;
     } catch (error) {
-      console.error(`Error fetching Glide data (attempt ${retries + 1}):`, error)
-      lastError = error
-      retries++
+      console.error(`Error fetching Glide data (attempt ${retries + 1}):`, error);
+      lastError = error;
+      retries++;
       
       if (retries < MAX_RETRIES) {
         await new Promise(resolve => 
           setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, retries))
-        )
+        );
       }
     }
   }
   
   if (!success) {
-    return { error: `Failed to fetch data after ${MAX_RETRIES} retries: ${lastError?.message}` }
+    return { error: `Failed to fetch data after ${MAX_RETRIES} retries: ${lastError?.message}` };
   }
   
-  return result
+  return result;
 }
