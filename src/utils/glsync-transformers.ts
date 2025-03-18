@@ -145,8 +145,8 @@ export function transformGlideToProduct(
         return;
       }
       
-      // Set the value in the product object
-      product[mappingObj.supabase_column_name as keyof GlProduct] = transformedValue;
+      // Use type assertion to ensure TypeScript accepts the dynamic property assignment
+      (product as any)[mappingObj.supabase_column_name] = transformedValue;
       
     } catch (error) {
       errors.push({

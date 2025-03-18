@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { GlColumnMapping, GlMapping } from '@/types/glsync';
+import { GlColumnMapping } from '@/types/glsync';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,9 +11,15 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 
+// Create a more specific interface for column mapping only
+interface ColumnMappingOnly {
+  supabase_table: string;
+  column_mappings: Record<string, GlColumnMapping>;
+}
+
 interface ColumnMappingEditorProps {
-  mapping: GlMapping;
-  onUpdate: (updatedMapping: GlMapping) => void;
+  mapping: ColumnMappingOnly;
+  onUpdate: (updatedMapping: ColumnMappingOnly) => void;
 }
 
 interface SupabaseColumn {
