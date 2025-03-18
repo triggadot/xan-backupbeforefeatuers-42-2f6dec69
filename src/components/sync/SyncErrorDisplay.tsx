@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GlSyncRecord } from '@/types/glsync';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,10 +10,11 @@ import { cn } from '@/lib/utils';
 export interface SyncErrorDisplayProps {
   syncErrors: GlSyncRecord[];
   onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
+  onRefresh?: (includeResolved?: boolean) => Promise<void>;
   className?: string;
 }
 
-export function SyncErrorDisplay({ syncErrors, onResolve, className }: SyncErrorDisplayProps) {
+export function SyncErrorDisplay({ syncErrors, onResolve, onRefresh, className }: SyncErrorDisplayProps) {
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
   const [resolving, setResolving] = useState<Record<string, boolean>>({});
 
@@ -27,7 +27,6 @@ export function SyncErrorDisplay({ syncErrors, onResolve, className }: SyncError
       const success = await onResolve(errorId, resolutionNotes[errorId]);
       
       if (success) {
-        // Clear the resolution notes for this error
         setResolutionNotes(prev => {
           const newNotes = { ...prev };
           delete newNotes[errorId];
@@ -155,12 +154,12 @@ export function SyncErrorDisplay({ syncErrors, onResolve, className }: SyncError
         <p className="text-xs text-muted-foreground">
           Displaying {syncErrors.length} error record{syncErrors.length !== 1 ? 's' : ''}
         </p>
-        {onResolve && (
+        {onRefresh && (
           <Button 
             variant="outline" 
             size="sm" 
             className="w-full sm:w-auto"
-            onClick={() => window.location.reload()}
+            onClick={() => onRefresh()}
           >
             Refresh Errors
           </Button>

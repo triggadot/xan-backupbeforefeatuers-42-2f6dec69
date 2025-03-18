@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,20 +14,14 @@ import { useToast } from '@/hooks/use-toast';
 
 interface MappingDetailsCardProps {
   mapping: GlMapping;
-  status: GlSyncStatus | null;
-  onSync: (mappingId: string) => Promise<void>;
-  onEdit: (mapping: GlMapping) => void;
-  onDelete: (mappingId: string) => void;
-  isSyncing: boolean;
+  connectionName?: string | null;
+  onSyncComplete?: () => void;
 }
 
 export function MappingDetailsCard({ 
-  mapping, 
-  status, 
-  onSync, 
-  onEdit, 
-  onDelete,
-  isSyncing 
+  mapping,
+  connectionName,
+  onSyncComplete
 }: MappingDetailsCardProps) {
   const [validating, setValidating] = useState(false);
   const [validation, setValidation] = useState<{
@@ -104,6 +97,9 @@ export function MappingDetailsCard({
     }
     
     await onSync(mapping.id);
+    if (onSyncComplete) {
+      onSyncComplete();
+    }
   };
 
   const getSyncDirectionIcon = () => {
