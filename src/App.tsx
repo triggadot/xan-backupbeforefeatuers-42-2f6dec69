@@ -11,6 +11,7 @@ import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Sync from "./pages/Sync";
 import { AuthProvider } from "./contexts/AuthProvider";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -52,6 +53,26 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <AccountDetail />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sync"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Sync />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sync/:tab"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Sync />
                   </Layout>
                 </ProtectedRoute>
               }
