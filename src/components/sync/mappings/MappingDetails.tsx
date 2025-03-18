@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
-import { GlMapping, GlSyncStatus } from '@/types/glsync';
+import { GlMapping } from '@/types/glsync';
 import { supabase } from '@/integrations/supabase/client';
 import { ColumnMappingsView } from './ColumnMappingsView';
 import { SyncLogsView } from './SyncLogsView';
@@ -15,7 +14,6 @@ import SyncProductsButton from "../SyncProductsButton";
 import { ArrowLeft } from 'lucide-react';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
-import { Json } from '@/integrations/supabase/types';
 
 const MappingDetails = ({ mappingId }: { mappingId: string }) => {
   const [mapping, setMapping] = useState<GlMapping | null>(null);
@@ -23,11 +21,30 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { syncStatus } = useGlSyncStatus(mappingId);
-  const { syncErrors, resolveError } = useGlSyncErrors(mappingId);
+  const { syncStatus, refreshStatus } = useGlSyncStatus(mappingId);
+  const { 
+    syncErrors, 
+    resolveError, 
+    includeResolved, 
+    setIncludeResolved, 
+    refreshErrors 
+  } = useGlSyncErrors(mappingId);
 
   useEffect(() => {
     fetchMapping();
+
+    // Subscribe to changes in the gl_mappings table for this mapping
+    const channel = supabase
+      .channel(`mapping-${mappingId}-changes`)
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'gl_mappings', filter: `id=eq.${mappingId}` },
+        fetchMapping
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [mappingId]);
 
   const fetchMapping = async () => {
@@ -70,16 +87,21 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
     if (!mapping) return;
     
     try {
-      const updatedMapping = await glSyncApi.updateMapping(mapping.id, {
-        enabled: !mapping.enabled,
-      });
+      const { error } = await supabase
+        .from('gl_mappings')
+        .update({
+          enabled: !mapping.enabled,
+        })
+        .eq('id', mapping.id);
       
-      // Update local state
-      setMapping(prev => prev ? { ...prev, enabled: updatedMapping.enabled } : null);
+      if (error) throw error;
+      
+      // Update local state (though the real-time subscription should handle this)
+      setMapping(prev => prev ? { ...prev, enabled: !prev.enabled } : null);
       
       toast({
-        title: `Mapping ${updatedMapping.enabled ? 'enabled' : 'disabled'}`,
-        description: `The table mapping has been ${updatedMapping.enabled ? 'enabled' : 'disabled'} successfully.`,
+        title: `Mapping ${!mapping.enabled ? 'enabled' : 'disabled'}`,
+        description: `The table mapping has been ${!mapping.enabled ? 'enabled' : 'disabled'} successfully.`,
       });
     } catch (error) {
       console.error('Error toggling mapping status:', error);
@@ -99,7 +121,13 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
     }
     
     try {
-      await glSyncApi.deleteMapping(mapping.id);
+      const { error } = await supabase
+        .from('gl_mappings')
+        .delete()
+        .eq('id', mapping.id);
+      
+      if (error) throw error;
+      
       toast({
         title: 'Mapping deleted',
         description: 'The table mapping has been deleted successfully.',
@@ -117,7 +145,7 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
 
   const handleSyncComplete = () => {
     // Refresh the mapping data to get updated sync status
-    fetchMapping();
+    refreshStatus();
   };
 
   if (isLoading) {
@@ -264,6 +292,9 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
           <SyncErrorsView 
             syncErrors={syncErrors}
             onResolve={resolveError}
+            onRefresh={refreshErrors}
+            onToggleShowResolved={setIncludeResolved}
+            includeResolved={includeResolved}
           />
         </TabsContent>
       </Tabs>

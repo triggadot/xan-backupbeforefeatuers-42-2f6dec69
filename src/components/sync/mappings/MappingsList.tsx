@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlMapping } from '@/types/glsync';
 import { Mapping } from '@/types/syncLog';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { AddMappingButton } from './AddMappingButton';
 import { 
   AlertDialog,
@@ -21,29 +20,15 @@ import {
 import { Eye, Trash2, Play, Pause } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { convertToGlMapping } from '@/utils/gl-mapping-converters';
-
-// Type guard to convert string data_type to the specific union type
-function isValidDataType(type: string): type is "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" {
-  return ["string", "number", "boolean", "date-time", "image-uri", "email-address"].includes(type);
-}
+import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
 
 interface MappingsListProps {
-  mappings: Mapping[];
-  onDelete: (id: string) => Promise<void>;
-  onToggleEnabled: (mapping: Mapping) => Promise<void>;
   onEdit: (mapping: GlMapping) => void;
-  isLoading: boolean;
 }
 
-export function MappingsList({
-  mappings,
-  onDelete,
-  onToggleEnabled,
-  onEdit,
-  isLoading
-}: MappingsListProps) {
+export function MappingsList({ onEdit }: MappingsListProps) {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { mappings, isLoading, toggleEnabled, deleteMapping } = useRealtimeMappings();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -52,19 +37,8 @@ export function MappingsList({
     
     setIsDeleting(true);
     try {
-      await onDelete(deletingId);
-      toast({
-        title: 'Mapping deleted',
-        description: 'The mapping has been deleted successfully',
-      });
+      await deleteMapping(deletingId);
       setDeletingId(null);
-    } catch (error) {
-      console.error('Error deleting mapping:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete mapping',
-        variant: 'destructive',
-      });
     } finally {
       setIsDeleting(false);
     }
@@ -74,9 +48,8 @@ export function MappingsList({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Table Mappings</h2>
-        <AddMappingButton onSuccess={async () => {
-          // Reload mappings after adding a new one
-          window.location.reload();
+        <AddMappingButton onSuccess={() => {
+          // Refresh happens automatically via real-time subscription
         }} />
       </div>
       
@@ -126,7 +99,7 @@ export function MappingsList({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onToggleEnabled(mapping)}
+                      onClick={() => toggleEnabled(mapping)}
                     >
                       {mapping.enabled ? (
                         <Pause className="h-4 w-4 mr-1" />

@@ -1,142 +1,196 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { GlSyncRecord } from '@/types/glsync';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+import { AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
 
-export interface SyncErrorsViewProps {
+interface SyncErrorsViewProps {
   syncErrors: GlSyncRecord[];
-  onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
+  onResolve: (errorId: string, notes?: string) => Promise<boolean>;
+  onRefresh?: () => void;
+  onToggleShowResolved?: (include: boolean) => void;
+  includeResolved?: boolean;
+  isLoading?: boolean;
 }
 
-export function SyncErrorsView({ syncErrors, onResolve }: SyncErrorsViewProps) {
+export function SyncErrorsView({ 
+  syncErrors, 
+  onResolve,
+  onRefresh,
+  onToggleShowResolved,
+  includeResolved = false,
+  isLoading = false
+}: SyncErrorsViewProps) {
+  const [selectedError, setSelectedError] = useState<GlSyncRecord | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [selectedErrorId, setSelectedErrorId] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
-  
+
   const handleResolve = async () => {
-    if (!selectedErrorId || !onResolve) return;
+    if (!selectedError) return;
     
     setIsResolving(true);
     try {
-      await onResolve(selectedErrorId, resolutionNotes);
-      setResolutionNotes('');
-      setSelectedErrorId(null);
+      const success = await onResolve(selectedError.id!, resolutionNotes);
+      if (success) {
+        setSelectedError(null);
+        setResolutionNotes('');
+      }
     } finally {
       setIsResolving(false);
     }
   };
-  
-  if (syncErrors.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Sync Errors</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center p-4">
-            <p className="text-muted-foreground">No sync errors found</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <AlertCircle className="mr-2 h-5 w-5 text-destructive" />
-          Sync Errors ({syncErrors.length})
-        </CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-xl">Sync Errors</CardTitle>
+        <div className="flex items-center gap-4">
+          {onToggleShowResolved && (
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="show-resolved" 
+                checked={includeResolved}
+                onCheckedChange={(checked) => onToggleShowResolved(checked)}
+              />
+              <Label htmlFor="show-resolved">Show Resolved</Label>
+            </div>
+          )}
+          {onRefresh && (
+            <Button variant="outline" size="sm" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Message</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="p-4 border rounded animate-pulse">
+                <div className="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : syncErrors.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            No synchronization errors found
+          </div>
+        ) : (
+          <div className="space-y-4">
             {syncErrors.map((error) => (
-              <TableRow key={error.id}>
-                <TableCell>
-                  <Badge variant={error.type === 'VALIDATION_ERROR' ? 'destructive' : 'outline'}>
-                    {error.type}
+              <div 
+                key={error.id} 
+                className={`p-4 border rounded ${error.resolved ? 'bg-muted/30' : 'hover:bg-muted/10'}`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center">
+                    {error.resolved ? (
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                    )}
+                    <span className="font-medium">
+                      {error.error_type || error.type}
+                    </span>
+                  </div>
+                  <Badge variant={error.retryable ? "outline" : "secondary"}>
+                    {error.retryable ? "Retryable" : "Non-retryable"}
                   </Badge>
-                </TableCell>
-                <TableCell className="max-w-md truncate">{error.message}</TableCell>
-                <TableCell>{new Date(error.timestamp).toLocaleString()}</TableCell>
-                <TableCell>
-                  {onResolve && error.id && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
+                </div>
+                <p className="text-sm mb-2">{error.error_message || error.message}</p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {formatDistanceToNow(new Date(error.timestamp || error.created_at!), { addSuffix: true })}
+                  </span>
+                  {!error.resolved && (
+                    <Dialog>
+                      <DialogTrigger asChild>
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
-                          onClick={() => setSelectedErrorId(error.id)}
+                          onClick={() => setSelectedError(error)}
                         >
-                          <Check className="h-4 w-4 mr-2" />
                           Resolve
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Resolve Error</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to mark this error as resolved?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <Textarea
-                          placeholder="Optional resolution notes"
-                          value={resolutionNotes}
-                          onChange={(e) => setResolutionNotes(e.target.value)}
-                          className="my-4"
-                        />
-                        <AlertDialogFooter>
-                          <AlertDialogCancel onClick={() => {
-                            setSelectedErrorId(null);
-                            setResolutionNotes('');
-                          }}>
-                            Cancel
-                          </AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleResolve();
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Resolve Sync Error</DialogTitle>
+                          <DialogDescription>
+                            Provide optional notes about how this error was resolved.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <Label htmlFor="resolution-notes">Resolution Notes</Label>
+                          <Textarea
+                            id="resolution-notes"
+                            placeholder="Describe how the error was resolved..."
+                            value={resolutionNotes}
+                            onChange={(e) => setResolutionNotes(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setSelectedError(null);
+                              setResolutionNotes('');
                             }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleResolve}
                             disabled={isResolving}
                           >
-                            {isResolving ? 'Resolving...' : 'Resolve'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            {isResolving ? 'Resolving...' : 'Mark as Resolved'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
-                </TableCell>
-              </TableRow>
+                  {error.resolved && error.resolution_notes && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">View Resolution</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Resolution Notes</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <p>{error.resolution_notes}</p>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Resolved {error.resolved_at ? formatDistanceToNow(new Date(error.resolved_at), { addSuffix: true }) : ''}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
