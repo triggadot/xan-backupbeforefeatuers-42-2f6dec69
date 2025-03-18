@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { glSyncApi } from '@/services/glsync';
-import { GlideTable } from '@/types/glsync';
+import { GlideTable, ProductSyncResult } from '@/types/glsync';
 
 export function useGlSync() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchGlideTables = async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
     try {
@@ -38,8 +39,86 @@ export function useGlSync() {
     }
   };
 
+  const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await glSyncApi.syncData(connectionId, mappingId);
+      
+      if (!result.success) {
+        const errorMessage = result.error || 'An unknown error occurred during sync';
+        setError(errorMessage);
+        toast({
+          title: 'Sync Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
+
+      return {
+        success: result.success,
+        error: result.error,
+        recordsProcessed: result.recordsProcessed || 0,
+        failedRecords: result.failedRecords || 0
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred during sync';
+      setError(message);
+      toast({
+        title: 'Sync Error',
+        description: message,
+        variant: 'destructive',
+      });
+      return {
+        success: false,
+        error: message,
+        recordsProcessed: 0,
+        failedRecords: 0
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call a function to retry failed sync
+      const { data, error } = await glSyncApi.callSyncFunction({
+        action: 'retryFailedSync',
+        mappingId,
+      });
+
+      if (error) throw new Error(error.message);
+      
+      toast({
+        title: 'Retry initiated',
+        description: 'Retry of failed synchronization has been initiated.',
+      });
+      
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred during retry';
+      setError(message);
+      toast({
+        title: 'Retry Error',
+        description: message,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     fetchGlideTables,
+    syncData,
+    retryFailedSync,
+    error
   };
 }
