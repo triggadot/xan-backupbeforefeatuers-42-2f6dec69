@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,8 +12,8 @@ export function useSupabaseTables() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchTables = async () => {
-    if (tables.length > 0) return tables; // Don't fetch if we already have tables
+  const fetchTables = useCallback(async (forceRefresh = false) => {
+    if (tables.length > 0 && !forceRefresh) return tables;
     
     setIsLoading(true);
     try {
@@ -35,7 +35,7 @@ export function useSupabaseTables() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tables.length, toast]);
 
   useEffect(() => {
     fetchTables();

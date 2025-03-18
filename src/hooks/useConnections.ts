@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,8 +14,8 @@ export function useConnections() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchConnections = async () => {
-    if (connections.length > 0) return connections; // Don't fetch if we already have connections
+  const fetchConnections = useCallback(async (forceRefresh = false) => {
+    if (connections.length > 0 && !forceRefresh) return connections;
     
     setIsLoading(true);
     try {
@@ -38,7 +38,7 @@ export function useConnections() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [connections.length, toast]);
 
   useEffect(() => {
     fetchConnections();

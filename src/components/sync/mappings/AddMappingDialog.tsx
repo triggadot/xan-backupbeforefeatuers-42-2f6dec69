@@ -8,16 +8,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useGlSync } from '@/hooks/useGlSync';
-import { GlideTable } from '@/types/glsync';
 import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
 import { ConnectionSelect } from './ConnectionSelect';
 import { SupabaseTableSelect } from './SupabaseTableSelect';
 import { SyncDirectionSelect } from './SyncDirectionSelect';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
+import { useGlSync } from '@/hooks/useGlSync';
+import { useAddMapping } from '@/hooks/useAddMapping';
 
 interface AddMappingDialogProps {
   open: boolean;
@@ -31,174 +29,79 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   onSuccess 
 }) => {
   // Custom hooks for data fetching
-  const { connections, isLoading: isLoadingConnections } = useConnections();
-  const { tables: supabaseTables, isLoading: isLoadingSupabaseTables } = useSupabaseTables();
-  
-  // State management
-  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
-  const [isLoadingGlideTables, setIsLoadingGlideTables] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
+  const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
+  const { fetchGlideTables, glideTables, isLoading: isLoadingGlideTables } = useGlSync();
+  const { addMapping, isSubmitting } = useAddMapping();
   
   // Form state
-  const [formState, setFormState] = useState({
-    selectedConnection: '',
-    selectedGlideTable: '',
-    selectedGlideTableDisplayName: '',
-    selectedSupabaseTable: '',
-    syncDirection: 'to_supabase' as 'to_supabase' | 'to_glide' | 'both'
-  });
+  const [selectedConnection, setSelectedConnection] = useState('');
+  const [selectedGlideTable, setSelectedGlideTable] = useState('');
+  const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState('');
+  const [selectedSupabaseTable, setSelectedSupabaseTable] = useState('');
+  const [syncDirection, setSyncDirection] = useState<'to_supabase' | 'to_glide' | 'both'>('to_supabase');
   
-  // Hooks
-  const { toast } = useToast();
-  const { fetchGlideTables } = useGlSync();
-  
-  // Fetch data when dialog is opened and connection is selected
+  // Fetch data when dialog is opened
   useEffect(() => {
-    if (open && formState.selectedConnection) {
-      loadGlideTables(formState.selectedConnection);
+    if (open) {
+      fetchConnections();
+      fetchSupabaseTables();
     }
-  }, [open, formState.selectedConnection]);
+  }, [open]);
+  
+  // Fetch glide tables when connection changes
+  useEffect(() => {
+    if (selectedConnection) {
+      fetchGlideTables(selectedConnection);
+    }
+  }, [selectedConnection]);
 
   // Reset form when dialog is closed
   useEffect(() => {
     if (!open) {
-      // Wait for dialog animation to complete before resetting
-      const timeoutId = setTimeout(() => {
-        setFormState({
-          selectedConnection: '',
-          selectedGlideTable: '',
-          selectedGlideTableDisplayName: '',
-          selectedSupabaseTable: '',
-          syncDirection: 'to_supabase'
-        });
-        setGlideTables([]);
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
+      setSelectedConnection('');
+      setSelectedGlideTable('');
+      setSelectedGlideTableDisplayName('');
+      setSelectedSupabaseTable('');
+      setSyncDirection('to_supabase');
     }
   }, [open]);
 
-  const loadGlideTables = async (connectionId: string) => {
-    if (!connectionId) return;
-    
-    setIsLoadingGlideTables(true);
-    
-    try {
-      const result = await fetchGlideTables(connectionId);
-      
-      if (result.tables) {
-        setGlideTables(result.tables);
-      } else {
-        setGlideTables([]);
-        toast({
-          title: 'Warning',
-          description: result.error || 'No Glide tables found',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading Glide tables:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load Glide tables',
-        variant: 'destructive',
-      });
-      setGlideTables([]);
-    } finally {
-      setIsLoadingGlideTables(false);
-    }
-  };
-
   const handleConnectionChange = (value: string) => {
-    setFormState(prev => ({
-      ...prev,
-      selectedConnection: value,
-      selectedGlideTable: '',
-      selectedGlideTableDisplayName: ''
-    }));
+    setSelectedConnection(value);
+    setSelectedGlideTable('');
+    setSelectedGlideTableDisplayName('');
   };
 
   const handleGlideTableChange = (tableId: string, displayName: string) => {
-    setFormState(prev => ({
-      ...prev,
-      selectedGlideTable: tableId,
-      selectedGlideTableDisplayName: displayName
-    }));
+    setSelectedGlideTable(tableId);
+    setSelectedGlideTableDisplayName(displayName);
   };
 
   const handleSupabaseTableChange = (value: string) => {
-    setFormState(prev => ({
-      ...prev,
-      selectedSupabaseTable: value
-    }));
+    setSelectedSupabaseTable(value);
   };
   
   const handleSyncDirectionChange = (value: 'to_supabase' | 'to_glide' | 'both') => {
-    setFormState(prev => ({
-      ...prev,
-      syncDirection: value
-    }));
+    setSyncDirection(value);
   };
 
   const isFormValid = () => {
-    const { selectedConnection, selectedGlideTable, selectedSupabaseTable } = formState;
     return Boolean(selectedConnection && selectedGlideTable && selectedSupabaseTable);
   };
 
   const handleSubmit = async () => {
-    if (!isFormValid()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a connection, Glide table, and Supabase table',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Create default column mapping with $rowID to glide_row_id
-      const defaultColumnMappings = {
-        '$rowID': {
-          glide_column_name: '$rowID',
-          supabase_column_name: 'glide_row_id',
-          data_type: 'string'
-        }
-      };
-      
-      // Create the mapping
-      const { error } = await supabase
-        .from('gl_mappings')
-        .insert({
-          connection_id: formState.selectedConnection,
-          glide_table: formState.selectedGlideTable,
-          glide_table_display_name: formState.selectedGlideTableDisplayName,
-          supabase_table: formState.selectedSupabaseTable,
-          column_mappings: defaultColumnMappings,
-          sync_direction: formState.syncDirection,
-          enabled: true
-        });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Success',
-        description: 'Mapping created successfully',
-      });
-      
+    const success = await addMapping(
+      selectedConnection,
+      selectedGlideTable,
+      selectedGlideTableDisplayName,
+      selectedSupabaseTable,
+      syncDirection
+    );
+    
+    if (success) {
       onSuccess();
-      
-      // Close the dialog
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding mapping:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add mapping',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -211,7 +114,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
         <div className="grid gap-4 py-4">
           <ConnectionSelect 
             connections={connections}
-            value={formState.selectedConnection}
+            value={selectedConnection}
             onValueChange={handleConnectionChange}
             isLoading={isLoadingConnections}
           />
@@ -219,9 +122,9 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           <div className="grid gap-2">
             <GlideTableSelector
               tables={glideTables}
-              value={formState.selectedGlideTable}
+              value={selectedGlideTable}
               onTableChange={handleGlideTableChange}
-              disabled={isLoadingGlideTables || !formState.selectedConnection}
+              disabled={isLoadingGlideTables || !selectedConnection}
               isLoading={isLoadingGlideTables}
               placeholder="Select a Glide table"
             />
@@ -235,13 +138,13 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           
           <SupabaseTableSelect 
             tables={supabaseTables}
-            value={formState.selectedSupabaseTable}
+            value={selectedSupabaseTable}
             onValueChange={handleSupabaseTableChange}
             isLoading={isLoadingSupabaseTables}
           />
           
           <SyncDirectionSelect 
-            value={formState.syncDirection}
+            value={syncDirection}
             onValueChange={handleSyncDirectionChange}
           />
         </div>

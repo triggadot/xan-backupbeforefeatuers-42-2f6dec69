@@ -8,6 +8,7 @@ export function useGlSync() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
 
   const fetchGlideTables = async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
     try {
@@ -25,6 +26,7 @@ export function useGlSync() {
       }
       
       console.log('Fetched Glide tables:', result.tables);
+      setGlideTables(result.tables);
       return { tables: result.tables };
     } catch (error) {
       console.error('Error fetching Glide tables:', error);
@@ -117,6 +119,7 @@ export function useGlSync() {
 
   return {
     isLoading,
+    glideTables,
     fetchGlideTables,
     syncData,
     retryFailedSync,
