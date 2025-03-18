@@ -9,7 +9,9 @@ import {
   SyncRequestPayload,
   ProductSyncResult,
   GlideTable,
-  GlSyncRecord
+  GlSyncRecord,
+  convertDbToGlRecentLog,
+  convertDbToGlideTable
 } from '@/types/glsync';
 
 export const glSyncApi = {
@@ -250,7 +252,9 @@ export const glSyncApi = {
       }
       throw new Error(error.message);
     }
-    return data as GlRecentLog[];
+    
+    // Convert to properly typed GlRecentLog objects
+    return (data || []).map(item => convertDbToGlRecentLog(item));
   },
 
   // Edge function interaction
@@ -297,7 +301,10 @@ export const glSyncApi = {
       });
       
       if (result.tables) {
-        return { tables: result.tables };
+        // Convert to properly typed GlideTable objects
+        return { 
+          tables: result.tables.map((table: any) => convertDbToGlideTable(table))
+        };
       }
       
       return { error: result.error || 'Failed to list tables' };

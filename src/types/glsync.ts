@@ -55,24 +55,27 @@ export interface GlSyncStatus {
   enabled?: boolean;
 }
 
+// Updated to match gl_sync_stats database view columns
 export interface GlSyncStats {
-  total_mappings: number;
-  active_mappings: number;
-  records_synced: number;
-  failed_records: number;
-  last_sync?: string;
+  syncs: number;
+  successful_syncs: number;
+  failed_syncs: number;
+  total_records_processed: number;
+  sync_date: string;
 }
 
-export interface GlSyncRecord {
+// Updated to match gl_recent_logs database view columns
+export interface GlRecentLog {
   id: string;
-  mapping_id: string;
-  type: string;
-  message: string;
-  timestamp: string;
-  record_data?: any;
-  resolved?: boolean;
-  record?: any;
-  retryable?: boolean;
+  status: string;
+  message: string | null;
+  records_processed: number | null;
+  started_at: string;
+  app_name: string | null;
+  glide_table: string | null;
+  glide_table_display_name: string | null;
+  supabase_table: string | null;
+  sync_direction: string | null;
 }
 
 export interface GlideTable {
@@ -100,22 +103,15 @@ export interface ColumnMappingSuggestion {
   confidence: number;
 }
 
-export interface GlRecentLog {
-  id: string;
-  mapping_id: string;
-  status: string;
-  timestamp: string;
-  records_processed: number;
-  mapping_name: string;
-  connection_name: string;
-}
-
+// Update GlProduct to match what's in the database
 export interface GlProduct {
   id: string;
-  name: string;
-  description?: string;
-  price?: number;
   glide_row_id: string;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  category?: string;
+  cost?: number;
+  product_purchase_date?: string;
 }
 
 export interface SyncRequestPayload {
@@ -123,3 +119,49 @@ export interface SyncRequestPayload {
   connection_id: string;
   direction?: "to_supabase" | "to_glide" | "both";
 }
+
+// Type converters to help with database to frontend type conversion
+export const convertDbToGlideTable = (dbItem: any): GlideTable => {
+  return {
+    id: dbItem.id,
+    name: dbItem.name || '',
+    displayName: dbItem.display_name || dbItem.displayName || ''
+  };
+};
+
+export const convertDbToGlSyncStats = (dbItem: any): GlSyncStats => {
+  return {
+    syncs: dbItem.syncs || 0,
+    successful_syncs: dbItem.successful_syncs || 0,
+    failed_syncs: dbItem.failed_syncs || 0,
+    total_records_processed: dbItem.total_records_processed || 0,
+    sync_date: dbItem.sync_date || new Date().toISOString()
+  };
+};
+
+export const convertDbToGlRecentLog = (dbItem: any): GlRecentLog => {
+  return {
+    id: dbItem.id || '',
+    status: dbItem.status || '',
+    message: dbItem.message || null,
+    records_processed: dbItem.records_processed || 0,
+    started_at: dbItem.started_at || new Date().toISOString(),
+    app_name: dbItem.app_name || null,
+    glide_table: dbItem.glide_table || null,
+    glide_table_display_name: dbItem.glide_table_display_name || null,
+    supabase_table: dbItem.supabase_table || null,
+    sync_direction: dbItem.sync_direction || null
+  };
+};
+
+export const convertDbToGlProduct = (dbItem: any): GlProduct => {
+  return {
+    id: dbItem.id || '',
+    glide_row_id: dbItem.glide_row_id || '',
+    vendor_product_name: dbItem.vendor_product_name || null,
+    new_product_name: dbItem.new_product_name || null,
+    category: dbItem.category || null,
+    cost: typeof dbItem.cost === 'number' ? dbItem.cost : null,
+    product_purchase_date: dbItem.product_purchase_date || null
+  };
+};
