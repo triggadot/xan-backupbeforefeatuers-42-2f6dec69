@@ -1,4 +1,3 @@
-
 export interface SyncLog {
   id: string;
   mapping_id: string | null;
