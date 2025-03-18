@@ -1,4 +1,3 @@
-
 import { GlColumnMapping, GlProduct, SyncErrorRecord } from '@/types/glsync';
 
 /**
@@ -151,4 +150,18 @@ export const validateProduct = (product: GlProduct): SyncErrorRecord[] => {
   });
   
   return errors;
+};
+
+export const transformColumnMappings = (columnMappings: any) => {
+  if (!columnMappings) return {};
+  
+  return Object.entries(columnMappings).reduce((acc, [key, value]) => {
+    acc[key] = {
+      glideColumn: value.glideColumn || value.glide_column,
+      supabaseColumn: value.supabaseColumn || value.supabase_column,
+      dataType: value.dataType || value.data_type || 'text',
+      direction: value.direction || 'both'
+    };
+    return acc;
+  }, {} as Record<string, any>);
 };

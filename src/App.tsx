@@ -23,7 +23,7 @@ function App() {
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Index />} />
-          <Route element={<Layout />}>
+          <Route path="/" element={<Layout />}>
             <Route
               path="/dashboard"
               element={
