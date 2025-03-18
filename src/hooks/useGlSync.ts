@@ -16,7 +16,7 @@ export function useGlSync() {
     try {
       console.log(`Starting sync for mapping ${mappingId} with connection ${connectionId}`);
       
-      // Call the edge function
+      // Call the edge function directly with minimal parameters
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'syncData',

@@ -1,11 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { GlProduct, ProductSyncResult } from '@/types/glsync';
+import { ProductSyncResult } from '@/types/glsync';
 import { BaseSyncService } from './base-sync';
 
 export class ProductsSyncService extends BaseSyncService {
   async sync(): Promise<ProductSyncResult> {
     try {
+      console.log(`Starting products sync for mapping ${this.mappingId}`);
+      
       // Create sync log entry
       const { data: logData, error: logError } = await supabase
         .from('gl_sync_logs')
@@ -30,8 +32,15 @@ export class ProductsSyncService extends BaseSyncService {
       });
 
       if (error) throw new Error(error.message);
-
-      return data as ProductSyncResult;
+      
+      console.log('Sync result:', data);
+      
+      return {
+        success: data.success ?? false,
+        recordsProcessed: data.recordsProcessed || 0,
+        failedRecords: data.failedRecords || 0,
+        errors: data.errors || [],
+      };
     } catch (error) {
       console.error('Error in products sync:', error);
       return {
