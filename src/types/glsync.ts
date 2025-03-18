@@ -1,3 +1,4 @@
+
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -6,6 +7,7 @@ export interface GlConnection {
   last_sync: string | null;
   created_at: string | null;
   status?: string;
+  settings?: Record<string, any> | null;
 }
 
 export interface GlMapping {
@@ -18,6 +20,7 @@ export interface GlMapping {
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
   enabled: boolean;
   created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface GlColumnMapping {
@@ -50,6 +53,7 @@ export interface GlSyncStatus {
   sync_direction: string;
   records_processed: number | null;
   total_records: number | null;
+  error_count: number | null;
 }
 
 export interface GlRecentLog {
@@ -63,6 +67,14 @@ export interface GlRecentLog {
   supabase_table: string | null;
   app_name: string | null;
   sync_direction: string | null;
+}
+
+export interface GlSyncStats {
+  sync_date: string;
+  syncs: number;
+  successful_syncs: number;
+  failed_syncs: number;
+  total_records_processed: number;
 }
 
 export interface SyncRequestPayload {
@@ -102,11 +114,14 @@ export interface GlProduct {
 
 // Interface for sync error records
 export interface GlSyncRecord {
+  id?: string;
   type: 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR';
   message: string;
   record?: any;
   timestamp: string;
   retryable: boolean;
+  resolved?: boolean;
+  resolution_notes?: string | null;
 }
 
 export interface ProductSyncResult {
@@ -124,4 +139,16 @@ export interface ProductSyncResult {
 export interface GlideTable {
   id: string;
   display_name: string;
+}
+
+export interface MappingValidationResult {
+  is_valid: boolean;
+  validation_message: string;
+}
+
+export interface ColumnMappingSuggestion {
+  glide_column_name: string;
+  suggested_supabase_column: string;
+  data_type: string;
+  confidence: number;
 }
