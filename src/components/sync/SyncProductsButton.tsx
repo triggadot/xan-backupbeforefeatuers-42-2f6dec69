@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
 import { GlMapping } from '@/types/glsync';
@@ -58,6 +58,19 @@ const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSync
     }
   };
 
+  const getSyncDirectionIcon = () => {
+    switch (mapping.sync_direction) {
+      case 'to_supabase':
+        return <ArrowRight className="mr-2 h-4 w-4" />;
+      case 'to_glide':
+        return <ArrowLeft className="mr-2 h-4 w-4" />;
+      case 'both':
+        return <ArrowRightLeft className="mr-2 h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Button 
       onClick={handleSync} 
@@ -70,7 +83,10 @@ const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSync
           Syncing Products...
         </>
       ) : (
-        'Sync Products'
+        <>
+          {getSyncDirectionIcon()}
+          Sync Products
+        </>
       )}
     </Button>
   );

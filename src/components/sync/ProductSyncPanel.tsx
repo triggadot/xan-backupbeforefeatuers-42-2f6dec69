@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, CheckCircle, Database } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Database, ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
 import { GlMapping } from '@/types/glsync';
@@ -62,6 +62,32 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
     }
   };
 
+  const getSyncDirectionIcon = () => {
+    switch (mapping.sync_direction) {
+      case 'to_supabase':
+        return <ArrowRight className="h-5 w-5 mr-2 text-blue-500" />;
+      case 'to_glide':
+        return <ArrowLeft className="h-5 w-5 mr-2 text-green-500" />;
+      case 'both':
+        return <ArrowRightLeft className="h-5 w-5 mr-2 text-purple-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getSyncDirectionText = () => {
+    switch (mapping.sync_direction) {
+      case 'to_supabase':
+        return 'Glide to Supabase';
+      case 'to_glide':
+        return 'Supabase to Glide';
+      case 'both':
+        return 'Bidirectional';
+      default:
+        return 'Unknown';
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -70,7 +96,7 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
           Products Sync
         </CardTitle>
         <CardDescription>
-          Synchronize products from Glide to Supabase with additional validation
+          Synchronize products between Glide and Supabase with additional validation
         </CardDescription>
       </CardHeader>
       
@@ -79,7 +105,7 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
           <div className="grid grid-cols-2 gap-4">
             <div>
               <h4 className="text-sm font-medium mb-1">Glide Table</h4>
-              <p className="text-sm text-gray-500">{mapping.glide_table}</p>
+              <p className="text-sm text-gray-500">{mapping.glide_table_display_name || mapping.glide_table}</p>
             </div>
             <div>
               <h4 className="text-sm font-medium mb-1">Supabase Table</h4>
@@ -89,13 +115,12 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
           
           <div>
             <h4 className="text-sm font-medium mb-1">Sync Direction</h4>
-            <p className="text-sm text-gray-500">
-              {mapping.sync_direction === 'to_supabase' 
-                ? 'Glide to Supabase' 
-                : mapping.sync_direction === 'to_glide' 
-                  ? 'Supabase to Glide' 
-                  : 'Bidirectional'}
-            </p>
+            <div className="flex items-center">
+              {getSyncDirectionIcon()}
+              <p className="text-sm text-gray-500">
+                {getSyncDirectionText()}
+              </p>
+            </div>
           </div>
           
           {syncResult && (

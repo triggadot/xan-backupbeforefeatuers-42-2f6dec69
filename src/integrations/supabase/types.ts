@@ -392,6 +392,7 @@ export type Database = {
           id: string
           supabase_table: string
           sync_direction: string
+          updated_at: string | null
         }
         Insert: {
           column_mappings?: Json
@@ -403,6 +404,7 @@ export type Database = {
           id?: string
           supabase_table: string
           sync_direction?: string
+          updated_at?: string | null
         }
         Update: {
           column_mappings?: Json
@@ -414,6 +416,7 @@ export type Database = {
           id?: string
           supabase_table?: string
           sync_direction?: string
+          updated_at?: string | null
         }
         Relationships: [
           {

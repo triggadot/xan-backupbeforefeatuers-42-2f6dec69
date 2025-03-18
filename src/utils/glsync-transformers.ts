@@ -51,6 +51,49 @@ export function transformGlideValue(value: any, dataType: string): any {
 }
 
 /**
+ * Transforms Supabase values to appropriate format for Glide
+ */
+export function transformSupabaseValue(value: any, dataType: string): any {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  try {
+    switch (dataType) {
+      case 'number':
+        if (typeof value === 'string') {
+          const num = parseFloat(value);
+          return isNaN(num) ? null : num;
+        }
+        return typeof value === 'number' ? value : null;
+      
+      case 'boolean':
+        return !!value; // Convert to boolean
+      
+      case 'date-time':
+        if (value instanceof Date) return value.toISOString();
+        if (typeof value === 'string') {
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? null : date.toISOString();
+        }
+        return null;
+      
+      // For strings, image-uri, and email-address, we just ensure they're strings
+      case 'string':
+      case 'image-uri':
+      case 'email-address':
+        return value === null ? null : String(value);
+      
+      default:
+        return value;
+    }
+  } catch (error) {
+    console.error(`Error transforming Supabase value ${value} to ${dataType}:`, error);
+    return null;
+  }
+}
+
+/**
  * Validates a value against the expected data type
  */
 export function validateGlideValue(value: any, dataType: string): boolean {
@@ -90,6 +133,28 @@ export function validateGlideValue(value: any, dataType: string): boolean {
 }
 
 /**
+ * Creates a reverse mapping from Supabase column names to Glide columns
+ * Used for bidirectional sync
+ */
+export function createReverseMapping(
+  mapping: GlMapping
+): Record<string, { glide_column_id: string, data_type: string }> {
+  const reverseMapping: Record<string, { glide_column_id: string, data_type: string }> = {};
+  
+  Object.entries(mapping.column_mappings).forEach(([glideColumnId, mappingObj]) => {
+    // Skip special Glide system fields that are handled separately
+    if (glideColumnId !== '$rowID' && glideColumnId !== '$rowIndex') {
+      reverseMapping[mappingObj.supabase_column_name] = {
+        glide_column_id: glideColumnId,
+        data_type: mappingObj.data_type
+      };
+    }
+  });
+  
+  return reverseMapping;
+}
+
+/**
  * Extracts the Glide row ID from a record
  * Glide uses $rowID as the primary identifier
  */
@@ -103,6 +168,22 @@ export function extractGlideRowId(glideRecord: Record<string, any>): string | nu
   }
   
   return String(rowId);
+}
+
+/**
+ * Creates a Glide mutation object from Supabase data
+ */
+export function createGlideMutation(
+  glideTableName: string,
+  glideRowId: string, 
+  columnValues: Record<string, any>
+): any {
+  return {
+    kind: 'set-columns-in-row',
+    tableName: glideTableName,
+    rowID: glideRowId,
+    columnValues
+  };
 }
 
 /**
@@ -200,6 +281,130 @@ export function transformGlideToProduct(
   });
 
   return { product, errors };
+}
+
+/**
+ * Transforms a Supabase record to Glide format
+ */
+export function transformSupabaseToGlide(
+  supabaseRecord: Record<string, any>,
+  mapping: GlMapping,
+  existingErrors: GlSyncRecord[] = []
+): { glideRecord: Record<string, any> | null; errors: GlSyncRecord[] } {
+  if (!supabaseRecord || !mapping) {
+    return { 
+      glideRecord: null, 
+      errors: [{
+        type: 'VALIDATION_ERROR',
+        message: 'Missing record or mapping data',
+        timestamp: new Date().toISOString(),
+        retryable: false
+      }]
+    };
+  }
+
+  const errors: GlSyncRecord[] = [...existingErrors];
+  
+  // Find the Supabase column that maps to Glide's $rowID
+  const rowIdMapping = Object.entries(mapping.column_mappings).find(
+    ([glideColumnId]) => glideColumnId === '$rowID'
+  );
+  
+  if (!rowIdMapping) {
+    errors.push({
+      type: 'VALIDATION_ERROR',
+      message: 'Missing required $rowID mapping for Supabase to Glide sync',
+      record: { recordData: supabaseRecord },
+      timestamp: new Date().toISOString(),
+      retryable: false
+    });
+    return { glideRecord: null, errors };
+  }
+  
+  const supabaseGlideRowIdField = rowIdMapping[1].supabase_column_name;
+  const glideRowId = supabaseRecord[supabaseGlideRowIdField];
+  
+  if (!glideRowId) {
+    errors.push({
+      type: 'VALIDATION_ERROR',
+      message: `Missing required Glide row ID (${supabaseGlideRowIdField})`,
+      record: { recordData: supabaseRecord },
+      timestamp: new Date().toISOString(),
+      retryable: false
+    });
+    return { glideRecord: null, errors };
+  }
+  
+  // Create reverse mapping from Supabase column names to Glide column IDs
+  const reverseMapping = createReverseMapping(mapping);
+  
+  // Create the Glide record
+  const glideRecord: Record<string, any> = {};
+  
+  // Add the row ID
+  glideRecord.$rowID = glideRowId;
+  
+  // Transform Supabase values to Glide values
+  Object.entries(supabaseRecord).forEach(([supabaseColumn, value]) => {
+    // Skip Supabase-specific fields and the glide_row_id field (already handled)
+    if (
+      supabaseColumn === supabaseGlideRowIdField ||
+      supabaseColumn === 'id' ||
+      supabaseColumn === 'created_at' ||
+      supabaseColumn === 'updated_at'
+    ) {
+      return;
+    }
+    
+    // If we have a mapping for this Supabase column, use it
+    const mapping = reverseMapping[supabaseColumn];
+    if (mapping) {
+      try {
+        // Skip undefined values
+        if (value === undefined) {
+          return;
+        }
+        
+        // Transform the value based on the data type
+        const transformedValue = transformSupabaseValue(value, mapping.data_type);
+        
+        // Validate the transformed value
+        if (!validateGlideValue(transformedValue, mapping.data_type)) {
+          errors.push({
+            type: 'VALIDATION_ERROR',
+            message: `Invalid value for ${supabaseColumn} (${mapping.data_type})`,
+            record: { 
+              supabaseColumn, 
+              glideColumn: mapping.glide_column_id,
+              value, 
+              expected: mapping.data_type 
+            },
+            timestamp: new Date().toISOString(),
+            retryable: false
+          });
+          return;
+        }
+        
+        // Add to Glide record
+        glideRecord[mapping.glide_column_id] = transformedValue;
+        
+      } catch (error) {
+        errors.push({
+          type: 'TRANSFORM_ERROR',
+          message: `Error transforming column ${supabaseColumn}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          record: { 
+            supabaseColumn, 
+            glideColumn: mapping.glide_column_id,
+            value 
+          },
+          timestamp: new Date().toISOString(),
+          retryable: false
+        });
+      }
+    }
+  });
+
+  return { glideRecord, errors };
 }
 
 /**
