@@ -110,13 +110,33 @@ export function transformGlideToProduct(
   }
 
   const errors: GlSyncRecord[] = [...existingErrors];
+  
+  // Extract the Glide row ID - check different possible fields
+  const glideRowId = glideRecord.$rowID || glideRecord.id || glideRecord.rowId || '';
+  
+  if (!glideRowId) {
+    errors.push({
+      type: 'VALIDATION_ERROR',
+      message: 'Missing required glide_row_id field ($rowID, id, or rowId)',
+      record: { recordData: glideRecord },
+      timestamp: new Date().toISOString(),
+      retryable: false
+    });
+    return { product: null, errors };
+  }
+  
   const product: GlProduct = {
-    glide_row_id: glideRecord.id || glideRecord.rowId || '',
+    glide_row_id: glideRowId,
   };
 
   // Apply column mappings
   Object.entries(mapping.column_mappings).forEach(([glideColumnId, mappingObj]) => {
     try {
+      // Skip special Glide system fields
+      if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
+        return;
+      }
+      
       const glideValue = glideRecord[glideColumnId];
       
       // Skip undefined values
@@ -162,18 +182,6 @@ export function transformGlideToProduct(
       });
     }
   });
-
-  // If we don't have a valid glide_row_id, we can't proceed
-  if (!product.glide_row_id) {
-    errors.push({
-      type: 'VALIDATION_ERROR',
-      message: 'Missing required glide_row_id',
-      record: glideRecord,
-      timestamp: new Date().toISOString(),
-      retryable: false
-    });
-    return { product: null, errors };
-  }
 
   return { product, errors };
 }

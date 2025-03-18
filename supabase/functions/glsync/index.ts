@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -403,8 +404,20 @@ async function syncProductsFromGlide(
     
     for (const row of rows) {
       try {
+        // Check for Glide's row identifier which could be $rowID, id, or rowId
+        const glideRowId = row.$rowID || row.id || row.rowId
+        
+        if (!glideRowId) {
+          console.error('Missing glide_row_id in record:', row)
+          recordValidationError(supabase, mappingId, 'Missing required glide_row_id', {
+            rowData: row
+          })
+          totalFailedRecords++
+          continue
+        }
+        
         const product = {
-          glide_row_id: row.id || row.rowId || '',
+          glide_row_id: glideRowId,
         }
         
         // Flag to track if we encountered any errors for this record
@@ -413,6 +426,11 @@ async function syncProductsFromGlide(
         // Apply column mappings
         Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
           try {
+            // Skip special Glide system columns
+            if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
+              return
+            }
+            
             const glideColumnName = mapping.glide_column_name
             const supabaseColumnName = mapping.supabase_column_name
             const dataType = mapping.data_type
@@ -750,23 +768,38 @@ async function pullFromGlideToSupabase(
     
     // Transform the data using the column mappings
     const transformedRows = rows.map(row => {
+      // Check for Glide's row identifier which could be $rowID, id, or rowId
+      const glideRowId = row.$rowID || row.id || row.rowId
+      
+      if (!glideRowId) {
+        console.error('Missing glide_row_id in record:', row)
+        return null
+      }
+      
       const transformedRow: Record<string, any> = {
-        glide_row_id: row.id || row.rowId, // Ensure we capture the Glide row ID
+        glide_row_id: glideRowId,
       }
       
       // Apply column mappings with the new structure
       Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
+        // Skip special Glide system columns
+        if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
+          return
+        }
+        
         if (row[glideColumnId] !== undefined) {
           transformedRow[mapping.supabase_column_name] = row[glideColumnId]
         }
       })
       
       return transformedRow
-    })
+    }).filter(row => row !== null)
     
     // Insert or update the data in Supabase
     for (let i = 0; i < transformedRows.length; i += MAX_BATCH_SIZE) {
       const batch = transformedRows.slice(i, i + MAX_BATCH_SIZE)
+      
+      if (batch.length === 0) continue
       
       // Upsert data to Supabase
       const { error } = await supabase
@@ -820,6 +853,8 @@ async function fetchGlideTableData(
         query.startAt = continuationToken
       }
       
+      console.log(`Fetching Glide data for table: ${tableName}, continuation: ${continuationToken ? 'yes' : 'no'}`)
+      
       const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
         method: 'POST',
         headers: {
@@ -850,9 +885,39 @@ async function fetchGlideTableData(
       }
       
       const data = await response.json()
-      result = data[0] // Assuming the result is the first element in the array
+      
+      // Handle the Glide response format - extract the first query result 
+      // and properly format the rows and pagination token
+      if (data && Array.isArray(data) && data.length > 0) {
+        const tableData = data[0]
+        
+        // Log the structure of the response for debugging
+        console.log(`Glide response structure: ${JSON.stringify(Object.keys(tableData))}`)
+        
+        // Handle the standard Glide response format
+        if (tableData.rows) {
+          result = { 
+            rows: tableData.rows,
+            next: tableData.next || null
+          }
+        }
+        // Fallback for alternative response formats
+        else {
+          // Some Glide responses might have a different structure
+          const rowsData = Object.values(tableData)[0] || []
+          result = {
+            rows: Array.isArray(rowsData) ? rowsData : [],
+            next: tableData.next || null
+          }
+        }
+      } else {
+        // If no data returned, return empty result
+        result = { rows: [], next: null }
+      }
+      
       success = true
     } catch (error) {
+      console.error(`Error fetching Glide data (attempt ${retries + 1}):`, error)
       lastError = error
       retries++
       

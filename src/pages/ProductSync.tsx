@@ -32,6 +32,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {
       onError: (error: any) => {
+        console.error('Error fetching mapping:', error);
         toast({
           title: 'Error fetching mapping',
           description: error.message,
@@ -47,6 +48,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     enabled: !!mapping?.connection_id,
     meta: {
       onError: (error: any) => {
+        console.error('Error fetching connection:', error);
         toast({
           title: 'Error fetching connection',
           description: error.message,
@@ -58,6 +60,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
 
   useEffect(() => {
     if (mappingId && mappingId !== ':mappingId') {
+      console.log('Fetching mapping with ID:', mappingId);
       refetch();
     }
   }, [mappingId, refetch]);
@@ -74,7 +77,9 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   const fetchSyncErrors = async () => {
     if (mappingId && mappingId !== ':mappingId') {
       try {
+        console.log('Fetching sync errors for mapping ID:', mappingId);
         const errors = await glSyncApi.getSyncErrors(mappingId);
+        console.log('Sync errors:', errors);
         setSyncErrors(errors);
       } catch (error: any) {
         console.error('Error fetching sync errors:', error);
@@ -164,6 +169,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
       <Tabs defaultValue="errors" className="mt-4">
         <TabsList>
           <TabsTrigger value="errors">Sync Errors</TabsTrigger>
+          <TabsTrigger value="column-mapping">Column Mapping</TabsTrigger>
         </TabsList>
         <TabsContent value="errors">
           <div className="mt-4">
@@ -177,6 +183,45 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
               </Card>
             )}
           </div>
+        </TabsContent>
+        <TabsContent value="column-mapping">
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Column Mapping Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="rounded-md bg-muted p-4">
+                  <p className="text-sm font-medium mb-2">Glide Row ID Mapping</p>
+                  <p className="text-sm text-muted-foreground">
+                    Records from Glide are identified by their <code>$rowID</code> field, 
+                    which is mapped to <code>glide_row_id</code> in Supabase.
+                  </p>
+                </div>
+                
+                <div className="border rounded-md">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-2 text-left">Glide Column</th>
+                        <th className="p-2 text-left">Supabase Column</th>
+                        <th className="p-2 text-left">Data Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {Object.entries(mapping.column_mappings).map(([glideCol, mappingObj]) => (
+                        <tr key={glideCol} className="hover:bg-muted/50">
+                          <td className="p-2">{mappingObj.glide_column_name}</td>
+                          <td className="p-2">{mappingObj.supabase_column_name}</td>
+                          <td className="p-2">{mappingObj.data_type}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
