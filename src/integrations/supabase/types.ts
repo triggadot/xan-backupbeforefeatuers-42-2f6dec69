@@ -519,6 +519,7 @@ export type Database = {
           docs_shortlink: string | null
           glide_row_id: string
           id: string
+          pdf_link: string | null
           po_date: string | null
           purchase_order_uid: string | null
           rowid_accounts: string | null
@@ -530,6 +531,7 @@ export type Database = {
           docs_shortlink?: string | null
           glide_row_id: string
           id?: string
+          pdf_link?: string | null
           po_date?: string | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
@@ -541,6 +543,7 @@ export type Database = {
           docs_shortlink?: string | null
           glide_row_id?: string
           id?: string
+          pdf_link?: string | null
           po_date?: string | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
