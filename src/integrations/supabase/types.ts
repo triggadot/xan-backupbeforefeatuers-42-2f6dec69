@@ -399,6 +399,7 @@ export type Database = {
           created_at: string | null
           enabled: boolean
           glide_table: string
+          glide_table_display_name: string
           id: string
           supabase_table: string
           sync_direction: string
@@ -409,6 +410,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean
           glide_table: string
+          glide_table_display_name: string
           id?: string
           supabase_table: string
           sync_direction?: string
@@ -419,6 +421,7 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean
           glide_table?: string
+          glide_table_display_name?: string
           id?: string
           supabase_table?: string
           sync_direction?: string
@@ -718,6 +721,7 @@ export type Database = {
           current_status: string | null
           enabled: boolean | null
           glide_table: string | null
+          glide_table_display_name: string | null
           last_sync_completed_at: string | null
           last_sync_started_at: string | null
           mapping_id: string | null
@@ -740,6 +744,7 @@ export type Database = {
         Row: {
           app_name: string | null
           glide_table: string | null
+          glide_table_display_name: string | null
           id: string | null
           message: string | null
           records_processed: number | null

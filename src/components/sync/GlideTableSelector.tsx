@@ -22,12 +22,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface GlideTable {
-  id: string;
-  display_name: string;
-}
+import { GlideTable } from '@/types/glsync';
 
 interface GlideTableSelectorProps {
   tables: GlideTable[];
