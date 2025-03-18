@@ -732,18 +732,7 @@ export type Database = {
       }
     }
     Functions: {
-      gl_get_recent_logs: {
-        Args: {
-          limit_count?: number
-        }
-        Returns: {
-          id: string
-          time_display: string
-          message: string
-          type: string
-          details: Json
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
