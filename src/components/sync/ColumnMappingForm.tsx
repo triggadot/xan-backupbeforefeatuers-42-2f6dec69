@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +44,6 @@ const ColumnMappingForm = ({
   const { toast } = useToast();
   const { validateColumnMapping, suggestColumnMappings, isValidating } = useColumnMappingValidation();
 
-  // Get column mappings as array for rendering
   const columnMappingsArray = Object.entries(columnMappings || {}).map(
     ([glideColumnId, columnMapping]) => ({
       glideColumnId,
@@ -53,7 +51,6 @@ const ColumnMappingForm = ({
     })
   );
 
-  // Check for $rowID mapping and fetch columns
   useEffect(() => {
     setHasRowIdMapping(!!columnMappings['$rowID']);
     
@@ -63,7 +60,6 @@ const ColumnMappingForm = ({
     }
   }, [supabaseTable, columnMappings]);
 
-  // If glideColumns are provided and mappings are empty, suggest mappings
   useEffect(() => {
     if (glideColumns.length > 0 && supabaseTable && 
         (!columnMappings || Object.keys(columnMappings).length <= 1)) {
@@ -107,10 +103,9 @@ const ColumnMappingForm = ({
     try {
       const suggestedMappings = await suggestColumnMappings(supabaseTable, glideColumns);
       
-      // Merge with existing mappings
       const updatedMappings = {
         ...suggestedMappings,
-        ...columnMappings, // Keep existing mappings
+        ...columnMappings,
       };
       
       onUpdate(updatedMappings);
@@ -135,7 +130,6 @@ const ColumnMappingForm = ({
       return;
     }
 
-    // Check if glideColumnId already exists
     if (columnMappings[newGlideColumnId]) {
       toast({
         title: 'Validation Error',
@@ -156,7 +150,6 @@ const ColumnMappingForm = ({
 
     onUpdate(updatedMappings);
     
-    // Reset form
     setNewGlideColumnId('');
     setNewGlideColumnName('');
     setNewSupabaseColumnName('');
@@ -169,7 +162,7 @@ const ColumnMappingForm = ({
       ['$rowID']: {
         glide_column_name: 'Row ID',
         supabase_column_name: 'glide_row_id',
-        data_type: 'string',
+        data_type: 'string' as 'string',
       },
     };
 
@@ -201,7 +194,6 @@ const ColumnMappingForm = ({
       setNewGlideColumnId(column.id);
       setNewGlideColumnName(column.name);
       
-      // Try to guess the data type
       if (column.type) {
         let dataType = 'string';
         
@@ -225,7 +217,7 @@ const ColumnMappingForm = ({
   return (
     <div className="space-y-4">
       {!hasRowIdMapping && (
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Row ID Mapping Required</AlertTitle>
           <AlertDescription>

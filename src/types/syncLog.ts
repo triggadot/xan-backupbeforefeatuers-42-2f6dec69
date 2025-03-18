@@ -1,4 +1,3 @@
-
 export interface SyncLog {
   id: string;
   mapping_id: string | null;
@@ -34,4 +33,8 @@ export interface Mapping {
   total_records?: number;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface SupabaseTable {
+  table_name: string;
 }

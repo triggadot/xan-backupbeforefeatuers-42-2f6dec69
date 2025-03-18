@@ -27,17 +27,20 @@ export function useMappingOperations() {
         };
       }
 
+      // Convert GlMapping column_mappings to a format Supabase can handle
+      const dbMapping = {
+        connection_id: mapping.connection_id,
+        glide_table: mapping.glide_table,
+        glide_table_display_name: mapping.glide_table_display_name,
+        supabase_table: mapping.supabase_table,
+        column_mappings: mapping.column_mappings as Record<string, unknown>,
+        sync_direction: mapping.sync_direction || 'to_supabase',
+        enabled: mapping.enabled !== undefined ? mapping.enabled : true,
+      };
+
       const { data, error } = await supabase
         .from('gl_mappings')
-        .insert({
-          connection_id: mapping.connection_id,
-          glide_table: mapping.glide_table,
-          glide_table_display_name: mapping.glide_table_display_name,
-          supabase_table: mapping.supabase_table,
-          column_mappings: mapping.column_mappings as Record<string, GlColumnMapping>,
-          sync_direction: mapping.sync_direction || 'to_supabase',
-          enabled: mapping.enabled !== undefined ? mapping.enabled : true,
-        })
+        .insert(dbMapping)
         .select()
         .single();
 
@@ -48,7 +51,11 @@ export function useMappingOperations() {
         description: 'Mapping created successfully',
       });
 
-      return data as GlMapping;
+      // Convert the returned data to a GlMapping with the proper types
+      return {
+        ...data,
+        column_mappings: data.column_mappings as unknown as Record<string, GlColumnMapping>
+      } as GlMapping;
     } catch (error) {
       console.error('Error creating mapping:', error);
       toast({
@@ -69,17 +76,20 @@ export function useMappingOperations() {
 
     setIsSubmitting(true);
     try {
+      // Convert GlMapping column_mappings to a format Supabase can handle
+      const dbMapping = {
+        connection_id: mapping.connection_id,
+        glide_table: mapping.glide_table,
+        glide_table_display_name: mapping.glide_table_display_name,
+        supabase_table: mapping.supabase_table,
+        column_mappings: mapping.column_mappings as Record<string, unknown>,
+        sync_direction: mapping.sync_direction,
+        enabled: mapping.enabled,
+      };
+
       const { data, error } = await supabase
         .from('gl_mappings')
-        .update({
-          connection_id: mapping.connection_id,
-          glide_table: mapping.glide_table,
-          glide_table_display_name: mapping.glide_table_display_name,
-          supabase_table: mapping.supabase_table,
-          column_mappings: mapping.column_mappings as Record<string, GlColumnMapping>,
-          sync_direction: mapping.sync_direction,
-          enabled: mapping.enabled,
-        })
+        .update(dbMapping)
         .eq('id', id)
         .select()
         .single();
@@ -91,7 +101,11 @@ export function useMappingOperations() {
         description: 'Mapping updated successfully',
       });
 
-      return data as GlMapping;
+      // Convert the returned data to a GlMapping with the proper types
+      return {
+        ...data,
+        column_mappings: data.column_mappings as unknown as Record<string, GlColumnMapping>
+      } as GlMapping;
     } catch (error) {
       console.error('Error updating mapping:', error);
       toast({

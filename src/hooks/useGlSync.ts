@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { glSyncApi } from '@/services/glsync';
@@ -88,9 +87,8 @@ export function useGlSync() {
     setError(null);
 
     try {
-      // Use syncData action instead of retryFailedSync since that's not a valid action type
       const { data, error } = await glSyncApi.callSyncFunction({
-        action: "syncData",  // Changed from "retryFailedSync" to "syncData"
+        action: "syncData",
         connectionId,
         mappingId,
       });
@@ -117,10 +115,44 @@ export function useGlSync() {
     }
   };
 
+  const fetchGlideTableColumns = async (connectionId: string, tableId: string) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/glide/columns', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'getColumnMappings',
+          connectionId,
+          tableId
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch Glide table columns');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error fetching Glide table columns:', error);
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+      return { error: error instanceof Error ? error.message : 'Failed to fetch Glide table columns' };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     glideTables,
     fetchGlideTables,
+    fetchGlideTableColumns,
     syncData,
     retryFailedSync,
     error

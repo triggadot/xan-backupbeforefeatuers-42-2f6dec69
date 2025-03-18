@@ -10,6 +10,7 @@ import { GlConnection, GlMapping } from '@/types/glsync';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
+import { SupabaseTable } from '@/types/syncLog';
 
 interface EditMappingDialogProps {
   open: boolean;
@@ -42,6 +43,9 @@ const EditMappingDialog = ({
     onOpenChange(false);
   };
 
+  // Extract table names for the form
+  const tableNames = supabaseTables.map(table => table.table_name);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -52,7 +56,7 @@ const EditMappingDialog = ({
           mapping={mapping}
           isEditing={true}
           connections={connections}
-          supabaseTables={supabaseTables}
+          supabaseTables={tableNames}
           onSuccess={handleSuccess}
           onCancel={() => onOpenChange(false)}
         />
