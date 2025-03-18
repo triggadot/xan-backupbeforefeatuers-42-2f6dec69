@@ -9,6 +9,7 @@ import {
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AddMappingDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ const AddMappingDialog = ({
 }: AddMappingDialogProps) => {
   const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
   const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
+  const isMobile = useIsMobile();
   
   // Fetch data when dialog is opened
   useEffect(() => {
@@ -42,17 +44,19 @@ const AddMappingDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className={`${isMobile ? 'p-3' : 'p-4'} overflow-y-auto`}>
+        <DialogHeader className="mb-2">
           <DialogTitle>Create New Mapping</DialogTitle>
         </DialogHeader>
-        <MappingFormContainer
-          isEditing={false}
-          connections={connections}
-          supabaseTables={tableNames}
-          onSuccess={handleSuccess}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="overflow-y-auto pr-1">
+          <MappingFormContainer
+            isEditing={false}
+            connections={connections}
+            supabaseTables={tableNames}
+            onSuccess={handleSuccess}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -23,12 +23,15 @@ export function useColumnMappingValidation() {
 
     setIsValidating(true);
     try {
-      // Call the new validation function that can handle pre-existing mappings
+      // Convert the columnMappings to a format Supabase can handle
+      const mappingParam = {
+        supabase_table: tableName,
+        column_mappings: columnMappings
+      };
+
+      // Call the validation function
       const { data, error } = await supabase.rpc('gl_validate_mapping_data', {
-        p_mapping: {
-          supabase_table: tableName,
-          column_mappings: columnMappings
-        }
+        p_mapping: mappingParam
       });
 
       if (error) throw error;

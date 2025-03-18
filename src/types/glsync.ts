@@ -8,6 +8,7 @@ export interface GlConnection {
   api_key: string;
   created_at?: string | null;
   updated_at?: string | null;
+  last_sync?: string | null;
 }
 
 export interface GlColumnMapping {
@@ -46,6 +47,20 @@ export interface GlSyncStatus {
   total_records?: number | null;
   records_processed?: number | null;
   error_count?: number | null;
+  connection_id?: string;
+  app_name?: string;
+  glide_table?: string;
+  glide_table_display_name?: string;
+  supabase_table?: string;
+  enabled?: boolean;
+}
+
+export interface GlSyncStats {
+  total_mappings: number;
+  active_mappings: number;
+  records_synced: number;
+  failed_records: number;
+  last_sync?: string;
 }
 
 export interface GlSyncRecord {
@@ -56,6 +71,8 @@ export interface GlSyncRecord {
   timestamp: string;
   record_data?: any;
   resolved?: boolean;
+  record?: any;
+  retryable?: boolean;
 }
 
 export interface GlideTable {
@@ -81,4 +98,28 @@ export interface ColumnMappingSuggestion {
   suggested_supabase_column: string;
   data_type: string;
   confidence: number;
+}
+
+export interface GlRecentLog {
+  id: string;
+  mapping_id: string;
+  status: string;
+  timestamp: string;
+  records_processed: number;
+  mapping_name: string;
+  connection_name: string;
+}
+
+export interface GlProduct {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  glide_row_id: string;
+}
+
+export interface SyncRequestPayload {
+  mapping_id: string;
+  connection_id: string;
+  direction?: "to_supabase" | "to_glide" | "both";
 }

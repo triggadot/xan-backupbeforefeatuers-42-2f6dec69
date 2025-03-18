@@ -10,6 +10,7 @@ import { GlConnection, GlMapping } from '@/types/glsync';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EditMappingDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ const EditMappingDialog = ({
 }: EditMappingDialogProps) => {
   const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
   const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
+  const isMobile = useIsMobile();
   
   // Fetch data when dialog is opened
   useEffect(() => {
@@ -47,18 +49,20 @@ const EditMappingDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className={`${isMobile ? 'p-3' : 'p-4'} overflow-y-auto`}>
+        <DialogHeader className="mb-2">
           <DialogTitle>Edit Mapping</DialogTitle>
         </DialogHeader>
-        <MappingFormContainer
-          mapping={mapping}
-          isEditing={true}
-          connections={connections}
-          supabaseTables={tableNames}
-          onSuccess={handleSuccess}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="overflow-y-auto pr-1">
+          <MappingFormContainer
+            mapping={mapping}
+            isEditing={true}
+            connections={connections}
+            supabaseTables={tableNames}
+            onSuccess={handleSuccess}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
