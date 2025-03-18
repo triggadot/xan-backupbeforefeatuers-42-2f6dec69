@@ -20,8 +20,9 @@ const SyncDashboard = () => {
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
-  // Only use the hook for dashboard-wide data
+  // Use the full hook return values
   const { 
+    allSyncStatuses,
     recentLogs,
     syncStats,
     isLoading,

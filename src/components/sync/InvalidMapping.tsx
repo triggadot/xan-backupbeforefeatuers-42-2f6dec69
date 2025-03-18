@@ -1,25 +1,26 @@
 
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 
 interface InvalidMappingProps {
-  onBackClick: () => void;
+  onBack: () => void;
 }
 
-export function InvalidMapping({ onBackClick }: InvalidMappingProps) {
+export function InvalidMapping({ onBack }: InvalidMappingProps) {
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardContent className="p-6">
-          <p>Invalid mapping ID. Please select a valid mapping.</p>
-          <Button variant="outline" onClick={onBackClick} className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sync
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Mapping Not Found</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-4">The requested mapping could not be found or may have been deleted.</p>
+        <Button onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Mappings
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

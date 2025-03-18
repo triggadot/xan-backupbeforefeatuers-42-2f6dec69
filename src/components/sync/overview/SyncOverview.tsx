@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import SyncStatusBadge from '../ui/SyncStatusBadge';
+import { SyncStatusBadge } from '../ui/SyncStatusBadge';
 import { GlSyncStatus } from '@/types/glsync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 

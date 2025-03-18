@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,12 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft } from 'lucide-react';
 import SyncProductsButton from '@/components/sync/SyncProductsButton';
-import SyncDetailsPanel from '@/components/sync/SyncDetailsPanel';
-import SyncProgressIndicator from '@/components/sync/SyncProgressIndicator';
-import SyncContainer from '@/components/sync/SyncContainer';
-import LoadingState from '@/components/sync/LoadingState';
-import InvalidMapping from '@/components/sync/InvalidMapping';
-import { GlMapping, GlProduct } from '@/types/glsync';
+import { SyncDetailsPanel } from '@/components/sync/SyncDetailsPanel';
+import { SyncProgressIndicator } from '@/components/sync/SyncProgressIndicator';
+import { SyncContainer } from '@/components/sync/SyncContainer';
+import { LoadingState } from '@/components/sync/LoadingState';
+import { InvalidMapping } from '@/components/sync/InvalidMapping';
+import { GlMapping, GlProduct, GlSyncLog } from '@/types/glsync';
 import { SyncLog } from '@/types/syncLog';
 import { SyncLogsTable } from '@/components/sync/SyncLogsTable';
 
@@ -21,7 +20,7 @@ const ProductSync = () => {
   const { mappingId } = useParams();
   const [mapping, setMapping] = useState<GlMapping | null>(null);
   const [products, setProducts] = useState<GlProduct[]>([]);
-  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+  const [syncLogs, setSyncLogs] = useState<GlSyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -46,7 +45,6 @@ const ProductSync = () => {
       
       if (error) throw error;
       
-      // Convert to GlMapping type
       const mappingData = {
         ...data,
         column_mappings: data.column_mappings as Record<string, {
@@ -108,7 +106,12 @@ const ProductSync = () => {
         .limit(20);
       
       if (error) throw error;
-      setSyncLogs(data as SyncLog[] || []);
+      const logs = (data || []).map(log => ({
+        ...log,
+        status: log.status as "started" | "processing" | "completed" | "failed"
+      })) as GlSyncLog[];
+      
+      setSyncLogs(logs);
     } catch (error) {
       console.error('Error fetching sync logs:', error);
       toast({

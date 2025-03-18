@@ -1,55 +1,47 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SyncLogsTable } from './SyncLogsTable';
-import { SyncStatusDisplay } from './SyncStatusDisplay';
-import { RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { GlSyncStatus, GlSyncLog } from '@/types/glsync';
-import SyncMetricsCard from './SyncMetricsCard';
+import { Badge } from '@/components/ui/badge';
+import { GlMapping } from '@/types/glsync';
 
 interface SyncDetailsPanelProps {
-  syncStatus: GlSyncStatus | null;
-  logs: GlSyncLog[];
-  isLoading: boolean;
-  onRefresh: () => void;
-  syncStats?: any[];
+  mapping: GlMapping;
 }
 
-export function SyncDetailsPanel({ 
-  syncStatus, 
-  logs, 
-  isLoading, 
-  onRefresh,
-  syncStats = []
-}: SyncDetailsPanelProps) {
+export function SyncDetailsPanel({ mapping }: SyncDetailsPanelProps) {
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg">Sync Status</CardTitle>
-          <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <SyncStatusDisplay status={syncStatus} />
-        </CardContent>
-      </Card>
-      
-      {syncStats && syncStats.length > 0 && (
-        <SyncMetricsCard syncStats={syncStats} isLoading={isLoading} />
-      )}
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Sync History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SyncLogsTable logs={logs} isLoading={isLoading} />
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Mapping Details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid grid-cols-1 gap-4">
+          <div>
+            <dt className="text-sm font-medium text-muted-foreground">Glide Table</dt>
+            <dd className="text-lg">{mapping.glide_table_display_name}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-muted-foreground">Supabase Table</dt>
+            <dd className="text-lg">{mapping.supabase_table}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-muted-foreground">Sync Direction</dt>
+            <dd className="text-lg">
+              {mapping.sync_direction === 'to_supabase' ? 'Glide → Supabase' : 
+               mapping.sync_direction === 'to_glide' ? 'Supabase → Glide' : 
+               'Bidirectional'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-muted-foreground">Status</dt>
+            <dd className="text-lg">
+              <Badge className={mapping.enabled ? "bg-green-500" : "bg-gray-500"}>
+                {mapping.enabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </dd>
+          </div>
+        </dl>
+      </CardContent>
+    </Card>
   );
 }

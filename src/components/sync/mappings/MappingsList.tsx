@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -7,9 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Mapping } from '@/types/syncLog';
 import MappingCard from './MappingCard';
 import { supabase } from '@/integrations/supabase/client';
-import AddMappingButton from './AddMappingButton';
+import { AddMappingButton } from './AddMappingButton';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Json } from '@/integrations/supabase/types';
+import { GlMapping, GlColumnMapping } from '@/types/glsync';
 
 const MappingsList = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
@@ -44,7 +44,7 @@ const MappingsList = () => {
             supabase_column_name: string;
             data_type: string;
           }>
-        } as Mapping;
+        } as unknown as Mapping;
       });
       
       setMappings(formattedMappings);

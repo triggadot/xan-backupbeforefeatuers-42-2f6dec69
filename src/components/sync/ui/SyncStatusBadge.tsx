@@ -1,28 +1,56 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Check, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface SyncStatusBadgeProps {
-  status: string | null;
+  status: string;
+  className?: string;
 }
 
-export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({ status }) => {
-  if (!status) {
-    return <Badge variant="outline">Unknown</Badge>;
-  }
-  
+export function SyncStatusBadge({ status, className }: SyncStatusBadgeProps) {
   switch (status.toLowerCase()) {
     case 'completed':
-      return <Badge className="bg-green-500">Completed</Badge>;
+      return (
+        <Badge className="bg-green-500 flex items-center gap-1">
+          <Check className="h-3 w-3" />
+          Completed
+        </Badge>
+      );
     case 'processing':
-      return <Badge className="bg-blue-500">Processing</Badge>;
+      return (
+        <Badge className="bg-blue-500 flex items-center gap-1">
+          <RefreshCw className="h-3 w-3 animate-spin" />
+          Processing
+        </Badge>
+      );
     case 'failed':
-      return <Badge variant="destructive">Failed</Badge>;
+    case 'error':
+      return (
+        <Badge className="bg-red-500 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Failed
+        </Badge>
+      );
     case 'started':
-      return <Badge className="bg-yellow-500">Started</Badge>;
-    case 'completed_with_errors':
-      return <Badge className="bg-amber-500">Completed with errors</Badge>;
+      return (
+        <Badge className="bg-yellow-500 flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Started
+        </Badge>
+      );
+    case 'idle':
+      return (
+        <Badge variant="outline" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Idle
+        </Badge>
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return (
+        <Badge variant="outline" className={className}>
+          {status}
+        </Badge>
+      );
   }
-};
+}
