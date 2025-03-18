@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { GlColumnMapping } from '@/types/glsync';
+import { convertToDbMapping } from '@/utils/gl-mapping-converters';
 
 interface AddMappingFormProps {
   onSuccess?: () => Promise<void>;
@@ -98,17 +98,20 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
         }
       };
       
+      // Convert the mapping to a database-compatible format
+      const dbMapping = convertToDbMapping({
+        connection_id: values.connection_id,
+        glide_table: values.glide_table,
+        glide_table_display_name: values.glide_table_display_name,
+        supabase_table: values.supabase_table,
+        column_mappings: defaultMapping,
+        sync_direction: values.sync_direction,
+        enabled: true
+      });
+      
       const { data, error } = await supabase
         .from('gl_mappings')
-        .insert({
-          connection_id: values.connection_id,
-          glide_table: values.glide_table,
-          glide_table_display_name: values.glide_table_display_name,
-          supabase_table: values.supabase_table,
-          column_mappings: defaultMapping,
-          sync_direction: values.sync_direction,
-          enabled: true
-        })
+        .insert(dbMapping)
         .select()
         .single();
       

@@ -46,6 +46,21 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
   } as GlMapping;
 }
 
+// Convert GlMapping to a format suitable for database storage (plain JSON)
+export function convertToDbMapping(mapping: Partial<GlMapping>): any {
+  if (!mapping.column_mappings) {
+    return mapping;
+  }
+  
+  // Convert the column_mappings to a plain object for database storage
+  const dbMapping = {
+    ...mapping,
+    column_mappings: { ...mapping.column_mappings }
+  };
+  
+  return dbMapping;
+}
+
 // Get default column mappings
 export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
   return {
