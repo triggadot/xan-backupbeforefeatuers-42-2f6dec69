@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import Dashboard from '@/pages/Dashboard';
 import Sync from '@/pages/Sync';
 import ProductSync from '@/pages/ProductSync';
+import MappingView from '@/pages/MappingView';
 import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -31,6 +31,7 @@ const App: React.FC = () => {
                 <Route path=":tab" element={<Sync />} />
               </Route>
               <Route path="sync/products/:mappingId" element={<ProductSync />} />
+              <Route path="sync/mappings/:mappingId" element={<MappingView />} />
             </Route>
           </Routes>
         </BrowserRouter>

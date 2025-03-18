@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -249,7 +248,12 @@ const SyncDashboard = () => {
                         Last sync: {formatTimestamp(status.last_sync_completed_at)}
                       </div>
                       <div className="flex space-x-2">
-                        <Link to={`/sync/products/${status.mapping_id}`}>
+                        <Link to={
+                          // Check table type and route appropriately
+                          status.supabase_table === 'gl_products' 
+                            ? `/sync/products/${status.mapping_id}` 
+                            : `/sync/mappings/${status.mapping_id}`
+                        }>
                           <Button 
                             size="sm"
                             variant="outline"

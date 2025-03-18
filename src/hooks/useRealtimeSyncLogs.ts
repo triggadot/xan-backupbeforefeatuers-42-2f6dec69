@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SyncLog } from '@/types/syncLog';
@@ -8,12 +7,14 @@ interface UseSyncLogsOptions {
   mappingId?: string;
   limit?: number;
   includeDetails?: boolean;
+  onlyFailed?: boolean;
 }
 
 export function useRealtimeSyncLogs({ 
   mappingId, 
   limit = 20, 
-  includeDetails = true 
+  includeDetails = true,
+  onlyFailed = false
 }: UseSyncLogsOptions = {}) {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +26,7 @@ export function useRealtimeSyncLogs({
     try {
       let query = supabase
         .from('gl_sync_logs')
-        .select(includeDetails ? `
+        .select(`
           *,
           gl_mappings!gl_sync_logs_mapping_id_fkey (
             glide_table,
@@ -36,7 +37,7 @@ export function useRealtimeSyncLogs({
               app_name
             )
           )
-        ` : '*')
+        `)
         .order('started_at', { ascending: false })
         .limit(limit);
       
@@ -44,9 +45,7 @@ export function useRealtimeSyncLogs({
         query = query.eq('mapping_id', mappingId);
       }
       
-      if (filter === 'completed') {
-        query = query.eq('status', 'completed');
-      } else if (filter === 'failed') {
+      if (onlyFailed) {
         query = query.eq('status', 'failed');
       }
       
@@ -54,19 +53,33 @@ export function useRealtimeSyncLogs({
       
       if (error) throw error;
       
-      // Transform the data to match the SyncLog type
-      const formattedLogs = data.map(log => {
-        if (!includeDetails) return log as SyncLog;
+      // Safely validate and transform the response data
+      const formattedLogs = (data || []).map(log => {
+        // Create a base log object with required properties
+        const baseLog: SyncLog = {
+          id: log.id || '',
+          mapping_id: log.mapping_id || null,
+          started_at: log.started_at || '',
+          completed_at: log.completed_at || null,
+          status: log.status || '',
+          message: log.message || null,
+          records_processed: log.records_processed || null
+        };
         
-        const mapping = log.gl_mappings;
+        // If we don't need details, return just the base log
+        if (!includeDetails) return baseLog;
+        
+        // If we have mapping details, add them
+        const mappingData = log.gl_mappings || null;
+        
         return {
-          ...log,
-          glide_table: mapping?.glide_table || null,
-          glide_table_display_name: mapping?.glide_table_display_name || null,
-          supabase_table: mapping?.supabase_table || null,
-          app_name: mapping?.gl_connections?.app_name || null,
-          sync_direction: mapping?.sync_direction || null
-        } as SyncLog;
+          ...baseLog,
+          glide_table: mappingData?.glide_table || null,
+          glide_table_display_name: mappingData?.glide_table_display_name || null,
+          supabase_table: mappingData?.supabase_table || null,
+          app_name: mappingData?.gl_connections?.app_name || null,
+          sync_direction: mappingData?.sync_direction || null
+        };
       });
       
       setSyncLogs(formattedLogs);
@@ -80,7 +93,7 @@ export function useRealtimeSyncLogs({
     } finally {
       setIsLoading(false);
     }
-  }, [mappingId, limit, filter, includeDetails, toast]);
+  }, [mappingId, limit, includeDetails, onlyFailed, toast]);
 
   // Initial load and setup realtime subscription
   useEffect(() => {

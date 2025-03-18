@@ -1,4 +1,3 @@
-
 import { GlMapping, GlColumnMapping } from '@/types/glsync';
 import { Mapping } from '@/types/syncLog';
 
@@ -11,21 +10,30 @@ export function isValidDataType(type: string): type is "string" | "number" | "bo
 export function convertToGlMapping(mapping: Mapping): GlMapping {
   const convertedColumnMappings: Record<string, GlColumnMapping> = {};
   
-  // Handle the case where column_mappings might be null or undefined
-  if (mapping.column_mappings) {
-    Object.entries(mapping.column_mappings).forEach(([key, value]) => {
+  // Handle the case where column_mappings might be coming from a JSON field in Supabase
+  const columnMappings = mapping.column_mappings as any;
+  
+  if (columnMappings) {
+    Object.entries(columnMappings).forEach(([key, value]) => {
+      // Ensure we have a proper object with the right properties
+      const columnMapping = value as any;
+      if (!columnMapping || typeof columnMapping !== 'object') {
+        console.warn(`Invalid column mapping for key "${key}"`);
+        return;
+      }
+
       // Ensure data_type is one of the allowed types
       let dataType: "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" = "string";
       
-      if (isValidDataType(value.data_type)) {
-        dataType = value.data_type;
+      if (isValidDataType(columnMapping.data_type)) {
+        dataType = columnMapping.data_type;
       } else {
-        console.warn(`Invalid data_type "${value.data_type}" for column "${key}", defaulting to "string"`);
+        console.warn(`Invalid data_type "${columnMapping.data_type}" for column "${key}", defaulting to "string"`);
       }
       
       convertedColumnMappings[key] = {
-        glide_column_name: value.glide_column_name,
-        supabase_column_name: value.supabase_column_name,
+        glide_column_name: columnMapping.glide_column_name || '',
+        supabase_column_name: columnMapping.supabase_column_name || '',
         data_type: dataType
       };
     });

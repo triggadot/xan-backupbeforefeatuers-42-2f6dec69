@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,8 +47,9 @@ export function MappingsList({ onEdit }: MappingsListProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Table Mappings</h2>
-        <AddMappingButton onSuccess={() => {
+        <AddMappingButton onSuccess={async () => {
           // Refresh happens automatically via real-time subscription
+          return Promise.resolve();
         }} />
       </div>
       

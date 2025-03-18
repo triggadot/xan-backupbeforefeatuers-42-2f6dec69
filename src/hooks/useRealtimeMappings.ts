@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlMapping } from '@/types/glsync';
 import { Mapping } from '@/types/syncLog';
 import { convertToGlMapping } from '@/utils/gl-mapping-converters';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +51,13 @@ export function useRealtimeMappings() {
       // Transform the data to match the Mapping type
       const formattedMappings = data.map(item => ({
         ...item,
-        app_name: item.gl_connections?.app_name || null
+        app_name: item.gl_connections?.app_name || null,
+        // Cast column_mappings from JSON to the expected Record type
+        column_mappings: item.column_mappings as unknown as Record<string, { 
+          glide_column_name: string;
+          supabase_column_name: string;
+          data_type: string;
+        }>
       })) as Mapping[];
       
       setMappings(formattedMappings);
