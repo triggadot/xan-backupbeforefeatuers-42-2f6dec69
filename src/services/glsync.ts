@@ -290,9 +290,9 @@ export const glSyncApi = {
 
   async listGlideTables(connectionId: string): Promise<{ tables: GlideTable[] } | { error: string }> {
     try {
-      console.log(`Listing tables for connection ${connectionId}`);
+      console.log(`Getting existing Glide tables from database`);
       const result = await this.callSyncFunction({
-        action: 'listGlideTables',
+        action: 'getTableNames',
         connectionId,
       });
       

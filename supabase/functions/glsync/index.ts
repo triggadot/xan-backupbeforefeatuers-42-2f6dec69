@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-import { listGlideTables, testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
+import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,26 +61,32 @@ Deno.serve(async (req) => {
       
       return await testGlideConnection(supabase, connectionId);
     } 
-    else if (action === 'listGlideTables') {
-      if (!connectionId) {
-        throw new Error('Connection ID is required');
+    else if (action === 'getTableNames') {
+      // Return existing Glide tables from gl_mappings
+      const { data, error } = await supabase
+        .from('gl_mappings')
+        .select('glide_table, glide_table_display_name')
+        .order('glide_table_display_name', { ascending: true });
+      
+      if (error) {
+        throw error;
       }
       
-      const { data: connection, error: connectionError } = await supabase
-        .from('gl_connections')
-        .select('*')
-        .eq('id', connectionId)
-        .single();
+      // Format the response to match expected structure
+      const uniqueTables = new Map();
       
-      if (connectionError) {
-        throw connectionError;
-      }
+      // Filter unique tables to avoid duplicates
+      data.forEach(item => {
+        // Only add if not already in map
+        if (!uniqueTables.has(item.glide_table)) {
+          uniqueTables.set(item.glide_table, {
+            id: item.glide_table,
+            display_name: item.glide_table_display_name
+          });
+        }
+      });
       
-      if (!connection) {
-        throw new Error('Connection not found');
-      }
-      
-      const tables = await listGlideTables(connection.api_key, connection.app_id);
+      const tables = Array.from(uniqueTables.values());
       
       return new Response(
         JSON.stringify({ 

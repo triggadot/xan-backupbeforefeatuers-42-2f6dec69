@@ -62,6 +62,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     if (open) {
       fetchConnections();
       fetchSupabaseTables();
+      // We'll fetch Glide tables from our database only when a connection is selected
     }
   }, [open]);
 
@@ -96,7 +97,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     try {
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
-          action: 'listGlideTables',
+          action: 'getTableNames',
           connectionId,
         },
       });
