@@ -1,116 +1,121 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Clock, BarChart2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { GlSyncStats } from '@/types/glsync';
-import { formatTimestamp } from '@/utils/glsync-transformers';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface SyncMetricsCardProps {
-  syncStats: GlSyncStats | null;
+  syncStats: GlSyncStats[];
   isLoading: boolean;
 }
 
-const SyncMetricsCard: React.FC<SyncMetricsCardProps> = ({ syncStats, isLoading }) => {
+const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = parseISO(dateString);
+      return isValid(date) ? format(date, 'MMM dd') : 'Invalid';
+    } catch (e) {
+      return 'Invalid';
+    }
+  };
+
+  // Prepare chart data
+  const chartData = syncStats.map(stat => ({
+    ...stat,
+    date: formatDate(stat.sync_date),
+  })).reverse();
+
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Sync Metrics</CardTitle>
+        <CardHeader>
+          <CardTitle className="text-lg">Sync Activity</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="h-8 bg-gray-200 rounded"></div>
-              <div className="h-8 bg-gray-200 rounded"></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="h-8 bg-gray-200 rounded"></div>
-              <div className="h-8 bg-gray-200 rounded"></div>
-            </div>
+        <CardContent className="space-y-6">
+          <Skeleton className="h-[200px] w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!syncStats) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Sync Metrics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <BarChart2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-muted-foreground">No sync statistics available yet.</p>
-            <p className="text-xs text-muted-foreground mt-2">Statistics will appear after sync operations.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const successRate = syncStats.syncs > 0 
-    ? Math.round((syncStats.successful_syncs / syncStats.syncs) * 100) 
-    : 0;
+  // Calculate totals from the stats
+  const totalSyncs = syncStats.reduce((sum, stat) => sum + stat.syncs, 0);
+  const totalRecords = syncStats.reduce((sum, stat) => sum + stat.total_records_processed, 0);
+  const successRate = totalSyncs ? 
+    Math.round((syncStats.reduce((sum, stat) => sum + stat.successful_syncs, 0) / totalSyncs) * 100) : 
+    0;
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Today's Sync Metrics</CardTitle>
+      <CardHeader>
+        <CardTitle className="text-lg">Sync Activity</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Last Updated:</span>
-            <span className="text-sm font-medium">{formatTimestamp(syncStats.sync_date)}</span>
+      <CardContent className="space-y-6">
+        {chartData.length > 0 ? (
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{
+                  top: 5,
+                  right: 20,
+                  left: 0,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  width={30}
+                />
+                <Tooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="syncs" 
+                  stroke="#3b82f6" 
+                  name="Syncs"
+                  strokeWidth={2}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="total_records_processed" 
+                  stroke="#10b981" 
+                  name="Records Processed"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-100 p-3 rounded-md">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">Total Syncs</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{syncStats.syncs}</p>
-            </div>
-            
-            <div className="bg-gray-100 p-3 rounded-md">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">Success Rate</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{successRate}%</p>
-            </div>
+        ) : (
+          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+            No sync data available
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-100 p-3 rounded-md">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">Successful</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{syncStats.successful_syncs}</p>
-            </div>
-            
-            <div className="bg-gray-100 p-3 rounded-md">
-              <div className="flex items-center space-x-2">
-                <XCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm font-medium">Failed</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{syncStats.failed_syncs}</p>
-            </div>
+        )}
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{totalSyncs}</div>
+            <div className="text-sm text-blue-800">Total Syncs</div>
           </div>
-          
-          <div className="bg-blue-50 p-3 rounded-md">
-            <div className="flex items-center space-x-2">
-              <BarChart2 className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">Records Processed</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{syncStats.total_records_processed.toLocaleString()}</p>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{totalRecords}</div>
+            <div className="text-sm text-green-800">Records Processed</div>
           </div>
+        </div>
+        
+        <div className="bg-gray-50 p-4 rounded-lg text-center">
+          <div className="text-2xl font-bold">{successRate}%</div>
+          <div className="text-sm text-gray-600">Success Rate</div>
         </div>
       </CardContent>
     </Card>

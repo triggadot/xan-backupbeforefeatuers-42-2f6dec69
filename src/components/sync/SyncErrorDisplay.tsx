@@ -1,247 +1,262 @@
 
 import React, { useState } from 'react';
 import { GlSyncRecord } from '@/types/glsync';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircle, CheckCircle, ExternalLink, RefreshCw, XCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Switch } from '@/components/ui/switch';
+import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-export interface SyncErrorDisplayProps {
+interface SyncErrorDisplayProps {
   syncErrors: GlSyncRecord[];
   onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
-  onRefresh?: (includeResolved?: boolean) => Promise<void>;
+  onRefresh?: () => Promise<void>;
+  isLoading?: boolean;
   className?: string;
 }
 
-export function SyncErrorDisplay({ syncErrors, onResolve, onRefresh, className }: SyncErrorDisplayProps) {
-  const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
-  const [resolving, setResolving] = useState<Record<string, boolean>>({});
-  const [showResolved, setShowResolved] = useState(false);
+export function SyncErrorDisplay({ 
+  syncErrors, 
+  onResolve, 
+  onRefresh,
+  isLoading = false,
+  className = "" 
+}: SyncErrorDisplayProps) {
+  const [selectedError, setSelectedError] = useState<GlSyncRecord | null>(null);
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleResolve = async (errorId: string) => {
-    if (!onResolve) return;
+  const handleResolve = async () => {
+    if (!selectedError || !onResolve) return;
     
-    setResolving(prev => ({ ...prev, [errorId]: true }));
-    
+    setIsResolving(true);
     try {
-      const success = await onResolve(errorId, resolutionNotes[errorId]);
-      
+      const success = await onResolve(selectedError.id!, resolutionNotes);
       if (success) {
-        setResolutionNotes(prev => {
-          const newNotes = { ...prev };
-          delete newNotes[errorId];
-          return newNotes;
-        });
-        
-        if (onRefresh) {
-          await onRefresh(showResolved);
-        }
+        setSelectedError(null);
+        setResolutionNotes('');
       }
-    } catch (error) {
-      console.error('Error resolving sync error:', error);
     } finally {
-      setResolving(prev => ({ ...prev, [errorId]: false }));
+      setIsResolving(false);
     }
   };
 
   const handleRefresh = async () => {
-    if (onRefresh) {
-      await onRefresh(showResolved);
+    if (!onRefresh) return;
+    
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
-  const handleShowResolvedToggle = async (checked: boolean) => {
-    setShowResolved(checked);
-    if (onRefresh) {
-      await onRefresh(checked);
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      return format(new Date(timestamp), 'MMM dd, yyyy h:mm a');
+    } catch (e) {
+      return 'Invalid date';
     }
   };
 
-  const getErrorBadgeColor = (type: string) => {
+  const getErrorIcon = (type: string) => {
     switch (type) {
       case 'VALIDATION_ERROR':
-        return 'bg-yellow-500';
-      case 'API_ERROR':
-        return 'bg-red-500';
-      case 'RATE_LIMIT':
-        return 'bg-orange-500';
-      case 'NETWORK_ERROR':
-        return 'bg-purple-500';
+        return <XCircle className="h-4 w-4 text-red-500" />;
       case 'TRANSFORM_ERROR':
-        return 'bg-amber-500';
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      case 'API_ERROR':
+        return <ExternalLink className="h-4 w-4 text-blue-500" />;
+      case 'RATE_LIMIT':
+        return <RefreshCw className="h-4 w-4 text-purple-500" />;
+      case 'NETWORK_ERROR':
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
       default:
-        return 'bg-gray-500';
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
   };
 
-  const errorTypes = {
-    'VALIDATION_ERROR': 'Data validation failed',
-    'API_ERROR': 'API communication error',
-    'RATE_LIMIT': 'Rate limit exceeded',
-    'NETWORK_ERROR': 'Network connectivity issue',
-    'TRANSFORM_ERROR': 'Data transformation error'
+  const getErrorTypeBadge = (type: string) => {
+    switch (type) {
+      case 'VALIDATION_ERROR':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Validation</Badge>;
+      case 'TRANSFORM_ERROR':
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">Transform</Badge>;
+      case 'API_ERROR':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">API</Badge>;
+      case 'RATE_LIMIT':
+        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">Rate Limit</Badge>;
+      case 'NETWORK_ERROR':
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200">Network</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
+    }
   };
 
-  if (syncErrors.length === 0) {
+  if (isLoading) {
     return (
-      <Card className={cn("w-full", className)}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle className="text-lg">Sync Errors</CardTitle>
-            <CardDescription>No errors found for this sync mapping</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-            <span>All clear! No sync errors detected.</span>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t p-4">
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="show-resolved" 
-              checked={showResolved}
-              onCheckedChange={handleShowResolvedToggle}
-            />
-            <Label htmlFor="show-resolved">Show resolved errors</Label>
-          </div>
-        </CardFooter>
-      </Card>
+      <div className={className}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex justify-between items-center">
+              <span>Sync Errors</span>
+              <Skeleton className="h-9 w-24" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex p-3 border rounded-md">
+                  <Skeleton className="h-4 w-4 mr-3 mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-5 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-7 w-20" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-lg">Sync Errors</CardTitle>
-          <CardDescription>
-            {syncErrors.length} error{syncErrors.length !== 1 ? 's' : ''} found during sync operations
-          </CardDescription>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Accordion type="multiple" className="w-full">
-          {syncErrors.map((error, index) => (
-            <AccordionItem key={error.id || index} value={error.id || `error-${index}`} className="border-b">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex justify-between items-center w-full pr-4">
-                  <div className="flex items-center gap-2">
-                    {error.resolved ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-red-500" />
-                    )}
-                    <Badge className={cn("text-white", getErrorBadgeColor(error.type))}>
-                      {error.type}
-                    </Badge>
+    <div className={className}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Sync Errors {syncErrors.length > 0 && `(${syncErrors.length})`}</span>
+            {onRefresh && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {syncErrors.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <p className="text-muted-foreground">No sync errors found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {syncErrors.map(error => (
+                <div key={error.id} className="flex p-3 border rounded-md hover:bg-slate-50">
+                  <div className="mr-3 mt-1">
+                    {getErrorIcon(error.type)}
                   </div>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {new Date(error.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Error Type:</h4>
-                    <p className="text-sm mb-3 p-2 bg-muted rounded">
-                      {errorTypes[error.type as keyof typeof errorTypes] || error.type}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Error Message:</h4>
-                    <p className="text-sm mb-3 p-2 bg-muted rounded">{error.message}</p>
-                  </div>
-                  
-                  {error.record && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-1">Affected Record:</h4>
-                      <pre className="text-xs p-2 bg-slate-100 dark:bg-slate-900 rounded overflow-x-auto max-h-40">
-                        {JSON.stringify(error.record, null, 2)}
-                      </pre>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium">{error.message}</div>
+                      {getErrorTypeBadge(error.type)}
                     </div>
-                  )}
-                  
-                  {error.retryable && !error.resolved && (
-                    <div className="flex items-center">
-                      <Badge variant="outline" className="border-blue-400 text-blue-500">
-                        This error can be retried automatically
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  {onResolve && !error.resolved && (
-                    <div className="mt-4 space-y-2">
-                      <Textarea 
-                        placeholder="Add resolution notes (optional)" 
-                        value={resolutionNotes[error.id || ''] || ''}
-                        onChange={(e) => setResolutionNotes(prev => ({ 
-                          ...prev, 
-                          [error.id || '']: e.target.value 
-                        }))}
-                        className="text-sm"
-                        rows={2}
-                      />
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleResolve(error.id || '')}
-                        disabled={resolving[error.id || '']}
-                      >
-                        {resolving[error.id || ''] ? 'Resolving...' : 'Mark as Resolved'}
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {error.resolved && (
-                    <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm">
-                      <div className="flex items-center text-green-700 dark:text-green-400">
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        <span className="font-medium">Resolved</span>
+                    {error.record && (
+                      <div className="text-sm text-muted-foreground">
+                        Record ID: {error.record.id || error.record.glide_row_id || 'Unknown'}
                       </div>
-                      {error.resolution_notes && (
-                        <p className="mt-1 text-muted-foreground">{error.resolution_notes}</p>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-muted-foreground">
+                        {formatTimestamp(error.timestamp)}
+                      </div>
+                      {onResolve && !error.resolved && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedError(error);
+                                setResolutionNotes('');
+                              }}
+                            >
+                              Resolve
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Resolve Sync Error</DialogTitle>
+                              <DialogDescription>
+                                Mark this error as resolved and add optional resolution notes.
+                              </DialogDescription>
+                            </DialogHeader>
+                            
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label>Error Message</Label>
+                                <div className="p-2 bg-slate-50 rounded-md text-sm">
+                                  {selectedError?.message}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="resolution-notes">Resolution Notes (Optional)</Label>
+                                <Textarea
+                                  id="resolution-notes"
+                                  value={resolutionNotes}
+                                  onChange={(e) => setResolutionNotes(e.target.value)}
+                                  placeholder="Add notes about how this error was resolved..."
+                                  rows={4}
+                                />
+                              </div>
+                            </div>
+                            
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setSelectedError(null)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleResolve}
+                                disabled={isResolving}
+                              >
+                                {isResolving ? (
+                                  <>
+                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                    Resolving...
+                                  </>
+                                ) : 'Mark as Resolved'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-      <CardFooter className="justify-between flex-col sm:flex-row items-center gap-2 border-t p-4">
-        <div className="flex items-center space-x-2">
-          <Switch 
-            id="show-resolved" 
-            checked={showResolved}
-            onCheckedChange={handleShowResolvedToggle}
-          />
-          <Label htmlFor="show-resolved">Show resolved errors</Label>
-        </div>
-        
-        <p className="text-xs text-muted-foreground">
-          Displaying {syncErrors.length} error record{syncErrors.length !== 1 ? 's' : ''}
-        </p>
-      </CardFooter>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

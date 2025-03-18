@@ -10,7 +10,7 @@ export function useGlSyncLogs(mappingId?: string) {
   const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
-  const fetchSyncLogs = useCallback(async (): Promise<void> => {
+  const fetchSyncLogs = useCallback(async (includeResolved: boolean = false): Promise<void> => {
     if (!mappingId) {
       setSyncLogs([]);
       setIsLoading(false);
@@ -34,7 +34,17 @@ export function useGlSyncLogs(mappingId?: string) {
         throw new Error(error.message);
       }
       
-      setSyncLogs(data || []);
+      const typedLogs: GlSyncLog[] = (data || []).map(log => ({
+        id: log.id,
+        mapping_id: log.mapping_id,
+        started_at: log.started_at,
+        completed_at: log.completed_at,
+        status: log.status as "started" | "processing" | "completed" | "failed",
+        message: log.message,
+        records_processed: log.records_processed
+      }));
+      
+      setSyncLogs(typedLogs);
     } catch (error) {
       console.error('Error fetching sync logs:', error);
       setHasError(true);

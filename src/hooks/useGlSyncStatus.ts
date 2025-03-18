@@ -1,13 +1,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlSyncStatus } from '@/types/glsync';
+import { GlSyncStatus, GlRecentLog, GlSyncStats } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 
 export function useGlSyncStatus(mappingId?: string) {
   const [syncStatus, setSyncStatus] = useState<GlSyncStatus | null>(null);
+  const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
+  const [syncStats, setSyncStats] = useState<GlSyncStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchSyncStatus = useCallback(async (): Promise<void> => {
@@ -43,6 +46,7 @@ export function useGlSyncStatus(mappingId?: string) {
     } catch (error) {
       console.error('Error fetching sync status:', error);
       setHasError(true);
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       toast({
         title: 'Error fetching sync status',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -52,6 +56,80 @@ export function useGlSyncStatus(mappingId?: string) {
       setIsLoading(false);
     }
   }, [mappingId, toast]);
+
+  const fetchRecentLogs = useCallback(async (): Promise<void> => {
+    try {
+      if (mappingId) {
+        // Fetch recent logs for a specific mapping
+        const { data, error } = await supabase
+          .from('gl_sync_logs')
+          .select('*')
+          .eq('mapping_id', mappingId)
+          .order('started_at', { ascending: false })
+          .limit(5);
+        
+        if (error) throw new Error(error.message);
+        setRecentLogs(data || []);
+      } else {
+        // Fetch global recent logs
+        const { data, error } = await supabase
+          .from('gl_recent_logs')
+          .select('*')
+          .order('started_at', { ascending: false })
+          .limit(10);
+        
+        if (error) throw new Error(error.message);
+        setRecentLogs(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recent logs:', error);
+      toast({
+        title: 'Error fetching recent logs',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [mappingId, toast]);
+
+  const fetchSyncStats = useCallback(async (): Promise<void> => {
+    try {
+      if (mappingId) {
+        // Fetch stats for a specific mapping
+        const { data, error } = await supabase
+          .from('gl_sync_stats')
+          .select('*')
+          .eq('mapping_id', mappingId)
+          .order('sync_date', { ascending: false })
+          .limit(7);
+        
+        if (error) throw new Error(error.message);
+        setSyncStats(data || []);
+      } else {
+        // Fetch global stats
+        const { data, error } = await supabase
+          .from('gl_sync_stats')
+          .select('*')
+          .order('sync_date', { ascending: false })
+          .limit(7);
+        
+        if (error) throw new Error(error.message);
+        setSyncStats(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching sync stats:', error);
+      // Don't show a toast for stats errors - less critical
+    }
+  }, [mappingId, toast]);
+
+  const refreshData = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    await Promise.all([
+      fetchSyncStatus(),
+      fetchRecentLogs(),
+      fetchSyncStats()
+    ]);
+    setIsLoading(false);
+  }, [fetchSyncStatus, fetchRecentLogs, fetchSyncStats]);
 
   // Set up realtime subscription for live updates
   const setupRealtimeSubscription = useCallback(() => {
@@ -75,8 +153,9 @@ export function useGlSyncStatus(mappingId?: string) {
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'gl_sync_logs', filter: `mapping_id=eq.${mappingId}` }, 
         () => {
-          // Refresh status when new logs are added
+          // Refresh status and logs when new logs are added
           fetchSyncStatus();
+          fetchRecentLogs();
         }
       )
       .subscribe();
@@ -85,21 +164,25 @@ export function useGlSyncStatus(mappingId?: string) {
       supabase.removeChannel(syncStatusChannel);
       supabase.removeChannel(syncLogsChannel);
     };
-  }, [fetchSyncStatus, mappingId]);
+  }, [fetchSyncStatus, fetchRecentLogs, mappingId]);
 
   useEffect(() => {
-    fetchSyncStatus();
+    refreshData();
     
     // Set up realtime subscription
     const cleanup = setupRealtimeSubscription();
     
     return cleanup;
-  }, [fetchSyncStatus, setupRealtimeSubscription]);
+  }, [refreshData, setupRealtimeSubscription]);
 
   return {
     syncStatus,
+    recentLogs,
+    syncStats,
     isLoading,
     hasError,
-    refreshStatus: fetchSyncStatus
+    errorMessage,
+    refreshStatus: fetchSyncStatus,
+    refreshData
   };
 }
