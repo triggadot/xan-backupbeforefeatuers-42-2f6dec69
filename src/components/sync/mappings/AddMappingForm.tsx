@@ -103,11 +103,12 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
     try {
       const result = await fetchGlideTables(connectionId);
       if (result.tables) {
+        console.log('Loaded Glide tables:', result.tables);
         setGlideTables(result.tables);
       } else {
         toast({
-          title: 'Error',
-          description: result.error || 'Failed to fetch Glide tables',
+          title: 'Warning',
+          description: result.error || 'No Glide tables found',
           variant: 'destructive',
         });
         setGlideTables([]);
@@ -125,14 +126,20 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
     }
   };
   
-  const handleGlideTableChange = (tableId: string, displayName: string) => {
-    form.setValue('glide_table', tableId);
-    form.setValue('glide_table_display_name', displayName);
+  const handleGlideTableChange = (tableId: string) => {
+    const selectedTable = glideTables.find(table => table.id === tableId);
+    if (selectedTable) {
+      console.log('Selected Glide table:', selectedTable);
+      form.setValue('glide_table', tableId);
+      form.setValue('glide_table_display_name', selectedTable.display_name);
+    }
   };
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
+      console.log('Submitting form values:', values);
+      
       // Create a default column mapping with $rowID
       const defaultMapping = getDefaultColumnMappings();
       
@@ -146,6 +153,8 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
         sync_direction: values.sync_direction,
         enabled: true
       });
+      
+      console.log('Inserting mapping with data:', dbMapping);
       
       const { data, error } = await supabase
         .from('gl_mappings')
@@ -226,15 +235,10 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
             name="glide_table"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Glide Table ID</FormLabel>
+                <FormLabel>Glide Table</FormLabel>
                 <Select
                   value={field.value}
-                  onValueChange={(value) => {
-                    const selectedTable = glideTables.find(table => table.id === value);
-                    if (selectedTable) {
-                      handleGlideTableChange(value, selectedTable.display_name);
-                    }
-                  }}
+                  onValueChange={handleGlideTableChange}
                   disabled={isLoadingGlideTables || glideTables.length === 0}
                 >
                   <FormControl>

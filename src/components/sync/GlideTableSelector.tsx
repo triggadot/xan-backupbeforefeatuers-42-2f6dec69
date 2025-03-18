@@ -57,6 +57,7 @@ export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
     
     const table = tables.find(t => t.id === tableId);
     if (table) {
+      console.log('Selected table:', table);
       onTableChange(table.id, table.display_name);
     }
   };
@@ -72,6 +73,7 @@ export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
       display_name: newTableDisplayName,
     };
     
+    console.log('Adding new table:', newTable);
     onAddTable?.(newTable);
     setNewTableName('');
     setNewTableDisplayName('');

@@ -18,16 +18,13 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { useGlSync } from '@/hooks/useGlSync';
+import { GlideTable } from '@/types/glsync';
 
 interface Connection {
   id: string;
   app_name: string;
   app_id: string;
-}
-
-interface GlideTable {
-  id: string;
-  display_name: string;
 }
 
 interface SupabaseTable {
@@ -53,16 +50,17 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   const [isLoadingSupabaseTables, setIsLoadingSupabaseTables] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<string>('');
   const [selectedGlideTable, setSelectedGlideTable] = useState<string>('');
+  const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState<string>('');
   const [selectedSupabaseTable, setSelectedSupabaseTable] = useState<string>('');
   const [syncDirection, setSyncDirection] = useState<string>('to_supabase');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { fetchGlideTables } = useGlSync();
 
   useEffect(() => {
     if (open) {
       fetchConnections();
       fetchSupabaseTables();
-      // We'll fetch Glide tables from our database only when a connection is selected
     }
   }, [open]);
 
@@ -88,34 +86,33 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     }
   };
 
-  const fetchGlideTables = async (connectionId: string) => {
+  const loadGlideTables = async (connectionId: string) => {
     if (!connectionId) return;
     
     setIsLoadingGlideTables(true);
     setGlideTables([]);
     
     try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'getTableNames',
-          connectionId,
-        },
-      });
-
-      if (error) throw error;
+      const result = await fetchGlideTables(connectionId);
       
-      if (data && data.tables) {
-        setGlideTables(data.tables);
+      if (result.tables) {
+        setGlideTables(result.tables);
       } else {
         setGlideTables([]);
+        toast({
+          title: 'Warning',
+          description: result.error || 'No Glide tables found',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      console.error('Error fetching Glide tables:', error);
+      console.error('Error loading Glide tables:', error);
       toast({
         title: 'Error',
         description: 'Failed to load Glide tables',
         variant: 'destructive',
       });
+      setGlideTables([]);
     } finally {
       setIsLoadingGlideTables(false);
     }
@@ -145,7 +142,18 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   const handleConnectionChange = (value: string) => {
     setSelectedConnection(value);
     setSelectedGlideTable('');
-    fetchGlideTables(value);
+    setSelectedGlideTableDisplayName('');
+    loadGlideTables(value);
+  };
+
+  const handleGlideTableChange = (value: string) => {
+    setSelectedGlideTable(value);
+    
+    // Find the display name for the selected table
+    const selectedTable = glideTables.find(table => table.id === value);
+    if (selectedTable) {
+      setSelectedGlideTableDisplayName(selectedTable.display_name);
+    }
   };
 
   const handleSubmit = async () => {
@@ -160,9 +168,6 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Get the selected Glide table display name
-      const glideTable = glideTables.find(table => table.id === selectedGlideTable);
-      
       // Create default column mapping with $rowID to glide_row_id
       const defaultColumnMappings = {
         '$rowID': {
@@ -178,7 +183,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
         .insert({
           connection_id: selectedConnection,
           glide_table: selectedGlideTable,
-          glide_table_display_name: glideTable?.display_name || selectedGlideTable,
+          glide_table_display_name: selectedGlideTableDisplayName,
           supabase_table: selectedSupabaseTable,
           column_mappings: defaultColumnMappings,
           sync_direction: syncDirection,
@@ -186,6 +191,11 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
         });
       
       if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'Mapping created successfully',
+      });
       
       onSuccess();
       resetForm();
@@ -204,6 +214,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   const resetForm = () => {
     setSelectedConnection('');
     setSelectedGlideTable('');
+    setSelectedGlideTableDisplayName('');
     setSelectedSupabaseTable('');
     setSyncDirection('to_supabase');
     setGlideTables([]);
@@ -251,7 +262,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
             <Label htmlFor="glideTable">Glide Table</Label>
             <Select
               value={selectedGlideTable}
-              onValueChange={setSelectedGlideTable}
+              onValueChange={handleGlideTableChange}
               disabled={isLoadingGlideTables || !selectedConnection || glideTables.length === 0}
             >
               <SelectTrigger>
