@@ -53,7 +53,7 @@ export const transformValue = (
  */
 export const transformGlideToSupabaseProduct = (
   glideProduct: Record<string, any>,
-  columnMappings: GlColumnMapping[]
+  columnMappings: Record<string, GlColumnMapping>
 ): { product: GlProduct; errors: SyncErrorRecord[] } => {
   const product: GlProduct = {
     glide_row_id: glideProduct.id || glideProduct.rowId || '',
@@ -62,9 +62,9 @@ export const transformGlideToSupabaseProduct = (
   const errors: SyncErrorRecord[] = [];
   
   // Process each mapped column
-  columnMappings.forEach(mapping => {
+  Object.entries(columnMappings).forEach(([glideColumnId, mapping]) => {
     try {
-      const glideValue = glideProduct[mapping.glide_column_id];
+      const glideValue = glideProduct[glideColumnId];
       
       if (glideValue !== undefined) {
         const transformedValue = transformValue(glideValue, mapping.data_type);
@@ -73,10 +73,10 @@ export const transformGlideToSupabaseProduct = (
     } catch (error) {
       errors.push({
         type: 'TRANSFORM_ERROR',
-        message: `Error transforming field ${mapping.glide_column_name} to ${mapping.supabase_column_name}: ${error.message}`,
+        message: `Error transforming field ${mapping.glide_column_name} to ${mapping.supabase_column_name}: ${error instanceof Error ? error.message : String(error)}`,
         record: { 
           glide_column: mapping.glide_column_name, 
-          value: glideProduct[mapping.glide_column_id] 
+          value: glideProduct[glideColumnId] 
         },
         timestamp: new Date().toISOString(),
         retryable: false

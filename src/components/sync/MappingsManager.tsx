@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight, Layers, Box } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -44,12 +45,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
-import { GlConnection, GlMapping, GlideTable, GlColumnMapping } from '@/types/glsync';
+import { GlConnection, GlMapping, GlideTable } from '@/types/glsync';
 import { supabase } from '@/integrations/supabase/client';
 import { GlideTableSelector } from './GlideTableSelector';
-import { ColumnMappingEditor } from './ColumnMappingEditor';
+import ColumnMappingEditor from './ColumnMappingEditor';
 
 const MappingsManager = () => {
+  const navigate = useNavigate();
   const [connections, setConnections] = useState<GlConnection[]>([]);
   const [mappings, setMappings] = useState<GlMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -215,7 +217,7 @@ const MappingsManager = () => {
           })));
           
           // Automatically create initial column mappings based on column names
-          const initialColumnMappings: Record<string, GlColumnMapping> = {};
+          const initialColumnMappings: Record<string, any> = {};
           result.columns.forEach(column => {
             initialColumnMappings[column.id] = {
               glide_column_name: column.name,
@@ -262,16 +264,16 @@ const MappingsManager = () => {
     }
   };
 
-  const handleColumnMappingsChange = (columnMappings: Record<string, GlColumnMapping>) => {
+  const handleColumnMappingsChange = (updatedMapping: {column_mappings: Record<string, any>}) => {
     if (editMapping) {
       setEditMapping({
         ...editMapping,
-        column_mappings: columnMappings,
+        column_mappings: updatedMapping.column_mappings,
       });
     } else {
       setNewMapping({
         ...newMapping,
-        column_mappings: columnMappings,
+        column_mappings: updatedMapping.column_mappings,
       });
     }
   };
@@ -379,6 +381,10 @@ const MappingsManager = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleGoToProductSync = (mapping: GlMapping) => {
+    navigate(`/sync/products/${mapping.id}`);
   };
 
   const getSyncDirectionIcon = (direction: string) => {
@@ -587,10 +593,11 @@ const MappingsManager = () => {
                 
                 <TabsContent value="column-mappings" className="py-4">
                   <ColumnMappingEditor 
-                    value={editMapping?.column_mappings || newMapping.column_mappings || {}}
-                    onChange={handleColumnMappingsChange}
-                    supabaseTable={editMapping?.supabase_table || newMapping.supabase_table || ''}
-                    availableGlideColumns={availableGlideColumns}
+                    mapping={{ 
+                      supabase_table: editMapping?.supabase_table || newMapping.supabase_table || '',
+                      column_mappings: editMapping?.column_mappings || newMapping.column_mappings || {}
+                    }}
+                    onUpdate={handleColumnMappingsChange}
                   />
                 </TabsContent>
               </Tabs>
@@ -660,7 +667,18 @@ const MappingsManager = () => {
                   </div>
                 </div>
                 
-                <div className="flex space-x-2 mt-4 md:mt-0">
+                <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
+                  {mapping.supabase_table === 'gl_products' && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => handleGoToProductSync(mapping)}
+                    >
+                      <Box className="h-4 w-4 mr-2" />
+                      Sync Products
+                    </Button>
+                  )}
+                
                   <Button 
                     variant="outline" 
                     size="sm"

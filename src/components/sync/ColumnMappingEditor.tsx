@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { GlMapping, GlColumnMapping } from '@/types/glsync';
+import { GlColumnMapping } from '@/types/glsync';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 
 interface ColumnMappingEditorProps {
-  mapping: GlMapping;
-  onUpdate: (updatedMapping: GlMapping) => void;
+  mapping: {
+    column_mappings: Record<string, GlColumnMapping>;
+  };
+  onUpdate: (updatedMapping: {
+    column_mappings: Record<string, GlColumnMapping>;
+  }) => void;
 }
 
 interface SupabaseColumn {

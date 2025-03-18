@@ -1,39 +1,34 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "./components/layout/Layout";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Accounts from "./pages/Accounts";
-import AccountDetail from "./pages/AccountDetail";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import Sync from "./pages/Sync";
-import { AuthProvider } from "./contexts/AuthProvider";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
+import { ThemeProvider } from '@/components/theme-provider';
 
-const queryClient = new QueryClient();
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Layout from '@/components/layout/Layout';
+import Dashboard from '@/pages/Dashboard';
+import Accounts from '@/pages/Accounts';
+import AccountDetail from '@/pages/AccountDetail';
+import Auth from '@/pages/Auth';
+import Index from '@/pages/Index';
+import NotFound from '@/pages/NotFound';
+import Sync from '@/pages/Sync';
+import ProductSync from '@/pages/ProductSync';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+import './App.css';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ThemeProvider defaultTheme="light" storageKey="app-theme">
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<Index />} />
+          <Route element={<Layout />}>
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
@@ -41,9 +36,7 @@ const App = () => (
               path="/accounts"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Accounts />
-                  </Layout>
+                  <Accounts />
                 </ProtectedRoute>
               }
             />
@@ -51,19 +44,7 @@ const App = () => (
               path="/accounts/:id"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <AccountDetail />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sync"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Sync />
-                  </Layout>
+                  <AccountDetail />
                 </ProtectedRoute>
               }
             />
@@ -71,19 +52,33 @@ const App = () => (
               path="/sync/:tab"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Sync />
-                  </Layout>
+                  <Sync />
                 </ProtectedRoute>
               }
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route
+              path="/sync"
+              element={
+                <ProtectedRoute>
+                  <Sync />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sync/products/:mappingId"
+              element={
+                <ProtectedRoute>
+                  <ProductSync />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+          </Route>
+        </Routes>
+        <Toaster />
+      </ThemeProvider>
+    </BrowserRouter>
+  );
+}
 
 export default App;

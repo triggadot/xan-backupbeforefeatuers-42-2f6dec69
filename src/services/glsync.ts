@@ -84,7 +84,15 @@ export const glSyncApi = {
       throw new Error(error.message);
     }
     
-    return data as GlMapping[];
+    // Convert the JSON column_mappings to the expected TypeScript type
+    return (data || []).map(mapping => ({
+      ...mapping,
+      column_mappings: mapping.column_mappings as unknown as Record<string, { 
+        glide_column_name: string;
+        supabase_column_name: string;
+        data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+      }>
+    })) as GlMapping[];
   },
 
   async getMapping(id: string): Promise<GlMapping> {
@@ -95,7 +103,16 @@ export const glSyncApi = {
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Convert the JSON column_mappings to the expected TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings as unknown as Record<string, { 
+        glide_column_name: string;
+        supabase_column_name: string;
+        data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+      }>
+    } as GlMapping;
   },
 
   async addMapping(mapping: Omit<GlMapping, 'id' | 'created_at'>): Promise<GlMapping> {
@@ -106,7 +123,7 @@ export const glSyncApi = {
         glide_table: mapping.glide_table,
         glide_table_display_name: mapping.glide_table_display_name,
         supabase_table: mapping.supabase_table,
-        column_mappings: mapping.column_mappings || {},
+        column_mappings: mapping.column_mappings as any,
         sync_direction: mapping.sync_direction,
         enabled: mapping.enabled
       })
@@ -114,19 +131,42 @@ export const glSyncApi = {
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Convert the JSON column_mappings to the expected TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings as unknown as Record<string, { 
+        glide_column_name: string;
+        supabase_column_name: string;
+        data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+      }>
+    } as GlMapping;
   },
 
   async updateMapping(id: string, mapping: Partial<GlMapping>): Promise<GlMapping> {
+    const updateData: any = { ...mapping };
+    if (mapping.column_mappings) {
+      updateData.column_mappings = mapping.column_mappings;
+    }
+    
     const { data, error } = await supabase
       .from('gl_mappings')
-      .update(mapping)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw new Error(error.message);
-    return data as GlMapping;
+    
+    // Convert the JSON column_mappings to the expected TypeScript type
+    return {
+      ...data,
+      column_mappings: data.column_mappings as unknown as Record<string, { 
+        glide_column_name: string;
+        supabase_column_name: string;
+        data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+      }>
+    } as GlMapping;
   },
 
   async deleteMapping(id: string): Promise<void> {
