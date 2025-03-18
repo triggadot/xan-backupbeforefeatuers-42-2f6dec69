@@ -7,18 +7,24 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
+import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
+import { useGlSyncLogs } from '@/hooks/useGlSyncLogs';
 import { MappingDetailsCard } from '@/components/sync/MappingDetailsCard';
 import { InvalidMapping } from '@/components/sync/InvalidMapping';
 import { LoadingState } from '@/components/sync/LoadingState';
 import { MappingTabs } from '@/components/sync/MappingTabs';
 import { useProductMapping } from '@/hooks/useProductMapping';
 import { GlMapping } from '@/types/glsync';
+import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
+import { SyncDetailsPanel } from '@/components/sync/SyncDetailsPanel';
 
 const ProductSync = () => {
   const { mappingId = '' } = useParams<{ mappingId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { syncErrors, refreshErrors } = useGlSyncErrors(mappingId);
+  const { syncStatus, refreshStatus } = useGlSyncStatus(mappingId);
+  const { syncLogs, refreshLogs, isLoading: isLoadingLogs } = useGlSyncLogs(mappingId);
   const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
   
   const { 
@@ -51,6 +57,12 @@ const ProductSync = () => {
   const handleSyncComplete = () => {
     refetch();
     refreshErrors();
+    refreshStatus();
+    refreshLogs();
+  };
+
+  const handleSettingsChange = () => {
+    refetch();
   };
 
   const handleEditMapping = (mapping: GlMapping) => {
@@ -115,13 +127,33 @@ const ProductSync = () => {
         </Alert>
       )}
 
-      <MappingDetailsCard 
-        mapping={mapping} 
-        connectionName={connection?.app_name}
-        onSyncComplete={handleSyncComplete}
-        onEdit={handleEditMapping}
-        onDelete={handleDeleteMapping}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <MappingDetailsCard 
+            mapping={mapping} 
+            connectionName={connection?.app_name}
+            onSyncComplete={handleSyncComplete}
+            onEdit={handleEditMapping}
+            onDelete={handleDeleteMapping}
+            status={syncStatus}
+          />
+          
+          <SyncDetailsPanel 
+            status={syncStatus}
+            logs={syncLogs}
+            isLoadingLogs={isLoadingLogs}
+          />
+        </div>
+        
+        <div>
+          <SyncControlPanel 
+            mapping={mapping}
+            status={syncStatus}
+            onSyncComplete={handleSyncComplete}
+            onSettingsChange={handleSettingsChange}
+          />
+        </div>
+      </div>
 
       <MappingTabs 
         mapping={mapping}
