@@ -4,15 +4,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Info } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { glSyncApi } from '@/services/glsync';
-import { GlMapping, GlSyncRecord } from '@/types/glsync';
+import { GlMapping } from '@/types/glsync';
 import MappingDetailsCard from '@/components/sync/MappingDetailsCard';
 import SyncErrorDisplay from '@/components/sync/SyncErrorDisplay';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
 
 interface ProductSyncProps {}
 
@@ -20,8 +21,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   const { mappingId = '' } = useParams<{ mappingId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [syncErrors, setSyncErrors] = useState<GlSyncRecord[]>([]);
+  const { syncErrors, refreshErrors } = useGlSyncErrors(mappingId);
+  
   const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
 
   const { 
@@ -30,7 +31,16 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     refetch 
   } = useQuery({
     queryKey: ['glsync-mapping', mappingId],
-    queryFn: () => glSyncApi.getMapping(mappingId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gl_mappings')
+        .select('*')
+        .eq('id', mappingId)
+        .single();
+      
+      if (error) throw error;
+      return data as GlMapping;
+    },
     enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {
       onError: (error: any) => {
@@ -46,7 +56,16 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
 
   const { data: connection, isLoading: isConnectionLoading } = useQuery({
     queryKey: ['glsync-connection', mapping?.connection_id],
-    queryFn: () => glSyncApi.getConnection(mapping?.connection_id!),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', mapping?.connection_id!)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
     enabled: !!mapping?.connection_id,
     meta: {
       onError: (error: any) => {
@@ -85,32 +104,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
 
   const handleSyncComplete = () => {
     refetch();
-    fetchSyncErrors();
+    refreshErrors();
   };
-
-  const fetchSyncErrors = async () => {
-    if (mappingId && mappingId !== ':mappingId') {
-      try {
-        console.log('Fetching sync errors for mapping ID:', mappingId);
-        const errors = await glSyncApi.getSyncErrors(mappingId);
-        console.log('Sync errors:', errors);
-        setSyncErrors(errors);
-      } catch (error: any) {
-        console.error('Error fetching sync errors:', error);
-        toast({
-          title: 'Error fetching sync errors',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (mappingId && mappingId !== ':mappingId') {
-      fetchSyncErrors();
-    }
-  }, [mappingId]);
 
   if (!mappingId || mappingId === ':mappingId') {
     return (
@@ -199,7 +194,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
         <TabsContent value="errors">
           <div className="mt-4">
             {syncErrors.length > 0 ? (
-              <SyncErrorDisplay syncErrors={syncErrors} onRefresh={fetchSyncErrors} />
+              <SyncErrorDisplay syncErrors={syncErrors} onRefresh={refreshErrors} />
             ) : (
               <Card>
                 <CardContent className="text-center p-6">

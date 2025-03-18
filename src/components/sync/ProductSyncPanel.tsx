@@ -1,13 +1,12 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, CheckCircle, Database, ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { glSyncApi } from '@/services/glsync';
 import { GlMapping } from '@/types/glsync';
 import SyncErrorDisplay from './SyncErrorDisplay';
+import { useGlSync } from '@/hooks/useGlSync';
 
 interface ProductSyncPanelProps {
   mapping: GlMapping;
@@ -15,50 +14,15 @@ interface ProductSyncPanelProps {
 }
 
 const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComplete }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [syncResult, setSyncResult] = useState<{
-    success?: boolean;
-    recordsProcessed?: number;
-    failedRecords?: number;
-    errors?: any[];
-    error?: string;
-  } | null>(null);
+  const { syncData, isLoading, syncResult } = useGlSync();
   
-  const { toast } = useToast();
-
   const handleSync = async () => {
-    setIsLoading(true);
-    setSyncResult(null);
+    if (!mapping.enabled) return;
     
-    try {
-      const result = await glSyncApi.syncData(mapping.connection_id, mapping.id);
-      setSyncResult(result);
-      
-      if (result.success) {
-        toast({
-          title: 'Sync completed',
-          description: `Successfully processed ${result.recordsProcessed} records`,
-        });
-      } else {
-        toast({
-          title: 'Sync had issues',
-          description: result.error || `Processed ${result.recordsProcessed} records with ${result.failedRecords} failures`,
-          variant: 'destructive',
-        });
-      }
-      
-      if (onSyncComplete) {
-        onSyncComplete();
-      }
-    } catch (error) {
-      setSyncResult({ success: false, error: error.message });
-      toast({
-        title: 'Sync failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+    const result = await syncData(mapping.connection_id, mapping.id);
+    
+    if (onSyncComplete) {
+      onSyncComplete();
     }
   };
 

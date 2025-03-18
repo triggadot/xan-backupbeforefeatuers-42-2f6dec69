@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -111,11 +110,11 @@ export interface GlSyncRecord {
 }
 
 export interface ProductSyncResult {
-  total_records: number;
-  processed_records: number;
-  failed_records: number;
-  error_records?: GlSyncRecord[];
   success: boolean;
+  recordsProcessed?: number;
+  failedRecords?: number;
+  errors?: GlSyncRecord[];
+  error?: string;
 }
 
 export interface GlideTable {

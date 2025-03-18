@@ -1,67 +1,26 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/use-toast';
-import { glSyncApi } from '@/services/glsync';
-import { GlSyncStatus, GlRecentLog } from '@/types/glsync';
+import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { useGlSync } from '@/hooks/useGlSync';
+import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 
 const SyncDashboard = () => {
-  const [syncStatus, setSyncStatus] = useState<GlSyncStatus[]>([]);
-  const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const { syncStatus, recentLogs, isLoading, hasError, refreshData } = useGlSyncStatus();
+  const { syncData } = useGlSync();
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    setHasError(false);
-    try {
-      const [statusData, logsData] = await Promise.all([
-        glSyncApi.getSyncStatus().catch(error => {
-          console.error('Error fetching sync status:', error);
-          return [];
-        }),
-        glSyncApi.getRecentLogs(5).catch(error => {
-          console.error('Error fetching recent logs:', error);
-          return [];
-        })
-      ]);
-      
-      setSyncStatus(statusData);
-      setRecentLogs(logsData);
-    } catch (error) {
-      console.error('Error in fetchData:', error);
-      setHasError(true);
-      toast({
-        title: 'Error fetching sync data',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    
-    const interval = setInterval(() => {
-      fetchData();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSync = async (connectionId: string, mappingId: string) => {
     setIsSyncing(prev => ({ ...prev, [mappingId]: true }));
     
     try {
-      const result = await glSyncApi.syncData(connectionId, mappingId);
+      const result = await syncData(connectionId, mappingId);
       
       if (result.success) {
         toast({
@@ -70,7 +29,7 @@ const SyncDashboard = () => {
         });
         
         setTimeout(() => {
-          fetchData();
+          refreshData();
         }, 2000);
       } else {
         toast({
@@ -138,7 +97,7 @@ const SyncDashboard = () => {
           <p className="text-muted-foreground">
             There was an error connecting to the database. Please ensure the database tables have been created.
           </p>
-          <Button onClick={fetchData}>
+          <Button onClick={refreshData}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
@@ -152,7 +111,7 @@ const SyncDashboard = () => {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-semibold">Active Mappings</h2>
-          <Button variant="outline" size="sm" onClick={fetchData}>
+          <Button variant="outline" size="sm" onClick={refreshData}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

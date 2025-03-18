@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { glSyncApi } from '@/services/glsync';
+import { useToast } from '@/hooks/use-toast';
 import { GlMapping } from '@/types/glsync';
+import { useGlSync } from '@/hooks/useGlSync';
 
 interface SyncProductsButtonProps {
   mapping: GlMapping;
@@ -12,7 +12,7 @@ interface SyncProductsButtonProps {
 }
 
 const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSyncComplete }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { syncData, isLoading } = useGlSync();
   const { toast } = useToast();
 
   const handleSync = async () => {
@@ -25,10 +25,8 @@ const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSync
       return;
     }
 
-    setIsLoading(true);
-    
     try {
-      const result = await glSyncApi.syncData(mapping.connection_id, mapping.id);
+      const result = await syncData(mapping.connection_id, mapping.id);
       
       if (result.success) {
         toast({
@@ -53,8 +51,6 @@ const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSync
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
