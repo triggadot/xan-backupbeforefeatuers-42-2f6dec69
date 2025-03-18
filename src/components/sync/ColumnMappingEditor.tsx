@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { GlColumnMapping } from '@/types/glsync';
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,8 @@ const dataTypeOptions = [
   { value: 'email-address', label: 'Email' },
 ];
 
-const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUpdate }) => {
+// Changed from const to export const to properly export the component
+export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUpdate }) => {
   const [newGlideColumnId, setNewGlideColumnId] = useState('');
   const [newGlideColumnName, setNewGlideColumnName] = useState('');
   const [newSupabaseColumnName, setNewSupabaseColumnName] = useState('');
@@ -282,4 +282,5 @@ const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUp
   );
 };
 
+// Export as default as well for backward compatibility
 export default ColumnMappingEditor;

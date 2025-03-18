@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Layout from '@/components/layout/Layout';
 import Dashboard from '@/pages/Dashboard';
 import Sync from '@/pages/Sync';
@@ -9,6 +10,14 @@ import DataManagement from '@/pages/DataManagement';
 import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster as ToastComponent } from '@/components/ui/toaster';
+
+// Import Purchase Order and Invoice pages
+import PurchaseOrders from '@/pages/PurchaseOrders';
+import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
+import Invoices from '@/pages/Invoices';
+import InvoiceDetail from '@/pages/InvoiceDetail';
+import Accounts from '@/pages/Accounts';
+import AccountDetail from '@/pages/AccountDetail';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,25 +30,41 @@ const queryClient = new QueryClient({
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="glide-sync-theme">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="sync" element={<Sync />}>
-                <Route index element={<Sync />} />
-                <Route path=":tab" element={<Sync />} />
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="light" storageKey="glide-sync-theme">
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="sync" element={<Sync />}>
+                  <Route index element={<Sync />} />
+                  <Route path=":tab" element={<Sync />} />
+                </Route>
+                <Route path="sync/products/:mappingId" element={<ProductSync />} />
+                <Route path="sync/mappings/:mappingId" element={<MappingView />} />
+                <Route path="data-management" element={<DataManagement />} />
+                
+                {/* Purchase Orders Routes */}
+                <Route path="purchase-orders" element={<PurchaseOrders />} />
+                <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+                <Route path="purchase-orders/new" element={<PurchaseOrderDetail />} />
+                
+                {/* Invoices Routes */}
+                <Route path="invoices" element={<Invoices />} />
+                <Route path="invoices/:id" element={<InvoiceDetail />} />
+                <Route path="invoices/new" element={<InvoiceDetail />} />
+                
+                {/* Accounts Routes */}
+                <Route path="accounts" element={<Accounts />} />
+                <Route path="accounts/:id" element={<AccountDetail />} />
               </Route>
-              <Route path="sync/products/:mappingId" element={<ProductSync />} />
-              <Route path="sync/mappings/:mappingId" element={<MappingView />} />
-              <Route path="data-management" element={<DataManagement />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-        <ToastComponent />
-      </ThemeProvider>
-    </QueryClientProvider>
+            </Routes>
+          </BrowserRouter>
+          <ToastComponent />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 

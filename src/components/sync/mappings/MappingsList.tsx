@@ -5,6 +5,7 @@ import { GlMapping } from '@/types/glsync';
 import { Mapping } from '@/types/syncLog';
 import { Button } from '@/components/ui/button';
 import { AddMappingButton } from './AddMappingButton';
+import { CreateSchemaButton } from './CreateSchemaButton';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -47,10 +48,16 @@ export function MappingsList({ onEdit }: MappingsListProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Table Mappings</h2>
-        <AddMappingButton onSuccess={async () => {
-          // Refresh happens automatically via real-time subscription
-          return Promise.resolve();
-        }} />
+        <div className="flex items-center space-x-2">
+          <CreateSchemaButton onMappingCreated={() => {
+            // Refresh happens automatically via real-time subscription
+            return Promise.resolve();
+          }} />
+          <AddMappingButton onSuccess={async () => {
+            // Refresh happens automatically via real-time subscription
+            return Promise.resolve();
+          }} />
+        </div>
       </div>
       
       {isLoading ? (
