@@ -86,9 +86,9 @@ export function useGlSync() {
     setError(null);
 
     try {
-      // Call a function to retry failed sync
+      // Use syncData action instead of retryFailedSync since that's not a valid action type
       const { data, error } = await glSyncApi.callSyncFunction({
-        action: 'retryFailedSync',
+        action: "syncData",  // Changed from "retryFailedSync" to "syncData"
         mappingId,
       });
 
