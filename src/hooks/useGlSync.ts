@@ -1,14 +1,35 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ProductSyncResult } from '@/types/glsync';
 import { ProductsSyncService } from '@/services/sync/products-sync';
 import { validateMapping } from '@/utils/gl-mapping-validator';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [syncResult, setSyncResult] = useState<ProductSyncResult | null>(null);
   const { toast } = useToast();
+
+  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'retryFailedSync',
+          mappingId,
+        },
+      });
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      toast({
+        title: 'Retry failed',
+        description: err instanceof Error ? err.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
 
   const syncData = async (connectionId: string, mappingId: string) => {
     setIsLoading(true);
@@ -71,6 +92,7 @@ export function useGlSync() {
   return {
     syncData,
     isLoading,
-    syncResult
+    syncResult,
+    retryFailedSync
   };
 }

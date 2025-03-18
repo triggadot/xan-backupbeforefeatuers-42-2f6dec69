@@ -14,16 +14,18 @@ export async function validateMapping(mappingId: string): Promise<MappingValidat
       };
     }
     
-    if (!data) {
+    if (!data || !data[0]) {
       return {
         is_valid: false,
         validation_message: 'No validation result returned'
       };
     }
     
+    // Access the first element of the array since RPC returns an array
+    const result = data[0];
     return {
-      is_valid: data.is_valid,
-      validation_message: data.validation_message
+      is_valid: result.is_valid,
+      validation_message: result.validation_message
     };
   } catch (error) {
     return {
