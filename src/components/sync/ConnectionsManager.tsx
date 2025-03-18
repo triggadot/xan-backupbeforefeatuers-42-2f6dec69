@@ -3,167 +3,55 @@ import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
-import { GlConnection } from '@/types/glsync';
-import ConnectionForm from './connections/ConnectionForm';
+import { useConnections } from '@/hooks/useConnections';
+import { supabase } from '@/integrations/supabase/client';
 import ConnectionCard from './connections/ConnectionCard';
 import DeleteConnectionDialog from './connections/DeleteConnectionDialog';
 import EditConnectionDialog from './connections/EditConnectionDialog';
 import AddConnectionDialog from './connections/AddConnectionDialog';
+import { GlConnection } from '@/types/glsync';
 
 const ConnectionsManager = () => {
-  const [connections, setConnections] = useState<GlConnection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isTestingConnection, setIsTestingConnection] = useState<Record<string, boolean>>({});
-  const [newConnection, setNewConnection] = useState<Partial<GlConnection>>({
-    app_name: '',
-    app_id: '',
-    api_key: '',
-  });
-  const [editConnection, setEditConnection] = useState<GlConnection | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddConnectionOpen, setIsAddConnectionOpen] = useState(false);
   const [isEditConnectionOpen, setIsEditConnectionOpen] = useState(false);
   const [isDeleteConnectionOpen, setIsDeleteConnectionOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<GlConnection | null>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
-
-  const fetchConnections = async () => {
-    setIsLoading(true);
-    try {
-      const data = await glSyncApi.getConnections();
-      setConnections(data);
-    } catch (error) {
-      toast({
-        title: 'Error fetching connections',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConnections();
-  }, []);
-
-  const handleConnectionChange = (field: string, value: string) => {
-    if (editConnection) {
-      setEditConnection({
-        ...editConnection,
-        [field]: value
-      });
-    } else {
-      setNewConnection({
-        ...newConnection,
-        [field]: value
-      });
-    }
-  };
-
-  const handleCreateConnection = async () => {
-    try {
-      if (!newConnection.app_id || !newConnection.api_key) {
-        toast({
-          title: 'Validation error',
-          description: 'App ID and API Key are required.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const connection = await glSyncApi.addConnection(newConnection as Omit<GlConnection, 'id' | 'created_at'>);
-      setConnections([...connections, connection]);
-      setNewConnection({ app_name: '', app_id: '', api_key: '' });
-      setIsDialogOpen(false);
-      
-      toast({
-        title: 'Connection created',
-        description: 'The Glide API connection has been created successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error creating connection',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleUpdateConnection = async () => {
-    try {
-      if (!editConnection || !editConnection.id) return;
-      
-      const { id, ...connectionData } = editConnection;
-      const updated = await glSyncApi.updateConnection(id, connectionData);
-      
-      setConnections(connections.map(conn => conn.id === id ? updated : conn));
-      setEditConnection(null);
-      setIsDialogOpen(false);
-      
-      toast({
-        title: 'Connection updated',
-        description: 'The Glide API connection has been updated successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error updating connection',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteConnection = async (connection: GlConnection) => {
-    try {
-      await glSyncApi.deleteConnection(connection.id);
-      setConnections(connections.filter(conn => conn.id !== connection.id));
-      
-      toast({
-        title: 'Connection deleted',
-        description: 'The Glide API connection has been deleted successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error deleting connection',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
+  const { connections, isLoading, fetchConnections } = useConnections();
 
   const handleTestConnection = async (id: string) => {
     setIsTestingConnection(prev => ({ ...prev, [id]: true }));
     
     try {
-      const result = await glSyncApi.testConnection(id);
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'testConnection',
+          connectionId: id,
+        },
+      });
+
+      if (error) throw error;
       
-      if (result.success) {
+      if (data.success) {
         toast({
           title: 'Connection successful',
-          description: 'The connection to Glide API was successful.',
+          description: 'Successfully connected to Glide API',
         });
+        fetchConnections(true);
       } else {
         toast({
           title: 'Connection failed',
-          description: result.error || 'Failed to connect to Glide API',
+          description: data.error || 'Failed to connect to Glide API',
           variant: 'destructive',
         });
       }
     } catch (error) {
+      console.error('Error testing connection:', error);
       toast({
         title: 'Connection test failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
@@ -187,17 +75,17 @@ const ConnectionsManager = () => {
 
   const handleAddConnectionSuccess = () => {
     setIsAddConnectionOpen(false);
-    fetchConnections();
+    fetchConnections(true);
   };
 
   const handleEditConnectionSuccess = () => {
     setIsEditConnectionOpen(false);
-    fetchConnections();
+    fetchConnections(true);
   };
 
   const handleDeleteConnectionSuccess = () => {
     setIsDeleteConnectionOpen(false);
-    fetchConnections();
+    fetchConnections(true);
   };
 
   return (
@@ -205,7 +93,7 @@ const ConnectionsManager = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">API Connections</h2>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={fetchConnections}>
+          <Button variant="outline" onClick={() => fetchConnections(true)}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
