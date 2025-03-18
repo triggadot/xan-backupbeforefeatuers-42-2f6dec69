@@ -1,10 +1,9 @@
-
 import { corsHeaders } from './cors.ts'
+import { MAX_BATCH_SIZE, withRetry } from './sync-utils.ts';
 
 // Define rate limiting parameters
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1000
-const MAX_BATCH_SIZE = 450 // Keep under 500 limit for safety
 
 // Function to test Glide API connection
 export async function testGlideConnection(apiKey: string, appId: string) {

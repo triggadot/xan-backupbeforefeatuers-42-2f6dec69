@@ -1,8 +1,9 @@
 
 import { corsHeaders } from './cors.ts';
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+export const MAX_RETRIES = 3;
+export const RETRY_DELAY_MS = 1000;
+export const MAX_BATCH_SIZE = 450; // Keep under 500 limit for safety
 
 export async function withRetry<T>(
   operation: () => Promise<T>,
