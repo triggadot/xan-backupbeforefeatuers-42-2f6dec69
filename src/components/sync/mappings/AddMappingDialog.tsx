@@ -1,15 +1,21 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
+import { ConnectionSelect } from './ConnectionSelect';
+import { SupabaseTableSelect } from './SupabaseTableSelect';
+import { SyncDirectionSelect } from './SyncDirectionSelect';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
-import MappingFormContainer from './MappingFormContainer';
-import { useDeviceType, BREAKPOINTS, useViewportSize } from '@/hooks/use-mobile';
+import { useGlSync } from '@/hooks/useGlSync';
+import { useAddMapping } from '@/hooks/useAddMapping';
 
 interface AddMappingDialogProps {
   open: boolean;
@@ -17,21 +23,23 @@ interface AddMappingDialogProps {
   onSuccess: () => void;
 }
 
-const AddMappingDialog = ({ 
+const AddMappingDialog: React.FC<AddMappingDialogProps> = ({ 
   open, 
   onOpenChange,
   onSuccess 
-}: AddMappingDialogProps) => {
+}) => {
+  // Custom hooks for data fetching
   const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
   const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
-  const deviceType = useDeviceType();
-  const { height: viewportHeight } = useViewportSize();
+  const { fetchGlideTables, glideTables, isLoading: isLoadingGlideTables } = useGlSync();
+  const { addMapping, isSubmitting } = useAddMapping();
   
-  // Calculate maximum dialog height based on viewport
-  const getMaxDialogHeight = () => {
-    const padding = 40; // Default padding
-    return viewportHeight - padding;
-  };
+  // Form state
+  const [selectedConnection, setSelectedConnection] = useState('');
+  const [selectedGlideTable, setSelectedGlideTable] = useState('');
+  const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState('');
+  const [selectedSupabaseTable, setSelectedSupabaseTable] = useState('');
+  const [syncDirection, setSyncDirection] = useState<'to_supabase' | 'to_glide' | 'both'>('to_supabase');
   
   // Fetch data when dialog is opened
   useEffect(() => {
@@ -40,44 +48,123 @@ const AddMappingDialog = ({
       fetchSupabaseTables();
     }
   }, [open]);
+  
+  // Fetch glide tables when connection changes
+  useEffect(() => {
+    if (selectedConnection) {
+      fetchGlideTables(selectedConnection);
+    }
+  }, [selectedConnection]);
 
-  const handleSuccess = () => {
-    onSuccess();
-    onOpenChange(false);
+  // Reset form when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setSelectedConnection('');
+      setSelectedGlideTable('');
+      setSelectedGlideTableDisplayName('');
+      setSelectedSupabaseTable('');
+      setSyncDirection('to_supabase');
+    }
+  }, [open]);
+
+  const handleConnectionChange = (value: string) => {
+    setSelectedConnection(value);
+    setSelectedGlideTable('');
+    setSelectedGlideTableDisplayName('');
   };
 
-  // Extract table names for the form
-  const tableNames = supabaseTables.map(table => table.table_name);
+  const handleGlideTableChange = (tableId: string, displayName: string) => {
+    setSelectedGlideTable(tableId);
+    setSelectedGlideTableDisplayName(displayName);
+  };
 
-  // Determine padding based on device type
-  const getPadding = () => {
-    switch (deviceType) {
-      case 'mobile':
-        return 'p-2';
-      case 'tablet':
-        return 'p-3';
-      default:
-        return 'p-4';
+  const handleSupabaseTableChange = (value: string) => {
+    setSelectedSupabaseTable(value);
+  };
+  
+  const handleSyncDirectionChange = (value: 'to_supabase' | 'to_glide' | 'both') => {
+    setSyncDirection(value);
+  };
+
+  const isFormValid = () => {
+    return Boolean(selectedConnection && selectedGlideTable && selectedSupabaseTable);
+  };
+
+  const handleSubmit = async () => {
+    const success = await addMapping(
+      selectedConnection,
+      selectedGlideTable,
+      selectedGlideTableDisplayName,
+      selectedSupabaseTable,
+      syncDirection
+    );
+    
+    if (success) {
+      onSuccess();
+      onOpenChange(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={`${getPadding()} overflow-y-auto`}
-        style={{ maxHeight: `${getMaxDialogHeight()}px` }}
-      >
-        <DialogHeader className={`${deviceType === 'mobile' ? 'mb-1' : 'mb-2'}`}>
-          <DialogTitle>Create New Mapping</DialogTitle>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Add Table Mapping</DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto pr-1">
-          <MappingFormContainer
-            isEditing={false}
+        <div className="grid gap-4 py-4">
+          <ConnectionSelect 
             connections={connections}
-            supabaseTables={tableNames}
-            onSuccess={handleSuccess}
-            onCancel={() => onOpenChange(false)}
+            value={selectedConnection}
+            onValueChange={handleConnectionChange}
+            isLoading={isLoadingConnections}
           />
+          
+          <div className="grid gap-2">
+            <GlideTableSelector
+              tables={glideTables}
+              value={selectedGlideTable}
+              onTableChange={handleGlideTableChange}
+              disabled={isLoadingGlideTables || !selectedConnection}
+              isLoading={isLoadingGlideTables}
+              placeholder="Select a Glide table"
+            />
+            {isLoadingGlideTables && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Loading Glide tables...
+              </div>
+            )}
+          </div>
+          
+          <SupabaseTableSelect 
+            tables={supabaseTables}
+            value={selectedSupabaseTable}
+            onValueChange={handleSupabaseTableChange}
+            isLoading={isLoadingSupabaseTables}
+          />
+          
+          <SyncDirectionSelect 
+            value={syncDirection}
+            onValueChange={handleSyncDirectionChange}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !isFormValid()}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Mapping'
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

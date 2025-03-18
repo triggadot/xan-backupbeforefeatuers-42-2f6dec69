@@ -1,144 +1,181 @@
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Check, ChevronDown, Loader2, Plus } from 'lucide-react';
-import { GlideTable, convertDbToGlideTable } from '@/types/glsync';
-import { NewTableDialog } from './NewTableDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { GlideTable } from '@/types/glsync';
 
 interface GlideTableSelectorProps {
   tables: GlideTable[];
   value: string;
-  onTableChange: (id: string, displayName: string) => void;
-  onAddTable?: (table: GlideTable) => void;
+  onTableChange: (tableId: string, displayName: string) => void;
+  onAddTable?: (newTable: GlideTable) => void;
   disabled?: boolean;
-  isLoading?: boolean;
   placeholder?: string;
+  isLoading?: boolean;
 }
 
-export function GlideTableSelector({
-  tables = [],
+export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
+  tables,
   value,
   onTableChange,
   onAddTable,
   disabled = false,
+  placeholder = 'Select a table',
   isLoading = false,
-  placeholder = 'Select a table'
-}: GlideTableSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [newTableDialogOpen, setNewTableDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Find the selected table to display
-  const selectedTable = tables.find(table => table.id === value);
-  const displayValue = selectedTable ? selectedTable.displayName : '';
-  
-  const filteredTables = tables.filter(table => 
-    table.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  // Reset search when the popover is closed
+}) => {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableDisplayName, setNewTableDisplayName] = useState('');
+
+  // When tables are loaded, if we have a value but it doesn't match any table, 
+  // we need to find it and call onTableChange with its display name
   useEffect(() => {
-    if (!open) {
-      setSearchTerm('');
+    if (tables.length > 0 && value) {
+      const selectedTable = tables.find(table => table.id === value);
+      if (selectedTable) {
+        // Make sure the parent has the display name
+        console.log('Selected table from useEffect:', selectedTable);
+      }
     }
-  }, [open]);
-  
-  const handleAddTable = (newTable: GlideTable) => {
-    if (onAddTable) {
-      // Convert to the proper GlideTable format
-      const formattedTable = convertDbToGlideTable({
-        id: newTable.id,
-        display_name: newTable.displayName,
-        name: newTable.name
-      });
-      onAddTable(formattedTable);
+  }, [tables, value]);
+
+  const handleSelectChange = (tableId: string) => {
+    if (tableId === 'add-new') {
+      setIsAddDialogOpen(true);
+      return;
     }
-    setNewTableDialogOpen(false);
-    // Auto-select the new table
-    onTableChange(newTable.id, newTable.displayName);
+    
+    const table = tables.find(t => t.id === tableId);
+    if (table) {
+      console.log('Selected table:', table);
+      onTableChange(table.id, table.display_name);
+    }
   };
-  
+
+  const handleAddTable = () => {
+    if (!newTableName || !newTableDisplayName) return;
+    
+    // Prefix with 'native' if needed
+    const tableId = newTableName.startsWith('native') ? newTableName : `native${newTableName}`;
+    
+    const newTable = {
+      id: tableId,
+      display_name: newTableDisplayName,
+    };
+    
+    console.log('Adding new table:', newTable);
+    onAddTable?.(newTable);
+    setNewTableName('');
+    setNewTableDisplayName('');
+    setIsAddDialogOpen(false);
+    
+    // Select the newly added table
+    onTableChange(newTable.id, newTable.display_name);
+  };
+
   return (
-    <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className="w-full justify-between"
-          >
-            {isLoading ? (
-              <div className="flex items-center">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                <span>Loading tables...</span>
-              </div>
-            ) : displayValue || placeholder}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="p-0 w-[300px]">
-          <Command>
-            <CommandInput
-              placeholder="Search tables..."
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-            />
-            <CommandList>
-              <CommandEmpty>
-                <div className="py-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-4">No tables found</p>
-                </div>
-              </CommandEmpty>
-              <CommandGroup>
-                {filteredTables.map((table) => (
-                  <CommandItem
-                    key={table.id}
-                    value={table.id}
-                    onSelect={() => {
-                      onTableChange(table.id, table.displayName);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === table.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {table.displayName}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
+    <div className="space-y-2">
+      <Select
+        value={value}
+        onValueChange={handleSelectChange}
+        disabled={disabled || isLoading}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={isLoading ? 'Loading...' : placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Glide Tables</SelectLabel>
+            {tables.map((table) => (
+              <SelectItem key={table.id} value={table.id}>
+                {table.display_name}
+              </SelectItem>
+            ))}
             {onAddTable && (
-              <div className="p-2 border-t">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                  onClick={() => setNewTableDialogOpen(true)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add new table
-                </Button>
-              </div>
+              <SelectItem value="add-new" className="text-primary">
+                <div className="flex items-center">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add New Table
+                </div>
+              </SelectItem>
             )}
-          </Command>
-        </PopoverContent>
-      </Popover>
-      
-      {onAddTable && (
-        <NewTableDialog
-          open={newTableDialogOpen}
-          onOpenChange={setNewTableDialogOpen}
-          onAddTable={handleAddTable}
-        />
-      )}
-    </>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) {
+          // Only reset form when dialog is explicitly closed
+          setNewTableName('');
+          setNewTableDisplayName('');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Glide Table</DialogTitle>
+            <DialogDescription>
+              Enter details for the new Glide table.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="table-id" className="col-span-4">
+                Table ID <span className="text-sm text-muted-foreground">(Will be prefixed with 'native' if needed)</span>
+              </Label>
+              <Input
+                id="table-id"
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                className="col-span-4"
+                placeholder="Enter table ID"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="display-name" className="col-span-4">
+                Display Name
+              </Label>
+              <Input
+                id="display-name"
+                value={newTableDisplayName}
+                onChange={(e) => setNewTableDisplayName(e.target.value)}
+                className="col-span-4"
+                placeholder="Enter display name"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTable}>
+              Add Table
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
-}
+};

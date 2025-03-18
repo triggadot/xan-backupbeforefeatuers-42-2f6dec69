@@ -1,12 +1,7 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  GlSyncStatus, 
-  GlRecentLog, 
-  GlSyncStats, 
-  convertDbToGlRecentLog,
-  convertDbToGlSyncStats
-} from '@/types/glsync';
+import { GlSyncStatus, GlRecentLog, GlSyncStats } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 
 export function useGlSyncStatus(mappingId?: string) {
@@ -29,43 +24,13 @@ export function useGlSyncStatus(mappingId?: string) {
       
       if (error) throw error;
       
-      // Set all statuses - ensure we properly type the statuses
-      setAllSyncStatuses(data.map(item => ({
-        mapping_id: item.mapping_id,
-        current_status: (item.current_status || 'idle') as GlSyncStatus['current_status'],
-        last_sync_completed_at: item.last_sync_completed_at,
-        total_records: item.total_records,
-        records_processed: item.records_processed,
-        error_count: item.error_count,
-        connection_id: item.connection_id,
-        app_name: item.app_name,
-        glide_table: item.glide_table,
-        glide_table_display_name: item.glide_table_display_name,
-        supabase_table: item.supabase_table,
-        enabled: item.enabled
-      })));
+      // Set all statuses
+      setAllSyncStatuses(data as GlSyncStatus[]);
       
       // If mappingId is provided, find and set the specific status
       if (mappingId) {
         const statusForMapping = data.find(status => status.mapping_id === mappingId);
-        if (statusForMapping) {
-          setSyncStatus({
-            mapping_id: statusForMapping.mapping_id,
-            current_status: (statusForMapping.current_status || 'idle') as GlSyncStatus['current_status'],
-            last_sync_completed_at: statusForMapping.last_sync_completed_at,
-            total_records: statusForMapping.total_records,
-            records_processed: statusForMapping.records_processed,
-            error_count: statusForMapping.error_count,
-            connection_id: statusForMapping.connection_id,
-            app_name: statusForMapping.app_name,
-            glide_table: statusForMapping.glide_table,
-            glide_table_display_name: statusForMapping.glide_table_display_name,
-            supabase_table: statusForMapping.supabase_table,
-            enabled: statusForMapping.enabled
-          });
-        } else {
-          setSyncStatus(null);
-        }
+        setSyncStatus(statusForMapping || null);
       } else {
         setSyncStatus(null);
       }
@@ -96,9 +61,7 @@ export function useGlSyncStatus(mappingId?: string) {
         .limit(10);
       
       if (error) throw error;
-      
-      // Convert database results to proper types
-      setRecentLogs((data || []).map(item => convertDbToGlRecentLog(item)));
+      setRecentLogs(data as GlRecentLog[]);
     } catch (error) {
       console.error('Error fetching recent logs:', error);
     }
@@ -113,9 +76,7 @@ export function useGlSyncStatus(mappingId?: string) {
         .limit(7);
       
       if (error) throw error;
-      
-      // Convert database results to proper types
-      setSyncStats((data || []).map(item => convertDbToGlSyncStats(item)));
+      setSyncStats(data as GlSyncStats[]);
     } catch (error) {
       console.error('Error fetching sync stats:', error);
     }

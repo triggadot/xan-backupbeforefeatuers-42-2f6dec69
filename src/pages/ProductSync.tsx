@@ -12,7 +12,7 @@ import { SyncProgressIndicator } from '@/components/sync/SyncProgressIndicator';
 import { SyncContainer } from '@/components/sync/SyncContainer';
 import { LoadingState } from '@/components/sync/LoadingState';
 import { InvalidMapping } from '@/components/sync/InvalidMapping';
-import { GlMapping, GlProduct, GlSyncLog, convertDbToGlProduct } from '@/types/glsync';
+import { GlMapping, GlProduct, GlSyncLog } from '@/types/glsync';
 import { SyncLog } from '@/types/syncLog';
 import { SyncLogsTable } from '@/components/sync/SyncLogsTable';
 
@@ -82,7 +82,7 @@ const ProductSync = () => {
         .limit(100);
       
       if (error) throw error;
-      setProducts((data || []).map(product => convertDbToGlProduct(product)));
+      setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({

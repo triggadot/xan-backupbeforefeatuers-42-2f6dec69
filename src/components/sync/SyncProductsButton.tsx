@@ -37,7 +37,7 @@ export const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping,
       } else {
         toast({
           title: 'Sync encountered issues',
-          description: result.error || `Processed ${result.recordsProcessed} records with errors`,
+          description: result.error || `Processed ${result.recordsProcessed} records with ${result.failedRecords} failures`,
           variant: 'destructive',
         });
       }

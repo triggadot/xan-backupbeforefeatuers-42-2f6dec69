@@ -1,40 +1,45 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { SupabaseTable } from '@/types/syncLog';
+import { useToast } from '@/hooks/use-toast';
+
+interface SupabaseTable {
+  table_name: string;
+}
 
 export function useSupabaseTables() {
   const [tables, setTables] = useState<SupabaseTable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const fetchTables = async () => {
+  const fetchTables = useCallback(async (forceRefresh = false) => {
+    if (tables.length > 0 && !forceRefresh) return tables;
+    
     setIsLoading(true);
-    setError(null);
     try {
       const { data, error } = await supabase
         .from('gl_tables_view')
-        .select('*')
-        .order('table_name');
+        .select('table_name');
       
       if (error) throw error;
       setTables(data || []);
-    } catch (err) {
-      console.error('Error fetching tables:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while fetching tables');
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching Supabase tables:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load Supabase tables',
+        variant: 'destructive',
+      });
+      return [];
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tables.length, toast]);
 
   useEffect(() => {
     fetchTables();
   }, []);
 
-  return {
-    tables,
-    isLoading,
-    error,
-    fetchTables,
-  };
+  return { tables, isLoading, fetchTables };
 }
