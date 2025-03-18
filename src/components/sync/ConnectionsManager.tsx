@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,9 @@ import { glSyncApi } from '@/services/glsync';
 import { GlConnection } from '@/types/glsync';
 import ConnectionForm from './connections/ConnectionForm';
 import ConnectionCard from './connections/ConnectionCard';
+import DeleteConnectionDialog from './connections/DeleteConnectionDialog';
+import EditConnectionDialog from './connections/EditConnectionDialog';
+import AddConnectionDialog from './connections/AddConnectionDialog';
 
 const ConnectionsManager = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);
@@ -27,6 +31,10 @@ const ConnectionsManager = () => {
   });
   const [editConnection, setEditConnection] = useState<GlConnection | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddConnectionOpen, setIsAddConnectionOpen] = useState(false);
+  const [isEditConnectionOpen, setIsEditConnectionOpen] = useState(false);
+  const [isDeleteConnectionOpen, setIsDeleteConnectionOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<GlConnection | null>(null);
   const { toast } = useToast();
 
   const fetchConnections = async () => {
@@ -163,6 +171,35 @@ const ConnectionsManager = () => {
     }
   };
 
+  const handleAddConnection = () => {
+    setIsAddConnectionOpen(true);
+  };
+
+  const handleEditConnection = (connection: GlConnection) => {
+    setSelectedConnection(connection);
+    setIsEditConnectionOpen(true);
+  };
+
+  const handleConfirmDelete = (connection: GlConnection) => {
+    setSelectedConnection(connection);
+    setIsDeleteConnectionOpen(true);
+  };
+
+  const handleAddConnectionSuccess = () => {
+    setIsAddConnectionOpen(false);
+    fetchConnections();
+  };
+
+  const handleEditConnectionSuccess = () => {
+    setIsEditConnectionOpen(false);
+    fetchConnections();
+  };
+
+  const handleDeleteConnectionSuccess = () => {
+    setIsDeleteConnectionOpen(false);
+    fetchConnections();
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -173,35 +210,10 @@ const ConnectionsManager = () => {
             Refresh
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditConnection(null);
-                setNewConnection({ app_name: '', app_id: '', api_key: '' });
-              }}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                New Connection
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editConnection ? 'Edit Connection' : 'Create New Connection'}
-                </DialogTitle>
-                <DialogDescription>
-                  Enter your Glide API details to connect to your Glide app.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <ConnectionForm 
-                connection={editConnection || newConnection}
-                onSubmit={editConnection ? handleUpdateConnection : handleCreateConnection}
-                onCancel={() => setIsDialogOpen(false)}
-                onChange={handleConnectionChange}
-                isEditing={!!editConnection}
-              />
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleAddConnection}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Connection
+          </Button>
         </div>
       </div>
 
@@ -232,16 +244,38 @@ const ConnectionsManager = () => {
             <ConnectionCard
               key={connection.id}
               connection={connection}
-              onEdit={(conn) => {
-                setEditConnection(conn);
-                setIsDialogOpen(true);
-              }}
-              onDelete={handleDeleteConnection}
+              onEdit={handleEditConnection}
+              onDelete={handleConfirmDelete}
               onTest={handleTestConnection}
               isTestingConnection={!!isTestingConnection[connection.id]}
             />
           ))}
         </div>
+      )}
+
+      {/* Dialogs */}
+      <AddConnectionDialog 
+        open={isAddConnectionOpen}
+        onOpenChange={setIsAddConnectionOpen}
+        onSuccess={handleAddConnectionSuccess}
+      />
+
+      {selectedConnection && (
+        <>
+          <EditConnectionDialog
+            open={isEditConnectionOpen}
+            onOpenChange={setIsEditConnectionOpen}
+            connection={selectedConnection}
+            onSuccess={handleEditConnectionSuccess}
+          />
+          
+          <DeleteConnectionDialog
+            open={isDeleteConnectionOpen}
+            onOpenChange={setIsDeleteConnectionOpen}
+            connection={selectedConnection}
+            onSuccess={handleDeleteConnectionSuccess}
+          />
+        </>
       )}
     </div>
   );

@@ -135,49 +135,58 @@ export function useGlSyncStatus(mappingId?: string) {
     setIsLoading(false);
   }, [fetchSyncStatus, fetchRecentLogs, fetchSyncStats]);
 
-  // Set up realtime subscription for live updates
-  const setupRealtimeSubscription = useCallback(() => {
-    if (!mappingId) return () => {};
-    
-    // Subscribe to changes on the mapping_status view
-    const syncStatusChannel = supabase
-      .channel('gl_status_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status', filter: `mapping_id=eq.${mappingId}` }, 
-        () => {
-          // Refresh status when it changes
-          fetchSyncStatus();
-        }
-      )
-      .subscribe();
-    
-    // Also subscribe to sync logs which can affect status
-    const syncLogsChannel = supabase
-      .channel('gl_log_changes_for_status')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'gl_sync_logs', filter: `mapping_id=eq.${mappingId}` }, 
-        () => {
-          // Refresh status and logs when new logs are added
-          fetchSyncStatus();
-          fetchRecentLogs();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(syncStatusChannel);
-      supabase.removeChannel(syncLogsChannel);
-    };
-  }, [fetchSyncStatus, fetchRecentLogs, mappingId]);
-
+  // Set up realtime subscription for sync status changes
   useEffect(() => {
-    refreshData();
+    fetchSyncStatus();
+    fetchRecentLogs();
+    fetchSyncStats();
     
-    // Set up realtime subscription
-    const cleanup = setupRealtimeSubscription();
-    
-    return cleanup;
-  }, [refreshData, setupRealtimeSubscription]);
+    // Set up realtime subscriptions if we have a mapping ID
+    if (mappingId) {
+      // Subscribe to changes in the mapping status view
+      const statusChannel = supabase
+        .channel('gl_status_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'gl_mapping_status', filter: `mapping_id=eq.${mappingId}` }, 
+          () => {
+            fetchSyncStatus();
+          }
+        )
+        .subscribe();
+      
+      // Subscribe to changes in the sync logs table
+      const logsChannel = supabase
+        .channel('gl_logs_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'gl_sync_logs', filter: `mapping_id=eq.${mappingId}` }, 
+          () => {
+            fetchRecentLogs();
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(statusChannel);
+        supabase.removeChannel(logsChannel);
+      };
+    } else {
+      // Subscribe to global changes in the recent logs view
+      const globalLogsChannel = supabase
+        .channel('gl_global_logs_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'gl_sync_logs' }, 
+          () => {
+            fetchRecentLogs();
+            fetchSyncStats();
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(globalLogsChannel);
+      };
+    }
+  }, [mappingId, fetchSyncStatus, fetchRecentLogs, fetchSyncStats]);
 
   return {
     syncStatus,
@@ -186,7 +195,6 @@ export function useGlSyncStatus(mappingId?: string) {
     isLoading,
     hasError,
     errorMessage,
-    refreshStatus: fetchSyncStatus,
     refreshData
   };
 }
