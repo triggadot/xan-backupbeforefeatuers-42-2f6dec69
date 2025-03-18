@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SyncLog } from '@/types/syncLog';
@@ -49,6 +50,14 @@ export function useRealtimeSyncLogs({
         query = query.eq('status', 'failed');
       }
       
+      if (filter !== 'all') {
+        if (filter === 'completed') {
+          query = query.eq('status', 'completed');
+        } else if (filter === 'failed') {
+          query = query.eq('status', 'failed');
+        }
+      }
+      
       const { data, error } = await query;
       
       if (error) throw error;
@@ -93,7 +102,7 @@ export function useRealtimeSyncLogs({
     } finally {
       setIsLoading(false);
     }
-  }, [mappingId, limit, includeDetails, onlyFailed, toast]);
+  }, [mappingId, limit, includeDetails, onlyFailed, filter, toast]);
 
   // Initial load and setup realtime subscription
   useEffect(() => {
