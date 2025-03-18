@@ -1,5 +1,5 @@
 
-import { GlColumnMapping } from '@/types/glsync';
+import { GlColumnMapping, GlMapping } from '@/types/glsync';
 
 // Default column mappings for the accounts table based on provided data
 export const getAccountsColumnMappings = (): Record<string, GlColumnMapping> => {

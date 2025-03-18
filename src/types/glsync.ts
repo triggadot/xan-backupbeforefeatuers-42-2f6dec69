@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
