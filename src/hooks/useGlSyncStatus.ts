@@ -1,11 +1,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlSyncStatus, GlRecentLog, GlSyncStats } from '@/types/glsync';
+import { GlSyncStatus, GlRecentLog, GlSyncStats, GlSyncStatuses } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 
 export function useGlSyncStatus(mappingId?: string) {
   const [syncStatus, setSyncStatus] = useState<GlSyncStatus | null>(null);
+  const [allSyncStatuses, setAllSyncStatuses] = useState<GlSyncStatuses>([]);
   const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
   const [syncStats, setSyncStats] = useState<GlSyncStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,35 +15,45 @@ export function useGlSyncStatus(mappingId?: string) {
   const { toast } = useToast();
 
   const fetchSyncStatus = useCallback(async (): Promise<void> => {
-    if (!mappingId) {
-      setSyncStatus(null);
-      setIsLoading(false);
-      return;
-    }
-    
     setIsLoading(true);
     setHasError(false);
     
     try {
-      console.log('Fetching sync status for mapping ID:', mappingId);
-      const { data, error } = await supabase
-        .from('gl_mapping_status')
-        .select('*')
-        .eq('mapping_id', mappingId)
-        .single();
-      
-      if (error) {
-        // If no data found, don't treat as error, just return null
-        if (error.code === 'PGRST116') {
-          setSyncStatus(null);
-          setIsLoading(false);
-          return;
+      if (mappingId) {
+        // For a specific mapping
+        console.log('Fetching sync status for mapping ID:', mappingId);
+        const { data, error } = await supabase
+          .from('gl_mapping_status')
+          .select('*')
+          .eq('mapping_id', mappingId)
+          .single();
+        
+        if (error) {
+          // If no data found, don't treat as error, just return null
+          if (error.code === 'PGRST116') {
+            setSyncStatus(null);
+            setIsLoading(false);
+            return;
+          }
+          console.error('Error fetching sync status:', error);
+          throw new Error(error.message);
         }
-        console.error('Error fetching sync status:', error);
-        throw new Error(error.message);
+        
+        setSyncStatus(data);
+      } else {
+        // For all mappings
+        const { data, error } = await supabase
+          .from('gl_mapping_status')
+          .select('*')
+          .order('last_sync_started_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching all sync statuses:', error);
+          throw new Error(error.message);
+        }
+        
+        setAllSyncStatuses(data || []);
       }
-      
-      setSyncStatus(data);
     } catch (error) {
       console.error('Error fetching sync status:', error);
       setHasError(true);
@@ -190,11 +201,13 @@ export function useGlSyncStatus(mappingId?: string) {
 
   return {
     syncStatus,
-    recentLogs,
     syncStats,
+    recentLogs,
     isLoading,
     hasError,
     errorMessage,
-    refreshData
+    refreshData,
+    // Return the array of statuses when no specific mappingId is provided
+    allSyncStatuses
   };
 }

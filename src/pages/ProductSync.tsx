@@ -24,9 +24,20 @@ const ProductSync = () => {
   const { toast } = useToast();
   const { syncErrors, refreshErrors } = useGlSyncErrors(mappingId);
   const { syncStatus, syncStats, refreshData } = useGlSyncStatus(mappingId);
-  const { syncLogs, refreshLogs, isLoading: isLoadingLogs } = useGlSyncLogs(mappingId);
+  const { syncLogs: glSyncLogs, refreshLogs, isLoading: isLoadingLogs } = useGlSyncLogs(mappingId);
   const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
   
+  // Convert GlSyncLog[] to SyncLog[] to match expected type
+  const syncLogs = glSyncLogs.map(log => ({
+    id: log.id,
+    mapping_id: log.mapping_id,
+    status: log.status,
+    message: log.message,
+    records_processed: log.records_processed,
+    started_at: log.started_at,
+    completed_at: log.completed_at
+  }));
+
   const { 
     mapping, 
     connection, 

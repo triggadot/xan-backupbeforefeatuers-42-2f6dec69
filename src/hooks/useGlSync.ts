@@ -53,6 +53,37 @@ export function useGlSync() {
     }
   };
 
+  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      // Call the Supabase function to create a retry log
+      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', {
+        p_mapping_id: mappingId
+      });
+
+      if (error) throw error;
+      
+      // Invoke the sync edge function
+      const syncResult = await syncData(
+        // We need to get the connection ID for this mapping
+        (await supabase.from('gl_mappings').select('connection_id').eq('id', mappingId).single()).data.connection_id,
+        mappingId
+      );
+      
+      return syncResult.success;
+    } catch (error: any) {
+      console.error('Error retrying failed sync:', error);
+      toast({
+        title: 'Retry failed',
+        description: error.message || 'An unknown error occurred',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const testConnection = async (connectionId: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
@@ -102,6 +133,7 @@ export function useGlSync() {
     syncData,
     testConnection,
     fetchGlideTables,
+    retryFailedSync,
     isLoading
   };
 }

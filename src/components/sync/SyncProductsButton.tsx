@@ -11,7 +11,7 @@ interface SyncProductsButtonProps {
   onSyncComplete?: () => void;
 }
 
-const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSyncComplete }) => {
+export const SyncProductsButton: React.FC<SyncProductsButtonProps> = ({ mapping, onSyncComplete }) => {
   const { syncData, isLoading } = useGlSync();
   const { toast } = useToast();
 

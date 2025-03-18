@@ -56,6 +56,8 @@ export interface GlSyncStatus {
   total_records: number | null;
 }
 
+export type GlSyncStatuses = GlSyncStatus[];
+
 export interface GlRecentLog {
   id: string;
   status: string;
@@ -123,6 +125,12 @@ export interface GlSyncRecord {
   retryable: boolean;
   resolved?: boolean;
   resolution_notes?: string | null;
+  // Add properties from DB schema to help with mapping
+  created_at?: string;
+  error_type?: string;
+  error_message?: string;
+  record_data?: any;
+  resolved_at?: string | null;
 }
 
 export interface ProductSyncResult {

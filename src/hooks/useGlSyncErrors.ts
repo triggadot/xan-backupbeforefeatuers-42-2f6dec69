@@ -23,7 +23,25 @@ export function useGlSyncErrors(mappingId?: string) {
       
       if (error) throw new Error(error.message);
       
-      setSyncErrors(data || []);
+      // Map the database error records to our GlSyncRecord type
+      const formattedErrors: GlSyncRecord[] = (data || []).map(error => ({
+        id: error.id,
+        mapping_id: error.mapping_id,
+        type: error.error_type as 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR',
+        message: error.error_message,
+        record: error.record_data,
+        timestamp: error.created_at,
+        retryable: error.retryable,
+        resolved: !!error.resolved_at,
+        resolution_notes: error.resolution_notes,
+        created_at: error.created_at,
+        error_type: error.error_type,
+        error_message: error.error_message,
+        record_data: error.record_data,
+        resolved_at: error.resolved_at
+      }));
+      
+      setSyncErrors(formattedErrors);
     } catch (error) {
       console.error('Error fetching sync errors:', error);
       toast({

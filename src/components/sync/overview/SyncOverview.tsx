@@ -11,7 +11,7 @@ import { RecentSyncsCard } from './RecentSyncsCard';
 
 export default function SyncOverview() {
   const navigate = useNavigate();
-  const { syncStatus, recentLogs, syncStats, isLoading, refreshData } = useGlSyncStatus();
+  const { allSyncStatuses, recentLogs, syncStats, isLoading, refreshData } = useGlSyncStatus();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -29,14 +29,14 @@ export default function SyncOverview() {
   };
 
   const countByStatus = {
-    enabled: syncStatus?.filter(s => s.enabled).length || 0,
-    total: syncStatus?.length || 0,
+    enabled: allSyncStatuses.filter(s => s.enabled).length || 0,
+    total: allSyncStatuses.length || 0,
   };
 
   const countByDirection = {
-    toSupabase: syncStatus?.filter(s => s.sync_direction === 'to_supabase').length || 0,
-    toGlide: syncStatus?.filter(s => s.sync_direction === 'to_glide').length || 0,
-    both: syncStatus?.filter(s => s.sync_direction === 'both').length || 0,
+    toSupabase: allSyncStatuses.filter(s => s.sync_direction === 'to_supabase').length || 0,
+    toGlide: allSyncStatuses.filter(s => s.sync_direction === 'to_glide').length || 0,
+    both: allSyncStatuses.filter(s => s.sync_direction === 'both').length || 0,
   };
 
   return (
@@ -131,7 +131,7 @@ export default function SyncOverview() {
               <Skeleton className="h-10 w-16" />
             ) : (
               <div className="text-3xl font-bold">
-                {[...new Set(syncStatus?.map(s => s.connection_id) || [])].length}
+                {[...new Set(allSyncStatuses.map(s => s.connection_id) || [])].length}
               </div>
             )}
           </CardContent>
