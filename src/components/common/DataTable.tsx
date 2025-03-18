@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Filter, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -55,7 +54,7 @@ function DataTable<T extends { id: string }>({
           return value.toLowerCase().includes(searchTerm.toLowerCase());
         }
         if (typeof value === 'number') {
-          return value.toString().includes(searchTerm);
+          return String(value).includes(searchTerm);
         }
         return false;
       });

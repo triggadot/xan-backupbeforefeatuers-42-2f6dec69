@@ -48,7 +48,7 @@ const Sidebar: React.FC = () => {
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem active={isActive('/dashboard')}>
+              <SidebarMenuItem className={isActive('/dashboard') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/dashboard">
                     <LayoutDashboard className="h-5 w-5" />
@@ -57,7 +57,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              <SidebarMenuItem active={isActive('/accounts')}>
+              <SidebarMenuItem className={isActive('/accounts') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/accounts">
                     <Users className="h-5 w-5" />
@@ -66,7 +66,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              <SidebarMenuItem active={isActive('/products')}>
+              <SidebarMenuItem className={isActive('/products') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/products">
                     <Package className="h-5 w-5" />
@@ -82,7 +82,7 @@ const Sidebar: React.FC = () => {
           <SidebarGroupLabel>Documents</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem active={isActive('/purchase-orders')}>
+              <SidebarMenuItem className={isActive('/purchase-orders') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/purchase-orders">
                     <ShoppingCart className="h-5 w-5" />
@@ -91,7 +91,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              <SidebarMenuItem active={isActive('/estimates')}>
+              <SidebarMenuItem className={isActive('/estimates') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/estimates">
                     <FileCog className="h-5 w-5" />
@@ -100,7 +100,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              <SidebarMenuItem active={isActive('/invoices')}>
+              <SidebarMenuItem className={isActive('/invoices') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/invoices">
                     <Receipt className="h-5 w-5" />
@@ -116,7 +116,7 @@ const Sidebar: React.FC = () => {
           <SidebarGroupLabel>Reports</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem className={isActive('/reports') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/reports">
                     <FileText className="h-5 w-5" />
@@ -125,7 +125,7 @@ const Sidebar: React.FC = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
-              <SidebarMenuItem>
+              <SidebarMenuItem className={isActive('/activity') ? 'active' : ''}>
                 <SidebarMenuButton asChild>
                   <Link to="/activity">
                     <ClipboardList className="h-5 w-5" />
