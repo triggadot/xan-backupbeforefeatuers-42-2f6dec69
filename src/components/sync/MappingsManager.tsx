@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
@@ -39,6 +38,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
 import { GlConnection, GlMapping } from '@/types/glsync';
+import { supabase } from '@/integrations/supabase/client';
 
 const MappingsManager = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);
@@ -88,26 +88,21 @@ const MappingsManager = () => {
 
   const fetchSupabaseTables = async () => {
     try {
-      // Get table names from gl_tables_view
-      const { data, error } = await fetch('https://api.glideapp.io/api/function/queryTables', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          table_name: ''
-        })
-      });
+      // Get table names from Supabase directly
+      const { data, error } = await supabase
+        .from('gl_tables_view')
+        .select('table_name');
       
       if (error) throw new Error(error.message);
       
-      // Filter relevant tables (e.g., 'gl_' prefixed tables for this app)
-      const tables = data.map(item => item.table_name)
-        .filter(name => name && name.startsWith('gl_'));
+      // Extract table names from the response
+      const tables = data?.map(item => item.table_name)
+        .filter(name => name && name.startsWith('gl_')) || [];
       
       setSupabaseTables(tables);
     } catch (error) {
       console.error('Error fetching Supabase tables:', error);
+      // Fallback to hardcoded values if the query fails
       setSupabaseTables(['gl_accounts', 'gl_products', 'gl_invoices', 'gl_estimates']);
     }
   };
@@ -155,6 +150,34 @@ const MappingsManager = () => {
     }
     
     fetchGlideTables(connectionId);
+  };
+
+  const handleGlideTableChange = (value: string) => {
+    if (editMapping) {
+      setEditMapping({
+        ...editMapping,
+        glide_table: value,
+      });
+    } else {
+      setNewMapping({
+        ...newMapping,
+        glide_table: value,
+      });
+    }
+  };
+
+  const handleSupabaseTableChange = (value: string) => {
+    if (editMapping) {
+      setEditMapping({
+        ...editMapping,
+        supabase_table: value,
+      });
+    } else {
+      setNewMapping({
+        ...newMapping,
+        supabase_table: value,
+      });
+    }
   };
 
   const handleCreateMapping = async () => {
@@ -339,19 +362,7 @@ const MappingsManager = () => {
                   <Label htmlFor="glide_table">Glide Table <span className="text-red-500">*</span></Label>
                   <Select
                     value={editMapping?.glide_table || newMapping.glide_table || ''}
-                    onValueChange={(value) => {
-                      if (editMapping) {
-                        setEditMapping({
-                          ...editMapping,
-                          glide_table: value,
-                        });
-                      } else {
-                        setNewMapping({
-                          ...newMapping,
-                          glide_table: value,
-                        });
-                      }
-                    }}
+                    onValueChange={handleGlideTableChange}
                     disabled={isLoadingTables || !selectedConnection}
                   >
                     <SelectTrigger>
@@ -374,19 +385,7 @@ const MappingsManager = () => {
                   <Label htmlFor="supabase_table">Supabase Table <span className="text-red-500">*</span></Label>
                   <Select
                     value={editMapping?.supabase_table || newMapping.supabase_table || ''}
-                    onValueChange={(value) => {
-                      if (editMapping) {
-                        setEditMapping({
-                          ...editMapping,
-                          supabase_table: value,
-                        });
-                      } else {
-                        setNewMapping({
-                          ...newMapping,
-                          supabase_table: value,
-                        });
-                      }
-                    }}
+                    onValueChange={handleSupabaseTableChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a Supabase table" />

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -146,7 +145,7 @@ export const glSyncApi = {
       .order('last_sync_started_at', { ascending: false });
     
     if (error) throw new Error(error.message);
-    return data as GlSyncStatus[];
+    return data as unknown as GlSyncStatus[];
   },
 
   // Get recent sync logs with additional info

@@ -33,7 +33,8 @@ export interface GlSyncLog {
 export interface GlSyncStatus {
   connection_id: string;
   mapping_id: string;
-  last_sync: string | null;
+  last_sync_started_at: string | null;
+  last_sync_completed_at: string | null;
   current_status: string | null;
   enabled: boolean;
   app_name: string | null;
@@ -41,6 +42,7 @@ export interface GlSyncStatus {
   supabase_table: string;
   sync_direction: string;
   records_processed: number | null;
+  total_records: number | null;
 }
 
 export interface GlRecentLog {

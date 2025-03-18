@@ -56,6 +56,8 @@ export type Database = {
           created_at: string | null
           id: string
           last_sync: string | null
+          settings: Json | null
+          status: string | null
         }
         Insert: {
           api_key: string
@@ -64,6 +66,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_sync?: string | null
+          settings?: Json | null
+          status?: string | null
         }
         Update: {
           api_key?: string
@@ -72,6 +76,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_sync?: string | null
+          settings?: Json | null
+          status?: string | null
         }
         Relationships: []
       }
