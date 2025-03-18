@@ -11,9 +11,6 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster as ToastComponent } from '@/components/ui/toaster';
 
-// Import only Account pages
-import Accounts from '@/pages/Accounts';
-import AccountDetail from '@/pages/AccountDetail';
 
 const queryClient = new QueryClient({
   defaultOptions: {
