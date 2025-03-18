@@ -1,5 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { listGlideTables, testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,7 +66,32 @@ Deno.serve(async (req) => {
         throw new Error('Connection ID is required');
       }
       
-      return await listGlideTables(supabase, connectionId);
+      const { data: connection, error: connectionError } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', connectionId)
+        .single();
+      
+      if (connectionError) {
+        throw connectionError;
+      }
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+      
+      const tables = await listGlideTables(connection.api_key, connection.app_id);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          tables 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
     }
     else if (action === 'getColumnMappings') {
       if (!connectionId || !tableId) {
@@ -176,76 +202,6 @@ async function testGlideConnection(supabase, connectionId: string) {
   }
 }
 
-async function listGlideTables(supabase, connectionId: string) {
-  console.log(`Listing tables for connection: ${connectionId}`);
-  
-  try {
-    // Get connection details
-    const { data: connection, error: connectionError } = await supabase
-      .from('gl_connections')
-      .select('*')
-      .eq('id', connectionId)
-      .single();
-    
-    if (connectionError) {
-      throw connectionError;
-    }
-    
-    if (!connection) {
-      throw new Error('Connection not found');
-    }
-    
-    // Query the Glide API for tables
-    const response = await fetch('https://api.glideapp.io/api/function/listTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: connection.app_id
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Format the results for the frontend
-    const tables = data.tables.map(table => ({
-      id: table.id,
-      display_name: table.name
-    }));
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        tables 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-  } catch (error) {
-    console.error('Error listing tables:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200  // Still return 200 so front-end can handle the error message
-      }
-    );
-  }
-}
-
 async function getGlideColumnMappings(supabase, connectionId: string, tableId: string) {
   console.log(`Getting column mappings for table: ${tableId}`);
   
@@ -265,42 +221,7 @@ async function getGlideColumnMappings(supabase, connectionId: string, tableId: s
       throw new Error('Connection not found');
     }
     
-    // Query the Glide API for column structure
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: connection.app_id,
-        queries: [
-          { 
-            tableName: tableId,
-            limit: 1
-          }
-        ]
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
-    }
-    
-    const data = await response.json();
-    const tableData = data[0];
-    
-    if (!tableData || !tableData.columns) {
-      throw new Error('No column data returned from Glide API');
-    }
-    
-    // Format the columns for the frontend
-    const columns = tableData.columns.map(column => ({
-      glide_column_id: column.id,
-      glide_column_name: column.name,
-      data_type: mapGlideDataType(column.type)
-    }));
+    const columns = await getGlideTableColumns(connection.api_key, connection.app_id, tableId);
     
     return new Response(
       JSON.stringify({ 
@@ -596,33 +517,6 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         status: 200  // Still return 200 so front-end can handle the error message
       }
     );
-  }
-}
-
-function mapGlideDataType(glideType: string): string {
-  // Map Glide data types to our simplified types
-  switch (glideType) {
-    case 'text':
-    case 'rich-text':
-    case 'link':
-      return 'string';
-    case 'number':
-    case 'computed-number':
-      return 'number';
-    case 'boolean':
-    case 'computed-boolean':
-      return 'boolean';
-    case 'date':
-    case 'date-time':
-    case 'computed-date-time':
-      return 'date-time';
-    case 'image':
-    case 'file':
-      return 'image-uri';
-    case 'email':
-      return 'email-address';
-    default:
-      return 'string';
   }
 }
 
