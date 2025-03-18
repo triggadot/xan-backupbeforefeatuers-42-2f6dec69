@@ -1,3 +1,4 @@
+
 import { useParams } from 'react-router-dom';
 import MappingDetails from '@/components/sync/mappings/MappingDetails';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,4 +24,4 @@ const MappingView = () => {
   return <MappingDetails mappingId={mappingId} />;
 };
 
-export default MappingView; 
+export default MappingView;

@@ -74,3 +74,91 @@ export const formatDate = (date: Date | string | number | null | undefined): str
     day: 'numeric',
   });
 };
+
+/**
+ * Format a date to a brief display format, mainly for charts
+ * @param date The date to format
+ * @returns Formatted date string (e.g. "01/15")
+ */
+export const formatDateBrief = (date: Date | string | number | null | undefined): string => {
+  if (!date) return '—';
+  
+  try {
+    const dateObj = new Date(date);
+    return `${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error('Error formatting brief date:', error);
+    return '—';
+  }
+};
+
+/**
+ * Format a timestamp to a readable string
+ * @param timestamp The timestamp to format
+ * @returns Formatted timestamp string
+ */
+export const formatTimestamp = (timestamp: string | Date | null | undefined): string => {
+  if (!timestamp) return 'Never';
+  
+  try {
+    return formatDateTime(timestamp, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.error('Error formatting timestamp:', error);
+    return 'Invalid date';
+  }
+};
+
+/**
+ * Format a time as "X ago" for recent times
+ * @param time The time to format
+ * @returns Formatted time ago string
+ */
+export const formatTimeAgo = (time: string | Date | null | undefined): string => {
+  return formatRelativeTime(time);
+};
+
+/**
+ * Calculate and format the duration between two timestamps
+ * @param startTime Start timestamp
+ * @param endTime End timestamp
+ * @returns Formatted duration string
+ */
+export const formatDuration = (
+  startTime: string | Date | null | undefined,
+  endTime: string | Date | null | undefined
+): string => {
+  if (!startTime || !endTime) return '—';
+  
+  try {
+    const start = new Date(startTime).getTime();
+    const end = new Date(endTime).getTime();
+    
+    if (isNaN(start) || isNaN(end) || end < start) {
+      return '—';
+    }
+    
+    const durationMs = end - start;
+    const seconds = Math.floor(durationMs / 1000);
+    
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
+    }
+  } catch (error) {
+    console.error('Error calculating duration:', error);
+    return '—';
+  }
+};
