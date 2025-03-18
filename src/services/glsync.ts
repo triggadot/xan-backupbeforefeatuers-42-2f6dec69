@@ -7,7 +7,8 @@ import {
   GlSyncStatus,
   GlRecentLog,
   SyncRequestPayload,
-  ProductSyncResult
+  ProductSyncResult,
+  GlideTable
 } from '@/types/glsync';
 
 export const glSyncApi = {
@@ -213,7 +214,7 @@ export const glSyncApi = {
     }
   },
 
-  async listGlideTables(connectionId: string): Promise<{ tables: string[] } | { error: string }> {
+  async listGlideTables(connectionId: string): Promise<{ tables: GlideTable[] } | { error: string }> {
     try {
       return await this.callSyncFunction({
         action: 'listGlideTables',

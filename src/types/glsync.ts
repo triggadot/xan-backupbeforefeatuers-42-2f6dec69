@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -13,6 +12,7 @@ export interface GlMapping {
   id: string;
   connection_id: string;
   glide_table: string;
+  glide_table_display_name: string;
   supabase_table: string;
   column_mappings: Record<string, string>;
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
@@ -46,6 +46,7 @@ export interface GlSyncStatus {
   enabled: boolean;
   app_name: string | null;
   glide_table: string;
+  glide_table_display_name: string;
   supabase_table: string;
   sync_direction: string;
   records_processed: number | null;
@@ -59,6 +60,7 @@ export interface GlRecentLog {
   records_processed: number | null;
   started_at: string;
   glide_table: string | null;
+  glide_table_display_name: string | null;
   supabase_table: string | null;
   app_name: string | null;
   sync_direction: string | null;
@@ -113,4 +115,9 @@ export interface ProductSyncResult {
   failed_records: number;
   error_records?: SyncErrorRecord[];
   success: boolean;
+}
+
+export interface GlideTable {
+  id: string;
+  display_name: string;
 }

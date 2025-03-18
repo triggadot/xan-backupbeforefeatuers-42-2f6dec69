@@ -38,27 +38,30 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
-import { GlConnection, GlMapping } from '@/types/glsync';
+import { GlConnection, GlMapping, GlideTable } from '@/types/glsync';
 import { supabase } from '@/integrations/supabase/client';
+import { GlideTableSelector } from './GlideTableSelector';
 
 const MappingsManager = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);
   const [mappings, setMappings] = useState<GlMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConnection, setSelectedConnection] = useState<string>('');
-  const [glideTables, setGlideTables] = useState<string[]>([]);
+  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
   const [supabaseTables, setSupabaseTables] = useState<string[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newMapping, setNewMapping] = useState<Partial<GlMapping>>({
     connection_id: '',
     glide_table: '',
+    glide_table_display_name: '',
     supabase_table: '',
     column_mappings: {},
     sync_direction: 'to_supabase',
     enabled: true,
   });
   const [editMapping, setEditMapping] = useState<GlMapping | null>(null);
+  const [customGlideTables, setCustomGlideTables] = useState<GlideTable[]>([]);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -115,6 +118,23 @@ const MappingsManager = () => {
       
       if ('tables' in result) {
         setGlideTables(result.tables);
+        
+        // Add custom tables if they're not already included
+        const allTables = [...result.tables];
+        
+        // Get custom tables from existing mappings
+        const mappingsForConnection = mappings.filter(m => m.connection_id === connectionId);
+        mappingsForConnection.forEach(mapping => {
+          const exists = allTables.some(table => table.id === mapping.glide_table);
+          if (!exists) {
+            allTables.push({
+              id: mapping.glide_table,
+              display_name: mapping.glide_table_display_name || mapping.glide_table
+            });
+          }
+        });
+        
+        setGlideTables(allTables);
       } else {
         toast({
           title: 'Error fetching Glide tables',
@@ -153,23 +173,30 @@ const MappingsManager = () => {
     fetchGlideTables(connectionId);
   };
 
-  const handleGlideTableChange = async (value: string) => {
+  const handleAddGlideTable = (newTable: GlideTable) => {
+    setGlideTables(prev => [...prev, newTable]);
+    setCustomGlideTables(prev => [...prev, newTable]);
+  };
+
+  const handleGlideTableChange = async (tableId: string, displayName: string) => {
     if (editMapping) {
       setEditMapping({
         ...editMapping,
-        glide_table: value,
+        glide_table: tableId,
+        glide_table_display_name: displayName,
       });
     } else {
       setNewMapping({
         ...newMapping,
-        glide_table: value,
+        glide_table: tableId,
+        glide_table_display_name: displayName,
       });
     }
 
     // If a Glide table is selected, try to fetch its columns to prepare for mapping
-    if (value && selectedConnection) {
+    if (tableId && selectedConnection) {
       try {
-        const result = await glSyncApi.getGlideTableColumns(selectedConnection, value);
+        const result = await glSyncApi.getGlideTableColumns(selectedConnection, tableId);
         if ('columns' in result) {
           // Automatically create initial column mappings based on column names
           const initialColumnMappings = {};
@@ -225,11 +252,17 @@ const MappingsManager = () => {
         return;
       }
 
+      // Ensure we have a display name
+      if (!newMapping.glide_table_display_name) {
+        newMapping.glide_table_display_name = newMapping.glide_table;
+      }
+
       const mapping = await glSyncApi.addMapping(newMapping as Omit<GlMapping, 'id' | 'created_at'>);
       setMappings([...mappings, mapping]);
       setNewMapping({
         connection_id: '',
         glide_table: '',
+        glide_table_display_name: '',
         supabase_table: '',
         column_mappings: {},
         sync_direction: 'to_supabase',
@@ -348,6 +381,7 @@ const MappingsManager = () => {
                 setNewMapping({
                   connection_id: '',
                   glide_table: '',
+                  glide_table_display_name: '',
                   supabase_table: '',
                   column_mappings: {},
                   sync_direction: 'to_supabase',
@@ -394,25 +428,15 @@ const MappingsManager = () => {
                 
                 <div className="grid gap-2">
                   <Label htmlFor="glide_table">Glide Table <span className="text-red-500">*</span></Label>
-                  <Select
+                  <GlideTableSelector
+                    tables={glideTables}
                     value={editMapping?.glide_table || newMapping.glide_table || ''}
-                    onValueChange={handleGlideTableChange}
+                    onTableChange={handleGlideTableChange}
+                    onAddTable={handleAddGlideTable}
                     disabled={isLoadingTables || !selectedConnection}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingTables ? 'Loading...' : 'Select a Glide table'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Glide Tables</SelectLabel>
-                        {glideTables.map((table) => (
-                          <SelectItem key={table} value={table}>
-                            {table}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    isLoading={isLoadingTables}
+                    placeholder={isLoadingTables ? 'Loading...' : 'Select a Glide table'}
+                  />
                 </div>
                 
                 <div className="grid gap-2">
@@ -555,7 +579,7 @@ const MappingsManager = () => {
                   </div>
                   
                   <div className="flex items-center text-sm text-muted-foreground mt-1">
-                    <span>{mapping.glide_table}</span>
+                    <span>{mapping.glide_table_display_name || mapping.glide_table}</span>
                     <span className="mx-2">
                       {getSyncDirectionIcon(mapping.sync_direction)}
                     </span>
