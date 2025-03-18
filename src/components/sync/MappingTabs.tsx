@@ -9,7 +9,7 @@ interface MappingTabsProps {
   mapping: GlMapping;
   syncErrors: GlSyncRecord[];
   hasRowIdMapping: boolean;
-  onRefreshErrors: () => void;
+  onRefreshErrors: (includeResolved?: boolean) => Promise<void>;
 }
 
 export function MappingTabs({ mapping, syncErrors, hasRowIdMapping, onRefreshErrors }: MappingTabsProps) {

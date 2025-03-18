@@ -10,7 +10,7 @@ export function useGlSyncErrors(mappingId?: string) {
   const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
-  const fetchSyncErrors = useCallback(async (includeResolved: boolean = false) => {
+  const fetchSyncErrors = useCallback(async (includeResolved: boolean = false): Promise<void> => {
     if (!mappingId) {
       setSyncErrors([]);
       setIsLoading(false);

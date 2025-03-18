@@ -12,6 +12,7 @@ import { InvalidMapping } from '@/components/sync/InvalidMapping';
 import { LoadingState } from '@/components/sync/LoadingState';
 import { MappingTabs } from '@/components/sync/MappingTabs';
 import { useProductMapping } from '@/hooks/useProductMapping';
+import { GlMapping } from '@/types/glsync';
 
 const ProductSync = () => {
   const { mappingId = '' } = useParams<{ mappingId: string }>();
