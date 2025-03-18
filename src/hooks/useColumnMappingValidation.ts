@@ -25,7 +25,7 @@ export function useColumnMappingValidation() {
       // Call the database function to validate the mapping
       const { data, error } = await supabase
         .rpc('gl_validate_mapping_data', { 
-          p_mapping_json: JSON.stringify(mapping)
+          p_mapping: mapping
         });
       
       if (error) {
