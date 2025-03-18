@@ -10,7 +10,7 @@ import { GlConnection, GlMapping } from '@/types/glsync';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useDeviceType, BREAKPOINTS, useViewportSize } from '@/hooks/use-mobile';
 
 interface EditMappingDialogProps {
   open: boolean;
@@ -29,7 +29,14 @@ const EditMappingDialog = ({
 }: EditMappingDialogProps) => {
   const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
   const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
-  const isMobile = useIsMobile();
+  const deviceType = useDeviceType();
+  const { height: viewportHeight } = useViewportSize();
+  
+  // Calculate maximum dialog height based on viewport
+  const getMaxDialogHeight = () => {
+    const padding = 40; // Default padding
+    return viewportHeight - padding;
+  };
   
   // Fetch data when dialog is opened
   useEffect(() => {
@@ -47,10 +54,25 @@ const EditMappingDialog = ({
   // Extract table names for the form
   const tableNames = supabaseTables.map(table => table.table_name);
 
+  // Determine padding based on device type
+  const getPadding = () => {
+    switch (deviceType) {
+      case 'mobile':
+        return 'p-2';
+      case 'tablet':
+        return 'p-3';
+      default:
+        return 'p-4';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${isMobile ? 'p-3' : 'p-4'} overflow-y-auto`}>
-        <DialogHeader className="mb-2">
+      <DialogContent 
+        className={`${getPadding()} overflow-y-auto`}
+        style={{ maxHeight: `${getMaxDialogHeight()}px` }}
+      >
+        <DialogHeader className={`${deviceType === 'mobile' ? 'mb-1' : 'mb-2'}`}>
           <DialogTitle>Edit Mapping</DialogTitle>
         </DialogHeader>
         <div className="overflow-y-auto pr-1">
