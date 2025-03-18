@@ -101,7 +101,8 @@ export interface GlProduct {
   updated_at?: string;
 }
 
-export interface SyncErrorRecord {
+// New interface for sync error records
+export interface GlSyncRecord {
   type: 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR';
   message: string;
   record?: any;
@@ -113,7 +114,7 @@ export interface ProductSyncResult {
   total_records: number;
   processed_records: number;
   failed_records: number;
-  error_records?: SyncErrorRecord[];
+  error_records?: GlSyncRecord[];
   success: boolean;
 }
 

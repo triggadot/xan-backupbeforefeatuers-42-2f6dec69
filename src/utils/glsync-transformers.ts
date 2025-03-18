@@ -1,4 +1,5 @@
-import { GlColumnMapping, GlProduct, SyncErrorRecord } from '@/types/glsync';
+
+import { GlColumnMapping, GlProduct, GlSyncRecord } from '@/types/glsync';
 
 /**
  * Transform a value based on its data type
@@ -53,12 +54,12 @@ export const transformValue = (
 export const transformGlideToSupabaseProduct = (
   glideProduct: Record<string, any>,
   columnMappings: Record<string, GlColumnMapping>
-): { product: GlProduct; errors: SyncErrorRecord[] } => {
+): { product: GlProduct; errors: GlSyncRecord[] } => {
   const product: GlProduct = {
     glide_row_id: glideProduct.id || glideProduct.rowId || '',
   };
   
-  const errors: SyncErrorRecord[] = [];
+  const errors: GlSyncRecord[] = [];
   
   // Process each mapped column
   Object.entries(columnMappings).forEach(([glideColumnId, mapping]) => {
@@ -92,8 +93,8 @@ export const transformGlideToSupabaseProduct = (
 /**
  * Validate a product record
  */
-export const validateProduct = (product: GlProduct): SyncErrorRecord[] => {
-  const errors: SyncErrorRecord[] = [];
+export const validateProduct = (product: GlProduct): GlSyncRecord[] => {
+  const errors: GlSyncRecord[] = [];
   
   // Check required fields
   if (!product.glide_row_id) {
@@ -157,8 +158,8 @@ export const transformColumnMappings = (columnMappings: any) => {
   
   return Object.entries(columnMappings).reduce((acc, [key, value]) => {
     acc[key] = {
-      glideColumn: value.glideColumn || value.glide_column,
-      supabaseColumn: value.supabaseColumn || value.supabase_column,
+      glideColumn: value.glideColumn || value.glide_column_name,
+      supabaseColumn: value.supabaseColumn || value.supabase_column_name,
       dataType: value.dataType || value.data_type || 'text',
       direction: value.direction || 'both'
     };

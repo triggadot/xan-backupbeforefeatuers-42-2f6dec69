@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge'; // Add this import
+import { Badge } from '@/components/ui/badge'; 
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -130,7 +131,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
 
       <MappingDetailsCard 
         mapping={mapping} 
-        connectionName={connection.name}
+        connectionName={connection.app_name}
         onSyncComplete={handleSyncComplete}
       />
 

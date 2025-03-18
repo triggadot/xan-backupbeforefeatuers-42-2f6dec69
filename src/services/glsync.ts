@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -8,7 +7,8 @@ import {
   GlRecentLog,
   SyncRequestPayload,
   ProductSyncResult,
-  GlideTable
+  GlideTable,
+  GlSyncRecord
 } from '@/types/glsync';
 
 export const glSyncApi = {
@@ -76,15 +76,12 @@ export const glSyncApi = {
     const { data, error } = await query;
     
     if (error) {
-      // Check if it's a "relation does not exist" error
       if (error.code === '42P01') {
-        // Return empty array instead of throwing error when table doesn't exist yet
         return [];
       }
       throw new Error(error.message);
     }
     
-    // Convert the JSON column_mappings to the expected TypeScript type
     return (data || []).map(mapping => ({
       ...mapping,
       column_mappings: mapping.column_mappings as unknown as Record<string, { 
@@ -104,7 +101,6 @@ export const glSyncApi = {
     
     if (error) throw new Error(error.message);
     
-    // Convert the JSON column_mappings to the expected TypeScript type
     return {
       ...data,
       column_mappings: data.column_mappings as unknown as Record<string, { 
@@ -132,7 +128,6 @@ export const glSyncApi = {
     
     if (error) throw new Error(error.message);
     
-    // Convert the JSON column_mappings to the expected TypeScript type
     return {
       ...data,
       column_mappings: data.column_mappings as unknown as Record<string, { 
@@ -158,7 +153,6 @@ export const glSyncApi = {
     
     if (error) throw new Error(error.message);
     
-    // Convert the JSON column_mappings to the expected TypeScript type
     return {
       ...data,
       column_mappings: data.column_mappings as unknown as Record<string, { 
@@ -202,9 +196,7 @@ export const glSyncApi = {
     const { data, error } = await query;
     
     if (error) {
-      // Check if it's a "relation does not exist" error
       if (error.code === '42P01') {
-        // Return empty array instead of throwing error when table doesn't exist yet
         return [];
       }
       throw new Error(error.message);
@@ -220,9 +212,7 @@ export const glSyncApi = {
       .order('last_sync_started_at', { ascending: false });
     
     if (error) {
-      // Check if it's a "relation does not exist" error
       if (error.code === '42P01') {
-        // Return empty array instead of throwing error
         return [];
       }
       throw new Error(error.message);
@@ -239,9 +229,7 @@ export const glSyncApi = {
       .limit(limit);
     
     if (error) {
-      // Check if it's a "relation does not exist" error
       if (error.code === '42P01') {
-        // Return empty array instead of throwing error
         return [];
       }
       throw new Error(error.message);
@@ -311,6 +299,26 @@ export const glSyncApi = {
       };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  async getSyncErrors(mappingId: string): Promise<GlSyncRecord[]> {
+    try {
+      const { data, error } = await supabase
+        .rpc('gl_get_sync_errors', { p_mapping_id: mappingId, p_limit: 100 });
+      
+      if (error) throw new Error(error.message);
+      
+      return (data || []).map(record => ({
+        type: record.error_type,
+        message: record.error_message,
+        record: record.record_data,
+        timestamp: record.created_at,
+        retryable: record.retryable
+      })) as GlSyncRecord[];
+    } catch (error) {
+      console.error('Error fetching sync errors:', error);
+      return [];
     }
   }
 };

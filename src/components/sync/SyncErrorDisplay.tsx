@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SyncErrorRecord } from '@/types/glsync';
+import { GlSyncRecord } from '@/types/glsync';
 import { 
   Accordion,
   AccordionContent,
@@ -11,27 +11,36 @@ import {
   AlertCircle,
   AlertTriangle,
   Info,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface SyncErrorDisplayProps {
-  errors: SyncErrorRecord[];
+  syncErrors?: GlSyncRecord[];
+  errors?: GlSyncRecord[];
   maxErrors?: number;
   className?: string;
+  onRefresh?: () => void;
 }
 
 const SyncErrorDisplay: React.FC<SyncErrorDisplayProps> = ({ 
-  errors, 
+  syncErrors, 
+  errors,
   maxErrors = 10,
-  className
+  className,
+  onRefresh
 }) => {
-  if (!errors || errors.length === 0) {
+  // Use either syncErrors or errors prop
+  const displayErrors = syncErrors || errors || [];
+  
+  if (displayErrors.length === 0) {
     return null;
   }
 
-  const displayErrors = errors.slice(0, maxErrors);
-  const hasMore = errors.length > maxErrors;
+  const limitedErrors = displayErrors.slice(0, maxErrors);
+  const hasMore = displayErrors.length > maxErrors;
 
   const getErrorIcon = (type: string) => {
     switch (type) {
@@ -59,10 +68,18 @@ const SyncErrorDisplay: React.FC<SyncErrorDisplayProps> = ({
 
   return (
     <div className={cn("border rounded-md p-4 bg-gray-50", className)}>
-      <h3 className="text-lg font-medium mb-4">Sync Errors</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Sync Errors</h3>
+        {onRefresh && (
+          <Button variant="outline" size="sm" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        )}
+      </div>
       
       <Accordion type="single" collapsible className="w-full">
-        {displayErrors.map((error, index) => (
+        {limitedErrors.map((error, index) => (
           <AccordionItem key={index} value={`item-${index}`} className="border-b border-gray-200">
             <AccordionTrigger className="hover:no-underline py-3">
               <div className="flex items-center text-left">
@@ -112,7 +129,7 @@ const SyncErrorDisplay: React.FC<SyncErrorDisplayProps> = ({
       
       {hasMore && (
         <div className="mt-2 text-sm text-gray-500">
-          Showing {displayErrors.length} of {errors.length} errors
+          Showing {limitedErrors.length} of {displayErrors.length} errors
         </div>
       )}
     </div>
