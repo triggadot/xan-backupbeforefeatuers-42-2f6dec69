@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -52,7 +51,7 @@ const SyncLogs = () => {
           <CardTitle>Recent Sync Activities</CardTitle>
         </CardHeader>
         <CardContent>
-          <SyncLogTable logs={syncLogs} isLoading={isLoading} />
+          <SyncLogTable logs={syncLogs} isLoading={isLoading} showAppInfo={true} />
         </CardContent>
       </Card>
     </div>

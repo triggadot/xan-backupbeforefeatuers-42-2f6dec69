@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   ClipboardList,
+  Database,
   FileCog,
   FileText,
   LayoutDashboard,
@@ -130,6 +131,31 @@ const Sidebar: React.FC = () => {
                   <Link to="/activity">
                     <ClipboardList className="h-5 w-5" />
                     <span>Activity</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem className={isActive('/sync') ? 'active' : ''}>
+                <SidebarMenuButton asChild>
+                  <Link to="/sync">
+                    <BarChart3 className="h-5 w-5" />
+                    <span>Glide Sync</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem className={isActive('/data-management') ? 'active' : ''}>
+                <SidebarMenuButton asChild>
+                  <Link to="/data-management">
+                    <Database className="h-5 w-5" />
+                    <span>Database Management</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

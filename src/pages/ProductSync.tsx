@@ -14,7 +14,7 @@ import { LoadingState } from '@/components/sync/LoadingState';
 import { InvalidMapping } from '@/components/sync/InvalidMapping';
 import { GlMapping, GlProduct, GlSyncLog } from '@/types/glsync';
 import { SyncLog } from '@/types/syncLog';
-import { SyncLogsTable } from '@/components/sync/SyncLogsTable';
+import { SyncLogTable } from '@/components/sync/ui/SyncLogTable';
 
 const ProductSync = () => {
   const { mappingId } = useParams();
@@ -250,7 +250,7 @@ const ProductSync = () => {
               {isLoadingLogs ? (
                 <LoadingState />
               ) : (
-                <SyncLogsTable 
+                <SyncLogTable 
                   logs={syncLogs} 
                   isLoading={isLoadingLogs} 
                 />

@@ -11,6 +11,8 @@ import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import SyncMetricsCard from './SyncMetricsCard';
 import { formatTimestamp } from '@/utils/glsync-transformers';
 import { supabase } from '@/integrations/supabase/client';
+import { getStatusBadge, getStatusIcon } from './ui/StatusBadgeUtils';
+import { ActiveMappingCard } from './overview/ActiveMappingCard';
 
 const SyncDashboard = () => {
   const [mappings, setMappings] = useState([]);
@@ -106,40 +108,6 @@ const SyncDashboard = () => {
     }
   };
 
-  const getStatusBadge = (status: string | null) => {
-    if (!status) return <Badge variant="outline">Unknown</Badge>;
-    
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case 'processing':
-        return <Badge className="bg-blue-500">Processing</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-500">Failed</Badge>;
-      case 'started':
-        return <Badge className="bg-yellow-500">Started</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getStatusIcon = (status: string | null) => {
-    if (!status) return <Clock className="h-5 w-5 text-gray-400" />;
-    
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return <Check className="h-5 w-5 text-green-500" />;
-      case 'processing':
-        return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
-      case 'failed':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      case 'started':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-400" />;
-    }
-  };
-
   const refreshAll = () => {
     fetchMappings();
     refreshData();
@@ -206,82 +174,13 @@ const SyncDashboard = () => {
               {mappings
                 .filter(status => status.enabled)
                 .map((status) => (
-                  <Card key={status.mapping_id} className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-medium">{status.app_name || 'Unnamed App'}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {status.glide_table_display_name} {status.sync_direction === 'both' ? '↔' : status.sync_direction === 'to_supabase' ? '→' : '←'} {status.supabase_table}
-                        </p>
-                      </div>
-                      {getStatusBadge(status.current_status)}
-                    </div>
-                    
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        {getStatusIcon(status.current_status)}
-                        <span className="ml-2">
-                          {status.records_processed ? `${status.records_processed} records processed` : 'No data processed yet'}
-                        </span>
-                      </div>
-
-                      {status.error_count > 0 && (
-                        <Badge variant="outline" className="bg-red-50 text-red-600">
-                          {status.error_count} {status.error_count === 1 ? 'error' : 'errors'}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="mt-1 mb-3 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                      <div 
-                        className="bg-blue-600 h-2.5 rounded-full" 
-                        style={{ 
-                          width: `${status.total_records && status.records_processed 
-                            ? Math.min(Math.round((status.records_processed / status.total_records) * 100), 100) 
-                            : 0}%` 
-                        }}>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mt-4">
-                      <div className="text-sm text-muted-foreground">
-                        Last sync: {formatTimestamp(status.last_sync_completed_at)}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Link to={
-                          // Check table type and route appropriately
-                          status.supabase_table === 'gl_products' 
-                            ? `/sync/products/${status.mapping_id}` 
-                            : `/sync/mappings/${status.mapping_id}`
-                        }>
-                          <Button 
-                            size="sm"
-                            variant="outline"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Details
-                          </Button>
-                        </Link>
-                        <Button 
-                          size="sm"
-                          onClick={() => handleSync(status.connection_id, status.mapping_id)}
-                          disabled={isSyncing[status.mapping_id] || status.current_status === 'processing'}
-                        >
-                          {isSyncing[status.mapping_id] ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Syncing...
-                            </>
-                          ) : (
-                            <>
-                              <ArrowRight className="h-4 w-4 mr-2" />
-                              Sync Now
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                  <div key={status.mapping_id} className="col-span-1">
+                    <ActiveMappingCard 
+                      status={status} 
+                      onSync={handleSync} 
+                      isSyncing={isSyncing[status.mapping_id] || false} 
+                    />
+                  </div>
                 ))}
             </div>
           )}

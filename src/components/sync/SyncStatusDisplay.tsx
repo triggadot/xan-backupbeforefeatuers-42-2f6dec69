@@ -1,34 +1,15 @@
-
 import React from 'react';
 import { CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GlSyncStatus } from '@/types/glsync';
 import { formatDistance } from 'date-fns';
+import { getStatusBadge } from './ui/StatusBadgeUtils';
 
 interface SyncStatusDisplayProps {
   status: GlSyncStatus | null;
 }
 
 export function SyncStatusDisplay({ status }: SyncStatusDisplayProps) {
-  const getStatusBadge = () => {
-    if (!status?.current_status) {
-      return <Badge variant="outline">Not synced</Badge>;
-    }
-
-    switch (status.current_status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
-      case 'processing':
-        return <Badge className="bg-blue-500">Processing</Badge>;
-      case 'started':
-        return <Badge className="bg-yellow-500">Started</Badge>;
-      default:
-        return <Badge variant="outline">{status.current_status}</Badge>;
-    }
-  };
-
   const getLastSyncTime = () => {
     if (!status?.last_sync_completed_at) return 'Never';
     
