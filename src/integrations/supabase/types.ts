@@ -204,6 +204,7 @@ export type Database = {
           date_of_sale: string | null
           glide_row_id: string
           id: string
+          line_total: number | null
           product_sale_note: string | null
           qty_sold: number | null
           rowid_estimate_lines: string | null
@@ -218,6 +219,7 @@ export type Database = {
           date_of_sale?: string | null
           glide_row_id: string
           id?: string
+          line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
           rowid_estimate_lines?: string | null
@@ -232,6 +234,7 @@ export type Database = {
           date_of_sale?: string | null
           glide_row_id?: string
           id?: string
+          line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
           rowid_estimate_lines?: string | null
@@ -363,6 +366,7 @@ export type Database = {
           date_of_sale: string | null
           glide_row_id: string
           id: string
+          line_total: number | null
           product_sale_note: string | null
           qty_sold: number | null
           renamed_product_name: string | null
@@ -377,6 +381,7 @@ export type Database = {
           date_of_sale?: string | null
           glide_row_id: string
           id?: string
+          line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
           renamed_product_name?: string | null
@@ -391,6 +396,7 @@ export type Database = {
           date_of_sale?: string | null
           glide_row_id?: string
           id?: string
+          line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
           renamed_product_name?: string | null
@@ -500,6 +506,7 @@ export type Database = {
           cost: number | null
           created_at: string | null
           date_timestamp_subm: string | null
+          display_name: string | null
           email_email_of_user_who_added_product: string | null
           fronted: boolean | null
           glide_row_id: string
@@ -527,6 +534,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           date_timestamp_subm?: string | null
+          display_name?: string | null
           email_email_of_user_who_added_product?: string | null
           fronted?: boolean | null
           glide_row_id: string
@@ -554,6 +562,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           date_timestamp_subm?: string | null
+          display_name?: string | null
           email_email_of_user_who_added_product?: string | null
           fronted?: boolean | null
           glide_row_id?: string
@@ -1204,6 +1213,60 @@ export type Database = {
       }
     }
     Views: {
+      gl_business_metrics: {
+        Row: {
+          total_customers: number | null
+          total_estimates: number | null
+          total_invoice_amount: number | null
+          total_invoices: number | null
+          total_outstanding_balance: number | null
+          total_payments_made: number | null
+          total_payments_received: number | null
+          total_products: number | null
+          total_purchase_amount: number | null
+          total_purchase_balance: number | null
+          total_purchase_orders: number | null
+          total_vendors: number | null
+        }
+        Relationships: []
+      }
+      gl_current_status: {
+        Row: {
+          balance_amount: number | null
+          category: string | null
+          draft_count: number | null
+          paid_count: number | null
+          total_amount: number | null
+          total_count: number | null
+          total_paid: number | null
+          unpaid_count: number | null
+        }
+        Relationships: []
+      }
+      gl_estimate_totals: {
+        Row: {
+          balance: number | null
+          glide_row_id: string | null
+          id: string | null
+          line_items_count: number | null
+          status: string | null
+          total_amount: number | null
+          total_credits: number | null
+        }
+        Relationships: []
+      }
+      gl_invoice_totals: {
+        Row: {
+          balance: number | null
+          glide_row_id: string | null
+          id: string | null
+          line_items_count: number | null
+          payment_status: string | null
+          total_amount: number | null
+          total_paid: number | null
+        }
+        Relationships: []
+      }
       gl_mapping_status: {
         Row: {
           app_name: string | null
@@ -1231,6 +1294,35 @@ export type Database = {
           },
         ]
       }
+      gl_order_fulfillment: {
+        Row: {
+          customer_name: string | null
+          has_shipping: boolean | null
+          invoice_amount: number | null
+          invoice_id: string | null
+          invoice_rowid: string | null
+          payment_status: string | null
+          products: string | null
+          ship_date: string | null
+          total_items: number | null
+          tracking_number: string | null
+        }
+        Relationships: []
+      }
+      gl_payment_history: {
+        Row: {
+          document_id: string | null
+          document_type: string | null
+          entity_name: string | null
+          entity_type: string | null
+          payment_amount: number | null
+          payment_date: string | null
+          payment_id: string | null
+          payment_note: string | null
+          payment_type: string | null
+        }
+        Relationships: []
+      }
       gl_product_sync_stats: {
         Row: {
           app_name: string | null
@@ -1253,6 +1345,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gl_purchase_order_totals: {
+        Row: {
+          balance: number | null
+          glide_row_id: string | null
+          id: string | null
+          payment_status: string | null
+          product_count: number | null
+          total_amount: number | null
+          total_paid: number | null
+        }
+        Relationships: []
       }
       gl_recent_logs: {
         Row: {
@@ -1287,6 +1391,20 @@ export type Database = {
       }
     }
     Functions: {
+      generate_invoice_uid: {
+        Args: {
+          account_uid: string
+          invoice_date: string
+        }
+        Returns: string
+      }
+      generate_po_uid: {
+        Args: {
+          account_uid: string
+          po_date: string
+        }
+        Returns: string
+      }
       get_table_columns: {
         Args: {
           table_name: string
