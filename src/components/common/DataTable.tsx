@@ -1,22 +1,15 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Filter, MoreVertical, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+import React, { useState, useMemo } from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { 
   Table, 
   TableBody, 
   TableCell, 
-  TableHead, 
-  TableHeader, 
   TableRow 
 } from '@/components/ui/table';
 import { ColumnDef, SortOption } from '@/types';
+import { TableHeader } from './table/TableHeader';
+import { TableActions } from './table/TableActions';
+import { TableToolbar } from './table/TableToolbar';
 
 interface DataTableProps<T> {
   data: T[];
@@ -45,7 +38,7 @@ function DataTable<T extends { id: string }>({
   const [sortOptions, setSortOptions] = useState<SortOption | null>(null);
   
   // Filter data based on search term
-  const filteredData = React.useMemo(() => {
+  const filteredData = useMemo(() => {
     if (!searchTerm) return data;
     
     return data.filter(item => {
@@ -62,7 +55,7 @@ function DataTable<T extends { id: string }>({
   }, [data, searchTerm]);
   
   // Sort data based on sort options
-  const sortedData = React.useMemo(() => {
+  const sortedData = useMemo(() => {
     if (!sortOptions) return filteredData;
     
     return [...filteredData].sort((a, b) => {
@@ -103,60 +96,26 @@ function DataTable<T extends { id: string }>({
     }
   };
   
-  const getSortIcon = (columnId: string) => {
-    if (sortOptions?.field !== columnId) return null;
-    
-    return sortOptions.direction === 'asc' ? (
-      <ChevronUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ChevronDown className="ml-2 h-4 w-4" />
-    );
-  };
-  
   return (
     <div className="animate-enter-bottom">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        
-        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={searchPlaceholder}
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          {onCreateClick && (
-            <Button onClick={onCreateClick} className="hover-lift">
-              {createButtonLabel}
-            </Button>
-          )}
-        </div>
-      </div>
+      <TableToolbar
+        title={title}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={searchPlaceholder}
+        createButtonLabel={createButtonLabel}
+        onCreateClick={onCreateClick}
+      />
       
       <div className="rounded-lg border bg-card overflow-hidden shadow-subtle">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.id}
-                    className={column.enableSorting !== false ? 'cursor-pointer select-none' : ''}
-                    onClick={column.enableSorting !== false ? () => handleSort(column.accessorKey || column.id) : undefined}
-                  >
-                    <div className="flex items-center">
-                      {column.header}
-                      {column.enableSorting !== false && getSortIcon(column.accessorKey || column.id)}
-                    </div>
-                  </TableHead>
-                ))}
-                {(onEdit || onDelete) && <TableHead className="w-[100px]">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
+            <TableHeader
+              columns={columns}
+              sortOptions={sortOptions}
+              onSort={handleSort}
+              hasRowActions={Boolean(onEdit || onDelete)}
+            />
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
@@ -183,34 +142,11 @@ function DataTable<T extends { id: string }>({
                     
                     {(onEdit || onDelete) && (
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {onEdit && (
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(row);
-                              }}>
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {onDelete && (
-                              <DropdownMenuItem 
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDelete(row);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <TableActions
+                          row={row}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
                       </TableCell>
                     )}
                   </TableRow>
