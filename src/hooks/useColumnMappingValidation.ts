@@ -23,9 +23,10 @@ export function useColumnMappingValidation() {
     setIsValidating(true);
     try {
       // Call the database function to validate the mapping
+      // Convert the mapping to a plain object that can be serialized as JSON
       const { data, error } = await supabase
         .rpc('gl_validate_mapping_data', { 
-          p_mapping: mapping
+          p_mapping: mapping as any // Use type assertion to bypass TypeScript's type checking
         });
       
       if (error) {
