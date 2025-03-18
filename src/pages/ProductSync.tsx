@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -39,7 +38,6 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
         .single();
       
       if (error) throw error;
-      // Explicitly cast the column_mappings field to the expected type
       return {
         ...data,
         column_mappings: data.column_mappings as unknown as Record<string, { 
@@ -94,10 +92,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     }
   }, [mappingId, refetch]);
 
-  // Check if the mapping has $rowID explicitly mapped
   useEffect(() => {
     if (mapping) {
-      // Check if there's a direct mapping from $rowID to glide_row_id
       const hasExplicitRowIdMapping = Object.entries(mapping.column_mappings).some(
         ([glideColumnId, mapping]) => glideColumnId === '$rowID' && mapping.supabase_column_name === 'glide_row_id'
       );
@@ -113,6 +109,36 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
   const handleSyncComplete = () => {
     refetch();
     refreshErrors();
+  };
+
+  const handleEditMapping = (mapping: GlMapping) => {
+    navigate(`/sync/mappings/edit/${mapping.id}`);
+  };
+
+  const handleDeleteMapping = async (mappingId: string) => {
+    if (window.confirm('Are you sure you want to delete this mapping? This action cannot be undone.')) {
+      try {
+        const { error } = await supabase
+          .from('gl_mappings')
+          .delete()
+          .eq('id', mappingId);
+        
+        if (error) throw error;
+        
+        toast({
+          title: 'Mapping deleted',
+          description: 'The mapping has been successfully deleted.',
+        });
+        
+        navigate('/sync/mappings');
+      } catch (error: any) {
+        toast({
+          title: 'Error deleting mapping',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   if (!mappingId || mappingId === ':mappingId') {
@@ -192,6 +218,8 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
         mapping={mapping} 
         connectionName={connection?.app_name}
         onSyncComplete={handleSyncComplete}
+        onEdit={handleEditMapping}
+        onDelete={handleDeleteMapping}
       />
 
       <Tabs defaultValue="errors" className="mt-4">
