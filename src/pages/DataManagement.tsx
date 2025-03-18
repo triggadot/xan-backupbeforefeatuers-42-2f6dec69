@@ -17,6 +17,11 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
 
+// This is needed to type the table_name property
+interface SupabaseTable {
+  table_name: string;
+}
+
 // Define table display names and descriptions
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
   gl_accounts: {

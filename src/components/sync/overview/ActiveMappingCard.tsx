@@ -2,11 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { ExternalLink, RefreshCw } from 'lucide-react';
-import { formatTimestamp } from '@/utils/glsync-transformers';
+import { formatTimestamp } from '@/utils/date-utils';
 import { getStatusBadge, getStatusIcon } from '../ui/StatusBadgeUtils';
 import { GlSyncStatus } from '@/types/glsync';
+import { ProgressIndicator } from '../ui/ProgressIndicator';
 
 interface ActiveMappingCardProps {
   status: GlSyncStatus;
@@ -15,11 +15,6 @@ interface ActiveMappingCardProps {
 }
 
 export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCardProps) {
-  const calculateProgress = () => {
-    if (!status.total_records || !status.records_processed) return 0;
-    return Math.min(Math.round((status.records_processed / status.total_records) * 100), 100);
-  };
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -52,24 +47,10 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
             </div>
           </div>
           
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Sync Progress</span>
-              <span>
-                {status.records_processed || 0} / {status.total_records || '?'}
-              </span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full">
-              <div 
-                className="h-2 bg-blue-500 rounded-full" 
-                style={{ 
-                  width: `${status.total_records && status.records_processed 
-                    ? Math.min(Math.round((status.records_processed / status.total_records) * 100), 100) 
-                    : 0}%` 
-                }}>
-              </div>
-            </div>
-          </div>
+          <ProgressIndicator 
+            current={status.records_processed} 
+            total={status.total_records} 
+          />
           
           <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-muted-foreground">

@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { GlSyncStats } from '@/types/glsync';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { format, parseISO, isValid } from 'date-fns';
+import { formatDateBrief } from '@/utils/date-utils';
 
 interface SyncMetricsCardProps {
   syncStats: GlSyncStats[];
@@ -12,19 +11,10 @@ interface SyncMetricsCardProps {
 }
 
 const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
-  const formatDate = (dateString: string): string => {
-    try {
-      const date = parseISO(dateString);
-      return isValid(date) ? format(date, 'MMM dd') : 'Invalid';
-    } catch (e) {
-      return 'Invalid';
-    }
-  };
-
   // Prepare chart data
   const chartData = syncStats.map(stat => ({
     ...stat,
-    date: formatDate(stat.sync_date),
+    date: formatDateBrief(stat.sync_date),
   })).reverse();
 
   if (isLoading) {
@@ -57,65 +47,58 @@ const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
         <CardTitle className="text-lg">Sync Activity</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {chartData.length > 0 ? (
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{
-                  top: 5,
-                  right: 20,
-                  left: 0,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  width={30}
-                />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="syncs" 
-                  stroke="#3b82f6" 
-                  name="Syncs"
-                  strokeWidth={2}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="total_records_processed" 
-                  stroke="#10b981" 
-                  name="Records Processed"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-            No sync data available
-          </div>
-        )}
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{totalSyncs}</div>
-            <div className="text-sm text-blue-800">Total Syncs</div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{totalRecords}</div>
-            <div className="text-sm text-green-800">Records Processed</div>
-          </div>
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={chartData}
+              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="colorSyncs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorRecords" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Area 
+                type="monotone" 
+                dataKey="syncs" 
+                stroke="#8884d8" 
+                fillOpacity={1} 
+                fill="url(#colorSyncs)" 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="total_records_processed" 
+                stroke="#82ca9d" 
+                fillOpacity={1} 
+                fill="url(#colorRecords)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
         
-        <div className="bg-gray-50 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold">{successRate}%</div>
-          <div className="text-sm text-gray-600">Success Rate</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
+            <div className="text-sm text-muted-foreground">Total Syncs</div>
+            <div className="text-2xl font-semibold mt-1">{totalSyncs}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Success Rate: {successRate}%
+            </div>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
+            <div className="text-sm text-muted-foreground">Records Processed</div>
+            <div className="text-2xl font-semibold mt-1">{totalRecords.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Across {syncStats.length} days
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

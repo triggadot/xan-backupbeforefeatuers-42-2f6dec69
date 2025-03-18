@@ -2,9 +2,9 @@ import React from 'react';
 import { SyncLog } from '@/types/syncLog';
 import { GlSyncLog } from '@/types/glsync';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, formatDistanceToNow } from 'date-fns';
 import { getStatusBadge } from './StatusBadgeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatTimeAgo, formatDateTime, formatDuration } from '@/utils/date-utils';
 
 interface SyncLogTableProps {
   logs: SyncLog[] | GlSyncLog[];
@@ -13,24 +13,6 @@ interface SyncLogTableProps {
 }
 
 export function SyncLogTable({ logs, isLoading, showAppInfo = false }: SyncLogTableProps) {
-  const formatTimeAgo = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return formatDistanceToNow(date, { addSuffix: true });
-    } catch (e) {
-      return 'Invalid date';
-    }
-  };
-
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return '-';
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy HH:mm:ss');
-    } catch (e) {
-      return 'Invalid date';
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -76,12 +58,7 @@ export function SyncLogTable({ logs, isLoading, showAppInfo = false }: SyncLogTa
             )}
             <TableCell>{formatTimeAgo(log.started_at)}</TableCell>
             <TableCell>
-              {log.completed_at 
-                ? formatDistanceToNow(new Date(log.started_at), { 
-                    addSuffix: false, 
-                    includeSeconds: true 
-                  })
-                : 'In progress'}
+              {formatDuration(log.started_at, log.completed_at)}
             </TableCell>
             <TableCell>{log.records_processed || '-'}</TableCell>
             <TableCell className="max-w-xs truncate">{log.message || '-'}</TableCell>

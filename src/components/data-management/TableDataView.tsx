@@ -13,6 +13,9 @@ import {
   CardTitle
 } from '@/components/ui/card';
 
+// Define a type for record with unknown structure but with an id
+type TableRecord = Record<string, unknown> & { id: string };
+
 interface TableDataViewProps {
   tableName: string;
   displayName: string;
@@ -32,11 +35,12 @@ export default function TableDataView({
     createRecord, 
     updateRecord, 
     deleteRecord 
-  } = useTableData(tableName as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } = useTableData<TableRecord>(tableName as any);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState<any>(null);
+  const [currentRecord, setCurrentRecord] = useState<TableRecord | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -60,7 +64,7 @@ export default function TableDataView({
         .join(' '),
       accessorKey: key,
       // Format date fields and limit text length
-      cell: (row: any) => {
+      cell: (row: TableRecord) => {
         const value = row[key];
         if (!value) return '--';
         
@@ -92,12 +96,12 @@ export default function TableDataView({
     }));
   }, [data]);
 
-  const handleCreate = async (values: any) => {
+  const handleCreate = async (values: Record<string, unknown>) => {
     await createRecord(values);
     setIsCreateDialogOpen(false);
   };
 
-  const handleUpdate = async (values: any) => {
+  const handleUpdate = async (values: Record<string, unknown>) => {
     if (currentRecord?.id) {
       await updateRecord(currentRecord.id, values);
       setIsEditDialogOpen(false);
@@ -105,12 +109,12 @@ export default function TableDataView({
     }
   };
 
-  const handleEdit = (record: any) => {
+  const handleEdit = (record: TableRecord) => {
     setCurrentRecord(record);
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (record: any) => {
+  const handleDelete = async (record: TableRecord) => {
     if (confirm(`Are you sure you want to delete this ${displayName}?`)) {
       await deleteRecord(record.id);
     }

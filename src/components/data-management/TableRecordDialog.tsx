@@ -24,9 +24,9 @@ interface TableRecordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  record: Record<string, any>;
+  record: Record<string, unknown>;
   fields: ColumnDef[];
-  onSubmit: (values: Record<string, any>) => void;
+  onSubmit: (values: Record<string, unknown>) => void;
 }
 
 export default function TableRecordDialog({
@@ -37,7 +37,7 @@ export default function TableRecordDialog({
   fields,
   onSubmit
 }: TableRecordDialogProps) {
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
   
   // Initialize form values when record changes
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function TableRecordDialog({
     });
   }, [fields]);
   
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: unknown) => {
     setFormValues(prev => ({
       ...prev,
       [field]: value
@@ -122,7 +122,7 @@ export default function TableRecordDialog({
             <Label htmlFor={fieldId}>{fieldLabel}</Label>
             <Textarea
               id={fieldId}
-              value={fieldValue || ''}
+              value={String(fieldValue || '')}
               onChange={(e) => handleChange(fieldName, e.target.value)}
               rows={5}
               placeholder={`Enter ${fieldLabel}`}
@@ -134,7 +134,7 @@ export default function TableRecordDialog({
             <Input
               id={fieldId}
               type={fieldType}
-              value={fieldValue === null ? '' : fieldValue}
+              value={fieldValue === null ? '' : String(fieldValue)}
               onChange={(e) => {
                 const value = fieldType === 'number' 
                   ? e.target.value ? Number(e.target.value) : null
