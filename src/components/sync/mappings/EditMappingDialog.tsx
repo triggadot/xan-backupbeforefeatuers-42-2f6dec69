@@ -6,21 +6,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { GlConnection, GlMapping } from '@/types/glsync';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
 
-interface AddMappingDialogProps {
+interface EditMappingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  connection?: GlConnection;
+  mapping: GlMapping;
   onSuccess: () => void;
 }
 
-const AddMappingDialog = ({ 
+const EditMappingDialog = ({ 
   open, 
   onOpenChange,
+  connection,
+  mapping,
   onSuccess 
-}: AddMappingDialogProps) => {
+}: EditMappingDialogProps) => {
   const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
   const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
   
@@ -41,10 +46,11 @@ const AddMappingDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Mapping</DialogTitle>
+          <DialogTitle>Edit Mapping</DialogTitle>
         </DialogHeader>
         <MappingFormContainer
-          isEditing={false}
+          mapping={mapping}
+          isEditing={true}
           connections={connections}
           supabaseTables={supabaseTables}
           onSuccess={handleSuccess}
@@ -55,4 +61,4 @@ const AddMappingDialog = ({
   );
 };
 
-export default AddMappingDialog;
+export default EditMappingDialog;
