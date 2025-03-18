@@ -5,23 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { GlMapping, GlColumnMapping } from '@/types/glsync';
 import { useMappingValidation } from './useMappingValidation';
 import { convertToTypedMappings, getDefaultColumnMappings } from '@/types/syncLog';
+import { Json } from '@/integrations/supabase/types';
 
 // Helper function to convert column mappings to JSON for database
-function convertMappingsToJson(mappings: Record<string, GlColumnMapping> | undefined): any {
-  if (!mappings) return {};
+function convertMappingsToJson(mappings: Record<string, GlColumnMapping> | undefined): Json {
+  if (!mappings) return {} as Json;
   
   // Convert to plain object for Supabase
-  const jsonMappings: Record<string, unknown> = {};
-  
-  for (const [key, mapping] of Object.entries(mappings)) {
-    jsonMappings[key] = {
-      glide_column_name: mapping.glide_column_name,
-      supabase_column_name: mapping.supabase_column_name,
-      data_type: mapping.data_type
-    };
-  }
-  
-  return jsonMappings;
+  return mappings as unknown as Json;
 }
 
 // Helper function to convert JSON from database to typed mappings

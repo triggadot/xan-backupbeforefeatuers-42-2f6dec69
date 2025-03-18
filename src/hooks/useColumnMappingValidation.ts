@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { GlColumnMapping } from '@/types/glsync';
+import { GlColumnMapping, ColumnMappingSuggestion } from '@/types/glsync';
 import { TypedColumnMapping, ensureValidDataType, isValidDataType } from '@/types/syncLog';
 
 export function useColumnMappingValidation() {
@@ -23,8 +23,7 @@ export function useColumnMappingValidation() {
 
     setIsValidating(true);
     try {
-      // Validate with our enhanced database function 
-      // by passing the mapping as JSON
+      // Call the new validation function that can handle pre-existing mappings
       const { data, error } = await supabase.rpc('gl_validate_mapping_data', {
         p_mapping: {
           supabase_table: tableName,
@@ -34,17 +33,25 @@ export function useColumnMappingValidation() {
 
       if (error) throw error;
 
-      if (!data || data.length === 0) {
+      if (!data) {
         return { 
           isValid: false, 
           message: 'Validation failed: No response from server'
         };
       }
 
-      const result = data[0];
+      // The function returns an array of records, each with is_valid and validation_message
+      if (Array.isArray(data) && data.length > 0) {
+        const result = data[0];
+        return {
+          isValid: result.is_valid,
+          message: result.validation_message
+        };
+      }
+
       return {
-        isValid: result.is_valid,
-        message: result.validation_message
+        isValid: false,
+        message: 'Unexpected validation result format'
       };
     } catch (error) {
       console.error('Error validating column mappings:', error);
@@ -97,8 +104,8 @@ export function useColumnMappingValidation() {
       };
 
       // Add suggested mappings with type validation
-      if (data && data.length > 0) {
-        for (const suggestion of data) {
+      if (Array.isArray(data) && data.length > 0) {
+        for (const suggestion of data as ColumnMappingSuggestion[]) {
           // Find the original glide column
           const glideCol = glideColumns.find(col => col.name === suggestion.glide_column_name);
           if (glideCol) {

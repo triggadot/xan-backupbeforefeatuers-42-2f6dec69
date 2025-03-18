@@ -1262,9 +1262,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      gl_suggest_column_mappings: {
+        Args: {
+          p_supabase_table: string
+          p_glide_columns: Json
+        }
+        Returns: {
+          glide_column_name: string
+          suggested_supabase_column: string
+          data_type: string
+          confidence: number
+        }[]
+      }
       gl_validate_column_mapping: {
         Args: {
           p_mapping_id: string
+        }
+        Returns: {
+          is_valid: boolean
+          validation_message: string
+        }[]
+      }
+      gl_validate_mapping_data: {
+        Args: {
+          p_mapping: Json
+          p_editing?: boolean
         }
         Returns: {
           is_valid: boolean
