@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSyncResult, GlMapping, GlideTable } from '@/types/glsync';
@@ -8,6 +7,7 @@ import { validateMapping } from '@/utils/gl-mapping-validator';
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [syncResult, setSyncResult] = useState<ProductSyncResult | null>(null);
+  const [retrying, setRetrying] = useState<boolean>(false);
   const { toast } = useToast();
 
   const syncData = async (connectionId: string, mappingId: string) => {
@@ -189,42 +189,50 @@ export function useGlSync() {
     }
   };
 
-  const retryFailedSync = async (mappingId: string) => {
-    setIsLoading(true);
+  const retryFailedSync = useCallback(async (mappingId: string): Promise<boolean> => {
+    if (!mappingId) return false;
     
     try {
-      // Use a direct RPC call to start a sync retry
-      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', { 
-        p_mapping_id: mappingId 
+      setRetrying(true);
+      
+      // Call the RPC function to retry the failed sync
+      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', {
+        p_mapping_id: mappingId
       });
       
       if (error) {
-        throw new Error(error.message);
+        console.error('Error retrying sync:', error.message);
+        toast({
+          title: 'Error retrying sync',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return false;
       }
       
+      const logId = data;
+      
       toast({
-        title: 'Sync retry initiated',
-        description: 'The failed sync operation has been queued for retry.',
+        title: 'Retry initiated',
+        description: 'The sync retry has been initiated successfully.'
       });
       
-      return { success: true, logId: data };
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Automatically trigger the sync with the edge function
+      const result = await syncData(mappingId);
       
+      return result.success;
+    } catch (error) {
+      console.error('Error in retryFailedSync:', error);
       toast({
         title: 'Error retrying sync',
-        description: errorMessage,
-        variant: 'destructive',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive'
       });
-      
-      return { 
-        success: false, 
-        error: errorMessage 
-      };
+      return false;
     } finally {
-      setIsLoading(false);
+      setRetrying(false);
     }
-  };
+  }, [syncData, setRetrying, toast]);
 
   return {
     syncData,

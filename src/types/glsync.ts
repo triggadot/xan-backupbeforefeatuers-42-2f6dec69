@@ -1,3 +1,4 @@
+
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -114,6 +115,7 @@ export interface GlProduct {
 // Interface for sync error records
 export interface GlSyncRecord {
   id?: string;
+  mapping_id?: string;
   type: 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR';
   message: string;
   record?: any;

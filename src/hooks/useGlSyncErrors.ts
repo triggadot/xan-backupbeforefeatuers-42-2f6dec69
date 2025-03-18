@@ -35,6 +35,7 @@ export function useGlSyncErrors(mappingId?: string) {
       
       const formattedErrors = data ? data.map((record: any) => ({
         id: record.id,
+        mapping_id: record.mapping_id,
         type: record.error_type as 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR',
         message: record.error_message,
         record: record.record_data,
@@ -61,7 +62,7 @@ export function useGlSyncErrors(mappingId?: string) {
 
   const resolveError = useCallback(async (errorId: string, resolutionNotes?: string) => {
     try {
-      // Call the RPC function directly
+      // Call the RPC function to resolve the error
       const { data, error } = await supabase.rpc('gl_resolve_sync_error', { 
         p_error_id: errorId,
         p_resolution_notes: resolutionNotes || null
