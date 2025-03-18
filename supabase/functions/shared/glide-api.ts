@@ -1,3 +1,4 @@
+
 import { corsHeaders } from './cors.ts'
 import { MAX_BATCH_SIZE, withRetry } from './sync-utils.ts';
 
@@ -82,7 +83,8 @@ export async function getGlideTableColumns(apiKey: string, appId: string, tableI
         appID: appId,
         queries: [{ 
           tableName: tableId,
-          limit: 1 
+          limit: 1,
+          utc: true
         }]
       })
     })
@@ -115,131 +117,60 @@ export async function getGlideTableColumns(apiKey: string, appId: string, tableI
   }
 }
 
-// Function to fetch data from a Glide table with pagination
+// Simplified function to fetch data from a Glide table with pagination
 export async function fetchGlideTableData(apiKey: string, appId: string, tableName: string, continuationToken: string | null) {
-  let retries = 0;
-  let success = false;
-  let lastError = null;
-  let result = null;
-  
-  // Implement retry logic with exponential backoff
-  while (!success && retries < MAX_RETRIES) {
-    try {
-      const query: any = { tableName };
-      
-      if (continuationToken) {
-        query.startAt = continuationToken;
-      }
-      
-      console.log(`Fetching Glide data for table: ${tableName}, continuation: ${continuationToken ? 'yes' : 'no'}`);
-      
-      const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          appID: appId,
-          queries: [query]
-        })
-      });
-      
+  try {
+    // Build the query object
+    const queryObj: Record<string, any> = { 
+      tableName: tableName,
+      utc: true // Use UTC time format for consistency
+    }
+    
+    // Add continuation token if provided
+    if (continuationToken) {
+      queryObj.startAt = continuationToken
+    }
+    
+    // Make the API request
+    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        appID: appId,
+        queries: [queryObj]
+      })
+    })
+    
+    // Handle HTTP errors
+    if (!response.ok) {
       if (response.status === 429) {
-        // Rate limited, wait and retry
-        const retryAfter = response.headers.get('retry-after') || 
-                          (RETRY_DELAY_MS * Math.pow(2, retries)) / 1000;
-        
-        await new Promise(resolve => 
-          setTimeout(resolve, parseInt(retryAfter as string) * 1000 || RETRY_DELAY_MS * Math.pow(2, retries))
-        );
-        retries++;
-        continue;
+        return { error: 'Rate limit exceeded. Please try again later.' }
+      }
+      return { error: `Glide API error: ${response.status} ${response.statusText}` }
+    }
+    
+    // Parse the response
+    const data = await response.json()
+    
+    // Get the table data and continuation token
+    if (data && Array.isArray(data) && data.length > 0) {
+      if (!data[0].rows || !Array.isArray(data[0].rows)) {
+        return { rows: [], next: null }
       }
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Glide API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Handle different formats of Glide API responses
-      if (data && Array.isArray(data) && data.length > 0) {
-        const tableData = data[0];
-        
-        // Check if rows array exists directly
-        if (tableData.rows && Array.isArray(tableData.rows)) {
-          result = { 
-            rows: tableData.rows,
-            next: tableData.next || null
-          };
-        }
-        // Sometimes Glide returns a direct array without the rows property
-        else if (Array.isArray(tableData)) {
-          result = {
-            rows: tableData,
-            next: data.next || null
-          };
-        }
-        // Handle case where data is returned in a property matching the table name
-        else if (tableData[tableName] && Array.isArray(tableData[tableName])) {
-          result = {
-            rows: tableData[tableName],
-            next: tableData.next || null
-          };
-        }
-        // Fallback for other response formats
-        else {
-          // Look for the first array in the response
-          for (const key of Object.keys(tableData)) {
-            if (Array.isArray(tableData[key]) && key !== 'next') {
-              result = {
-                rows: tableData[key],
-                next: tableData.next || null
-              };
-              break;
-            }
-          }
-          
-          // If still no array found, try to extract from the data
-          if (!result) {
-            result = {
-              rows: Array.isArray(Object.values(tableData)[0]) ? Object.values(tableData)[0] : [],
-              next: tableData.next || null
-            };
-          }
-        }
-      } else {
-        // If no data returned, return empty result
-        result = { rows: [], next: null };
-      }
-      
-      // Do a final check to ensure rows is always an array
-      if (!Array.isArray(result.rows)) {
-        console.warn('Expected rows to be an array, got:', typeof result.rows);
-        result.rows = [];
-      }
-      
-      success = true;
-    } catch (error) {
-      console.error(`Error fetching Glide data (attempt ${retries + 1}):`, error);
-      lastError = error;
-      retries++;
-      
-      if (retries < MAX_RETRIES) {
-        await new Promise(resolve => 
-          setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, retries))
-        );
+      return {
+        rows: data[0].rows,
+        next: data[0].next || null
       }
     }
+    
+    return { rows: [], next: null }
+  } catch (error) {
+    return { error: `Error fetching Glide data: ${error.message}` }
   }
-  
-  if (!success) {
-    return { error: `Failed to fetch data after ${MAX_RETRIES} retries: ${lastError?.message}` };
-  }
-  
-  return result;
 }
 
 // Helper function to send mutations to Glide

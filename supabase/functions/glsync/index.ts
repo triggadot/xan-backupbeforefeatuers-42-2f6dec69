@@ -1,7 +1,8 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { corsHeaders, handleCors } from "../shared/cors.ts"
-import { withRetry, handleError } from "../shared/sync-utils.ts"
+import { withRetry, handleError, MAX_BATCH_SIZE } from "../shared/sync-utils.ts"
 import { 
   testGlideConnection, 
   listGlideTables, 
@@ -16,10 +17,12 @@ serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   try {
+    // Set up Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Parse request payload
     const { action, connectionId, mappingId, tableId } = await req.json();
 
     // Create sync log entry
@@ -65,26 +68,22 @@ serve(async (req) => {
     let result;
     switch (action) {
       case 'testConnection':
-        result = await withRetry(() => testGlideConnection(connection.api_key, connection.app_id));
+        result = await testGlideConnection(connection.api_key, connection.app_id);
         break;
       case 'listGlideTables':
-        result = await withRetry(() => listGlideTables(connection.api_key, connection.app_id));
+        result = await listGlideTables(connection.api_key, connection.app_id);
         break;
       case 'getColumnMappings':
         if (!tableId) {
           return handleError(new Error('Table ID is required for getColumnMappings'));
         }
-        result = await withRetry(() => 
-          getGlideTableColumns(connection.api_key, connection.app_id, tableId)
-        );
+        result = await getGlideTableColumns(connection.api_key, connection.app_id, tableId);
         break;
       case 'syncData':
         if (!mapping) {
           return handleError(new Error('Mapping is required for syncData'));
         }
-        result = await withRetry(() => 
-          syncGlideData(supabase, connection, mapping, logData.id)
-        );
+        result = await syncGlideData(supabase, connection, mapping, logData.id);
         break;
       default:
         return handleError(new Error('Invalid action'));
@@ -136,59 +135,250 @@ async function updateSyncLog(
     .eq('id', logId)
 }
 
-// Function to handle data synchronization between Glide and Supabase
+// Simplified function to handle data synchronization between Glide and Supabase
 async function syncGlideData(supabase: any, connection: any, mapping: any, logId: string) {
   const { glide_table, supabase_table, column_mappings, sync_direction } = mapping
   
-  // If sync_direction is 'to_glide' or 'both', we need to push from Supabase to Glide
-  if (sync_direction === 'to_glide' || sync_direction === 'both') {
-    try {
-      return await pushFromSupabaseToGlide(
-        supabase,
-        connection.api_key,
-        connection.app_id,
-        mapping,
-        logId
-      )
-    } catch (error) {
-      return { error: `Error syncing data from Supabase to Glide: ${error.message}` }
-    }
+  // If sync_direction is 'to_supabase', pull from Glide to Supabase
+  if (sync_direction === 'to_supabase' || sync_direction === 'both') {
+    console.log(`Starting sync from Glide to Supabase - Table: ${glide_table}`)
+    return await pullFromGlideToSupabase(
+      supabase,
+      connection.api_key,
+      connection.app_id,
+      glide_table,
+      supabase_table,
+      column_mappings,
+      mapping.id,
+      logId
+    )
   }
   
-  // If sync_direction is 'to_supabase' or 'both', we need to pull from Glide to Supabase
-  if (sync_direction === 'to_supabase' || sync_direction === 'both') {
-    try {
-      // Special handling for products table
-      if (supabase_table === 'gl_products') {
-        return await syncProductsFromGlide(
-          supabase,
-          connection.api_key,
-          connection.app_id,
-          glide_table,
-          column_mappings,
-          mapping.id,
-          logId
-        )
-      } else {
-        return await pullFromGlideToSupabase(
-          supabase,
-          connection.api_key,
-          connection.app_id,
-          glide_table,
-          supabase_table,
-          column_mappings,
-          logId
-        )
-      }
-    } catch (error) {
-      return { error: `Error syncing data from Glide to Supabase: ${error.message}` }
-    }
+  // If sync_direction is 'to_glide', push from Supabase to Glide
+  if (sync_direction === 'to_glide' || sync_direction === 'both') {
+    console.log(`Starting sync from Supabase to Glide - Table: ${supabase_table}`)
+    return await pushFromSupabaseToGlide(
+      supabase,
+      connection.api_key,
+      connection.app_id,
+      mapping,
+      logId
+    )
   }
   
   return { error: `Invalid sync direction: ${sync_direction}` }
 }
 
-// New function to push data from Supabase to Glide
+// Function to pull data from Glide to Supabase (simplified approach)
+async function pullFromGlideToSupabase(
+  supabase: any,
+  apiKey: string,
+  appId: string,
+  glideTable: string,
+  supabaseTable: string,
+  columnMappings: Record<string, any>,
+  mappingId: string,
+  logId: string
+) {
+  let totalRecordsProcessed = 0;
+  let totalFailedRecords = 0;
+  let continuationToken = null;
+  let hasMore = true;
+  
+  // Update log with progress
+  await updateSyncLog(
+    supabase,
+    logId,
+    'processing',
+    'Starting Glide to Supabase sync',
+    0
+  );
+  
+  try {
+    // Loop until we have processed all data
+    while (hasMore) {
+      // Fetch a batch of data from Glide
+      console.log(`Fetching batch from Glide - Table: ${glideTable}`)
+      const result = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken);
+      
+      if (result.error) {
+        await recordSyncError(
+          supabase,
+          mappingId,
+          'API_ERROR',
+          `Error fetching data from Glide: ${result.error}`,
+          null,
+          true
+        );
+        
+        return {
+          success: false,
+          error: result.error,
+          recordsProcessed: totalRecordsProcessed,
+          failedRecords: totalFailedRecords + 1
+        };
+      }
+      
+      const { rows, next } = result;
+      
+      if (!rows || rows.length === 0) {
+        console.log('No more data to process');
+        break;
+      }
+      
+      console.log(`Processing ${rows.length} records`);
+      
+      // Transform the data
+      const transformedRows = [];
+      
+      for (const row of rows) {
+        try {
+          // Get the Glide row ID
+          const glideRowId = row.$rowID || row.id || row.rowId;
+          
+          if (!glideRowId) {
+            console.error('Missing glide_row_id in record:', row);
+            await recordSyncError(
+              supabase,
+              mappingId,
+              'VALIDATION_ERROR',
+              'Missing required glide_row_id',
+              { rowData: row }
+            );
+            totalFailedRecords++;
+            continue;
+          }
+          
+          // Create the base record with the glide_row_id
+          const transformedRow: Record<string, any> = {
+            glide_row_id: glideRowId,
+          };
+          
+          // Apply column mappings
+          for (const [glideColumnId, mapping] of Object.entries(columnMappings)) {
+            // Skip Glide system columns
+            if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
+              continue;
+            }
+            
+            // If the Glide column exists in the row
+            if (row[glideColumnId] !== undefined) {
+              transformedRow[mapping.supabase_column_name] = row[glideColumnId];
+            }
+          }
+          
+          transformedRows.push(transformedRow);
+        } catch (error) {
+          console.error('Error processing record:', error);
+          await recordSyncError(
+            supabase,
+            mappingId,
+            'TRANSFORM_ERROR',
+            `Error processing record: ${error.message}`,
+            { rowData: row }
+          );
+          totalFailedRecords++;
+        }
+      }
+      
+      // Upsert the transformed data to Supabase
+      console.log(`Upserting ${transformedRows.length} records to Supabase`);
+      
+      if (transformedRows.length > 0) {
+        // Process in batches to avoid overloading the database
+        for (let i = 0; i < transformedRows.length; i += MAX_BATCH_SIZE) {
+          const batch = transformedRows.slice(i, i + MAX_BATCH_SIZE);
+          
+          try {
+            const { error } = await supabase
+              .from(supabaseTable)
+              .upsert(batch, { onConflict: 'glide_row_id' });
+            
+            if (error) {
+              console.error('Error upserting batch:', error);
+              await recordSyncError(
+                supabase,
+                mappingId,
+                'DATABASE_ERROR',
+                `Error upserting data: ${error.message}`,
+                { batchSize: batch.length },
+                true
+              );
+              totalFailedRecords += batch.length;
+            } else {
+              totalRecordsProcessed += batch.length;
+            }
+          } catch (error) {
+            console.error('Unexpected error during upsert:', error);
+            await recordSyncError(
+              supabase,
+              mappingId,
+              'DATABASE_ERROR',
+              `Unexpected error during upsert: ${error.message}`,
+              { batchSize: batch.length },
+              true
+            );
+            totalFailedRecords += batch.length;
+          }
+          
+          // Update progress
+          await updateSyncLog(
+            supabase,
+            logId,
+            'processing',
+            `Processed ${totalRecordsProcessed} records so far`,
+            totalRecordsProcessed
+          );
+        }
+      }
+      
+      // Check if there's more data to fetch
+      continuationToken = next;
+      hasMore = !!continuationToken;
+      
+      // Add a small delay to avoid hitting rate limits
+      if (hasMore) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    // Update connection's last_sync timestamp
+    await supabase
+      .from('gl_connections')
+      .update({ last_sync: new Date().toISOString() })
+      .eq('id', mapping.connection_id);
+    
+    // Get the errors for this sync
+    const { data: errors } = await getSyncErrors(supabase, mappingId);
+    
+    return {
+      success: totalFailedRecords === 0,
+      recordsProcessed: totalRecordsProcessed,
+      failedRecords: totalFailedRecords,
+      errors: errors
+    };
+  } catch (error) {
+    console.error('Error in pullFromGlideToSupabase:', error);
+    
+    await recordSyncError(
+      supabase,
+      mappingId,
+      'SYSTEM_ERROR',
+      `Error in sync process: ${error.message}`,
+      null,
+      true
+    );
+    
+    return {
+      success: false,
+      error: `Error syncing data: ${error.message}`,
+      recordsProcessed: totalRecordsProcessed,
+      failedRecords: totalFailedRecords + 1
+    };
+  }
+}
+
+// Function to push data from Supabase to Glide
 async function pushFromSupabaseToGlide(
   supabase: any,
   apiKey: string,
@@ -199,7 +389,6 @@ async function pushFromSupabaseToGlide(
   const { id: mappingId, glide_table, supabase_table, column_mappings } = mapping;
   let totalRecordsProcessed = 0;
   let totalFailedRecords = 0;
-  let errorRecords: any[] = [];
   
   // Update log with progress
   await updateSyncLog(
@@ -211,26 +400,29 @@ async function pushFromSupabaseToGlide(
   );
   
   try {
-    // Get all records from the Supabase table
-    // For this implementation, we'll focus on recently updated records
+    // Get records from Supabase
+    console.log(`Fetching records from Supabase - Table: ${supabase_table}`);
     const { data: records, error } = await supabase
       .from(supabase_table)
       .select('*')
       .order('updated_at', { ascending: false })
-      .limit(500); // Reasonable batch size
+      .limit(500);
     
     if (error) {
-      await supabase.rpc('gl_record_sync_error', {
-        p_mapping_id: mappingId,
-        p_error_type: 'API_ERROR',
-        p_error_message: `Error retrieving data from Supabase: ${error.message}`,
-        p_retryable: true
-      });
+      await recordSyncError(
+        supabase,
+        mappingId,
+        'DATABASE_ERROR',
+        `Error fetching data from Supabase: ${error.message}`,
+        null,
+        true
+      );
       
       return { 
-        error: `Error retrieving data from Supabase: ${error.message}`,
-        recordsProcessed: totalRecordsProcessed,
-        failedRecords: totalFailedRecords + 1
+        success: false,
+        error: `Error fetching data from Supabase: ${error.message}`,
+        recordsProcessed: 0,
+        failedRecords: 1
       };
     }
     
@@ -244,89 +436,85 @@ async function pushFromSupabaseToGlide(
     
     console.log(`Processing ${records.length} records from Supabase to Glide`);
     
-    // Create a reverse mapping from Supabase column names to Glide column names
-    const reverseColumnMappings: Record<string, { glide_column_id: string, data_type: string }> = {};
+    // Create a reverse mapping from Supabase to Glide
+    const reverseColumnMappings: Record<string, string> = {};
     
     Object.entries(column_mappings).forEach(([glideColumnId, mapping]: [string, any]) => {
-      // Skip special Glide system columns handled separately
       if (glideColumnId !== '$rowID' && glideColumnId !== '$rowIndex') {
-        reverseColumnMappings[mapping.supabase_column_name] = {
-          glide_column_id: glideColumnId,
-          data_type: mapping.data_type
-        };
+        reverseColumnMappings[mapping.supabase_column_name] = glideColumnId;
       }
     });
     
-    // Identify the Glide rowID field
+    // Find the glide_row_id field
     const rowIdMapping = Object.entries(column_mappings).find(
       ([glideColumnId]) => glideColumnId === '$rowID'
     );
     
     if (!rowIdMapping) {
       return {
+        success: false,
         error: 'Missing $rowID mapping required for Supabase to Glide sync',
         recordsProcessed: 0,
         failedRecords: 0
       };
     }
     
-    const supabaseGlideRowIdField = rowIdMapping[1].supabase_column_name;
+    const glideRowIdField = rowIdMapping[1].supabase_column_name;
     
-    // Prepare batch of mutations
-    const mutations = records.map(record => {
+    // Prepare mutations
+    const mutations = [];
+    
+    for (const record of records) {
       // Skip records without a glide_row_id
-      if (!record[supabaseGlideRowIdField]) {
+      if (!record[glideRowIdField]) {
         totalFailedRecords++;
-        return null;
+        continue;
       }
       
       // Prepare column values for the mutation
       const columnValues: Record<string, any> = {};
       
-      Object.entries(record).forEach(([supabaseColumn, value]) => {
-        // Skip the glide_row_id field and any Supabase-specific fields
+      for (const [supabaseColumn, value] of Object.entries(record)) {
+        // Skip special fields
         if (
-          supabaseColumn === supabaseGlideRowIdField ||
+          supabaseColumn === glideRowIdField ||
           supabaseColumn === 'id' ||
           supabaseColumn === 'created_at' ||
           supabaseColumn === 'updated_at'
         ) {
-          return;
+          continue;
         }
         
-        // If we have a mapping for this Supabase column, use it
+        // If we have a mapping for this column
         if (reverseColumnMappings[supabaseColumn]) {
-          const { glide_column_id, data_type } = reverseColumnMappings[supabaseColumn];
+          const glideColumnId = reverseColumnMappings[supabaseColumn];
           
-          // Transform value based on data type if needed
+          // Only include non-null values
           if (value !== null && value !== undefined) {
-            // For dates, ensure they're in ISO format
-            if (data_type === 'date-time' && value instanceof Date) {
-              columnValues[glide_column_id] = value.toISOString();
-            } else {
-              columnValues[glide_column_id] = value;
-            }
+            columnValues[glideColumnId] = value;
           }
         }
-      });
+      }
       
-      // Create the mutation object
-      return {
+      // Create the mutation
+      mutations.push({
         kind: 'set-columns-in-row',
         tableName: glide_table,
-        rowID: record[supabaseGlideRowIdField],
+        rowID: record[glideRowIdField],
         columnValues
-      };
-    }).filter(mutation => mutation !== null);
+      });
+    }
     
-    // Process mutations in batches to respect the 500 limit
+    // Send mutations in batches
+    console.log(`Sending ${mutations.length} mutations to Glide`);
+    
     for (let i = 0; i < mutations.length; i += MAX_BATCH_SIZE) {
       const batch = mutations.slice(i, i + MAX_BATCH_SIZE);
       
       if (batch.length === 0) continue;
       
       try {
-        // Update log with progress
+        // Update progress
         await updateSyncLog(
           supabase,
           logId,
@@ -335,20 +523,20 @@ async function pushFromSupabaseToGlide(
           totalRecordsProcessed
         );
         
-        // Send mutation request to Glide
+        // Send mutations
         const result = await sendGlideMutations(apiKey, appId, batch);
         
         if (result.error) {
-          // Record the error but continue with other batches
           console.error('Error with Glide mutation batch:', result.error);
           
-          await supabase.rpc('gl_record_sync_error', {
-            p_mapping_id: mappingId,
-            p_error_type: 'API_ERROR',
-            p_error_message: `Error with Glide mutation batch: ${result.error}`,
-            p_record_data: { batchIndex: i, batchSize: batch.length },
-            p_retryable: true
-          });
+          await recordSyncError(
+            supabase,
+            mappingId,
+            'API_ERROR',
+            `Error with Glide mutation batch: ${result.error}`,
+            { batchIndex: i, batchSize: batch.length },
+            true
+          );
           
           totalFailedRecords += batch.length;
         } else {
@@ -357,18 +545,19 @@ async function pushFromSupabaseToGlide(
       } catch (error) {
         console.error('Unexpected error during Glide mutation:', error);
         
-        await supabase.rpc('gl_record_sync_error', {
-          p_mapping_id: mappingId,
-          p_error_type: 'API_ERROR',
-          p_error_message: `Unexpected error during Glide mutation: ${error.message}`,
-          p_record_data: { batchIndex: i, batchSize: batch.length },
-          p_retryable: true
-        });
+        await recordSyncError(
+          supabase,
+          mappingId,
+          'API_ERROR',
+          `Unexpected error during Glide mutation: ${error.message}`,
+          { batchIndex: i, batchSize: batch.length },
+          true
+        );
         
         totalFailedRecords += batch.length;
       }
       
-      // Add a small delay between batches to avoid rate limits
+      // Add a small delay between batches
       if (i + MAX_BATCH_SIZE < mutations.length) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -381,537 +570,69 @@ async function pushFromSupabaseToGlide(
       .eq('id', mapping.connection_id);
     
     // Get the errors for this sync
-    const { data: errors } = await supabase
-      .from('gl_sync_errors')
-      .select('*')
-      .eq('mapping_id', mappingId)
-      .is('resolved_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    // Convert to the expected format for frontend
-    const formattedErrors = (errors || []).map(error => ({
-      type: error.error_type,
-      message: error.error_message,
-      record: error.record_data,
-      timestamp: error.created_at,
-      retryable: error.retryable
-    }));
+    const { data: errors } = await getSyncErrors(supabase, mappingId);
     
     return {
       success: totalFailedRecords === 0,
       recordsProcessed: totalRecordsProcessed,
       failedRecords: totalFailedRecords,
-      errors: formattedErrors
+      errors: errors
     };
   } catch (error) {
     console.error('Error in pushFromSupabaseToGlide:', error);
     
-    await supabase.rpc('gl_record_sync_error', {
-      p_mapping_id: mappingId,
-      p_error_type: 'API_ERROR',
-      p_error_message: `Error in pushFromSupabaseToGlide: ${error.message}`,
-      p_retryable: true
-    });
+    await recordSyncError(
+      supabase,
+      mappingId,
+      'SYSTEM_ERROR',
+      `Error in sync process: ${error.message}`,
+      null,
+      true
+    );
     
     return {
-      error: `Error syncing data from Supabase to Glide: ${error.message}`,
+      success: false,
+      error: `Error syncing data: ${error.message}`,
       recordsProcessed: totalRecordsProcessed,
       failedRecords: totalFailedRecords + 1
     };
   }
 }
 
-// Special function to sync products with additional validation
-async function syncProductsFromGlide(
-  supabase: any,
-  apiKey: string,
-  appId: string,
-  glideTable: string,
-  columnMappings: Record<string, any>,
-  mappingId: string,
-  logId: string
-) {
-  let continuationToken = null;
-  let totalRecordsProcessed = 0;
-  let totalFailedRecords = 0;
-  let hasMore = true;
-  let errorRecords: any[] = [];
-  
-  // Clear existing errors for this sync run
-  await supabase
-    .from('gl_sync_errors')
-    .delete()
-    .eq('mapping_id', mappingId)
-    .is('resolved_at', null);
-  
-  // Loop until we have processed all data
-  while (hasMore) {
-    // Update log with progress
-    await updateSyncLog(
-      supabase,
-      logId,
-      'processing',
-      `Processing batch from Glide. Total records so far: ${totalRecordsProcessed}`,
-      totalRecordsProcessed
-    );
-    
-    // Fetch a batch of data from Glide
-    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken);
-    
-    if (glideData.error) {
-      // Record the API error
-      await supabase.rpc('gl_record_sync_error', {
-        p_mapping_id: mappingId,
-        p_error_type: 'API_ERROR',
-        p_error_message: glideData.error,
-        p_retryable: true
-      });
-      
-      return { 
-        error: glideData.error,
-        recordsProcessed: totalRecordsProcessed,
-        failedRecords: totalFailedRecords + 1
-      };
-    }
-    
-    const { rows, next } = glideData;
-    
-    if (!rows || rows.length === 0) {
-      break;
-    }
-    
-    console.log(`Processing ${rows.length} records from Glide`);
-    
-    // Transform the data using the column mappings and perform validation
-    const transformedRecords = [];
-    
-    for (const row of rows) {
-      try {
-        // Extract the Glide row ID - explicitly check for $rowID first
-        const glideRowId = row.$rowID || row.id || row.rowId;
-        
-        if (!glideRowId) {
-          console.error('Missing glide_row_id in record:', row);
-          recordValidationError(supabase, mappingId, 'Missing required glide_row_id ($rowID)', {
-            rowData: row
-          });
-          totalFailedRecords++;
-          continue;
-        }
-        
-        const product = {
-          glide_row_id: glideRowId,
-        };
-        
-        // Flag to track if we encountered any errors for this record
-        let hasErrors = false;
-        
-        // Apply column mappings
-        Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
-          try {
-            // Skip special Glide system columns
-            if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
-              return;
-            }
-            
-            const glideColumnName = mapping.glide_column_name;
-            const supabaseColumnName = mapping.supabase_column_name;
-            const dataType = mapping.data_type;
-            let value = row[glideColumnId];
-            
-            // Skip undefined values
-            if (value === undefined) {
-              return;
-            }
-            
-            // Transform value based on data type
-            switch (dataType) {
-              case 'number':
-                if (typeof value === 'string') {
-                  const num = parseFloat(value);
-                  if (isNaN(num)) {
-                    hasErrors = true;
-                    recordValidationError(supabase, mappingId, 'Invalid number format', {
-                      glideColumnId,
-                      glideColumnName,
-                      supabaseColumnName,
-                      value,
-                      rowId: product.glide_row_id
-                    });
-                    totalFailedRecords++;
-                    return;
-                  }
-                  value = num;
-                } else if (typeof value !== 'number') {
-                  hasErrors = true;
-                  recordValidationError(supabase, mappingId, 'Expected number value', {
-                    glideColumnId,
-                    glideColumnName,
-                    supabaseColumnName,
-                    value,
-                    rowId: product.glide_row_id
-                  });
-                  totalFailedRecords++;
-                  return;
-                }
-                break;
-                
-              case 'boolean':
-                if (typeof value === 'string') {
-                  const lowered = value.toLowerCase();
-                  if (lowered === 'true' || lowered === 'yes' || lowered === '1') {
-                    value = true;
-                  } else if (lowered === 'false' || lowered === 'no' || lowered === '0') {
-                    value = false;
-                  } else {
-                    hasErrors = true;
-                    recordValidationError(supabase, mappingId, 'Invalid boolean value', {
-                      glideColumnId,
-                      glideColumnName,
-                      supabaseColumnName,
-                      value,
-                      rowId: product.glide_row_id
-                    });
-                    totalFailedRecords++;
-                    return;
-                  }
-                } else if (typeof value !== 'boolean') {
-                  hasErrors = true;
-                  recordValidationError(supabase, mappingId, 'Expected boolean value', {
-                    glideColumnId,
-                    glideColumnName,
-                    supabaseColumnName,
-                    value,
-                    rowId: product.glide_row_id
-                  });
-                  totalFailedRecords++;
-                  return;
-                }
-                break;
-                
-              case 'date-time':
-                if (value instanceof Date) {
-                  value = value.toISOString();
-                } else if (typeof value === 'string') {
-                  const date = new Date(value);
-                  if (isNaN(date.getTime())) {
-                    hasErrors = true;
-                    recordValidationError(supabase, mappingId, 'Invalid date format', {
-                      glideColumnId,
-                      glideColumnName,
-                      supabaseColumnName,
-                      value,
-                      rowId: product.glide_row_id
-                    });
-                    totalFailedRecords++;
-                    return;
-                  }
-                  value = date.toISOString();
-                } else {
-                  hasErrors = true;
-                  recordValidationError(supabase, mappingId, 'Expected date value', {
-                    glideColumnId,
-                    glideColumnName,
-                    supabaseColumnName,
-                    value,
-                    rowId: product.glide_row_id
-                  });
-                  totalFailedRecords++;
-                  return;
-                }
-                break;
-              
-              // For strings and other types, basic validation
-              case 'string':
-              case 'image-uri':
-              case 'email-address':
-                value = value === null ? null : String(value);
-                
-                // Additional validation for specific types
-                if (dataType === 'image-uri' && value && 
-                    !(value.startsWith('http://') || value.startsWith('https://'))) {
-                  // Just log a warning, don't fail the record
-                  console.warn(`Warning: Invalid image URI format for ${glideColumnName}: ${value}`);
-                }
-                
-                if (dataType === 'email-address' && value && 
-                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                  // Just log a warning, don't fail the record
-                  console.warn(`Warning: Invalid email format for ${glideColumnName}: ${value}`);
-                }
-                break;
-            }
-            
-            // Set the value in the product object if no errors
-            if (!hasErrors) {
-              product[supabaseColumnName] = value;
-            }
-            
-          } catch (error) {
-            hasErrors = true;
-            recordTransformError(supabase, mappingId, 
-              `Error transforming column ${glideColumnId}: ${error.message}`, {
-              glideColumnId,
-              glideColumnName: mapping.glide_column_name,
-              supabaseColumnName: mapping.supabase_column_name,
-              value: row[glideColumnId],
-              rowId: product.glide_row_id
-            });
-            totalFailedRecords++;
-          }
-        });
-        
-        // If no errors and we have a valid product, add it to the batch
-        if (!hasErrors && product.glide_row_id) {
-          transformedRecords.push(product);
-        } else if (!product.glide_row_id) {
-          recordValidationError(supabase, mappingId, 'Missing required glide_row_id', {
-            rowData: row
-          });
-          totalFailedRecords++;
-        }
-        
-      } catch (error) {
-        recordTransformError(supabase, mappingId, 
-          `Unexpected error processing record: ${error.message}`, {
-          rowData: row
-        });
-        totalFailedRecords++;
-      }
-    }
-    
-    // Insert or update the data in Supabase
-    for (let i = 0; i < transformedRecords.length; i += MAX_BATCH_SIZE) {
-      const batch = transformedRecords.slice(i, i + MAX_BATCH_SIZE);
-      
-      if (batch.length === 0) continue;
-      
-      try {
-        // Upsert data to Supabase
-        const { error } = await supabase
-          .from('gl_products')
-          .upsert(batch, { onConflict: 'glide_row_id' });
-        
-        if (error) {
-          console.error('Error upserting batch to Supabase:', error);
-          
-          // Record the error
-          await supabase.rpc('gl_record_sync_error', {
-            p_mapping_id: mappingId,
-            p_error_type: 'API_ERROR',
-            p_error_message: `Error upserting data to Supabase: ${error.message}`,
-            p_record_data: { batchSize: batch.length },
-            p_retryable: true
-          });
-          
-          totalFailedRecords += batch.length;
-        } else {
-          totalRecordsProcessed += batch.length;
-        }
-      } catch (error) {
-        console.error('Unexpected error during upsert:', error);
-        
-        // Record the error
-        await supabase.rpc('gl_record_sync_error', {
-          p_mapping_id: mappingId,
-          p_error_type: 'API_ERROR',
-          p_error_message: `Unexpected error during upsert: ${error.message}`,
-          p_record_data: { batchSize: batch.length },
-          p_retryable: true
-        });
-        
-        totalFailedRecords += batch.length;
-      }
-    }
-    
-    // Check if there's more data to fetch
-    continuationToken = next;
-    hasMore = !!continuationToken;
-    
-    // Add a small delay to avoid hitting rate limits
-    if (hasMore) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  }
-  
-  // Update the connection's last_sync timestamp
-  await supabase
-    .from('gl_connections')
-    .update({ last_sync: new Date().toISOString() })
-    .eq('id', mapping.connection_id);
-  
-  // Get the errors for this sync
-  const { data: errors } = await supabase
-    .from('gl_sync_errors')
-    .select('*')
-    .eq('mapping_id', mappingId)
-    .is('resolved_at', null)
-    .order('created_at', { ascending: false })
-    .limit(20);
-  
-  // Convert to the expected format for frontend
-  const formattedErrors = (errors || []).map(error => ({
-    type: error.error_type,
-    message: error.error_message,
-    record: error.record_data,
-    timestamp: error.created_at,
-    retryable: error.retryable
-  }));
-  
-  // Store sync results
-  const syncResult = {
-    success: totalFailedRecords === 0,
-    recordsProcessed: totalRecordsProcessed,
-    failedRecords: totalFailedRecords,
-    errors: formattedErrors
-  };
-  
-  return syncResult;
-}
-
-// Helper function to record validation errors
-async function recordValidationError(
+// Helper function to record sync errors
+async function recordSyncError(
   supabase: any,
   mappingId: string,
-  message: string,
-  recordData: any,
+  errorType: string,
+  errorMessage: string,
+  recordData: any = null,
   retryable: boolean = false
 ) {
   try {
     await supabase.rpc('gl_record_sync_error', {
       p_mapping_id: mappingId,
-      p_error_type: 'VALIDATION_ERROR',
-      p_error_message: message,
+      p_error_type: errorType,
+      p_error_message: errorMessage,
       p_record_data: recordData,
       p_retryable: retryable
-    })
+    });
   } catch (error) {
-    console.error('Error recording validation error:', error)
+    console.error('Error recording sync error:', error);
   }
 }
 
-// Helper function to record transform errors
-async function recordTransformError(
-  supabase: any,
-  mappingId: string,
-  message: string,
-  recordData: any,
-  retryable: boolean = false
-) {
+// Helper function to get sync errors
+async function getSyncErrors(supabase: any, mappingId: string) {
   try {
-    await supabase.rpc('gl_record_sync_error', {
-      p_mapping_id: mappingId,
-      p_error_type: 'TRANSFORM_ERROR',
-      p_error_message: message,
-      p_record_data: recordData,
-      p_retryable: retryable
-    })
+    return await supabase
+      .from('gl_sync_errors')
+      .select('*')
+      .eq('mapping_id', mappingId)
+      .is('resolved_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
   } catch (error) {
-    console.error('Error recording transform error:', error)
+    console.error('Error fetching sync errors:', error);
+    return { data: [] };
   }
-}
-
-// Function to pull data from Glide to Supabase
-async function pullFromGlideToSupabase(
-  supabase: any,
-  apiKey: string,
-  appId: string,
-  glideTable: string,
-  supabaseTable: string,
-  columnMappings: Record<string, any>,
-  logId: string
-) {
-  let continuationToken = null;
-  let totalRecordsProcessed = 0;
-  let hasMore = true;
-  
-  // Loop until we have processed all data
-  while (hasMore) {
-    // Update log with progress
-    await updateSyncLog(
-      supabase,
-      logId,
-      'processing',
-      `Processing batch from Glide. Total records so far: ${totalRecordsProcessed}`,
-      totalRecordsProcessed
-    );
-    
-    // Fetch a batch of data from Glide
-    const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken);
-    
-    if (glideData.error) {
-      return { error: glideData.error };
-    }
-    
-    const { rows, next } = glideData;
-    
-    if (!rows || rows.length === 0) {
-      break;
-    }
-    
-    // Transform the data using the column mappings
-    const transformedRows = rows.map(row => {
-      // Check for Glide's row identifier which could be $rowID, id, or rowId
-      const glideRowId = row.$rowID || row.id || row.rowId;
-      
-      if (!glideRowId) {
-        console.error('Missing glide_row_id in record:', row);
-        return null;
-      }
-      
-      const transformedRow: Record<string, any> = {
-        glide_row_id: glideRowId,
-      };
-      
-      // Apply column mappings with the new structure
-      Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
-        // Skip special Glide system columns
-        if (glideColumnId === '$rowID' || glideColumnId === '$rowIndex') {
-          return;
-        }
-        
-        if (row[glideColumnId] !== undefined) {
-          transformedRow[mapping.supabase_column_name] = row[glideColumnId];
-        }
-      });
-      
-      return transformedRow;
-    }).filter(row => row !== null);
-    
-    // Insert or update the data in Supabase
-    for (let i = 0; i < transformedRows.length; i += MAX_BATCH_SIZE) {
-      const batch = transformedRows.slice(i, i + MAX_BATCH_SIZE);
-      
-      if (batch.length === 0) continue;
-      
-      // Upsert data to Supabase
-      const { error } = await supabase
-        .from(supabaseTable)
-        .upsert(batch, { onConflict: 'glide_row_id' });
-      
-      if (error) {
-        return { error: `Error upserting data to Supabase: ${error.message}` };
-      }
-      
-      totalRecordsProcessed += batch.length;
-    }
-    
-    // Check if there's more data to fetch
-    continuationToken = next;
-    hasMore = !!continuationToken;
-    
-    // Add a small delay to avoid hitting rate limits
-    if (hasMore) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  }
-  
-  // Update the connection's last_sync timestamp
-  await supabase
-    .from('gl_connections')
-    .update({ last_sync: new Date().toISOString() })
-    .eq('id', mapping.connection_id);
-  
-  return { success: true, recordsProcessed: totalRecordsProcessed };
 }

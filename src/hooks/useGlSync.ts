@@ -16,75 +16,26 @@ export function useGlSync() {
     try {
       console.log(`Starting sync for mapping ${mappingId} with connection ${connectionId}`);
       
-      // First check connection status
-      const { data: connection, error: connectionError } = await supabase
-        .from('gl_connections')
-        .select('status, api_key, app_id')
-        .eq('id', connectionId)
-        .single();
-      
-      if (connectionError) {
-        throw new Error(`Connection error: ${connectionError.message}`);
-      }
-      
-      if (!connection) {
-        throw new Error('Connection not found');
-      }
-      
-      if (connection.status !== 'active') {
-        // Update connection status to testing
-        await supabase
-          .from('gl_connections')
-          .update({ status: 'testing' })
-          .eq('id', connectionId);
-          
-        // Test the connection
-        const testResult = await supabase.functions.invoke('glsync', {
-          body: {
-            action: 'testConnection',
-            connectionId: connectionId,
-          },
-        });
-        
-        if (testResult.error) {
-          await supabase
-            .from('gl_connections')
-            .update({ status: 'error' })
-            .eq('id', connectionId);
-            
-          throw new Error(`Connection test failed: ${testResult.error}`);
-        }
-        
-        // Update connection to active
-        await supabase
-          .from('gl_connections')
-          .update({ status: 'active' })
-          .eq('id', connectionId);
-      }
-      
-      // Call the sync function
-      const result = await supabase.functions.invoke('glsync', {
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'syncData',
-          connectionId: connectionId,
-          mappingId: mappingId,
+          connectionId,
+          mappingId,
         },
       });
       
-      if (result.error) {
-        throw new Error(result.error);
+      if (error) {
+        throw new Error(error.message);
       }
       
-      console.log('Sync result:', result.data);
+      console.log('Sync result:', data);
       
       const syncResult = {
-        success: result.data.success ?? false,
-        recordsProcessed: result.data.recordsProcessed || 0,
-        failedRecords: result.data.failedRecords || 0,
-        errors: result.data.errors || [],
-        total_records: result.data.total_records,
-        processed_records: result.data.processed_records,
-        failed_records: result.data.failed_records,
+        success: data.success ?? false,
+        recordsProcessed: data.recordsProcessed || 0,
+        failedRecords: data.failedRecords || 0,
+        errors: data.errors || [],
       };
       
       setLastResult(syncResult);
@@ -97,7 +48,7 @@ export function useGlSync() {
       } else {
         toast({
           title: 'Sync completed with issues',
-          description: `Processed ${syncResult.recordsProcessed} records with ${syncResult.failedRecords} failures.`,
+          description: data.error || `Processed ${syncResult.recordsProcessed} records with ${syncResult.failedRecords} failures.`,
           variant: 'destructive',
         });
       }
