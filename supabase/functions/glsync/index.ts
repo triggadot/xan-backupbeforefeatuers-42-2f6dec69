@@ -1,7 +1,7 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { corsHeaders, handleCors, jsonResponse, errorResponse } from "../shared/cors.ts"
+import { corsHeaders, handleCors } from "../shared/cors.ts"
+import { withRetry, handleError } from "../shared/sync-utils.ts"
 import { 
   testGlideConnection, 
   listGlideTables, 
@@ -10,25 +10,19 @@ import {
   sendGlideMutations
 } from "../shared/glide-api.ts"
 
-// Define rate limiting parameters
-const MAX_BATCH_SIZE = 450 // Keep under 500 limit for safety
-
-// Handle API requests
 serve(async (req) => {
   // Handle CORS preflight requests
-  const corsResponse = handleCors(req)
-  if (corsResponse) return corsResponse
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
-    // Get Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request data
-    const { action, connectionId, mappingId, tableId } = await req.json()
+    const { action, connectionId, mappingId, tableId } = await req.json();
 
-    // Create a sync log entry
+    // Create sync log entry
     const { data: logData, error: logError } = await supabase
       .from('gl_sync_logs')
       .insert({
@@ -37,96 +31,83 @@ serve(async (req) => {
         message: `Starting ${action} operation`,
       })
       .select('id')
-      .single()
+      .single();
 
-    if (logError) {
-      console.error('Error creating sync log:', logError)
-      return errorResponse('Failed to create sync log')
-    }
-
-    const logId = logData.id
+    if (logError) return handleError(new Error('Failed to create sync log'));
 
     // Get connection details
     const { data: connection, error: connectionError } = await supabase
       .from('gl_connections')
       .select('*')
       .eq('id', connectionId)
-      .single()
+      .single();
 
     if (connectionError || !connection) {
-      await updateSyncLog(supabase, logId, 'failed', 'Connection not found')
-      return errorResponse('Connection not found', 404)
+      return handleError(new Error('Connection not found'));
     }
 
-    // Get mapping details if a mapping ID is provided
-    let mapping = null
+    // Get mapping if provided
+    let mapping = null;
     if (mappingId) {
       const { data: mappingData, error: mappingError } = await supabase
         .from('gl_mappings')
         .select('*')
         .eq('id', mappingId)
-        .single()
+        .single();
 
       if (mappingError || !mappingData) {
-        await updateSyncLog(supabase, logId, 'failed', 'Mapping not found')
-        return errorResponse('Mapping not found', 404)
+        return handleError(new Error('Mapping not found'));
       }
-      mapping = mappingData
+      mapping = mappingData;
     }
 
-    // Execute the requested action
-    let result
+    // Execute requested action
+    let result;
     switch (action) {
       case 'testConnection':
-        result = await testGlideConnection(connection.api_key, connection.app_id)
-        break
+        result = await withRetry(() => testGlideConnection(connection.api_key, connection.app_id));
+        break;
       case 'listGlideTables':
-        result = await listGlideTables(connection.api_key, connection.app_id)
-        break
+        result = await withRetry(() => listGlideTables(connection.api_key, connection.app_id));
+        break;
       case 'getColumnMappings':
         if (!tableId) {
-          await updateSyncLog(supabase, logId, 'failed', 'Table ID is required for getColumnMappings')
-          return errorResponse('Table ID is required for getColumnMappings', 400)
+          return handleError(new Error('Table ID is required for getColumnMappings'));
         }
-        result = await getGlideTableColumns(connection.api_key, connection.app_id, tableId)
-        break
+        result = await withRetry(() => 
+          getGlideTableColumns(connection.api_key, connection.app_id, tableId)
+        );
+        break;
       case 'syncData':
         if (!mapping) {
-          await updateSyncLog(supabase, logId, 'failed', 'Mapping is required for syncData')
-          return errorResponse('Mapping is required for syncData', 400)
+          return handleError(new Error('Mapping is required for syncData'));
         }
-        result = await syncGlideData(supabase, connection, mapping, logId)
-        break
+        result = await withRetry(() => 
+          syncGlideData(supabase, connection, mapping, logData.id)
+        );
+        break;
       default:
-        await updateSyncLog(supabase, logId, 'failed', `Invalid action: ${action}`)
-        return errorResponse('Invalid action', 400)
+        return handleError(new Error('Invalid action'));
     }
 
-    if (result.error) {
-      await updateSyncLog(supabase, logId, 'failed', result.error)
-      return errorResponse(result.error)
-    }
-
-    // Update sync log with success status
-    if (action === 'syncData') {
+    // Update sync log with final status
+    if (action === 'syncData' && result) {
       await updateSyncLog(
-        supabase, 
-        logId, 
-        'completed', 
-        `Sync completed successfully. Processed ${result.recordsProcessed} records.`,
+        supabase,
+        logData.id,
+        result.success ? 'completed' : 'failed',
+        `Sync ${result.success ? 'completed successfully' : 'failed'}. ${result.recordsProcessed || 0} records processed.`,
         result.recordsProcessed
-      )
-    } else {
-      await updateSyncLog(supabase, logId, 'completed', 'Operation completed successfully')
+      );
     }
 
-    // Return the result
-    return jsonResponse(result)
+    return new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return errorResponse('Internal server error')
+    return handleError(error);
   }
-})
+});
 
 // Helper function to update sync log status
 async function updateSyncLog(

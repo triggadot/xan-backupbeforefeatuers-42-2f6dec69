@@ -1061,6 +1061,39 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          correlation_id: string | null
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          correlation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          correlation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       webhook_logs: {
         Row: {
           chat_id: number | null
@@ -1108,6 +1141,7 @@ export type Database = {
           connection_id: string | null
           current_status: string | null
           enabled: boolean | null
+          error_count: number | null
           glide_table: string | null
           glide_table_display_name: string | null
           last_sync_completed_at: string | null
@@ -1220,6 +1254,34 @@ export type Database = {
           p_retryable?: boolean
         }
         Returns: string
+      }
+      gl_resolve_sync_error: {
+        Args: {
+          p_error_id: string
+          p_resolution_notes?: string
+        }
+        Returns: boolean
+      }
+      gl_validate_column_mapping: {
+        Args: {
+          p_mapping_id: string
+        }
+        Returns: {
+          is_valid: boolean
+          validation_message: string
+        }[]
+      }
+      glsync_retry_failed_sync: {
+        Args: {
+          p_mapping_id: string
+        }
+        Returns: string
+      }
+      process_webhook_event: {
+        Args: {
+          p_event_id: string
+        }
+        Returns: undefined
       }
       xdelo_log_message_operation: {
         Args: {

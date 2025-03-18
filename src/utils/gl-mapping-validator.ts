@@ -4,7 +4,6 @@ import { MappingValidationResult } from '@/types/glsync';
 
 export async function validateMapping(mappingId: string): Promise<MappingValidationResult> {
   try {
-    // Use RPC call instead of direct table access since this is a database function
     const { data, error } = await supabase
       .rpc('gl_validate_column_mapping', { p_mapping_id: mappingId });
       
@@ -22,7 +21,6 @@ export async function validateMapping(mappingId: string): Promise<MappingValidat
       };
     }
     
-    // Ensure we return the right type
     return {
       is_valid: data.is_valid,
       validation_message: data.validation_message
@@ -36,7 +34,6 @@ export async function validateMapping(mappingId: string): Promise<MappingValidat
 }
 
 export function getDefaultColumnMappings(): Record<string, any> {
-  // Always include the $rowID to glide_row_id mapping
   return {
     "$rowID": {
       "glide_column_name": "$rowID",
