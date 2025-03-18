@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useGlSync } from '@/hooks/useGlSync';
 import { GlideTable } from '@/types/glsync';
+import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
 
 interface Connection {
   id: string;
@@ -54,21 +55,45 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form state
-  const [selectedConnection, setSelectedConnection] = useState<string>('');
-  const [selectedGlideTable, setSelectedGlideTable] = useState<string>('');
-  const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState<string>('');
-  const [selectedSupabaseTable, setSelectedSupabaseTable] = useState<string>('');
-  const [syncDirection, setSyncDirection] = useState<string>('to_supabase');
+  const [formState, setFormState] = useState({
+    selectedConnection: '',
+    selectedGlideTable: '',
+    selectedGlideTableDisplayName: '',
+    selectedSupabaseTable: '',
+    syncDirection: 'to_supabase' as 'to_supabase' | 'to_glide' | 'both'
+  });
   
   // Hooks
   const { toast } = useToast();
   const { fetchGlideTables } = useGlSync();
   
-  // Only fetch data when the dialog is opened
+  // Fetch data once when dialog is opened
   useEffect(() => {
     if (open) {
-      fetchConnections();
-      fetchSupabaseTables();
+      if (connections.length === 0) {
+        fetchConnections();
+      }
+      if (supabaseTables.length === 0) {
+        fetchSupabaseTables();
+      }
+    }
+  }, [open]);
+
+  // Reset form when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      // Wait for dialog animation to complete before resetting
+      const timeoutId = setTimeout(() => {
+        setFormState({
+          selectedConnection: '',
+          selectedGlideTable: '',
+          selectedGlideTableDisplayName: '',
+          selectedSupabaseTable: '',
+          syncDirection: 'to_supabase'
+        });
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [open]);
 
@@ -151,28 +176,47 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   };
 
   const handleConnectionChange = (value: string) => {
-    setSelectedConnection(value);
-    setSelectedGlideTable('');
-    setSelectedGlideTableDisplayName('');
+    setFormState(prev => ({
+      ...prev,
+      selectedConnection: value,
+      selectedGlideTable: '',
+      selectedGlideTableDisplayName: ''
+    }));
     loadGlideTables(value);
   };
 
-  const handleGlideTableChange = (value: string) => {
-    setSelectedGlideTable(value);
+  const handleGlideTableChange = (tableId: string, displayName: string) => {
+    setFormState(prev => ({
+      ...prev,
+      selectedGlideTable: tableId,
+      selectedGlideTableDisplayName: displayName
+    }));
     
-    // Find the display name for the selected table
-    const selectedTable = glideTables.find(table => table.id === value);
-    if (selectedTable) {
-      setSelectedGlideTableDisplayName(selectedTable.display_name);
-    }
+    console.log(`Selected Glide table: ${tableId} - ${displayName}`);
   };
 
   const handleSupabaseTableChange = (value: string) => {
-    setSelectedSupabaseTable(value);
+    setFormState(prev => ({
+      ...prev,
+      selectedSupabaseTable: value
+    }));
+    console.log(`Selected Supabase table: ${value}`);
+  };
+  
+  const handleSyncDirectionChange = (value: 'to_supabase' | 'to_glide' | 'both') => {
+    setFormState(prev => ({
+      ...prev,
+      syncDirection: value
+    }));
+  };
+
+  const isFormValid = () => {
+    const { selectedConnection, selectedGlideTable, selectedSupabaseTable } = formState;
+    return Boolean(selectedConnection && selectedGlideTable && selectedSupabaseTable);
   };
 
   const handleSubmit = async () => {
-    if (!selectedConnection || !selectedGlideTable || !selectedSupabaseTable) {
+    if (!isFormValid()) {
       toast({
         title: 'Validation Error',
         description: 'Please select a connection, Glide table, and Supabase table',
@@ -196,12 +240,12 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
       const { error } = await supabase
         .from('gl_mappings')
         .insert({
-          connection_id: selectedConnection,
-          glide_table: selectedGlideTable,
-          glide_table_display_name: selectedGlideTableDisplayName,
-          supabase_table: selectedSupabaseTable,
+          connection_id: formState.selectedConnection,
+          glide_table: formState.selectedGlideTable,
+          glide_table_display_name: formState.selectedGlideTableDisplayName,
+          supabase_table: formState.selectedSupabaseTable,
           column_mappings: defaultColumnMappings,
-          sync_direction: syncDirection,
+          sync_direction: formState.syncDirection,
           enabled: true
         });
       
@@ -213,8 +257,9 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
       });
       
       onSuccess();
-      resetForm();
-      onOpenChange(false); // Close the dialog after successful submission
+      
+      // Close the dialog
+      onOpenChange(false);
     } catch (error) {
       console.error('Error adding mapping:', error);
       toast({
@@ -227,17 +272,13 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     }
   };
 
-  const resetForm = () => {
-    // Only reset the form values, not the fetched data
-    setSelectedConnection('');
-    setSelectedGlideTable('');
-    setSelectedGlideTableDisplayName('');
-    setSelectedSupabaseTable('');
-    setSyncDirection('to_supabase');
+  const handleCloseDialog = (open: boolean) => {
+    // Only handle closing, don't reset form state here
+    onOpenChange(open);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add Table Mapping</DialogTitle>
@@ -246,7 +287,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           <div className="grid gap-2">
             <Label htmlFor="connection">Glide Connection</Label>
             <Select
-              value={selectedConnection}
+              value={formState.selectedConnection}
               onValueChange={handleConnectionChange}
               disabled={isLoadingConnections || connections.length === 0}
             >
@@ -271,22 +312,14 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           
           <div className="grid gap-2">
             <Label htmlFor="glideTable">Glide Table</Label>
-            <Select
-              value={selectedGlideTable}
-              onValueChange={handleGlideTableChange}
-              disabled={isLoadingGlideTables || !selectedConnection || glideTables.length === 0}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a Glide table" />
-              </SelectTrigger>
-              <SelectContent>
-                {glideTables.map((table) => (
-                  <SelectItem key={table.id} value={table.id}>
-                    {table.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <GlideTableSelector
+              tables={glideTables}
+              value={formState.selectedGlideTable}
+              onTableChange={handleGlideTableChange}
+              disabled={isLoadingGlideTables || !formState.selectedConnection}
+              isLoading={isLoadingGlideTables}
+              placeholder="Select a Glide table"
+            />
             {isLoadingGlideTables && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="h-3 w-3 mr-2 animate-spin" />
@@ -298,7 +331,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           <div className="grid gap-2">
             <Label htmlFor="supabaseTable">Supabase Table</Label>
             <Select
-              value={selectedSupabaseTable}
+              value={formState.selectedSupabaseTable}
               onValueChange={handleSupabaseTableChange}
               disabled={isLoadingSupabaseTables || supabaseTables.length === 0}
             >
@@ -324,8 +357,8 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           <div className="grid gap-2">
             <Label htmlFor="syncDirection">Sync Direction</Label>
             <Select
-              value={syncDirection}
-              onValueChange={setSyncDirection}
+              value={formState.syncDirection}
+              onValueChange={handleSyncDirectionChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select sync direction" />
@@ -347,7 +380,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isSubmitting || !selectedConnection || !selectedGlideTable || !selectedSupabaseTable}
+            disabled={isSubmitting || !isFormValid()}
           >
             {isSubmitting ? (
               <>

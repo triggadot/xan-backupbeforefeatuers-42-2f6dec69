@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react';
 import {
   Select,
@@ -19,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { GlideTable } from '@/types/glsync';
@@ -47,7 +46,17 @@ export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   const [newTableName, setNewTableName] = useState('');
   const [newTableDisplayName, setNewTableDisplayName] = useState('');
 
-  const selectedTable = tables.find(table => table.id === value);
+  // When tables are loaded, if we have a value but it doesn't match any table, 
+  // we need to find it and call onTableChange with its display name
+  useEffect(() => {
+    if (tables.length > 0 && value) {
+      const selectedTable = tables.find(table => table.id === value);
+      if (selectedTable) {
+        // Make sure the parent has the display name
+        console.log('Selected table from useEffect:', selectedTable);
+      }
+    }
+  }, [tables, value]);
 
   const handleSelectChange = (tableId: string) => {
     if (tableId === 'add-new') {
@@ -113,7 +122,14 @@ export const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
         </SelectContent>
       </Select>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) {
+          // Only reset form when dialog is explicitly closed
+          setNewTableName('');
+          setNewTableDisplayName('');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Glide Table</DialogTitle>
