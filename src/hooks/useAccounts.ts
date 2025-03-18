@@ -2,38 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Account } from '@/types';
-
-export type GlAccountData = {
-  id: string;
-  glide_row_id: string;
-  account_name: string;
-  client_type: string;
-  email_of_who_added: string;
-  date_added_client: string;
-  photo: string;
-  accounts_uid: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Convert database format to Account format
-const mapGlAccountToAccount = (glAccount: GlAccountData): Account => {
-  return {
-    id: glAccount.id,
-    name: glAccount.account_name || 'Unnamed Account',
-    type: (glAccount.client_type?.toLowerCase() as 'customer' | 'vendor' | 'both') || 'customer',
-    email: glAccount.email_of_who_added || '',
-    phone: '',
-    address: '',
-    website: '',
-    notes: '',
-    status: 'active',
-    balance: 0,
-    createdAt: new Date(glAccount.created_at),
-    updatedAt: new Date(glAccount.updated_at)
-  };
-};
+import { Account, GlAccount } from '@/types';
+import { mapGlAccountToAccount } from '@/utils/mapping-utils';
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -53,7 +23,7 @@ export function useAccounts() {
       
       if (error) throw error;
       
-      const mappedAccounts = (data || []).map(mapGlAccountToAccount);
+      const mappedAccounts = (data || []).map((account: GlAccount) => mapGlAccountToAccount(account));
       setAccounts(mappedAccounts);
       
       return mappedAccounts;
@@ -68,6 +38,28 @@ export function useAccounts() {
       return [];
     } finally {
       setIsLoading(false);
+    }
+  }, [toast]);
+
+  const getAccount = useCallback(async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      return mapGlAccountToAccount(data as GlAccount);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
     }
   }, [toast]);
 
@@ -86,7 +78,7 @@ export function useAccounts() {
       
       if (error) throw error;
       
-      const newAccount = mapGlAccountToAccount(data as GlAccountData);
+      const newAccount = mapGlAccountToAccount(data as GlAccount);
       setAccounts(prev => [...prev, newAccount]);
       
       toast({
@@ -109,7 +101,7 @@ export function useAccounts() {
   const updateAccount = useCallback(async (id: string, accountData: Partial<Account>) => {
     try {
       // Convert from Account format to gl_accounts format
-      const updateData: Partial<GlAccountData> = {};
+      const updateData: Partial<GlAccount> = {};
       if (accountData.name) updateData.account_name = accountData.name;
       if (accountData.type) updateData.client_type = accountData.type;
       if (accountData.email) updateData.email_of_who_added = accountData.email;
@@ -123,7 +115,7 @@ export function useAccounts() {
       
       if (error) throw error;
       
-      const updatedAccount = mapGlAccountToAccount(data as GlAccountData);
+      const updatedAccount = mapGlAccountToAccount(data as GlAccount);
       setAccounts(prev => prev.map(account => 
         account.id === id ? updatedAccount : account
       ));
@@ -183,6 +175,7 @@ export function useAccounts() {
     isLoading,
     error,
     fetchAccounts,
+    getAccount,
     addAccount,
     updateAccount,
     deleteAccount

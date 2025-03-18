@@ -18,6 +18,20 @@ export interface Account extends BaseEntity {
   balance: number;
 }
 
+// Database representation of gl_accounts
+export interface GlAccount {
+  id: string;
+  account_name: string;
+  client_type: string;
+  email_of_who_added: string;
+  accounts_uid?: string;
+  photo?: string;
+  date_added_client?: string;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string;
+}
+
 // Product type
 export interface Product extends BaseEntity {
   name: string;
@@ -41,7 +55,55 @@ export interface LineItem {
   total: number;
 }
 
-// Base document type for Estimates
+// Database representation of gl_invoice_lines
+export interface GlInvoiceLine {
+  id: string;
+  rowid_invoices: string;
+  rowid_products: string;
+  renamed_product_name: string;
+  qty_sold: number;
+  selling_price: number;
+  line_total: number;
+  product_sale_note?: string;
+  date_of_sale?: string;
+  user_email_of_added?: string;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string;
+}
+
+// Database representation of gl_customer_payments
+export interface GlCustomerPayment {
+  id: string;
+  rowid_invoices: string;
+  rowid_accounts: string;
+  payment_amount: number;
+  payment_note?: string;
+  date_of_payment?: string;
+  type_of_payment?: string;
+  email_of_user?: string;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string;
+}
+
+// Database representation of gl_invoices
+export interface GlInvoice {
+  id: string;
+  rowid_accounts: string;
+  glide_row_id: string;
+  created_timestamp?: string;
+  submitted_timestamp?: string;
+  invoice_order_date?: string;
+  processed?: boolean;
+  notes?: string;
+  doc_glideforeverlink?: string;
+  user_email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Base document type for invoices and purchase orders
 export interface BaseDocument extends BaseEntity {
   number: string;
   date: Date;
@@ -55,11 +117,58 @@ export interface BaseDocument extends BaseEntity {
   lineItems: LineItem[];
 }
 
-// Estimate type
-export interface Estimate extends BaseDocument {
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
-  expiryDate?: Date;
-  convertedToInvoiceId?: string;
+// Purchase order type
+export interface PurchaseOrder extends BaseDocument {
+  status: 'draft' | 'sent' | 'received' | 'partial' | 'complete';
+  balance: number;
+  amountPaid: number;
+  vendorId: string;
+}
+
+// Database representation of gl_purchase_orders
+export interface GlPurchaseOrder {
+  id: string;
+  rowid_accounts: string;
+  purchase_order_uid?: string;
+  po_date?: string;
+  pdf_link?: string;
+  date_payment_date_mddyyyy?: string;
+  docs_shortlink?: string;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string;
+}
+
+// Database representation of gl_vendor_payments
+export interface GlVendorPayment {
+  id: string;
+  rowid_purchase_orders: string;
+  rowid_accounts: string;
+  rowid_products?: string;
+  payment_amount: number;
+  vendor_purchase_note?: string;
+  date_of_payment?: string;
+  date_of_purchase_order?: string;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string;
+}
+
+// Invoice type
+export interface Invoice extends BaseDocument {
+  status: 'draft' | 'sent' | 'overdue' | 'paid' | 'partial';
+  balance: number;
+  amountPaid: number;
+  payments: Payment[];
+}
+
+// Payment type
+export interface Payment {
+  id: string;
+  date: Date;
+  amount: number;
+  method?: string;
+  notes?: string;
 }
 
 // Dashboard analytics/metrics types

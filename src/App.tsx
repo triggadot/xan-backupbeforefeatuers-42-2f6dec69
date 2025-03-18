@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -37,10 +38,6 @@ const App: React.FC = () => {
                 <Route path="sync/products/:mappingId" element={<ProductSync />} />
                 <Route path="sync/mappings/:mappingId" element={<MappingView />} />
                 <Route path="data-management" element={<DataManagement />} />
-                
-                {/* Accounts Routes */}
-                <Route path="accounts" element={<Accounts />} />
-                <Route path="accounts/:id" element={<AccountDetail />} />
               </Route>
             </Routes>
           </BrowserRouter>

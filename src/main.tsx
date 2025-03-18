@@ -17,7 +17,6 @@ import Dashboard from './pages/Dashboard'
 import NotFound from './pages/NotFound'
 import Accounts from './pages/Accounts'
 import AccountDetail from './pages/AccountDetail'
-import InvoiceDetail from './pages/InvoiceDetail'
 import Invoices from './pages/Invoices'
 import PurchaseOrders from './pages/PurchaseOrders'
 import SyncLayout from './components/sync/SyncLayout'
@@ -66,7 +65,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     <Route path="accounts" element={<Accounts />} />
                     <Route path="accounts/:id" element={<AccountDetail />} />
                     <Route path="invoices" element={<Invoices />} />
-                    <Route path="invoices/:id" element={<InvoiceDetail />} />
                     <Route path="purchase-orders" element={<PurchaseOrders />} />
                     <Route path="products" element={<Products />} />
                     <Route path="data-management" element={<DataManagement />} />
