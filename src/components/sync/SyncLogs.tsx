@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
 import { SyncLogTable } from './ui/SyncLogTable';
 import { RefreshCw } from 'lucide-react';
+import { SyncLogFilter } from '@/types/syncLog';
 
 const SyncLogs = () => {
   const { 
@@ -25,12 +26,16 @@ const SyncLogs = () => {
     includeDetails: true,
   });
 
+  const handleFilterChange = (value: string) => {
+    setFilter(value as SyncLogFilter);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Synchronization Logs</h2>
         <div className="flex items-center gap-2">
-          <Select value={filter} onValueChange={(value: 'all' | 'completed' | 'failed') => setFilter(value)}>
+          <Select value={filter} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Filter logs" />
             </SelectTrigger>

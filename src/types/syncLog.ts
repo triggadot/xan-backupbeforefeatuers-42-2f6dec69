@@ -12,6 +12,9 @@ export interface SyncLog {
   supabase_table?: string | null;
   app_name?: string | null;
   sync_direction?: string | null;
+  // Additional fields for error tracking
+  error_count?: number;
+  error_message?: string | null;
 }
 
 export interface Mapping {
@@ -44,3 +47,13 @@ export interface MappingToValidate {
     data_type: string;
   }>;
 }
+
+// Added ValidationResult type for type checking validation results
+export interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  details?: Record<string, string[]>;
+}
+
+// Type for filter states
+export type SyncLogFilter = 'all' | 'completed' | 'failed';

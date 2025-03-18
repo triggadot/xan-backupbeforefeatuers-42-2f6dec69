@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { SyncLog } from '@/types/syncLog';
+import { SyncLog, SyncLogFilter } from '@/types/syncLog';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseSyncLogsOptions {
@@ -11,15 +11,23 @@ interface UseSyncLogsOptions {
   onlyFailed?: boolean;
 }
 
+interface SyncLogsResult {
+  syncLogs: SyncLog[];
+  isLoading: boolean;
+  refreshLogs: () => Promise<void>;
+  filter: SyncLogFilter;
+  setFilter: (filter: SyncLogFilter) => void;
+}
+
 export function useRealtimeSyncLogs({ 
   mappingId, 
   limit = 20, 
   includeDetails = true,
   onlyFailed = false
-}: UseSyncLogsOptions = {}) {
+}: UseSyncLogsOptions = {}): SyncLogsResult {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'completed' | 'failed'>('all');
+  const [filter, setFilter] = useState<SyncLogFilter>('all');
   const { toast } = useToast();
 
   const fetchLogs = useCallback(async () => {
