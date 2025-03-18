@@ -10,6 +10,9 @@ export function useGlSync() {
   const [lastResult, setLastResult] = useState<ProductSyncResult | null>(null);
   const { toast } = useToast();
 
+  /**
+   * Initiates a sync operation between Glide and Supabase
+   */
   const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
     setIsLoading(true);
     setLastResult(null);
@@ -73,6 +76,9 @@ export function useGlSync() {
     }
   };
   
+  /**
+   * Retries a previously failed sync operation
+   */
   const retryFailedSync = async (mappingId: string): Promise<boolean> => {
     setIsLoading(true);
     
@@ -110,6 +116,9 @@ export function useGlSync() {
     }
   };
   
+  /**
+   * Validates a connection to the Glide API
+   */
   const validateConnection = async (connectionId: string): Promise<boolean> => {
     setIsLoading(true);
     
