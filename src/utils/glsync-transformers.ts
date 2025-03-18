@@ -1,4 +1,3 @@
-
 import { GlMapping, GlProduct, ProductSyncResult, GlSyncRecord } from "@/types/glsync";
 
 /**
@@ -416,10 +415,12 @@ export function processSyncResult(
   errors: GlSyncRecord[]
 ): ProductSyncResult {
   return {
+    success: errors.length === 0 && result?.error === undefined,
+    recordsProcessed: recordsProcessed,
+    failedRecords: errors.length,
     total_records: recordsProcessed + errors.length,
     processed_records: recordsProcessed,
     failed_records: errors.length,
-    error_records: errors.length > 0 ? errors : undefined,
-    success: errors.length === 0 && result?.error === undefined
+    error_records: errors.length > 0 ? errors : undefined
   };
 }

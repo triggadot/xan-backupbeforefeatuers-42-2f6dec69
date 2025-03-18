@@ -11,6 +11,7 @@ export function useGlSyncErrors(mappingId: string) {
   const fetchSyncErrors = useCallback(async () => {
     if (!mappingId || mappingId === ':mappingId') {
       setSyncErrors([]);
+      setIsLoading(false);
       return;
     }
     
@@ -29,11 +30,12 @@ export function useGlSyncErrors(mappingId: string) {
       
       if (!data) {
         setSyncErrors([]);
+        setIsLoading(false);
         return;
       }
       
       const formattedErrors = data.map((record: any) => ({
-        type: record.error_type,
+        type: record.error_type as 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR',
         message: record.error_message,
         record: record.record_data,
         timestamp: record.created_at,

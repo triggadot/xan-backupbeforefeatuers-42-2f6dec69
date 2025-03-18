@@ -115,6 +115,10 @@ export interface ProductSyncResult {
   failedRecords?: number;
   errors?: GlSyncRecord[];
   error?: string;
+  total_records?: number;
+  processed_records?: number;
+  failed_records?: number;
+  error_records?: GlSyncRecord[];
 }
 
 export interface GlideTable {

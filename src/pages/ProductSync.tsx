@@ -39,7 +39,15 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
         .single();
       
       if (error) throw error;
-      return data as GlMapping;
+      // Explicitly cast the column_mappings field to the expected type
+      return {
+        ...data,
+        column_mappings: data.column_mappings as unknown as Record<string, { 
+          glide_column_name: string;
+          supabase_column_name: string;
+          data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+        }>
+      } as GlMapping;
     },
     enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {
@@ -170,7 +178,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
       </div>
 
       {!hasRowIdMapping && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Row ID Mapping Missing</AlertTitle>
           <AlertDescription>
@@ -182,7 +190,7 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
 
       <MappingDetailsCard 
         mapping={mapping} 
-        connectionName={connection.app_name}
+        connectionName={connection?.app_name}
         onSyncComplete={handleSyncComplete}
       />
 
