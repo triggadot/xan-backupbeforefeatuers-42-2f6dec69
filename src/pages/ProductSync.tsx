@@ -250,7 +250,10 @@ const ProductSync = () => {
               {isLoadingLogs ? (
                 <LoadingState />
               ) : (
-                <SyncLogsTable logs={syncLogs} />
+                <SyncLogsTable 
+                  logs={syncLogs} 
+                  isLoading={isLoadingLogs} 
+                />
               )}
             </TabsContent>
           </Tabs>

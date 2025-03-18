@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -39,12 +40,12 @@ const MappingsList = () => {
         return {
           ...item,
           app_name: item.gl_connections?.app_name || 'Unknown App',
-          column_mappings: item.column_mappings as Record<string, {
+          column_mappings: item.column_mappings as unknown as Record<string, {
             glide_column_name: string;
             supabase_column_name: string;
             data_type: string;
           }>
-        } as unknown as Mapping;
+        } as Mapping;
       });
       
       setMappings(formattedMappings);

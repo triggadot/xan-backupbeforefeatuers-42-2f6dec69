@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,18 +7,61 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { SyncLog } from '@/types/syncLog';
 import { formatRelative } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SyncLogsViewProps {
-  logs: SyncLog[];
-  onRefresh: () => void;
+  logs?: SyncLog[];
+  onRefresh?: () => void;
+  mappingId?: string;
 }
 
-export function SyncLogsView({ logs, onRefresh }: SyncLogsViewProps) {
+export function SyncLogsView({ logs: providedLogs, onRefresh: providedRefresh, mappingId }: SyncLogsViewProps) {
   const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState<SyncLog[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (providedLogs) {
+      setLogs(providedLogs);
+    } else if (mappingId) {
+      fetchLogs();
+    }
+  }, [mappingId, providedLogs]);
+
+  const fetchLogs = async () => {
+    if (!mappingId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('gl_sync_logs')
+        .select('*')
+        .eq('mapping_id', mappingId)
+        .order('started_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch sync logs',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setLoading(true);
-    await onRefresh();
+    if (providedRefresh) {
+      await providedRefresh();
+    } else {
+      await fetchLogs();
+    }
     setLoading(false);
   };
 
