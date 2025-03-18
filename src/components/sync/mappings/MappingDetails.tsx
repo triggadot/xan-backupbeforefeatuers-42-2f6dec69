@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { GlMapping } from '@/types/glsync';
@@ -10,9 +10,14 @@ import { ColumnMappingsView } from './ColumnMappingsView';
 import { SyncLogsView } from './SyncLogsView';
 import { SyncErrorsView } from './SyncErrorsView';
 import SyncProductsButton from "../SyncProductsButton";
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, PlusCircle } from 'lucide-react';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
+import { CreateTableForm } from './CreateTableForm';
+import { EditTableButton } from './EditTableButton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useSupabaseTables } from '@/hooks/useSupabaseTables';
+import { SupabaseTableSelector } from './SupabaseTableSelector';
 
 interface MappingDetailsProps {
   mappingId: string;
@@ -23,6 +28,7 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
   const [mapping, setMapping] = useState<GlMapping | null>(null);
   const [activeTab, setActiveTab] = useState('details');
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateTableDialog, setShowCreateTableDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { syncStatus, refreshStatus } = useGlSyncStatus(mappingId);
@@ -33,6 +39,7 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
     setIncludeResolved, 
     refreshErrors 
   } = useGlSyncErrors(mappingId);
+  const { tables: supabaseTables, fetchTables, isLoading: isLoadingTables } = useSupabaseTables();
 
   useEffect(() => {
     fetchMapping();
@@ -152,6 +159,62 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
     refreshStatus();
   };
 
+  const handleTableCreated = (tableName: string) => {
+    setShowCreateTableDialog(false);
+    fetchTables();
+    toast({
+      title: 'Table Created',
+      description: `Table ${tableName} has been created successfully.`
+    });
+
+    // If we don't have a mapping yet, update the mapping details
+    if (mapping && mapping.supabase_table !== tableName) {
+      updateMappingTable(tableName);
+    }
+  };
+
+  const handleTableUpdated = () => {
+    fetchTables();
+    toast({
+      title: 'Success',
+      description: 'Table schema has been updated.'
+    });
+  };
+
+  const updateMappingTable = async (tableName: string) => {
+    if (!mapping) return;
+
+    try {
+      const { error } = await supabase
+        .from('gl_mappings')
+        .update({ supabase_table: tableName })
+        .eq('id', mappingId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Mapping Updated',
+        description: `Mapping now uses table ${tableName}`
+      });
+
+      // Refresh the mapping data
+      fetchMapping();
+    } catch (error) {
+      console.error('Error updating mapping:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update mapping',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleSupabaseTableChange = (tableName: string) => {
+    if (mapping && mapping.supabase_table !== tableName) {
+      updateMappingTable(tableName);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="animate-pulse">
@@ -232,6 +295,7 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="column-mappings">Column Mappings</TabsTrigger>
+          <TabsTrigger value="table-schema">Table Schema</TabsTrigger>
           <TabsTrigger value="sync-logs">Sync Logs</TabsTrigger>
           <TabsTrigger value="sync-errors">Sync Errors</TabsTrigger>
         </TabsList>
@@ -286,6 +350,69 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
         
         <TabsContent value="column-mappings" className="pt-4">
           <ColumnMappingsView mapping={mapping} />
+        </TabsContent>
+        
+        <TabsContent value="table-schema" className="pt-4">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Create Table Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Create New Table</CardTitle>
+                <CardDescription>
+                  Create a new Supabase table and update this mapping
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  className="w-full"
+                  onClick={() => setShowCreateTableDialog(true)}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create New Table
+                </Button>
+                
+                <Dialog open={showCreateTableDialog} onOpenChange={setShowCreateTableDialog}>
+                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create Supabase Table</DialogTitle>
+                    </DialogHeader>
+                    <CreateTableForm 
+                      onTableCreated={handleTableCreated}
+                      onCancel={() => setShowCreateTableDialog(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+            
+            {/* View Existing Tables Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Change Table</CardTitle>
+                <CardDescription>
+                  Switch this mapping to use a different table
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <SupabaseTableSelector
+                    tables={supabaseTables}
+                    value={mapping.supabase_table}
+                    onTableChange={handleSupabaseTableChange}
+                    filterPrefix="gl_"
+                    isLoading={isLoadingTables}
+                    placeholder="Select a table"
+                    onCreateTableSuccess={handleTableCreated}
+                  />
+                  
+                  <EditTableButton 
+                    onTableUpdated={handleTableUpdated}
+                    initialTableName={mapping.supabase_table}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="sync-logs" className="pt-4">

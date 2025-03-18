@@ -41,7 +41,7 @@ export interface LineItem {
   total: number;
 }
 
-// Base document type for PurchaseOrders, Estimates, and Invoices
+// Base document type for Estimates
 export interface BaseDocument extends BaseEntity {
   number: string;
   date: Date;
@@ -55,30 +55,11 @@ export interface BaseDocument extends BaseEntity {
   lineItems: LineItem[];
 }
 
-// Purchase Order type
-export interface PurchaseOrder extends BaseDocument {
-  status: 'draft' | 'sent' | 'received' | 'cancelled';
-  expectedDeliveryDate?: Date;
-  amountPaid?: number;
-  balance?: number;
-  paymentStatus?: 'PAID' | 'PARTIAL' | 'UNPAID';
-}
-
 // Estimate type
 export interface Estimate extends BaseDocument {
   status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
   expiryDate?: Date;
   convertedToInvoiceId?: string;
-}
-
-// Invoice type
-export interface Invoice extends BaseDocument {
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
-  paymentTerms?: string;
-  paymentDate?: Date;
-  amountPaid: number;
-  balance: number;
-  estimateId?: string;
 }
 
 // Dashboard analytics/metrics types
