@@ -1414,6 +1414,12 @@ export type Database = {
           data_type: string
         }[]
       }
+      gl_admin_execute_sql: {
+        Args: {
+          sql_query: string
+        }
+        Returns: Json
+      }
       gl_get_sync_errors: {
         Args: {
           p_mapping_id: string
@@ -1430,6 +1436,17 @@ export type Database = {
           resolution_notes: string | null
           resolved_at: string | null
           retryable: boolean | null
+        }[]
+      }
+      gl_get_table_columns: {
+        Args: {
+          table_name: string
+        }
+        Returns: {
+          column_name: string
+          data_type: string
+          is_nullable: boolean
+          is_primary_key: boolean
         }[]
       }
       gl_record_sync_error: {

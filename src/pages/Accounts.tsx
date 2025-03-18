@@ -23,13 +23,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import DataTable from '@/components/common/DataTable';
-import { useStore } from '@/store';
 import { Account } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAccounts } from '@/hooks/useAccounts';
 
 const Accounts = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { accounts, isLoading, addAccount, updateAccount, deleteAccount } = useAccounts();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
@@ -44,11 +46,6 @@ const Accounts = () => {
     status: 'active',
     balance: 0,
   });
-  
-  const accounts = useStore((state) => state.accounts);
-  const addAccount = useStore((state) => state.addAccount);
-  const updateAccount = useStore((state) => state.updateAccount);
-  const deleteAccount = useStore((state) => state.deleteAccount);
   
   const handleCreateClick = () => {
     setCurrentAccount(null);
@@ -124,17 +121,9 @@ const Accounts = () => {
     if (currentAccount) {
       // Update existing account
       updateAccount(currentAccount.id, formData);
-      toast({
-        title: 'Account Updated',
-        description: `${formData.name} has been updated successfully.`,
-      });
     } else {
       // Create new account
       addAccount(formData as Omit<Account, 'id' | 'createdAt' | 'updatedAt'>);
-      toast({
-        title: 'Account Created',
-        description: `${formData.name} has been added successfully.`,
-      });
     }
     
     setIsDialogOpen(false);
@@ -143,10 +132,6 @@ const Accounts = () => {
   const handleDelete = () => {
     if (currentAccount) {
       deleteAccount(currentAccount.id);
-      toast({
-        title: 'Account Deleted',
-        description: `${currentAccount.name} has been deleted.`,
-      });
       setIsDeleteDialogOpen(false);
     }
   };
