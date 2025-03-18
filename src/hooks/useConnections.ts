@@ -20,8 +20,15 @@ export function useConnections() {
         .order('app_name', { ascending: true });
       
       if (error) throw error;
-      setConnections(data || []);
-      return data || [];
+      
+      // Convert the data to the expected GlConnection type
+      const typedConnections: GlConnection[] = data?.map(conn => ({
+        ...conn,
+        settings: conn.settings as Record<string, any> | null
+      })) || [];
+      
+      setConnections(typedConnections);
+      return typedConnections;
     } catch (error) {
       console.error('Error fetching connections:', error);
       toast({
