@@ -1,180 +1,266 @@
 
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import { useGlSyncLogs } from '@/hooks/useGlSyncLogs';
-import { MappingDetailsCard } from '@/components/sync/MappingDetailsCard';
-import { InvalidMapping } from '@/components/sync/InvalidMapping';
-import { LoadingState } from '@/components/sync/LoadingState';
-import { MappingTabs } from '@/components/sync/MappingTabs';
-import { useProductMapping } from '@/hooks/useProductMapping';
-import { GlMapping } from '@/types/glsync';
-import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
-import { SyncDetailsPanel } from '@/components/sync/SyncDetailsPanel';
+import { ArrowLeft } from 'lucide-react';
+import SyncProductsButton from '@/components/sync/SyncProductsButton';
+import SyncDetailsPanel from '@/components/sync/SyncDetailsPanel';
+import SyncProgressIndicator from '@/components/sync/SyncProgressIndicator';
+import SyncContainer from '@/components/sync/SyncContainer';
+import LoadingState from '@/components/sync/LoadingState';
+import InvalidMapping from '@/components/sync/InvalidMapping';
+import { GlMapping, GlProduct } from '@/types/glsync';
+import { SyncLog } from '@/types/syncLog';
+import { SyncLogsTable } from '@/components/sync/SyncLogsTable';
 
 const ProductSync = () => {
-  const { mappingId = '' } = useParams<{ mappingId: string }>();
-  const navigate = useNavigate();
+  const { mappingId } = useParams();
+  const [mapping, setMapping] = useState<GlMapping | null>(null);
+  const [products, setProducts] = useState<GlProduct[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [activeTab, setActiveTab] = useState('products');
   const { toast } = useToast();
-  const { syncErrors, refreshErrors } = useGlSyncErrors(mappingId);
-  const { syncStatus, syncStats, refreshData } = useGlSyncStatus(mappingId);
-  const { syncLogs: glSyncLogs, refreshLogs, isLoading: isLoadingLogs } = useGlSyncLogs(mappingId);
-  const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
-  
-  // Convert GlSyncLog[] to SyncLog[] to match expected type
-  const syncLogs = glSyncLogs.map(log => ({
-    id: log.id,
-    mapping_id: log.mapping_id,
-    status: log.status,
-    message: log.message,
-    records_processed: log.records_processed,
-    started_at: log.started_at,
-    completed_at: log.completed_at
-  }));
-
-  const { 
-    mapping, 
-    connection, 
-    isLoading, 
-    refetch 
-  } = useProductMapping(mappingId);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (mappingId && mappingId !== ':mappingId') {
-      console.log('Fetching mapping with ID:', mappingId);
-      refetch();
+    if (mappingId) {
+      fetchMapping(mappingId);
     }
-  }, [mappingId, refetch]);
+  }, [mappingId]);
 
-  useEffect(() => {
-    if (mapping) {
-      const hasExplicitRowIdMapping = Object.entries(mapping.column_mappings).some(
-        ([glideColumnId, mapping]) => glideColumnId === '$rowID' && mapping.supabase_column_name === 'glide_row_id'
-      );
-      setHasRowIdMapping(hasExplicitRowIdMapping);
+  const fetchMapping = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('gl_mappings')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      // Convert to GlMapping type
+      const mappingData = {
+        ...data,
+        column_mappings: data.column_mappings as Record<string, {
+          glide_column_name: string;
+          supabase_column_name: string;
+          data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
+        }>
+      } as GlMapping;
+      
+      setMapping(mappingData);
+      
+      if (mappingData.supabase_table === 'gl_products') {
+        fetchProducts();
+        fetchSyncLogs(id);
+      }
+    } catch (error) {
+      console.error('Error fetching mapping:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load mapping details',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [mapping]);
+  };
 
-  const handleBackClick = () => {
-    navigate('/sync');
+  const fetchProducts = async () => {
+    setIsLoadingProducts(true);
+    try {
+      const { data, error } = await supabase
+        .from('gl_products')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load products',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  const fetchSyncLogs = async (id: string) => {
+    setIsLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('gl_sync_logs')
+        .select('*')
+        .eq('mapping_id', id)
+        .order('started_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      setSyncLogs(data as SyncLog[] || []);
+    } catch (error) {
+      console.error('Error fetching sync logs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load sync logs',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingLogs(false);
+    }
   };
 
   const handleSyncComplete = () => {
-    refetch();
-    refreshErrors();
-    refreshData();
-    refreshLogs();
-  };
-
-  const handleSettingsChange = () => {
-    refetch();
-  };
-
-  const handleEditMapping = (mapping: GlMapping) => {
-    navigate(`/sync/mappings/edit/${mapping.id}`);
-  };
-
-  const handleDeleteMapping = async (mappingId: string) => {
-    if (window.confirm('Are you sure you want to delete this mapping? This action cannot be undone.')) {
-      try {
-        const { error } = await supabase
-          .from('gl_mappings')
-          .delete()
-          .eq('id', mappingId);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Mapping deleted',
-          description: 'The mapping has been successfully deleted.',
-        });
-        
-        navigate('/sync/mappings');
-      } catch (error: any) {
-        toast({
-          title: 'Error deleting mapping',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
+    fetchProducts();
+    if (mappingId) {
+      fetchSyncLogs(mappingId);
     }
   };
-
-  if (!mappingId || mappingId === ':mappingId') {
-    return <InvalidMapping onBackClick={handleBackClick} />;
-  }
 
   if (isLoading) {
     return <LoadingState />;
   }
 
-  if (!mapping || !connection) {
-    return <InvalidMapping onBackClick={handleBackClick} />;
+  if (!mapping) {
+    return <InvalidMapping onBack={() => navigate('/sync/mappings')} />;
+  }
+
+  if (mapping.supabase_table !== 'gl_products') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Invalid Mapping Type</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>This page is only for Products mappings.</p>
+          <Button onClick={() => navigate('/sync/mappings')} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Mappings
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="mb-4">
-        <Button variant="ghost" onClick={handleBackClick}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Sync
-        </Button>
+    <SyncContainer>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/sync/mappings')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-semibold">Product Sync</h1>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            Sync products between Glide and Supabase
+          </p>
+        </div>
+        
+        <SyncProductsButton 
+          mapping={mapping}
+          onSyncComplete={handleSyncComplete}
+        />
       </div>
-
-      {!hasRowIdMapping && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Row ID Mapping Missing</AlertTitle>
-          <AlertDescription>
-            No explicit mapping from Glide's <code>$rowID</code> to <code>glide_row_id</code> is defined. 
-            The system will automatically use <code>$rowID</code>, but for clarity, consider adding this mapping.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <MappingDetailsCard 
-            mapping={mapping} 
-            connectionName={connection?.app_name}
-            onSyncComplete={handleSyncComplete}
-            onEdit={handleEditMapping}
-            onDelete={handleDeleteMapping}
-            status={syncStatus}
-          />
-          
-          <SyncDetailsPanel 
-            syncStatus={syncStatus}
-            logs={syncLogs}
-            isLoading={isLoadingLogs}
-            onRefresh={refreshData}
-            syncStats={syncStats}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="logs">Sync Logs</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="products" className="pt-4">
+              {isLoadingProducts ? (
+                <LoadingState />
+              ) : products.length === 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>No Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>No products have been synced yet.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {products.slice(0, 5).map((product) => (
+                    <Card key={product.id}>
+                      <CardHeader>
+                        <CardTitle>{product.new_product_name || product.vendor_product_name || 'Unnamed Product'}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <dt className="text-sm font-medium text-muted-foreground">Glide ID</dt>
+                            <dd className="text-sm">{product.glide_row_id}</dd>
+                          </div>
+                          {product.category && (
+                            <div>
+                              <dt className="text-sm font-medium text-muted-foreground">Category</dt>
+                              <dd className="text-sm">{product.category}</dd>
+                            </div>
+                          )}
+                          {product.cost !== null && (
+                            <div>
+                              <dt className="text-sm font-medium text-muted-foreground">Cost</dt>
+                              <dd className="text-sm">${product.cost}</dd>
+                            </div>
+                          )}
+                          {product.product_purchase_date && (
+                            <div>
+                              <dt className="text-sm font-medium text-muted-foreground">Purchase Date</dt>
+                              <dd className="text-sm">{new Date(product.product_purchase_date).toLocaleDateString()}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {products.length > 5 && (
+                    <Button variant="outline" className="w-full">
+                      View All Products ({products.length})
+                    </Button>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="logs" className="pt-4">
+              {isLoadingLogs ? (
+                <LoadingState />
+              ) : (
+                <SyncLogsTable logs={syncLogs} />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
         
         <div>
-          <SyncControlPanel 
-            mapping={mapping}
-            status={syncStatus}
-            onSyncComplete={handleSyncComplete}
-            onSettingsChange={handleSettingsChange}
-          />
+          <SyncDetailsPanel mapping={mapping} />
+          <div className="mt-6">
+            <SyncProgressIndicator mapping={mapping} />
+          </div>
         </div>
       </div>
-
-      <MappingTabs 
-        mapping={mapping}
-        syncErrors={syncErrors}
-        hasRowIdMapping={hasRowIdMapping}
-        onRefreshErrors={refreshErrors}
-      />
-    </div>
+    </SyncContainer>
   );
 };
 

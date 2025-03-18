@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { GlSyncRecord } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export function useGlSyncErrors(mappingId?: string) {
   const [syncErrors, setSyncErrors] = useState<GlSyncRecord[]>([]);
@@ -24,7 +25,17 @@ export function useGlSyncErrors(mappingId?: string) {
       if (error) throw new Error(error.message);
       
       // Map the database error records to our GlSyncRecord type
-      const formattedErrors: GlSyncRecord[] = (data || []).map(error => ({
+      const formattedErrors: GlSyncRecord[] = (data || []).map((error: {
+        id: string;
+        mapping_id: string;
+        error_type: string;
+        error_message: string;
+        record_data: Json;
+        created_at: string;
+        resolved_at: string | null;
+        retryable: boolean;
+        resolution_notes: string | null;
+      }) => ({
         id: error.id,
         mapping_id: error.mapping_id,
         type: error.error_type as 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR',
