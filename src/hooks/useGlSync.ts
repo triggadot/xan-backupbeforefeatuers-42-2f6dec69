@@ -1,148 +1,144 @@
+
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
-import { GlideTable, ProductSyncResult } from '@/types/glsync';
+import { GlideTable } from '@/types/glsync';
 
 export function useGlSync() {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
+  const [error, setError] = useState('');
+  const { toast } = useToast();
 
-  const fetchGlideTables = async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
-    try {
-      setIsLoading(true);
-      console.log(`Fetching Glide tables for connection ${connectionId}`);
-      const result = await glSyncApi.listGlideTables(connectionId);
-      
-      if ('error' in result) {
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        });
-        return { error: result.error };
-      }
-      
-      console.log('Fetched Glide tables:', result.tables);
-      setGlideTables(result.tables);
-      return { tables: result.tables };
-    } catch (error) {
-      console.error('Error fetching Glide tables:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch Glide tables',
-        variant: 'destructive',
-      });
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+  const fetchGlideTables = async (connectionId: string): Promise<{ tables?: GlideTable[]; error?: string }> => {
     setIsLoading(true);
-    setError(null);
-
     try {
-      const result = await glSyncApi.syncData(connectionId, mappingId);
-      
-      if (!result.success) {
-        const errorMessage = result.error || 'An unknown error occurred during sync';
-        setError(errorMessage);
-        toast({
-          title: 'Sync Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+      console.log('Fetching Glide tables for connection:', connectionId);
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'getTableNames',
+          connectionId
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
       }
 
-      return {
-        success: result.success,
-        error: result.error,
-        recordsProcessed: result.recordsProcessed || 0,
-        failedRecords: result.failedRecords || 0
-      };
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setGlideTables(data.tables || []);
+      return { tables: data.tables };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred during sync';
-      setError(message);
-      toast({
-        title: 'Sync Error',
-        description: message,
-        variant: 'destructive',
-      });
-      return {
-        success: false,
-        error: message,
-        recordsProcessed: 0,
-        failedRecords: 0
-      };
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Glide tables';
+      setError(errorMessage);
+      console.error('Error fetching Glide tables:', err);
+      return { error: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
+  const fetchGlideTableColumns = async (connectionId: string, tableId: string): Promise<{ columns?: any[]; error?: string }> => {
     setIsLoading(true);
-    setError(null);
-
     try {
-      const { data, error } = await glSyncApi.callSyncFunction({
-        action: "syncData",
-        connectionId,
-        mappingId,
-      });
-
-      if (error) throw new Error(error.message);
-      
-      toast({
-        title: 'Retry initiated',
-        description: 'Retry of failed synchronization has been initiated.',
-      });
-      
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred during retry';
-      setError(message);
-      toast({
-        title: 'Retry Error',
-        description: message,
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchGlideTableColumns = async (connectionId: string, tableId: string) => {
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      const response = await fetch('/api/glide/columns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      console.log('Fetching columns for Glide table:', tableId);
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
           action: 'getColumnMappings',
           connectionId,
           tableId
-        }),
+        }
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch Glide table columns');
+
+      if (error) {
+        throw new Error(error.message);
       }
-      
-      return result;
-    } catch (error) {
-      console.error('Error fetching Glide table columns:', error);
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-      return { error: error instanceof Error ? error.message : 'Failed to fetch Glide table columns' };
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return { columns: data.columns || [] };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Glide table columns';
+      console.error('Error fetching Glide table columns:', err);
+      return { error: errorMessage };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const syncData = async (connectionId: string, mappingId: string): Promise<{
+    success: boolean;
+    recordsProcessed?: number;
+    error?: string;
+  }> => {
+    setIsLoading(true);
+    try {
+      console.log('Syncing data for mapping:', mappingId);
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'syncData',
+          connectionId,
+          mappingId
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return {
+        success: true,
+        recordsProcessed: data.recordsProcessed
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sync data';
+      console.error('Error syncing data:', err);
+      toast({
+        title: 'Sync Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return { success: false, error: errorMessage };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    setIsLoading(true);
+    try {
+      console.log('Retrying failed sync for mapping:', mappingId);
+      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', {
+        p_mapping_id: mappingId
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Trigger the actual sync
+      return await syncData(connectionId, mappingId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to retry sync';
+      console.error('Error retrying sync:', err);
+      toast({
+        title: 'Retry Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }

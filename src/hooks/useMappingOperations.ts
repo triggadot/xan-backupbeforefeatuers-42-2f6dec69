@@ -4,6 +4,43 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GlMapping, GlColumnMapping } from '@/types/glsync';
 import { useMappingValidation } from './useMappingValidation';
+import { convertToTypedMappings, getDefaultColumnMappings } from '@/types/syncLog';
+
+// Helper function to convert column mappings to JSON for database
+function convertMappingsToJson(mappings: Record<string, GlColumnMapping> | undefined): any {
+  if (!mappings) return {};
+  
+  // Convert to plain object for Supabase
+  const jsonMappings: Record<string, unknown> = {};
+  
+  for (const [key, mapping] of Object.entries(mappings)) {
+    jsonMappings[key] = {
+      glide_column_name: mapping.glide_column_name,
+      supabase_column_name: mapping.supabase_column_name,
+      data_type: mapping.data_type
+    };
+  }
+  
+  return jsonMappings;
+}
+
+// Helper function to convert JSON from database to typed mappings
+function convertJsonToMappings(jsonData: any): Record<string, GlColumnMapping> {
+  if (!jsonData) return {};
+  
+  const columnMappings: Record<string, GlColumnMapping> = {};
+  
+  for (const [key, value] of Object.entries(jsonData)) {
+    const mapping = value as any;
+    columnMappings[key] = {
+      glide_column_name: mapping.glide_column_name,
+      supabase_column_name: mapping.supabase_column_name,
+      data_type: mapping.data_type
+    };
+  }
+  
+  return columnMappings;
+}
 
 export function useMappingOperations() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +70,7 @@ export function useMappingOperations() {
         glide_table: mapping.glide_table,
         glide_table_display_name: mapping.glide_table_display_name,
         supabase_table: mapping.supabase_table,
-        column_mappings: mapping.column_mappings as Record<string, unknown>,
+        column_mappings: convertMappingsToJson(mapping.column_mappings),
         sync_direction: mapping.sync_direction || 'to_supabase',
         enabled: mapping.enabled !== undefined ? mapping.enabled : true,
       };
@@ -54,7 +91,7 @@ export function useMappingOperations() {
       // Convert the returned data to a GlMapping with the proper types
       return {
         ...data,
-        column_mappings: data.column_mappings as unknown as Record<string, GlColumnMapping>
+        column_mappings: convertJsonToMappings(data.column_mappings)
       } as GlMapping;
     } catch (error) {
       console.error('Error creating mapping:', error);
@@ -82,7 +119,7 @@ export function useMappingOperations() {
         glide_table: mapping.glide_table,
         glide_table_display_name: mapping.glide_table_display_name,
         supabase_table: mapping.supabase_table,
-        column_mappings: mapping.column_mappings as Record<string, unknown>,
+        column_mappings: convertMappingsToJson(mapping.column_mappings),
         sync_direction: mapping.sync_direction,
         enabled: mapping.enabled,
       };
@@ -104,7 +141,7 @@ export function useMappingOperations() {
       // Convert the returned data to a GlMapping with the proper types
       return {
         ...data,
-        column_mappings: data.column_mappings as unknown as Record<string, GlColumnMapping>
+        column_mappings: convertJsonToMappings(data.column_mappings)
       } as GlMapping;
     } catch (error) {
       console.error('Error updating mapping:', error);

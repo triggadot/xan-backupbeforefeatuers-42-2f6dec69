@@ -10,7 +10,6 @@ import { GlConnection, GlMapping } from '@/types/glsync';
 import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import MappingFormContainer from './MappingFormContainer';
-import { SupabaseTable } from '@/types/syncLog';
 
 interface EditMappingDialogProps {
   open: boolean;
