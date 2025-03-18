@@ -75,7 +75,14 @@ export const glSyncApi = {
     
     const { data, error } = await query;
     
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if it's a "relation does not exist" error
+      if (error.code === '42P01') {
+        // Return empty array instead of throwing error when table doesn't exist yet
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return data as GlMapping[];
   },
 
@@ -130,7 +137,14 @@ export const glSyncApi = {
       .eq('connection_id', connectionId)
       .eq('supabase_table', tableId);
     
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if it's a "relation does not exist" error
+      if (error.code === '42P01') {
+        // Return empty array instead of throwing error when table doesn't exist yet
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return data as GlColumnMapping[];
   },
 
@@ -159,7 +173,14 @@ export const glSyncApi = {
     
     const { data, error } = await query;
     
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if it's a "relation does not exist" error
+      if (error.code === '42P01') {
+        // Return empty array instead of throwing error when table doesn't exist yet
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return data as GlSyncLog[];
   },
 
@@ -170,7 +191,14 @@ export const glSyncApi = {
       .select('*')
       .order('last_sync_started_at', { ascending: false });
     
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if it's a "relation does not exist" error
+      if (error.code === '42P01') {
+        // Return empty array instead of throwing error
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return data as unknown as GlSyncStatus[];
   },
 
@@ -182,7 +210,14 @@ export const glSyncApi = {
       .order('started_at', { ascending: false })
       .limit(limit);
     
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if it's a "relation does not exist" error
+      if (error.code === '42P01') {
+        // Return empty array instead of throwing error
+        return [];
+      }
+      throw new Error(error.message);
+    }
     return data as GlRecentLog[];
   },
 
@@ -205,7 +240,7 @@ export const glSyncApi = {
       
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
@@ -216,7 +251,7 @@ export const glSyncApi = {
         connectionId,
       });
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
   
@@ -228,7 +263,7 @@ export const glSyncApi = {
         tableId,
       });
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
@@ -247,7 +282,7 @@ export const glSyncApi = {
         errors: result.errors
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 };

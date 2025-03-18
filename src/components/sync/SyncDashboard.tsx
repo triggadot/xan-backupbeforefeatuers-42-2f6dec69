@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,21 +13,34 @@ const SyncDashboard = () => {
   const [syncStatus, setSyncStatus] = useState<GlSyncStatus[]>([]);
   const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const fetchData = async () => {
     setIsLoading(true);
+    setHasError(false);
     try {
-      const statusData = await glSyncApi.getSyncStatus();
-      const logsData = await glSyncApi.getRecentLogs(5);
+      // Fetch data in parallel
+      const [statusData, logsData] = await Promise.all([
+        glSyncApi.getSyncStatus().catch(error => {
+          console.error('Error fetching sync status:', error);
+          return [];
+        }),
+        glSyncApi.getRecentLogs(5).catch(error => {
+          console.error('Error fetching recent logs:', error);
+          return [];
+        })
+      ]);
       
       setSyncStatus(statusData);
       setRecentLogs(logsData);
     } catch (error) {
+      console.error('Error in fetchData:', error);
+      setHasError(true);
       toast({
         title: 'Error fetching sync data',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -72,7 +85,7 @@ const SyncDashboard = () => {
     } catch (error) {
       toast({
         title: 'Sync failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -119,6 +132,24 @@ const SyncDashboard = () => {
     }
   };
 
+  if (hasError) {
+    return (
+      <Card className="p-6">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
+          <h3 className="text-lg font-medium">Unable to load synchronization dashboard</h3>
+          <p className="text-muted-foreground">
+            There was an error connecting to the database. Please ensure the database tables have been created.
+          </p>
+          <Button onClick={fetchData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -146,6 +177,7 @@ const SyncDashboard = () => {
           </div>
         ) : syncStatus.length === 0 ? (
           <Card className="p-6 text-center">
+            <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-muted-foreground">No active mappings found.</p>
             <p className="mt-2">
               Create a connection and set up table mappings to start synchronizing data.
@@ -178,7 +210,7 @@ const SyncDashboard = () => {
                   
                   <div className="flex justify-between items-center mt-4">
                     <div className="text-sm text-muted-foreground">
-                      Last sync: {formatDate(status.last_sync)}
+                      Last sync: {formatDate(status.last_sync_completed_at)}
                     </div>
                     <Button 
                       size="sm"
@@ -237,7 +269,7 @@ const SyncDashboard = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">
-                          {log.app_name || 'Unnamed App'}: {log.glide_table} → {log.supabase_table}
+                          {log.app_name || 'Unnamed App'}: {log.glide_table || 'Unknown'} → {log.supabase_table || 'Unknown'}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {log.message || `Status: ${log.status}`}

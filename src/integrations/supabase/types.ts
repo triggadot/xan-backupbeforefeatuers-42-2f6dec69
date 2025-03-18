@@ -90,13 +90,6 @@ export type Database = {
             referencedRelation: "gl_connections"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "gl_column_mappings_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "gl_mapping_status"
-            referencedColumns: ["connection_id"]
-          },
         ]
       }
       gl_connections: {
@@ -404,7 +397,7 @@ export type Database = {
           column_mappings: Json
           connection_id: string
           created_at: string | null
-          enabled: boolean | null
+          enabled: boolean
           glide_table: string
           id: string
           supabase_table: string
@@ -414,7 +407,7 @@ export type Database = {
           column_mappings?: Json
           connection_id: string
           created_at?: string | null
-          enabled?: boolean | null
+          enabled?: boolean
           glide_table: string
           id?: string
           supabase_table: string
@@ -424,7 +417,7 @@ export type Database = {
           column_mappings?: Json
           connection_id?: string
           created_at?: string | null
-          enabled?: boolean | null
+          enabled?: boolean
           glide_table?: string
           id?: string
           supabase_table?: string
@@ -437,13 +430,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gl_connections"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "gl_mappings_connection_id_fkey"
-            columns: ["connection_id"]
-            isOneToOne: false
-            referencedRelation: "gl_mapping_status"
-            referencedColumns: ["connection_id"]
           },
         ]
       }
@@ -658,22 +644,7 @@ export type Database = {
           started_at?: string | null
           status?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "gl_sync_logs_mapping_id_fkey"
-            columns: ["mapping_id"]
-            isOneToOne: false
-            referencedRelation: "gl_mapping_status"
-            referencedColumns: ["mapping_id"]
-          },
-          {
-            foreignKeyName: "gl_sync_logs_mapping_id_fkey"
-            columns: ["mapping_id"]
-            isOneToOne: false
-            referencedRelation: "gl_mappings"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       gl_vendor_payments: {
         Row: {
@@ -755,7 +726,15 @@ export type Database = {
           sync_direction: string | null
           total_records: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "gl_mappings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "gl_connections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gl_recent_logs: {
         Row: {
