@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { convertValue } from '@/utils/glsync-transformers';
 
 /**
  * GlideAPI service that uses direct HTTP requests (cURL-style) instead of JSON
@@ -180,17 +180,8 @@ export class GlideAPI {
               const { supabase_column_name, data_type } = mapping as any;
               let value = row[glideColumnId];
               
-              // Apply data type conversions if needed
-              if (value !== null && value !== undefined) {
-                if (data_type === 'number' && typeof value === 'string') {
-                  value = parseFloat(value);
-                  if (isNaN(value)) value = null;
-                } else if (data_type === 'boolean' && typeof value === 'string') {
-                  value = value.toLowerCase() === 'true';
-                }
-              }
-              
-              mappedRecord[supabase_column_name] = value;
+              // Use the utility function for data conversion
+              mappedRecord[supabase_column_name] = convertValue(value, data_type);
             }
           });
           
