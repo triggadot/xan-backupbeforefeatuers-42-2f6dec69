@@ -14,7 +14,8 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
   mapping,
   status: initialStatus 
 }) => {
-  const { syncStatus } = useGlSyncStatus(mapping.id, initialStatus);
+  // Pass only the mappingId to useGlSyncStatus according to its signature
+  const { syncStatus } = useGlSyncStatus(mapping.id);
   
   const calculateProgress = () => {
     if (!syncStatus) return 0;

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './components/theme-provider';
@@ -44,6 +44,17 @@ const queryClient = new QueryClient({
   },
 });
 
+// Wrapper component for MappingsList that provides the onEdit prop
+const MappingsListWrapper = () => {
+  const navigate = useNavigate();
+  
+  const handleEditMapping = (mapping) => {
+    navigate(`/sync/mappings/${mapping.id}`);
+  };
+  
+  return <MappingsList onEdit={handleEditMapping} />;
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -72,7 +83,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     <Route path="sync" element={<SyncLayout />}>
                       <Route index element={<SyncOverview />} />
                       <Route path="connections" element={<ConnectionsList />} />
-                      <Route path="mappings" element={<MappingsList />} />
+                      <Route path="mappings" element={<MappingsListWrapper />} />
                       <Route path="mappings/:mappingId" element={<MappingDetails mappingId=":mappingId" />} />
                       <Route path="products/:mappingId" element={<ProductSync />} />
                       <Route path="logs" element={<SyncLogs />} />
