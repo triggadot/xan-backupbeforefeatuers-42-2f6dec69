@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,9 +36,10 @@ const DATA_TYPES = [
 interface CreateTableFormProps {
   onTableCreated: (tableName: string) => void;
   onCancel: () => void;
+  isCompact?: boolean;
 }
 
-export function CreateTableForm({ onTableCreated, onCancel }: CreateTableFormProps) {
+export function CreateTableForm({ onTableCreated, onCancel, isCompact = false }: CreateTableFormProps) {
   const [tableName, setTableName] = useState('gl_');
   const [columns, setColumns] = useState<ColumnDefinition[]>([...DEFAULT_COLUMNS]);
   const [newColumnName, setNewColumnName] = useState('');
@@ -141,7 +141,7 @@ export function CreateTableForm({ onTableCreated, onCancel }: CreateTableFormPro
       sql += `-- Create updated_at trigger\nCREATE TRIGGER set_updated_at\nBEFORE UPDATE ON ${tableName}\nFOR EACH ROW\nEXECUTE FUNCTION public.set_updated_at();`;
 
       // Execute the SQL query to create the table
-      const { error } = await supabase.rpc('admin_execute_sql', { sql_query: sql });
+      const { error } = await supabase.rpc('gl_admin_execute_sql' as any, { sql_query: sql });
 
       if (error) throw new Error(error.message);
 
@@ -151,6 +151,12 @@ export function CreateTableForm({ onTableCreated, onCancel }: CreateTableFormPro
       });
 
       onTableCreated(tableName);
+      
+      // Reset form
+      setTableName('gl_');
+      setColumns([...DEFAULT_COLUMNS]);
+      setNewColumnName('');
+      setNewColumnType('text');
     } catch (error) {
       console.error('Error creating table:', error);
       toast({
@@ -164,118 +170,148 @@ export function CreateTableForm({ onTableCreated, onCancel }: CreateTableFormPro
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Supabase Table</CardTitle>
-        <CardDescription>
-          Define a new table to store data from Glide. Table names should start with "gl_".
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="tableName">Table Name</Label>
-          <Input
-            id="tableName"
-            value={tableName}
-            onChange={(e) => setTableName(e.target.value)}
-            placeholder="gl_customers"
-          />
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="tableName">Table Name</Label>
+        <Input
+          id="tableName"
+          value={tableName}
+          onChange={(e) => setTableName(e.target.value)}
+          placeholder="gl_customers"
+        />
+      </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium">Columns</h3>
-          </div>
-          
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Required</TableHead>
-                <TableHead>Primary Key</TableHead>
-                <TableHead className="w-[80px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {columns.map((column, index) => (
-                <TableRow key={column.name}>
-                  <TableCell>{column.name}</TableCell>
-                  <TableCell>{column.type}</TableCell>
-                  <TableCell>{column.isNullable ? 'No' : 'Yes'}</TableCell>
-                  <TableCell>{column.isPrimary ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeColumn(index)}
-                      disabled={index < DEFAULT_COLUMNS.length}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+      {!isCompact && (
+        <>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Default Columns</h3>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Required</TableHead>
+                  <TableHead>Primary Key</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {DEFAULT_COLUMNS.map((column) => (
+                  <TableRow key={column.name}>
+                    <TableCell>{column.name}</TableCell>
+                    <TableCell>{column.type}</TableCell>
+                    <TableCell>{column.isNullable ? 'No' : 'Yes'}</TableCell>
+                    <TableCell>{column.isPrimary ? 'Yes' : 'No'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
-          <div className="grid grid-cols-12 gap-2 items-end">
-            <div className="col-span-5">
-              <Label htmlFor="newColumnName">Column Name</Label>
-              <Input
-                id="newColumnName"
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                placeholder="customer_name"
-              />
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Additional Columns</h3>
             </div>
-            <div className="col-span-5">
-              <Label htmlFor="newColumnType">Data Type</Label>
-              <Select value={newColumnType} onValueChange={setNewColumnType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DATA_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={addColumn}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add
-              </Button>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Required</TableHead>
+                  <TableHead>Primary Key</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {columns.slice(DEFAULT_COLUMNS.length).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      No additional columns defined
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  columns.slice(DEFAULT_COLUMNS.length).map((column, index) => (
+                    <TableRow key={column.name}>
+                      <TableCell>{column.name}</TableCell>
+                      <TableCell>{column.type}</TableCell>
+                      <TableCell>{column.isNullable ? 'No' : 'Yes'}</TableCell>
+                      <TableCell>{column.isPrimary ? 'Yes' : 'No'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeColumn(index + DEFAULT_COLUMNS.length)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-5">
+                <Label htmlFor="newColumnName">Column Name</Label>
+                <Input
+                  id="newColumnName"
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  placeholder="customer_name"
+                />
+              </div>
+              <div className="col-span-5">
+                <Label htmlFor="newColumnType">Data Type</Label>
+                <Select value={newColumnType} onValueChange={setNewColumnType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATA_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={addColumn}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
 
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            onClick={createTable}
-            disabled={isCreating || !tableName}
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Table'
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={createTable}
+          disabled={isCreating || !tableName}
+        >
+          {isCreating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Table'
+          )}
+        </Button>
+      </div>
+    </div>
   );
 } 

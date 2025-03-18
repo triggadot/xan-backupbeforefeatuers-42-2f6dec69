@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -15,7 +14,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
 
-const MappingDetails = ({ mappingId }: { mappingId: string }) => {
+interface MappingDetailsProps {
+  mappingId: string;
+  onBack?: () => void;
+}
+
+const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
   const [mapping, setMapping] = useState<GlMapping | null>(null);
   const [activeTab, setActiveTab] = useState('details');
   const [isLoading, setIsLoading] = useState(true);
@@ -188,7 +192,7 @@ const MappingDetails = ({ mappingId }: { mappingId: string }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => navigate('/sync/mappings')}
+              onClick={onBack ? onBack : () => navigate('/sync/mappings')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back

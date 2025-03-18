@@ -8,15 +8,17 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateTableForm } from './CreateTableForm';
+import { EditTableButton } from './EditTableButton';
 import { ColumnMappingEditor } from '@/components/sync/ColumnMappingEditor';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Database } from 'lucide-react';
 import { GlideTable } from '@/types/glsync';
 import GlideTableSelector from '@/components/sync/GlideTableSelector';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useAddMapping } from '@/hooks/useAddMapping';
+import { SupabaseTableSelector } from './SupabaseTableSelector';
 
 interface SchemaSetupDialogProps {
   open: boolean;
@@ -42,7 +44,7 @@ export function SchemaSetupDialog({
   const [isCreatingMapping, setIsCreatingMapping] = useState(false);
   
   const { toast } = useToast();
-  const { tables: supabaseTables, fetchTables } = useSupabaseTables();
+  const { tables: supabaseTables, fetchTables, isLoading: isLoadingSupabaseTables } = useSupabaseTables();
   const { fetchGlideTables, glideTables, isLoading: isLoadingGlideTables } = useGlSync();
   const { addMapping } = useAddMapping();
 
@@ -62,6 +64,15 @@ export function SchemaSetupDialog({
     });
   };
 
+  // Handle table update success
+  const handleTableUpdated = () => {
+    fetchTables(); // Refresh the tables list
+    toast({
+      title: 'Table Updated',
+      description: 'The table schema has been updated successfully'
+    });
+  };
+
   // Handle column mapping updates
   const handleColumnMappingUpdate = (updatedMapping: any) => {
     setColumnMapping(updatedMapping);
@@ -71,6 +82,15 @@ export function SchemaSetupDialog({
   const handleGlideTableChange = (tableId: string, displayName: string) => {
     setSelectedGlideTable(tableId);
     setSelectedGlideTableDisplayName(displayName);
+  };
+
+  // Handle Supabase table selection
+  const handleSupabaseTableChange = (tableName: string) => {
+    setSelectedTable(tableName);
+    setColumnMapping({
+      supabase_table: tableName,
+      column_mappings: {}
+    });
   };
 
   // Create the mapping between Glide and Supabase
@@ -132,14 +152,15 @@ export function SchemaSetupDialog({
         <DialogHeader>
           <DialogTitle>Setup Table Mapping</DialogTitle>
           <DialogDescription>
-            Create a new Supabase table or define column mappings for an existing table
+            Create, edit, or map tables for synchronization with Glide
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-2">
+          <TabsList className="grid grid-cols-3">
             <TabsTrigger value="create-table">Create Table</TabsTrigger>
-            <TabsTrigger value="column-mapping">Column Mapping</TabsTrigger>
+            <TabsTrigger value="edit-table">Edit Table</TabsTrigger>
+            <TabsTrigger value="column-mapping">Map Columns</TabsTrigger>
           </TabsList>
 
           <TabsContent value="create-table" className="space-y-4 pt-4">
@@ -147,6 +168,10 @@ export function SchemaSetupDialog({
               onTableCreated={handleTableCreated}
               onCancel={() => onOpenChange(false)}
             />
+          </TabsContent>
+
+          <TabsContent value="edit-table" className="space-y-4 pt-4">
+            <EditTableButton onTableUpdated={handleTableUpdated} />
           </TabsContent>
 
           <TabsContent value="column-mapping" className="space-y-6 pt-4">
@@ -163,24 +188,15 @@ export function SchemaSetupDialog({
               </div>
               <div>
                 <h3 className="text-sm font-medium mb-2">Supabase Table</h3>
-                <select
-                  className="w-full h-10 px-3 py-2 text-sm rounded-md border border-input bg-background"
+                <SupabaseTableSelector
+                  tables={supabaseTables}
                   value={selectedTable}
-                  onChange={(e) => {
-                    setSelectedTable(e.target.value);
-                    setColumnMapping({
-                      supabase_table: e.target.value,
-                      column_mappings: {}
-                    });
-                  }}
-                >
-                  <option value="">Select a table</option>
-                  {supabaseTables.map((table: any) => (
-                    <option key={table.table_name} value={table.table_name}>
-                      {table.table_name}
-                    </option>
-                  ))}
-                </select>
+                  onTableChange={handleSupabaseTableChange}
+                  onCreateTableSuccess={handleTableCreated}
+                  isLoading={isLoadingSupabaseTables}
+                  placeholder="Select a Supabase table"
+                  filterPrefix="gl_"
+                />
               </div>
             </div>
 
@@ -207,7 +223,10 @@ export function SchemaSetupDialog({
                     Creating Mapping...
                   </>
                 ) : (
-                  'Create Mapping'
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    Create Mapping
+                  </>
                 )}
               </Button>
             </div>
