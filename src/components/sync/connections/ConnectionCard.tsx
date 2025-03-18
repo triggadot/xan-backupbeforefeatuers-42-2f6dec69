@@ -13,11 +13,6 @@ interface ConnectionCardProps {
   isTestingConnection: boolean;
 }
 
-export const formatDate = (dateString: string | null) => {
-  if (!dateString) return 'Never';
-  return new Date(dateString).toLocaleString();
-};
-
 const ConnectionCard = ({ 
   connection, 
   onEdit, 
