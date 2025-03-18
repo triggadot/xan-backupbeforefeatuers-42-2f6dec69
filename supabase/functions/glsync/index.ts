@@ -1,24 +1,23 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-
-// Define response headers with CORS support
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders, handleCors, jsonResponse, errorResponse } from "../shared/cors.ts"
+import { 
+  testGlideConnection, 
+  listGlideTables, 
+  getGlideTableColumns,
+  fetchGlideTableData,
+  sendGlideMutations
+} from "../shared/glide-api.ts"
 
 // Define rate limiting parameters
-const MAX_RETRIES = 3
-const RETRY_DELAY_MS = 1000
 const MAX_BATCH_SIZE = 450 // Keep under 500 limit for safety
 
 // Handle API requests
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
 
   try {
     // Get Supabase client
@@ -42,10 +41,7 @@ serve(async (req) => {
 
     if (logError) {
       console.error('Error creating sync log:', logError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to create sync log' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+      return errorResponse('Failed to create sync log')
     }
 
     const logId = logData.id
@@ -59,10 +55,7 @@ serve(async (req) => {
 
     if (connectionError || !connection) {
       await updateSyncLog(supabase, logId, 'failed', 'Connection not found')
-      return new Response(
-        JSON.stringify({ error: 'Connection not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
+      return errorResponse('Connection not found', 404)
     }
 
     // Get mapping details if a mapping ID is provided
@@ -76,10 +69,7 @@ serve(async (req) => {
 
       if (mappingError || !mappingData) {
         await updateSyncLog(supabase, logId, 'failed', 'Mapping not found')
-        return new Response(
-          JSON.stringify({ error: 'Mapping not found' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-        )
+        return errorResponse('Mapping not found', 404)
       }
       mapping = mappingData
     }
@@ -96,37 +86,25 @@ serve(async (req) => {
       case 'getColumnMappings':
         if (!tableId) {
           await updateSyncLog(supabase, logId, 'failed', 'Table ID is required for getColumnMappings')
-          return new Response(
-            JSON.stringify({ error: 'Table ID is required for getColumnMappings' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          )
+          return errorResponse('Table ID is required for getColumnMappings', 400)
         }
         result = await getGlideTableColumns(connection.api_key, connection.app_id, tableId)
         break
       case 'syncData':
         if (!mapping) {
           await updateSyncLog(supabase, logId, 'failed', 'Mapping is required for syncData')
-          return new Response(
-            JSON.stringify({ error: 'Mapping is required for syncData' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          )
+          return errorResponse('Mapping is required for syncData', 400)
         }
         result = await syncGlideData(supabase, connection, mapping, logId)
         break
       default:
         await updateSyncLog(supabase, logId, 'failed', `Invalid action: ${action}`)
-        return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
+        return errorResponse('Invalid action', 400)
     }
 
     if (result.error) {
       await updateSyncLog(supabase, logId, 'failed', result.error)
-      return new Response(
-        JSON.stringify({ error: result.error }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+      return errorResponse(result.error)
     }
 
     // Update sync log with success status
@@ -143,16 +121,10 @@ serve(async (req) => {
     }
 
     // Return the result
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse(result)
   } catch (error) {
     console.error('Unexpected error:', error)
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    return errorResponse('Internal server error')
   }
 })
 
@@ -181,118 +153,6 @@ async function updateSyncLog(
     .from('gl_sync_logs')
     .update(updateData)
     .eq('id', logId)
-}
-
-// Function to test Glide API connection
-async function testGlideConnection(apiKey: string, appId: string) {
-  try {
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        appID: appId,
-        queries: [{ limit: 1 }]
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      return {
-        error: `Failed to connect to Glide API: ${response.status} ${response.statusText}`,
-        details: errorData
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    return { error: `Error connecting to Glide API: ${error.message}` }
-  }
-}
-
-// Function to list tables from a Glide app
-async function listGlideTables(apiKey: string, appId: string) {
-  try {
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        appID: appId,
-        queries: [{ limit: 1 }]
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      return {
-        error: `Failed to fetch Glide tables: ${response.status} ${response.statusText}`,
-        details: errorData
-      }
-    }
-
-    const data = await response.json()
-    
-    // Extract table names from the response
-    // Note: This is a simplified approach, the actual implementation might require examining
-    // the query structure differently depending on the Glide API response format
-    const tableNames = Object.keys(data)
-      .filter(key => Array.isArray(data[key]) && data[key].length > 0)
-    
-    return { tables: tableNames }
-  } catch (error) {
-    return { error: `Error fetching Glide tables: ${error.message}` }
-  }
-}
-
-// Function to get column metadata for a Glide table
-async function getGlideTableColumns(apiKey: string, appId: string, tableId: string) {
-  try {
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        appID: appId,
-        queries: [{ 
-          tableName: tableId,
-          limit: 1 
-        }]
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      return {
-        error: `Failed to fetch Glide table schema: ${response.status} ${response.statusText}`,
-        details: errorData
-      }
-    }
-
-    const data = await response.json()
-    
-    if (!data || !data[0] || !data[0].rows || !data[0].rows[0]) {
-      return { error: 'No data returned from Glide table' }
-    }
-    
-    // Extract column names from the first record
-    const sampleRecord = data[0].rows[0]
-    const columns = Object.keys(sampleRecord).map(key => ({
-      id: key,
-      name: key,
-      type: typeof sampleRecord[key]
-    }))
-    
-    return { columns }
-  } catch (error) {
-    return { error: `Error fetching Glide table columns: ${error.message}` }
-  }
 }
 
 // Function to handle data synchronization between Glide and Supabase
@@ -372,7 +232,6 @@ async function pushFromSupabaseToGlide(
   try {
     // Get all records from the Supabase table
     // For this implementation, we'll focus on recently updated records
-    // In a more comprehensive implementation, we would track changes with a "last_synced_at" timestamp
     const { data: records, error } = await supabase
       .from(supabase_table)
       .select('*')
@@ -459,8 +318,6 @@ async function pushFromSupabaseToGlide(
           const { glide_column_id, data_type } = reverseColumnMappings[supabaseColumn];
           
           // Transform value based on data type if needed
-          // Note: For Glide, we may not need to transform values in the same way,
-          // but this ensures consistency
           if (value !== null && value !== undefined) {
             // For dates, ensure they're in ISO format
             if (data_type === 'date-time' && value instanceof Date) {
@@ -581,35 +438,6 @@ async function pushFromSupabaseToGlide(
       recordsProcessed: totalRecordsProcessed,
       failedRecords: totalFailedRecords + 1
     };
-  }
-}
-
-// Helper function to send mutations to Glide
-async function sendGlideMutations(apiKey: string, appId: string, mutations: any[]) {
-  try {
-    const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        appID: appId,
-        mutations
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Glide API error:', errorText);
-      return { error: `Glide API error: ${response.status} ${response.statusText}` };
-    }
-    
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error sending mutations to Glide:', error);
-    return { error: `Error sending mutations to Glide: ${error.message}` };
   }
 }
 
@@ -930,7 +758,7 @@ async function syncProductsFromGlide(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', connection.id);
+    .eq('id', mapping.connection_id);
   
   // Get the errors for this sync
   const { data: errors } = await supabase
@@ -1102,145 +930,7 @@ async function pullFromGlideToSupabase(
   await supabase
     .from('gl_connections')
     .update({ last_sync: new Date().toISOString() })
-    .eq('id', connection.id);
+    .eq('id', mapping.connection_id);
   
   return { success: true, recordsProcessed: totalRecordsProcessed };
-}
-
-// Function to fetch data from a Glide table with pagination
-async function fetchGlideTableData(
-  apiKey: string,
-  appId: string,
-  tableName: string,
-  continuationToken: string | null
-) {
-  let retries = 0;
-  let success = false;
-  let lastError = null;
-  let result = null;
-  
-  // Implement retry logic with exponential backoff
-  while (!success && retries < MAX_RETRIES) {
-    try {
-      const query: any = { tableName };
-      
-      if (continuationToken) {
-        query.startAt = continuationToken;
-      }
-      
-      console.log(`Fetching Glide data for table: ${tableName}, continuation: ${continuationToken ? 'yes' : 'no'}`);
-      
-      const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          appID: appId,
-          queries: [query]
-        })
-      });
-      
-      if (response.status === 429) {
-        // Rate limited, wait and retry
-        const retryAfter = response.headers.get('retry-after') || 
-                          (RETRY_DELAY_MS * Math.pow(2, retries)) / 1000;
-        
-        await new Promise(resolve => 
-          setTimeout(resolve, parseInt(retryAfter as string) * 1000 || RETRY_DELAY_MS * Math.pow(2, retries))
-        );
-        retries++;
-        continue;
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Glide API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Log the entire response for debugging
-      console.log(`Glide response structure: ${JSON.stringify(Object.keys(data))}`);
-      
-      // Handle different formats of Glide API responses
-      if (data && Array.isArray(data) && data.length > 0) {
-        const tableData = data[0];
-        
-        // Check if rows array exists directly
-        if (tableData.rows && Array.isArray(tableData.rows)) {
-          result = { 
-            rows: tableData.rows,
-            next: tableData.next || null
-          };
-        }
-        // Sometimes Glide returns a direct array without the rows property
-        else if (Array.isArray(tableData)) {
-          result = {
-            rows: tableData,
-            next: data.next || null
-          };
-        }
-        // Handle case where data is returned in a property matching the table name
-        else if (tableData[tableName] && Array.isArray(tableData[tableName])) {
-          result = {
-            rows: tableData[tableName],
-            next: tableData.next || null
-          };
-        }
-        // Fallback for other response formats
-        else {
-          // Look for the first array in the response
-          for (const key of Object.keys(tableData)) {
-            if (Array.isArray(tableData[key]) && key !== 'next') {
-              result = {
-                rows: tableData[key],
-                next: tableData.next || null
-              };
-              break;
-            }
-          }
-          
-          // If still no array found, try to extract from the data
-          if (!result) {
-            result = {
-              rows: Array.isArray(Object.values(tableData)[0]) ? Object.values(tableData)[0] : [],
-              next: tableData.next || null
-            };
-          }
-        }
-      } else {
-        // If no data returned, return empty result
-        result = { rows: [], next: null };
-      }
-      
-      // Log the extracted rows
-      console.log(`Extracted ${result.rows.length} rows, next token: ${result.next ? 'exists' : 'none'}`);
-      
-      // Do a final check to ensure rows is always an array
-      if (!Array.isArray(result.rows)) {
-        console.warn('Expected rows to be an array, got:', typeof result.rows);
-        result.rows = [];
-      }
-      
-      success = true;
-    } catch (error) {
-      console.error(`Error fetching Glide data (attempt ${retries + 1}):`, error);
-      lastError = error;
-      retries++;
-      
-      if (retries < MAX_RETRIES) {
-        await new Promise(resolve => 
-          setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, retries))
-        );
-      }
-    }
-  }
-  
-  if (!success) {
-    return { error: `Failed to fetch data after ${MAX_RETRIES} retries: ${lastError?.message}` };
-  }
-  
-  return result;
 }
