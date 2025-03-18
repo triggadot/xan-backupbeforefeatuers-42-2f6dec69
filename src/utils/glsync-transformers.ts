@@ -1,30 +1,31 @@
 
-import { GlColumnMapping, GlProduct, GlSyncRecord } from '@/types/glsync';
+import { GlMapping, GlProduct, ProductSyncResult, GlSyncRecord } from "@/types/glsync";
 
 /**
- * Transform a value based on its data type
+ * Transforms Glide column values to appropriate data types for Supabase
  */
-export const transformValue = (
-  value: any, 
-  dataType: string
-): any | null => {
-  if (value === null || value === undefined) {
+export function transformGlideValue(value: any, dataType: string): any {
+  if (value === undefined || value === null) {
     return null;
   }
 
   try {
     switch (dataType) {
       case 'number':
-        return typeof value === 'string' ? parseFloat(value) : value;
+        if (typeof value === 'string') {
+          const num = parseFloat(value);
+          return isNaN(num) ? null : num;
+        }
+        return typeof value === 'number' ? value : null;
       
       case 'boolean':
         if (typeof value === 'boolean') return value;
         if (typeof value === 'string') {
-          const lowerValue = value.toLowerCase();
-          if (lowerValue === 'true' || lowerValue === 'yes' || lowerValue === '1') return true;
-          if (lowerValue === 'false' || lowerValue === 'no' || lowerValue === '0') return false;
+          const lowered = value.toLowerCase();
+          if (lowered === 'true' || lowered === 'yes' || lowered === '1') return true;
+          if (lowered === 'false' || lowered === 'no' || lowered === '0') return false;
         }
-        return Boolean(value);
+        return null;
       
       case 'date-time':
         if (value instanceof Date) return value.toISOString();
@@ -34,10 +35,11 @@ export const transformValue = (
         }
         return null;
       
+      // For strings, image-uri, and email-address, we just ensure they're strings
       case 'string':
       case 'image-uri':
       case 'email-address':
-        return String(value);
+        return value === null ? null : String(value);
       
       default:
         return value;
@@ -46,37 +48,114 @@ export const transformValue = (
     console.error(`Error transforming value ${value} to ${dataType}:`, error);
     return null;
   }
-};
+}
 
 /**
- * Transform Glide product data to Supabase format 
+ * Validates a value against the expected data type
  */
-export const transformGlideToSupabaseProduct = (
-  glideProduct: Record<string, any>,
-  columnMappings: Record<string, GlColumnMapping>
-): { product: GlProduct; errors: GlSyncRecord[] } => {
-  const product: GlProduct = {
-    glide_row_id: glideProduct.id || glideProduct.rowId || '',
-  };
-  
-  const errors: GlSyncRecord[] = [];
-  
-  // Process each mapped column
-  Object.entries(columnMappings).forEach(([glideColumnId, mapping]) => {
-    try {
-      const glideValue = glideProduct[glideColumnId];
-      
-      if (glideValue !== undefined) {
-        const transformedValue = transformValue(glideValue, mapping.data_type);
-        product[mapping.supabase_column_name as keyof GlProduct] = transformedValue;
+export function validateGlideValue(value: any, dataType: string): boolean {
+  if (value === null || value === undefined) {
+    return true; // Null values are allowed for now
+  }
+
+  switch (dataType) {
+    case 'number':
+      return typeof value === 'number' && !isNaN(value);
+    
+    case 'boolean':
+      return typeof value === 'boolean';
+    
+    case 'date-time':
+      if (value instanceof Date) return !isNaN(value.getTime());
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        return !isNaN(date.getTime());
       }
+      return false;
+    
+    case 'string':
+      return typeof value === 'string';
+    
+    case 'image-uri':
+      return typeof value === 'string' && 
+        (value.startsWith('http://') || value.startsWith('https://'));
+    
+    case 'email-address':
+      return typeof value === 'string' && 
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    
+    default:
+      return true;
+  }
+}
+
+/**
+ * Transforms a Glide record to a Supabase product
+ */
+export function transformGlideToProduct(
+  glideRecord: Record<string, any>,
+  mapping: GlMapping,
+  existingErrors: GlSyncRecord[] = []
+): { product: GlProduct | null; errors: GlSyncRecord[] } {
+  if (!glideRecord || !mapping) {
+    return { 
+      product: null, 
+      errors: [{
+        type: 'VALIDATION_ERROR',
+        message: 'Missing record or mapping data',
+        timestamp: new Date().toISOString(),
+        retryable: false
+      }]
+    };
+  }
+
+  const errors: GlSyncRecord[] = [...existingErrors];
+  const product: GlProduct = {
+    glide_row_id: glideRecord.id || glideRecord.rowId || '',
+  };
+
+  // Apply column mappings
+  Object.entries(mapping.column_mappings).forEach(([glideColumnId, mappingObj]) => {
+    try {
+      const glideValue = glideRecord[glideColumnId];
+      
+      // Skip undefined values
+      if (glideValue === undefined) {
+        return;
+      }
+      
+      // Transform the value based on the data type
+      const transformedValue = transformGlideValue(glideValue, mappingObj.data_type);
+      
+      // Validate the transformed value
+      if (!validateGlideValue(transformedValue, mappingObj.data_type)) {
+        errors.push({
+          type: 'VALIDATION_ERROR',
+          message: `Invalid value for ${mappingObj.glide_column_name} (${mappingObj.data_type})`,
+          record: { 
+            glideColumn: glideColumnId, 
+            glide_column_name: mappingObj.glide_column_name,
+            supabaseColumn: mappingObj.supabase_column_name, 
+            value: glideValue, 
+            expected: mappingObj.data_type 
+          },
+          timestamp: new Date().toISOString(),
+          retryable: false
+        });
+        return;
+      }
+      
+      // Set the value in the product object
+      product[mappingObj.supabase_column_name as keyof GlProduct] = transformedValue;
+      
     } catch (error) {
       errors.push({
         type: 'TRANSFORM_ERROR',
-        message: `Error transforming field ${mapping.glide_column_name} to ${mapping.supabase_column_name}: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Error transforming column ${glideColumnId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         record: { 
-          glide_column: mapping.glide_column_name, 
-          value: glideProduct[glideColumnId] 
+          glideColumn: glideColumnId, 
+          supabaseColumn: mappingObj.supabase_column_name, 
+          value: glideRecord[glideColumnId] 
         },
         timestamp: new Date().toISOString(),
         retryable: false
@@ -84,85 +163,34 @@ export const transformGlideToSupabaseProduct = (
     }
   });
 
-  return {
-    product,
-    errors
-  };
-};
-
-/**
- * Validate a product record
- */
-export const validateProduct = (product: GlProduct): GlSyncRecord[] => {
-  const errors: GlSyncRecord[] = [];
-  
-  // Check required fields
+  // If we don't have a valid glide_row_id, we can't proceed
   if (!product.glide_row_id) {
     errors.push({
       type: 'VALIDATION_ERROR',
-      message: 'Missing required field: glide_row_id',
-      record: product,
+      message: 'Missing required glide_row_id',
+      record: glideRecord,
       timestamp: new Date().toISOString(),
       retryable: false
     });
+    return { product: null, errors };
   }
-  
-  // Validate numeric fields
-  if (product.cost !== null && product.cost !== undefined) {
-    if (isNaN(product.cost as number)) {
-      errors.push({
-        type: 'VALIDATION_ERROR',
-        message: 'Invalid cost value: must be a number',
-        record: { field: 'cost', value: product.cost },
-        timestamp: new Date().toISOString(),
-        retryable: false
-      });
-    }
-  }
-  
-  if (product.total_qty_purchased !== null && product.total_qty_purchased !== undefined) {
-    if (isNaN(product.total_qty_purchased as number)) {
-      errors.push({
-        type: 'VALIDATION_ERROR',
-        message: 'Invalid total_qty_purchased value: must be a number',
-        record: { field: 'total_qty_purchased', value: product.total_qty_purchased },
-        timestamp: new Date().toISOString(),
-        retryable: false
-      });
-    }
-  }
-  
-  // Validate date fields
-  const dateFields = ['po_po_date', 'product_purchase_date', 'date_timestamp_subm'];
-  dateFields.forEach(field => {
-    const value = product[field as keyof GlProduct];
-    if (value !== null && value !== undefined) {
-      const date = new Date(value as string);
-      if (isNaN(date.getTime())) {
-        errors.push({
-          type: 'VALIDATION_ERROR',
-          message: `Invalid ${field} value: must be a valid date`,
-          record: { field, value },
-          timestamp: new Date().toISOString(),
-          retryable: false
-        });
-      }
-    }
-  });
-  
-  return errors;
-};
 
-export const transformColumnMappings = (columnMappings: any) => {
-  if (!columnMappings) return {};
-  
-  return Object.entries(columnMappings).reduce((acc, [key, value]) => {
-    acc[key] = {
-      glideColumn: value.glideColumn || value.glide_column_name,
-      supabaseColumn: value.supabaseColumn || value.supabase_column_name,
-      dataType: value.dataType || value.data_type || 'text',
-      direction: value.direction || 'both'
-    };
-    return acc;
-  }, {} as Record<string, any>);
-};
+  return { product, errors };
+}
+
+/**
+ * Process sync results and format errors
+ */
+export function processSyncResult(
+  result: any,
+  recordsProcessed: number,
+  errors: GlSyncRecord[]
+): ProductSyncResult {
+  return {
+    total_records: recordsProcessed + errors.length,
+    processed_records: recordsProcessed,
+    failed_records: errors.length,
+    error_records: errors.length > 0 ? errors : undefined,
+    success: errors.length === 0 && result?.error === undefined
+  };
+}

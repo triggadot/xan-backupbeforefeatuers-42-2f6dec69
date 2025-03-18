@@ -1,14 +1,17 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeftRight, ArrowLeft, ArrowRight, Database } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { GlMapping } from '@/types/glsync';
 import SyncProductsButton from './SyncProductsButton';
+import ProductSyncPanel from './ProductSyncPanel';
 
 interface MappingDetailsCardProps {
   mapping: GlMapping;
-  connectionName: string;
+  connectionName?: string | null;
   onSyncComplete?: () => void;
 }
 
@@ -17,90 +20,88 @@ const MappingDetailsCard: React.FC<MappingDetailsCardProps> = ({
   connectionName,
   onSyncComplete 
 }) => {
-  // Helper function to get the sync direction icon
-  const getSyncDirectionIcon = () => {
-    switch (mapping.sync_direction) {
+  const getDirectionBadge = (direction: string) => {
+    switch (direction) {
       case 'to_supabase':
-        return <ArrowRight className="h-5 w-5" />;
+        return <Badge>Glide → Supabase</Badge>;
       case 'to_glide':
-        return <ArrowLeft className="h-5 w-5" />;
+        return <Badge>Supabase → Glide</Badge>;
       case 'both':
-        return <ArrowLeftRight className="h-5 w-5" />;
+        return <Badge>Bidirectional</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{direction}</Badge>;
     }
   };
 
-  // Helper function to get the sync direction text
-  const getSyncDirectionText = () => {
-    switch (mapping.sync_direction) {
-      case 'to_supabase':
-        return 'Glide → Supabase';
-      case 'to_glide':
-        return 'Supabase → Glide';
-      case 'both':
-        return 'Bidirectional';
-      default:
-        return 'Unknown';
-    }
-  };
+  const columnCount = Object.keys(mapping.column_mappings).length;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              {mapping.glide_table_display_name || mapping.glide_table}
-            </CardTitle>
-            <CardDescription>{connectionName}</CardDescription>
-          </div>
-          {mapping.enabled ? (
-            <Badge className="bg-green-500">Enabled</Badge>
-          ) : (
-            <Badge variant="outline">Disabled</Badge>
-          )}
-        </div>
-      </CardHeader>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="md:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Mapping Details</CardTitle>
+            <CardDescription>{connectionName || 'Glide App'}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium">Status</h3>
+                <div className="flex items-center justify-between mt-1">
+                  <Label htmlFor="mapping-enabled">Enabled</Label>
+                  <Switch 
+                    id="mapping-enabled" 
+                    checked={mapping.enabled}
+                    disabled
+                  />
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <h3 className="text-sm font-medium">Glide Table</h3>
+                <p className="text-sm text-gray-500 mt-1">{mapping.glide_table_display_name || mapping.glide_table}</p>
+                <p className="text-xs text-gray-400 mt-1">ID: {mapping.glide_table}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium">Supabase Table</h3>
+                <p className="text-sm text-gray-500 mt-1">{mapping.supabase_table}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium">Direction</h3>
+                <div className="mt-1">
+                  {getDirectionBadge(mapping.sync_direction)}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium">Mapped Columns</h3>
+                <p className="text-sm text-gray-500 mt-1">{columnCount} columns mapped</p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <SyncProductsButton 
+                  mapping={mapping}
+                  onSyncComplete={onSyncComplete}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
-      <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-medium mb-1">Glide Table</h4>
-              <p className="text-sm text-gray-500">{mapping.glide_table}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium mb-1">Supabase Table</h4>
-              <p className="text-sm text-gray-500">{mapping.supabase_table}</p>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-sm font-medium mb-1">Sync Direction</h4>
-            <div className="flex items-center">
-              {getSyncDirectionIcon()}
-              <p className="text-sm text-gray-500 ml-2">{getSyncDirectionText()}</p>
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-sm font-medium mb-1">Column Mappings</h4>
-            <p className="text-sm text-gray-500">
-              {Object.keys(mapping.column_mappings).length} columns mapped
-            </p>
-          </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter>
-        <SyncProductsButton 
-          mapping={mapping} 
+      <div className="md:col-span-2">
+        <ProductSyncPanel
+          mapping={mapping}
           onSyncComplete={onSyncComplete}
         />
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 

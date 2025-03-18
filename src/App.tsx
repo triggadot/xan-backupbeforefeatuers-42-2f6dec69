@@ -1,84 +1,67 @@
 
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/components/theme-provider';
-
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
 import Dashboard from '@/pages/Dashboard';
+import Auth from '@/pages/Auth';
+import NotFound from '@/pages/NotFound';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Accounts from '@/pages/Accounts';
 import AccountDetail from '@/pages/AccountDetail';
-import Auth from '@/pages/Auth';
-import Index from '@/pages/Index';
-import NotFound from '@/pages/NotFound';
 import Sync from '@/pages/Sync';
 import ProductSync from '@/pages/ProductSync';
 
-import './App.css';
+// Create a client
+const queryClient = new QueryClient();
 
-function App() {
+const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <ThemeProvider defaultTheme="light" storageKey="app-theme">
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<Index />} />
-          <Route path="/" element={<Layout />}>
-            <Route
-              path="/dashboard"
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light" storageKey="ui-theme">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route 
+              path="/accounts" 
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Layout><Accounts /></Layout>
                 </ProtectedRoute>
-              }
+              } 
             />
-            <Route
-              path="/accounts"
+            <Route 
+              path="/accounts/:id" 
               element={
                 <ProtectedRoute>
-                  <Accounts />
+                  <Layout><AccountDetail /></Layout>
                 </ProtectedRoute>
-              }
+              } 
             />
-            <Route
-              path="/accounts/:id"
+            <Route 
+              path="/sync" 
               element={
                 <ProtectedRoute>
-                  <AccountDetail />
+                  <Layout><Sync /></Layout>
                 </ProtectedRoute>
-              }
+              } 
             />
-            <Route
-              path="/sync/:tab"
+            <Route 
+              path="/sync/products/:mappingId" 
               element={
                 <ProtectedRoute>
-                  <Sync />
+                  <Layout><ProductSync /></Layout>
                 </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sync"
-              element={
-                <ProtectedRoute>
-                  <Sync />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sync/products/:mappingId"
-              element={
-                <ProtectedRoute>
-                  <ProductSync />
-                </ProtectedRoute>
-              }
+              } 
             />
             <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-        <Toaster />
+          </Routes>
+        </BrowserRouter>
       </ThemeProvider>
-    </BrowserRouter>
+    </QueryClientProvider>
   );
-}
+};
 
 export default App;

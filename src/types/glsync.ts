@@ -101,7 +101,7 @@ export interface GlProduct {
   updated_at?: string;
 }
 
-// New interface for sync error records
+// Interface for sync error records
 export interface GlSyncRecord {
   type: 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR';
   message: string;

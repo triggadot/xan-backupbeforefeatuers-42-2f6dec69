@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -309,7 +310,9 @@ export const glSyncApi = {
       
       if (error) throw new Error(error.message);
       
-      return (data || []).map(record => ({
+      if (!data) return [];
+      
+      return data.map((record: any) => ({
         type: record.error_type,
         message: record.error_message,
         record: record.record_data,

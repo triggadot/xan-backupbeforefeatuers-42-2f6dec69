@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
@@ -316,6 +315,7 @@ async function syncGlideData(supabase: any, connection: any, mapping: any, logId
           connection.app_id,
           glide_table,
           column_mappings,
+          mapping.id,
           logId
         )
       } else {
@@ -344,6 +344,7 @@ async function syncProductsFromGlide(
   appId: string,
   glideTable: string,
   columnMappings: Record<string, any>,
+  mappingId: string,
   logId: string
 ) {
   let continuationToken = null
@@ -351,6 +352,13 @@ async function syncProductsFromGlide(
   let totalFailedRecords = 0
   let hasMore = true
   let errorRecords: any[] = []
+  
+  // Clear existing errors for this sync run
+  await supabase
+    .from('gl_sync_errors')
+    .delete()
+    .eq('mapping_id', mappingId)
+    .is('resolved_at', null)
   
   // Loop until we have processed all data
   while (hasMore) {
@@ -367,7 +375,19 @@ async function syncProductsFromGlide(
     const glideData = await fetchGlideTableData(apiKey, appId, glideTable, continuationToken)
     
     if (glideData.error) {
-      return { error: glideData.error }
+      // Record the API error
+      await supabase.rpc('gl_record_sync_error', {
+        p_mapping_id: mappingId,
+        p_error_type: 'API_ERROR',
+        p_error_message: glideData.error,
+        p_retryable: true
+      })
+      
+      return { 
+        error: glideData.error,
+        recordsProcessed: totalRecordsProcessed,
+        failedRecords: totalFailedRecords + 1
+      }
     }
     
     const { rows, next } = glideData
@@ -376,28 +396,187 @@ async function syncProductsFromGlide(
       break
     }
     
+    console.log(`Processing ${rows.length} records from Glide`)
+    
     // Transform the data using the column mappings and perform validation
     const transformedRecords = []
     
     for (const row of rows) {
-      const { product, errors } = transformGlideToSupabaseProduct(row, columnMappings)
-      
-      if (errors.length > 0) {
-        totalFailedRecords += 1
-        errorRecords = [...errorRecords, ...errors]
-        continue
+      try {
+        const product = {
+          glide_row_id: row.id || row.rowId || '',
+        }
+        
+        // Flag to track if we encountered any errors for this record
+        let hasErrors = false
+        
+        // Apply column mappings
+        Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
+          try {
+            const glideColumnName = mapping.glide_column_name
+            const supabaseColumnName = mapping.supabase_column_name
+            const dataType = mapping.data_type
+            let value = row[glideColumnId]
+            
+            // Skip undefined values
+            if (value === undefined) {
+              return
+            }
+            
+            // Transform value based on data type
+            switch (dataType) {
+              case 'number':
+                if (typeof value === 'string') {
+                  const num = parseFloat(value)
+                  if (isNaN(num)) {
+                    hasErrors = true
+                    recordValidationError(supabase, mappingId, 'Invalid number format', {
+                      glideColumnId,
+                      glideColumnName,
+                      supabaseColumnName,
+                      value,
+                      rowId: product.glide_row_id
+                    })
+                    totalFailedRecords++
+                    return
+                  }
+                  value = num
+                } else if (typeof value !== 'number') {
+                  hasErrors = true
+                  recordValidationError(supabase, mappingId, 'Expected number value', {
+                    glideColumnId,
+                    glideColumnName,
+                    supabaseColumnName,
+                    value,
+                    rowId: product.glide_row_id
+                  })
+                  totalFailedRecords++
+                  return
+                }
+                break
+                
+              case 'boolean':
+                if (typeof value === 'string') {
+                  const lowered = value.toLowerCase()
+                  if (lowered === 'true' || lowered === 'yes' || lowered === '1') {
+                    value = true
+                  } else if (lowered === 'false' || lowered === 'no' || lowered === '0') {
+                    value = false
+                  } else {
+                    hasErrors = true
+                    recordValidationError(supabase, mappingId, 'Invalid boolean value', {
+                      glideColumnId,
+                      glideColumnName,
+                      supabaseColumnName,
+                      value,
+                      rowId: product.glide_row_id
+                    })
+                    totalFailedRecords++
+                    return
+                  }
+                } else if (typeof value !== 'boolean') {
+                  hasErrors = true
+                  recordValidationError(supabase, mappingId, 'Expected boolean value', {
+                    glideColumnId,
+                    glideColumnName,
+                    supabaseColumnName,
+                    value,
+                    rowId: product.glide_row_id
+                  })
+                  totalFailedRecords++
+                  return
+                }
+                break
+                
+              case 'date-time':
+                if (value instanceof Date) {
+                  value = value.toISOString()
+                } else if (typeof value === 'string') {
+                  const date = new Date(value)
+                  if (isNaN(date.getTime())) {
+                    hasErrors = true
+                    recordValidationError(supabase, mappingId, 'Invalid date format', {
+                      glideColumnId,
+                      glideColumnName,
+                      supabaseColumnName,
+                      value,
+                      rowId: product.glide_row_id
+                    })
+                    totalFailedRecords++
+                    return
+                  }
+                  value = date.toISOString()
+                } else {
+                  hasErrors = true
+                  recordValidationError(supabase, mappingId, 'Expected date value', {
+                    glideColumnId,
+                    glideColumnName,
+                    supabaseColumnName,
+                    value,
+                    rowId: product.glide_row_id
+                  })
+                  totalFailedRecords++
+                  return
+                }
+                break
+              
+              // For strings and other types, basic validation
+              case 'string':
+              case 'image-uri':
+              case 'email-address':
+                value = value === null ? null : String(value)
+                
+                // Additional validation for specific types
+                if (dataType === 'image-uri' && value && 
+                    !(value.startsWith('http://') || value.startsWith('https://'))) {
+                  // Just log a warning, don't fail the record
+                  console.warn(`Warning: Invalid image URI format for ${glideColumnName}: ${value}`)
+                }
+                
+                if (dataType === 'email-address' && value && 
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                  // Just log a warning, don't fail the record
+                  console.warn(`Warning: Invalid email format for ${glideColumnName}: ${value}`)
+                }
+                break
+            }
+            
+            // Set the value in the product object if no errors
+            if (!hasErrors) {
+              product[supabaseColumnName] = value
+            }
+            
+          } catch (error) {
+            hasErrors = true
+            recordTransformError(supabase, mappingId, 
+              `Error transforming column ${glideColumnId}: ${error.message}`, {
+              glideColumnId,
+              glideColumnName: mapping.glide_column_name,
+              supabaseColumnName: mapping.supabase_column_name,
+              value: row[glideColumnId],
+              rowId: product.glide_row_id
+            })
+            totalFailedRecords++
+          }
+        })
+        
+        // If no errors and we have a valid product, add it to the batch
+        if (!hasErrors && product.glide_row_id) {
+          transformedRecords.push(product)
+        } else if (!product.glide_row_id) {
+          recordValidationError(supabase, mappingId, 'Missing required glide_row_id', {
+            rowData: row
+          })
+          totalFailedRecords++
+        }
+        
+      } catch (error) {
+        recordTransformError(supabase, mappingId, 
+          `Unexpected error processing record: ${error.message}`, {
+          rowData: row
+        })
+        totalFailedRecords++
       }
-      
-      // Additional validation
-      const validationErrors = validateProduct(product)
-      
-      if (validationErrors.length > 0) {
-        totalFailedRecords += 1
-        errorRecords = [...errorRecords, ...validationErrors]
-        continue
-      }
-      
-      transformedRecords.push(product)
     }
     
     // Insert or update the data in Supabase
@@ -406,22 +585,41 @@ async function syncProductsFromGlide(
       
       if (batch.length === 0) continue
       
-      // Upsert data to Supabase
-      const { error } = await supabase
-        .from('gl_products')
-        .upsert(batch, { onConflict: 'glide_row_id' })
-      
-      if (error) {
-        totalFailedRecords += batch.length
-        errorRecords.push({
-          type: 'API_ERROR',
-          message: `Error upserting data to Supabase: ${error.message}`,
-          record: null,
-          timestamp: new Date().toISOString(),
-          retryable: false
+      try {
+        // Upsert data to Supabase
+        const { error } = await supabase
+          .from('gl_products')
+          .upsert(batch, { onConflict: 'glide_row_id' })
+        
+        if (error) {
+          console.error('Error upserting batch to Supabase:', error)
+          
+          // Record the error
+          await supabase.rpc('gl_record_sync_error', {
+            p_mapping_id: mappingId,
+            p_error_type: 'API_ERROR',
+            p_error_message: `Error upserting data to Supabase: ${error.message}`,
+            p_record_data: { batchSize: batch.length },
+            p_retryable: true
+          })
+          
+          totalFailedRecords += batch.length
+        } else {
+          totalRecordsProcessed += batch.length
+        }
+      } catch (error) {
+        console.error('Unexpected error during upsert:', error)
+        
+        // Record the error
+        await supabase.rpc('gl_record_sync_error', {
+          p_mapping_id: mappingId,
+          p_error_type: 'API_ERROR',
+          p_error_message: `Unexpected error during upsert: ${error.message}`,
+          p_record_data: { batchSize: batch.length },
+          p_retryable: true
         })
-      } else {
-        totalRecordsProcessed += batch.length
+        
+        totalFailedRecords += batch.length
       }
     }
     
@@ -441,106 +639,75 @@ async function syncProductsFromGlide(
     .update({ last_sync: new Date().toISOString() })
     .eq('id', connection.id)
   
-  // Store sync results with errors
+  // Get the errors for this sync
+  const { data: errors } = await supabase
+    .from('gl_sync_errors')
+    .select('*')
+    .eq('mapping_id', mappingId)
+    .is('resolved_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  
+  // Convert to the expected format for frontend
+  const formattedErrors = (errors || []).map(error => ({
+    type: error.error_type,
+    message: error.error_message,
+    record: error.record_data,
+    timestamp: error.created_at,
+    retryable: error.retryable
+  }))
+  
+  // Store sync results
   const syncResult = {
     success: totalFailedRecords === 0,
     recordsProcessed: totalRecordsProcessed,
     failedRecords: totalFailedRecords,
-    errors: errorRecords.length > 20 ? errorRecords.slice(0, 20) : errorRecords // Limit error records
+    errors: formattedErrors
   }
   
   return syncResult
 }
 
-// Function to transform a product record for validation
-function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Record<string, any>) {
-  const product: any = {
-    glide_row_id: glideRecord.id || glideRecord.rowId || '',
+// Helper function to record validation errors
+async function recordValidationError(
+  supabase: any,
+  mappingId: string,
+  message: string,
+  recordData: any,
+  retryable: boolean = false
+) {
+  try {
+    await supabase.rpc('gl_record_sync_error', {
+      p_mapping_id: mappingId,
+      p_error_type: 'VALIDATION_ERROR',
+      p_error_message: message,
+      p_record_data: recordData,
+      p_retryable: retryable
+    })
+  } catch (error) {
+    console.error('Error recording validation error:', error)
   }
-  
-  const errors: any[] = []
-  
-  // Apply column mappings with the new structure
-  Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
-    try {
-      const glideColumnName = mapping.glide_column_name;
-      const supabaseColumnName = mapping.supabase_column_name;
-      let value = glideRecord[glideColumnId];
-      
-      // Skip undefined values
-      if (value === undefined) {
-        return;
-      }
-      
-      // Basic type handling
-      if (typeof value === 'string' && !isNaN(Number(value)) && 
-          (supabaseColumnName.includes('_qty_') || supabaseColumnName === 'cost')) {
-        value = Number(value);
-      }
-      
-      // Handle boolean values
-      if (typeof value === 'string' && (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') && 
-          (supabaseColumnName.includes('samples') || supabaseColumnName.includes('fronted') || 
-           supabaseColumnName.includes('miscellaneous'))) {
-        value = value.toLowerCase() === 'true';
-      }
-      
-      product[supabaseColumnName] = value;
-    } catch (error) {
-      errors.push({
-        type: 'TRANSFORM_ERROR',
-        message: `Error transforming column ${glideColumnId} to ${mapping.supabase_column_name}: ${error.message}`,
-        record: { glideColumn: glideColumnId, supabaseColumn: mapping.supabase_column_name, value: glideRecord[glideColumnId] },
-        timestamp: new Date().toISOString(),
-        retryable: false
-      });
-    }
-  });
-  
-  return { product, errors };
 }
 
-// Basic validation for a product record
-function validateProduct(product: any) {
-  const errors: any[] = []
-  
-  // Check for required glide_row_id
-  if (!product.glide_row_id) {
-    errors.push({
-      type: 'VALIDATION_ERROR',
-      message: 'Missing required glide_row_id',
-      record: product,
-      timestamp: new Date().toISOString(),
-      retryable: false
+// Helper function to record transform errors
+async function recordTransformError(
+  supabase: any,
+  mappingId: string,
+  message: string,
+  recordData: any,
+  retryable: boolean = false
+) {
+  try {
+    await supabase.rpc('gl_record_sync_error', {
+      p_mapping_id: mappingId,
+      p_error_type: 'TRANSFORM_ERROR',
+      p_error_message: message,
+      p_record_data: recordData,
+      p_retryable: retryable
     })
+  } catch (error) {
+    console.error('Error recording transform error:', error)
   }
-  
-  // Validate numeric fields if present
-  if (product.cost !== undefined && product.cost !== null) {
-    if (isNaN(Number(product.cost))) {
-      errors.push({
-        type: 'VALIDATION_ERROR',
-        message: 'Invalid cost value',
-        record: { field: 'cost', value: product.cost },
-        timestamp: new Date().toISOString(),
-        retryable: false
-      })
-    }
-  }
-  
-  if (product.total_qty_purchased !== undefined && product.total_qty_purchased !== null) {
-    if (isNaN(Number(product.total_qty_purchased))) {
-      errors.push({
-        type: 'VALIDATION_ERROR',
-        message: 'Invalid total_qty_purchased value',
-        record: { field: 'total_qty_purchased', value: product.total_qty_purchased },
-        timestamp: new Date().toISOString(),
-        retryable: false
-      })
-    }
-  }
-  
-  return errors
 }
 
 // Function to pull data from Glide to Supabase

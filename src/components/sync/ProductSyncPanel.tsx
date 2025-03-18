@@ -123,7 +123,7 @@ const ProductSyncPanel: React.FC<ProductSyncPanelProps> = ({ mapping, onSyncComp
               
               {syncResult.errors && syncResult.errors.length > 0 && (
                 <SyncErrorDisplay 
-                  errors={syncResult.errors} 
+                  syncErrors={syncResult.errors} 
                   className="mt-4"
                 />
               )}

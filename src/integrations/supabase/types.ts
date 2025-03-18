@@ -608,6 +608,64 @@ export type Database = {
         }
         Relationships: []
       }
+      gl_sync_errors: {
+        Row: {
+          created_at: string | null
+          error_message: string
+          error_type: string
+          id: string
+          mapping_id: string | null
+          record_data: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          retryable: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message: string
+          error_type: string
+          id?: string
+          mapping_id?: string | null
+          record_data?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          retryable?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          mapping_id?: string | null
+          record_data?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          retryable?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gl_sync_errors_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "gl_mapping_status"
+            referencedColumns: ["mapping_id"]
+          },
+          {
+            foreignKeyName: "gl_sync_errors_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "gl_mappings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gl_sync_errors_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "gl_product_sync_stats"
+            referencedColumns: ["mapping_id"]
+          },
+        ]
+      }
       gl_sync_logs: {
         Row: {
           completed_at: string | null
@@ -1067,6 +1125,29 @@ export type Database = {
           },
         ]
       }
+      gl_product_sync_stats: {
+        Row: {
+          app_name: string | null
+          connection_id: string | null
+          error_count: number | null
+          glide_table: string | null
+          glide_table_display_name: string | null
+          last_sync_time: string | null
+          mapping_id: string | null
+          supabase_table: string | null
+          sync_direction: string | null
+          total_products: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gl_mappings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "gl_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gl_recent_logs: {
         Row: {
           app_name: string | null
@@ -1108,6 +1189,34 @@ export type Database = {
           column_name: string
           data_type: string
         }[]
+      }
+      gl_get_sync_errors: {
+        Args: {
+          p_mapping_id: string
+          p_limit?: number
+          p_include_resolved?: boolean
+        }
+        Returns: {
+          created_at: string | null
+          error_message: string
+          error_type: string
+          id: string
+          mapping_id: string | null
+          record_data: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          retryable: boolean | null
+        }[]
+      }
+      gl_record_sync_error: {
+        Args: {
+          p_mapping_id: string
+          p_error_type: string
+          p_error_message: string
+          p_record_data?: Json
+          p_retryable?: boolean
+        }
+        Returns: string
       }
       xdelo_log_message_operation: {
         Args: {

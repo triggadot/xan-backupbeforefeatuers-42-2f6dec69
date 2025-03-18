@@ -31,12 +31,14 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     queryKey: ['glsync-mapping', mappingId],
     queryFn: () => glSyncApi.getMapping(mappingId!),
     enabled: !!mappingId,
-    onError: (error: any) => {
-      toast({
-        title: 'Error fetching mapping',
-        description: error.message,
-        variant: 'destructive',
-      });
+    meta: {
+      onError: (error: any) => {
+        toast({
+          title: 'Error fetching mapping',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     }
   });
 
@@ -44,12 +46,14 @@ const ProductSync: React.FC<ProductSyncProps> = () => {
     queryKey: ['glsync-connection', mapping?.connection_id],
     queryFn: () => glSyncApi.getConnection(mapping?.connection_id!),
     enabled: !!mapping?.connection_id,
-    onError: (error: any) => {
-      toast({
-        title: 'Error fetching connection',
-        description: error.message,
-        variant: 'destructive',
-      });
+    meta: {
+      onError: (error: any) => {
+        toast({
+          title: 'Error fetching connection',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     }
   });
 
