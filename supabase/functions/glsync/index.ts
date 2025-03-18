@@ -463,7 +463,7 @@ function transformGlideToSupabaseProduct(glideRecord: any, columnMappings: Recor
   // Apply column mappings
   Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
     try {
-      const glideColumnName = mapping.glide_column_id;
+      const glideColumnName = mapping.glide_column_name;
       const supabaseColumnName = mapping.supabase_column_name;
       let value = glideRecord[glideColumnId];
       
@@ -550,7 +550,7 @@ async function pullFromGlideToSupabase(
   appId: string,
   glideTable: string,
   supabaseTable: string,
-  columnMappings: any, // Use the column mappings stored in gl_mappings
+  columnMappings: Record<string, any>,
   logId: string
 ) {
   let continuationToken = null
@@ -587,7 +587,7 @@ async function pullFromGlideToSupabase(
         glide_row_id: row.id || row.rowId, // Ensure we capture the Glide row ID
       }
       
-      // Apply column mappings from the new structure
+      // Apply column mappings from the JSONB structure
       Object.entries(columnMappings).forEach(([glideColumnId, mapping]: [string, any]) => {
         if (row[glideColumnId] !== undefined) {
           transformedRow[mapping.supabase_column_name] = row[glideColumnId]

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react';
+import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRightLeft, ArrowRight, ArrowLeft, ToggleLeft, ToggleRight, Layers } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -26,6 +26,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -38,9 +44,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { glSyncApi } from '@/services/glsync';
-import { GlConnection, GlMapping, GlideTable } from '@/types/glsync';
+import { GlConnection, GlMapping, GlideTable, GlColumnMapping } from '@/types/glsync';
 import { supabase } from '@/integrations/supabase/client';
 import { GlideTableSelector } from './GlideTableSelector';
+import { ColumnMappingEditor } from './ColumnMappingEditor';
 
 const MappingsManager = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);
@@ -51,6 +58,8 @@ const MappingsManager = () => {
   const [supabaseTables, setSupabaseTables] = useState<string[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [availableGlideColumns, setAvailableGlideColumns] = useState<Array<{ id: string; name: string; type?: string }>>([]);
+  const [activeTab, setActiveTab] = useState('general');
   const [newMapping, setNewMapping] = useState<Partial<GlMapping>>({
     connection_id: '',
     glide_table: '',
@@ -198,21 +207,33 @@ const MappingsManager = () => {
       try {
         const result = await glSyncApi.getGlideTableColumns(selectedConnection, tableId);
         if ('columns' in result) {
+          // Store available columns for the column mapping editor
+          setAvailableGlideColumns(result.columns.map(col => ({
+            id: col.id,
+            name: col.name,
+            type: col.type
+          })));
+          
           // Automatically create initial column mappings based on column names
-          const initialColumnMappings = {};
+          const initialColumnMappings: Record<string, GlColumnMapping> = {};
           result.columns.forEach(column => {
             initialColumnMappings[column.id] = {
-              glide_column_id: column.id,
               glide_column_name: column.name,
               supabase_column_name: column.name.toLowerCase().replace(/\s+/g, '_'),
-              data_type: typeof column.type === 'string' ? column.type : 'string'
+              data_type: typeof column.type === 'string' ? 
+                (column.type as 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address') : 
+                'string'
             };
           });
           
           if (editMapping) {
+            // For edit, only add new mappings that don't exist yet
             setEditMapping({
               ...editMapping,
-              column_mappings: initialColumnMappings,
+              column_mappings: {
+                ...initialColumnMappings,
+                ...editMapping.column_mappings
+              },
             });
           } else {
             setNewMapping({
@@ -237,6 +258,20 @@ const MappingsManager = () => {
       setNewMapping({
         ...newMapping,
         supabase_table: value,
+      });
+    }
+  };
+
+  const handleColumnMappingsChange = (columnMappings: Record<string, GlColumnMapping>) => {
+    if (editMapping) {
+      setEditMapping({
+        ...editMapping,
+        column_mappings: columnMappings,
+      });
+    } else {
+      setNewMapping({
+        ...newMapping,
+        column_mappings: columnMappings,
       });
     }
   };
@@ -364,6 +399,10 @@ const MappingsManager = () => {
     return connection?.app_name || 'Unnamed App';
   };
 
+  const countColumnMappings = (columnMappings: Record<string, any>) => {
+    return Object.keys(columnMappings).length;
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -374,7 +413,12 @@ const MappingsManager = () => {
             Refresh
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (open) {
+              setActiveTab('general');
+            }
+          }}>
             <DialogTrigger asChild>
               <Button onClick={() => {
                 setEditMapping(null);
@@ -388,12 +432,13 @@ const MappingsManager = () => {
                   enabled: true,
                 });
                 setSelectedConnection('');
+                setAvailableGlideColumns([]);
               }}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 New Mapping
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
                   {editMapping ? 'Edit Mapping' : 'Create New Mapping'}
@@ -403,129 +448,152 @@ const MappingsManager = () => {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="connection">Connection <span className="text-red-500">*</span></Label>
-                  <Select
-                    value={editMapping?.connection_id || newMapping.connection_id || ''}
-                    onValueChange={handleConnectionChange}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="general">General Settings</TabsTrigger>
+                  <TabsTrigger 
+                    value="column-mappings"
+                    disabled={!newMapping.supabase_table && !editMapping?.supabase_table}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a connection" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Connections</SelectLabel>
-                        {connections.map((connection) => (
-                          <SelectItem key={connection.id} value={connection.id}>
-                            {connection.app_name || 'Unnamed App'}
+                    Column Mappings
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="general" className="py-4">
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="connection">Connection <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={editMapping?.connection_id || newMapping.connection_id || ''}
+                        onValueChange={handleConnectionChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a connection" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Connections</SelectLabel>
+                            {connections.map((connection) => (
+                              <SelectItem key={connection.id} value={connection.id}>
+                                {connection.app_name || 'Unnamed App'}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="glide_table">Glide Table <span className="text-red-500">*</span></Label>
+                      <GlideTableSelector
+                        tables={glideTables}
+                        value={editMapping?.glide_table || newMapping.glide_table || ''}
+                        onTableChange={handleGlideTableChange}
+                        onAddTable={handleAddGlideTable}
+                        disabled={isLoadingTables || !selectedConnection}
+                        isLoading={isLoadingTables}
+                        placeholder={isLoadingTables ? 'Loading...' : 'Select a Glide table'}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="supabase_table">Supabase Table <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={editMapping?.supabase_table || newMapping.supabase_table || ''}
+                        onValueChange={handleSupabaseTableChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a Supabase table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Supabase Tables</SelectLabel>
+                            {supabaseTables.map((table) => (
+                              <SelectItem key={table} value={table}>
+                                {table}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="sync_direction">Sync Direction</Label>
+                      <Select
+                        value={editMapping?.sync_direction || newMapping.sync_direction || 'to_supabase'}
+                        onValueChange={(value: 'to_supabase' | 'to_glide' | 'both') => {
+                          if (editMapping) {
+                            setEditMapping({
+                              ...editMapping,
+                              sync_direction: value,
+                            });
+                          } else {
+                            setNewMapping({
+                              ...newMapping,
+                              sync_direction: value,
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="to_supabase">
+                            <div className="flex items-center">
+                              <ArrowRight className="h-4 w-4 mr-2" />
+                              Glide to Supabase
+                            </div>
                           </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="glide_table">Glide Table <span className="text-red-500">*</span></Label>
-                  <GlideTableSelector
-                    tables={glideTables}
-                    value={editMapping?.glide_table || newMapping.glide_table || ''}
-                    onTableChange={handleGlideTableChange}
-                    onAddTable={handleAddGlideTable}
-                    disabled={isLoadingTables || !selectedConnection}
-                    isLoading={isLoadingTables}
-                    placeholder={isLoadingTables ? 'Loading...' : 'Select a Glide table'}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="supabase_table">Supabase Table <span className="text-red-500">*</span></Label>
-                  <Select
-                    value={editMapping?.supabase_table || newMapping.supabase_table || ''}
-                    onValueChange={handleSupabaseTableChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a Supabase table" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Supabase Tables</SelectLabel>
-                        {supabaseTables.map((table) => (
-                          <SelectItem key={table} value={table}>
-                            {table}
+                          <SelectItem value="to_glide">
+                            <div className="flex items-center">
+                              <ArrowLeft className="h-4 w-4 mr-2" />
+                              Supabase to Glide
+                            </div>
                           </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+                          <SelectItem value="both">
+                            <div className="flex items-center">
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Bidirectional
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="enabled">Enabled</Label>
+                      <Switch
+                        id="enabled"
+                        checked={editMapping?.enabled ?? newMapping.enabled ?? true}
+                        onCheckedChange={(checked) => {
+                          if (editMapping) {
+                            setEditMapping({
+                              ...editMapping,
+                              enabled: checked,
+                            });
+                          } else {
+                            setNewMapping({
+                              ...newMapping,
+                              enabled: checked,
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
                 
-                <div className="grid gap-2">
-                  <Label htmlFor="sync_direction">Sync Direction</Label>
-                  <Select
-                    value={editMapping?.sync_direction || newMapping.sync_direction || 'to_supabase'}
-                    onValueChange={(value: 'to_supabase' | 'to_glide' | 'both') => {
-                      if (editMapping) {
-                        setEditMapping({
-                          ...editMapping,
-                          sync_direction: value,
-                        });
-                      } else {
-                        setNewMapping({
-                          ...newMapping,
-                          sync_direction: value,
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="to_supabase">
-                        <div className="flex items-center">
-                          <ArrowRight className="h-4 w-4 mr-2" />
-                          Glide to Supabase
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="to_glide">
-                        <div className="flex items-center">
-                          <ArrowLeft className="h-4 w-4 mr-2" />
-                          Supabase to Glide
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="both">
-                        <div className="flex items-center">
-                          <ArrowRightLeft className="h-4 w-4 mr-2" />
-                          Bidirectional
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="enabled">Enabled</Label>
-                  <Switch
-                    id="enabled"
-                    checked={editMapping?.enabled ?? newMapping.enabled ?? true}
-                    onCheckedChange={(checked) => {
-                      if (editMapping) {
-                        setEditMapping({
-                          ...editMapping,
-                          enabled: checked,
-                        });
-                      } else {
-                        setNewMapping({
-                          ...newMapping,
-                          enabled: checked,
-                        });
-                      }
-                    }}
+                <TabsContent value="column-mappings" className="py-4">
+                  <ColumnMappingEditor 
+                    value={editMapping?.column_mappings || newMapping.column_mappings || {}}
+                    onChange={handleColumnMappingsChange}
+                    supabaseTable={editMapping?.supabase_table || newMapping.supabase_table || ''}
+                    availableGlideColumns={availableGlideColumns}
                   />
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
               
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -585,6 +653,11 @@ const MappingsManager = () => {
                     </span>
                     <span>{mapping.supabase_table}</span>
                   </div>
+                  
+                  <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                    <Layers className="h-4 w-4 mr-1" />
+                    <span>{countColumnMappings(mapping.column_mappings)} column mappings</span>
+                  </div>
                 </div>
                 
                 <div className="flex space-x-2 mt-4 md:mt-0">
@@ -606,7 +679,14 @@ const MappingsManager = () => {
                     )}
                   </Button>
                   
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                    setIsDialogOpen(open);
+                    if (open) {
+                      setActiveTab('general');
+                    } else {
+                      setEditMapping(null);
+                    }
+                  }}>
                     <DialogTrigger asChild>
                       <Button 
                         variant="outline" 
@@ -615,6 +695,14 @@ const MappingsManager = () => {
                           setEditMapping(mapping);
                           setSelectedConnection(mapping.connection_id);
                           fetchGlideTables(mapping.connection_id);
+                          
+                          // Convert column mappings to available columns for the editor if needed
+                          const columns = Object.entries(mapping.column_mappings).map(([id, col]) => ({
+                            id,
+                            name: col.glide_column_name,
+                            type: col.data_type
+                          }));
+                          setAvailableGlideColumns(columns);
                         }}
                       >
                         <Edit className="h-4 w-4 mr-2" />

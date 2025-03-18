@@ -15,14 +15,13 @@ export interface GlMapping {
   glide_table: string;
   glide_table_display_name: string;
   supabase_table: string;
-  column_mappings: Record<string, string>;
+  column_mappings: Record<string, GlColumnMapping>;
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
   enabled: boolean;
   created_at: string | null;
 }
 
 export interface GlColumnMapping {
-  glide_column_id: string;
   glide_column_name: string;
   supabase_column_name: string;
   data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
