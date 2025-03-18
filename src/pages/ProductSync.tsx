@@ -23,7 +23,7 @@ const ProductSync = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { syncErrors, refreshErrors } = useGlSyncErrors(mappingId);
-  const { syncStatus, refreshStatus } = useGlSyncStatus(mappingId);
+  const { syncStatus, syncStats, refreshData } = useGlSyncStatus(mappingId);
   const { syncLogs, refreshLogs, isLoading: isLoadingLogs } = useGlSyncLogs(mappingId);
   const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
   
@@ -57,7 +57,7 @@ const ProductSync = () => {
   const handleSyncComplete = () => {
     refetch();
     refreshErrors();
-    refreshStatus();
+    refreshData();
     refreshLogs();
   };
 
@@ -139,9 +139,11 @@ const ProductSync = () => {
           />
           
           <SyncDetailsPanel 
-            status={syncStatus}
+            syncStatus={syncStatus}
             logs={syncLogs}
-            isLoadingLogs={isLoadingLogs}
+            isLoading={isLoadingLogs}
+            onRefresh={refreshData}
+            syncStats={syncStats}
           />
         </div>
         

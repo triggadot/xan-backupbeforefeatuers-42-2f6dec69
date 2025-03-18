@@ -6,19 +6,22 @@ import { SyncStatusDisplay } from './SyncStatusDisplay';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlSyncStatus, GlSyncLog } from '@/types/glsync';
+import SyncMetricsCard from './SyncMetricsCard';
 
 interface SyncDetailsPanelProps {
   syncStatus: GlSyncStatus | null;
-  syncLogs: GlSyncLog[];
+  logs: GlSyncLog[];
   isLoading: boolean;
   onRefresh: () => void;
+  syncStats?: any[];
 }
 
 export function SyncDetailsPanel({ 
   syncStatus, 
-  syncLogs, 
+  logs, 
   isLoading, 
-  onRefresh 
+  onRefresh,
+  syncStats = []
 }: SyncDetailsPanelProps) {
   return (
     <div className="space-y-6">
@@ -35,12 +38,16 @@ export function SyncDetailsPanel({
         </CardContent>
       </Card>
       
+      {syncStats && syncStats.length > 0 && (
+        <SyncMetricsCard syncStats={syncStats} isLoading={isLoading} />
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Sync History</CardTitle>
         </CardHeader>
         <CardContent>
-          <SyncLogsTable logs={syncLogs} isLoading={isLoading} />
+          <SyncLogsTable logs={logs} isLoading={isLoading} />
         </CardContent>
       </Card>
     </div>

@@ -69,7 +69,25 @@ export function useGlSyncStatus(mappingId?: string) {
           .limit(5);
         
         if (error) throw new Error(error.message);
-        setRecentLogs(data || []);
+        
+        // Convert the logs to GlRecentLog format
+        const formattedLogs: GlRecentLog[] = (data || []).map(log => {
+          // If we have a specific mapping ID, get the mapping info to fill in the GlRecentLog fields
+          return {
+            id: log.id,
+            status: log.status,
+            message: log.message,
+            records_processed: log.records_processed,
+            started_at: log.started_at,
+            glide_table: syncStatus?.glide_table || null,
+            glide_table_display_name: syncStatus?.glide_table_display_name || null,
+            supabase_table: syncStatus?.supabase_table || null,
+            app_name: syncStatus?.app_name || null,
+            sync_direction: syncStatus?.sync_direction || null
+          };
+        });
+        
+        setRecentLogs(formattedLogs);
       } else {
         // Fetch global recent logs
         const { data, error } = await supabase
@@ -89,37 +107,23 @@ export function useGlSyncStatus(mappingId?: string) {
         variant: 'destructive',
       });
     }
-  }, [mappingId, toast]);
+  }, [mappingId, syncStatus, toast]);
 
   const fetchSyncStats = useCallback(async (): Promise<void> => {
     try {
-      if (mappingId) {
-        // Fetch stats for a specific mapping
-        const { data, error } = await supabase
-          .from('gl_sync_stats')
-          .select('*')
-          .eq('mapping_id', mappingId)
-          .order('sync_date', { ascending: false })
-          .limit(7);
-        
-        if (error) throw new Error(error.message);
-        setSyncStats(data || []);
-      } else {
-        // Fetch global stats
-        const { data, error } = await supabase
-          .from('gl_sync_stats')
-          .select('*')
-          .order('sync_date', { ascending: false })
-          .limit(7);
-        
-        if (error) throw new Error(error.message);
-        setSyncStats(data || []);
-      }
+      const { data, error } = await supabase
+        .from('gl_sync_stats')
+        .select('*')
+        .order('sync_date', { ascending: false })
+        .limit(7);
+      
+      if (error) throw new Error(error.message);
+      setSyncStats(data || []);
     } catch (error) {
       console.error('Error fetching sync stats:', error);
       // Don't show a toast for stats errors - less critical
     }
-  }, [mappingId, toast]);
+  }, []);
 
   const refreshData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
