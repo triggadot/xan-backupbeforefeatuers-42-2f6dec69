@@ -2,15 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface Connection {
-  id: string;
-  app_name: string;
-  app_id: string;
-}
+import { GlConnection } from '@/types/glsync';
 
 export function useConnections() {
-  const [connections, setConnections] = useState<Connection[]>([]);
+  const [connections, setConnections] = useState<GlConnection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -21,7 +16,7 @@ export function useConnections() {
     try {
       const { data, error } = await supabase
         .from('gl_connections')
-        .select('id, app_name, app_id')
+        .select('id, app_name, app_id, api_key, last_sync, created_at, status, settings')
         .order('app_name', { ascending: true });
       
       if (error) throw error;
@@ -42,7 +37,7 @@ export function useConnections() {
 
   useEffect(() => {
     fetchConnections();
-  }, []);
+  }, [fetchConnections]);
 
   return { connections, isLoading, fetchConnections };
 }
