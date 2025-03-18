@@ -8,7 +8,7 @@ import MappingView from '@/pages/MappingView';
 import DataManagement from '@/pages/DataManagement';
 import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster as ToastComponent } from '@/components/ui/toaster';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +37,7 @@ const App: React.FC = () => {
             </Route>
           </Routes>
         </BrowserRouter>
-        <Toaster />
+        <ToastComponent />
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -1,11 +1,20 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search } from "lucide-react";
 import { GlideTable } from '@/types/glsync';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+// Interface for table objects that might have different property names
+interface TableLike {
+  id?: string;
+  tableId?: string;
+  table_id?: string;
+  displayName?: string;
+  display_name?: string;
+  name?: string;
+}
 
 interface GlideTableSelectorProps {
   tables: GlideTable[];
@@ -30,15 +39,45 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   const [newTableName, setNewTableName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddTable, setShowAddTable] = useState(false);
+  const [normalizedTables, setNormalizedTables] = useState<GlideTable[]>([]);
 
-  // Filter tables based on search term
-  const filteredTables = tables.filter(table => 
-    table.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.id.toLowerCase().includes(searchTerm.toLowerCase())
+  // Normalize tables to ensure they have the expected structure
+  useEffect(() => {
+    if (!tables) {
+      setNormalizedTables([]);
+      return;
+    }
+
+    const normalized = tables
+      .filter(table => table) // Filter out null/undefined tables
+      .map(table => {
+        // Handle different possible formats of table data
+        if (typeof table === 'string') {
+          return { id: table, displayName: table };
+        }
+        
+        // Ensure the table has id and displayName properties
+        const tableObj = table as TableLike; // Cast to TableLike for flexible property access
+        return {
+          id: tableObj.id || tableObj.tableId || tableObj.table_id || '',
+          displayName: tableObj.displayName || tableObj.display_name || tableObj.name || tableObj.id || ''
+        };
+      })
+      .filter(table => table.id); // Filter out tables with no id
+    
+    setNormalizedTables(normalized);
+  }, [tables]);
+
+  // Filter tables based on search term with null/undefined checks
+  const filteredTables = normalizedTables.filter(table => 
+    table.displayName && (
+      table.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      table.id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const handleTableChange = (tableId: string) => {
-    const selectedTable = tables.find(t => t.id === tableId);
+    const selectedTable = normalizedTables.find(t => t.id === tableId);
     if (selectedTable) {
       onTableChange(selectedTable.id, selectedTable.displayName);
     }
