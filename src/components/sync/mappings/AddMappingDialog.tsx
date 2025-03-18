@@ -42,21 +42,29 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   onOpenChange,
   onSuccess 
 }) => {
+  // State management
   const [connections, setConnections] = useState<Connection[]>([]);
   const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
   const [supabaseTables, setSupabaseTables] = useState<SupabaseTable[]>([]);
+  
+  // Loading states
   const [isLoadingConnections, setIsLoadingConnections] = useState(false);
   const [isLoadingGlideTables, setIsLoadingGlideTables] = useState(false);
   const [isLoadingSupabaseTables, setIsLoadingSupabaseTables] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form state
   const [selectedConnection, setSelectedConnection] = useState<string>('');
   const [selectedGlideTable, setSelectedGlideTable] = useState<string>('');
   const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState<string>('');
   const [selectedSupabaseTable, setSelectedSupabaseTable] = useState<string>('');
   const [syncDirection, setSyncDirection] = useState<string>('to_supabase');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Hooks
   const { toast } = useToast();
   const { fetchGlideTables } = useGlSync();
-
+  
+  // Only fetch data when the dialog is opened
   useEffect(() => {
     if (open) {
       fetchConnections();
@@ -65,6 +73,8 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   }, [open]);
 
   const fetchConnections = async () => {
+    if (connections.length > 0) return; // Don't fetch if we already have connections
+    
     setIsLoadingConnections(true);
     try {
       const { data, error } = await supabase
@@ -90,7 +100,6 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     if (!connectionId) return;
     
     setIsLoadingGlideTables(true);
-    setGlideTables([]);
     
     try {
       const result = await fetchGlideTables(connectionId);
@@ -119,6 +128,8 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   };
 
   const fetchSupabaseTables = async () => {
+    if (supabaseTables.length > 0) return; // Don't fetch if we already have tables
+    
     setIsLoadingSupabaseTables(true);
     try {
       const { data, error } = await supabase
@@ -154,6 +165,10 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     if (selectedTable) {
       setSelectedGlideTableDisplayName(selectedTable.display_name);
     }
+  };
+
+  const handleSupabaseTableChange = (value: string) => {
+    setSelectedSupabaseTable(value);
   };
 
   const handleSubmit = async () => {
@@ -199,6 +214,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
       
       onSuccess();
       resetForm();
+      onOpenChange(false); // Close the dialog after successful submission
     } catch (error) {
       console.error('Error adding mapping:', error);
       toast({
@@ -212,21 +228,16 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
   };
 
   const resetForm = () => {
+    // Only reset the form values, not the fetched data
     setSelectedConnection('');
     setSelectedGlideTable('');
     setSelectedGlideTableDisplayName('');
     setSelectedSupabaseTable('');
     setSyncDirection('to_supabase');
-    setGlideTables([]);
-  };
-
-  const handleDialogClose = (open: boolean) => {
-    if (!open) resetForm();
-    onOpenChange(open);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add Table Mapping</DialogTitle>
@@ -288,7 +299,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
             <Label htmlFor="supabaseTable">Supabase Table</Label>
             <Select
               value={selectedSupabaseTable}
-              onValueChange={setSelectedSupabaseTable}
+              onValueChange={handleSupabaseTableChange}
               disabled={isLoadingSupabaseTables || supabaseTables.length === 0}
             >
               <SelectTrigger>
