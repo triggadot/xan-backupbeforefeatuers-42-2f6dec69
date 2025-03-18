@@ -81,7 +81,7 @@ export function useGlSync() {
     }
   };
 
-  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
+  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -89,6 +89,7 @@ export function useGlSync() {
       // Use syncData action instead of retryFailedSync since that's not a valid action type
       const { data, error } = await glSyncApi.callSyncFunction({
         action: "syncData",  // Changed from "retryFailedSync" to "syncData"
+        connectionId,
         mappingId,
       });
 
