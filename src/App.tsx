@@ -3,14 +3,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import Dashboard from '@/pages/Dashboard';
-import SyncLayout from '@/components/sync/SyncLayout';
-import SyncOverview from '@/components/sync/overview/SyncOverview';
-import ConnectionsList from '@/components/sync/connections/ConnectionsList';
-import MappingsList from '@/components/sync/mappings/MappingsList';
-import MappingDetails from '@/components/sync/mappings/MappingDetails';
-import SyncLogs from '@/components/sync/logs/SyncLogs';
+import Sync from '@/pages/Sync';
+import ProductSync from '@/pages/ProductSync';
 import { ThemeProvider } from '@/components/theme-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,17 +26,15 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
-              
-              <Route path="sync" element={<SyncLayout />}>
-                <Route index element={<SyncOverview />} />
-                <Route path="connections" element={<ConnectionsList />} />
-                <Route path="mappings" element={<MappingsList />} />
-                <Route path="mappings/:id" element={<MappingDetails />} />
-                <Route path="logs" element={<SyncLogs />} />
+              <Route path="sync" element={<Sync />}>
+                <Route index element={<Sync />} />
+                <Route path=":tab" element={<Sync />} />
               </Route>
+              <Route path="sync/products/:mappingId" element={<ProductSync />} />
             </Route>
           </Routes>
         </BrowserRouter>
+        <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   );

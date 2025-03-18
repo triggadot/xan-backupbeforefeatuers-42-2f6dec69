@@ -1,81 +1,51 @@
-
 import React from 'react';
-import { Bell, HelpCircle, LogOut, Search, Settings, User } from 'lucide-react';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { NavLink } from 'react-router-dom';
+import { ModeToggle } from '@/components/mode-toggle';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthProvider';
-import { useNavigate } from 'react-router-dom';
+import { Home, Settings, RefreshCw } from 'lucide-react';
 
 const Navbar: React.FC = () => {
-  const { signOut, user } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/auth');
-  };
-
   return (
-    <header className="h-16 border-b bg-card backdrop-blur-sm z-30 sticky top-0 flex items-center px-4 md:px-6">
-      <SidebarTrigger />
-      
-      <div className="hidden md:flex md:flex-1 items-center gap-4 ml-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search..."
-            className="w-full bg-background pl-8 h-9 rounded-md border border-input text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 hidden md:flex">
+          <NavLink to="/" className="mr-6 flex items-center space-x-2">
+            <RefreshCw className="h-5 w-5" />
+            <span className="hidden font-bold sm:inline-block">
+              Glide Sync
+            </span>
+          </NavLink>
+          <nav className="flex items-center space-x-6 text-sm font-medium">
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                isActive
+                  ? "text-foreground"
+                  : "text-foreground/60 transition-colors hover:text-foreground"
+              }
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/sync"
+              className={({ isActive }) =>
+                isActive
+                  ? "text-foreground"
+                  : "text-foreground/60 transition-colors hover:text-foreground"
+              }
+            >
+              Sync
+            </NavLink>
+          </nav>
         </div>
-      </div>
-      
-      <div className="flex items-center gap-2 md:gap-4">
-        <Button variant="ghost" size="icon" className="hover-lift">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-        </Button>
-        
-        <Button variant="ghost" size="icon" className="hover-lift">
-          <HelpCircle className="h-5 w-5" />
-          <span className="sr-only">Help</span>
-        </Button>
-        
-        <Button variant="ghost" size="icon" className="hover-lift">
-          <Settings className="h-5 w-5" />
-          <span className="sr-only">Settings</span>
-        </Button>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full hover-lift">
-              <User className="h-5 w-5" />
-              <span className="sr-only">User menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 glass">
-            <DropdownMenuLabel>
-              {user?.email || 'My Account'}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Billing</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            {/* Mobile menu if needed */}
+          </div>
+          <nav className="flex items-center">
+            <ModeToggle />
+          </nav>
+        </div>
       </div>
     </header>
   );

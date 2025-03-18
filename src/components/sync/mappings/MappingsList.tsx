@@ -1,24 +1,31 @@
-import React, { useState, useEffect } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, RefreshCw, Edit, Trash2, ArrowRight, ToggleLeft, ToggleRight, ExternalLink } from 'lucide-react';
+import { PlusCircle, RefreshCw, ArrowUpDown, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import AddMappingDialog from './AddMappingDialog';
-import DeleteMappingDialog from './DeleteMappingDialog';
-import { formatDateTime } from '@/utils/date-utils';
+import { supabase } from '@/integrations/supabase/client';
 import { Mapping } from '@/types/syncLog';
+import { AddMappingButton } from './AddMappingButton';
 
-const MappingsList: React.FC = () => {
+export default function MappingsList() {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedMapping, setSelectedMapping] = useState<Mapping | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<keyof Mapping>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -26,34 +33,38 @@ const MappingsList: React.FC = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('gl_mapping_status')
-        .select('*')
-        .order('last_sync_started_at', { ascending: false });
+        .from('gl_mappings')
+        .select(`
+          id,
+          connection_id,
+          glide_table,
+          glide_table_display_name,
+          supabase_table,
+          column_mappings,
+          sync_direction,
+          enabled,
+          created_at,
+          updated_at,
+          gl_connections (
+            app_name
+          )
+        `)
+        .order(sortField, { ascending: sortDirection === 'asc' });
       
       if (error) throw error;
       
-      const transformedMappings: Mapping[] = (data || []).map(item => ({
-        id: item.mapping_id,
-        connection_id: item.connection_id,
-        glide_table: item.glide_table,
-        glide_table_display_name: item.glide_table_display_name,
-        supabase_table: item.supabase_table,
-        column_mappings: {},
-        sync_direction: item.sync_direction,
-        enabled: item.enabled,
-        app_name: item.app_name,
-        current_status: item.current_status,
-        last_sync_completed_at: item.last_sync_completed_at,
-        error_count: item.error_count,
-        total_records: item.total_records
+      // Transform the data to include the app_name from the joined table
+      const transformedData = data.map(item => ({
+        ...item,
+        app_name: item.gl_connections?.app_name || 'Unknown App'
       }));
       
-      setMappings(transformedMappings);
+      setMappings(transformedData);
     } catch (error) {
       console.error('Error fetching mappings:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load mappings',
+        description: 'Failed to fetch mappings',
         variant: 'destructive',
       });
     } finally {
@@ -64,225 +75,149 @@ const MappingsList: React.FC = () => {
   useEffect(() => {
     fetchMappings();
     
-    const mappingsChannel = supabase
-      .channel('gl_mappings_changes')
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('mappings-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status' }, 
-        () => {
-          fetchMappings();
-        }
+        { event: '*', schema: 'public', table: 'gl_mappings' },
+        fetchMappings
       )
       .subscribe();
     
     return () => {
-      supabase.removeChannel(mappingsChannel);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [sortField, sortDirection]);
 
-  const handleToggleEnabled = async (id: string, currentEnabled: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('gl_mappings')
-        .update({ enabled: !currentEnabled })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Mapping updated',
-        description: `Mapping ${currentEnabled ? 'disabled' : 'enabled'} successfully`,
-      });
-      
-      fetchMappings();
-    } catch (error) {
-      console.error('Error toggling mapping:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update mapping',
-        variant: 'destructive',
-      });
+  const handleSort = (field: keyof Mapping) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
 
-  const handleAddMapping = () => {
-    setShowAddDialog(true);
-  };
-
-  const handleEditMapping = (id: string) => {
+  const handleViewMapping = (id: string) => {
     navigate(`/sync/mappings/${id}`);
   };
 
-  const handleDeleteMapping = async (mapping: Mapping): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('gl_mappings')
-        .delete()
-        .eq('id', mapping.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Mapping deleted',
-        description: 'Mapping deleted successfully',
-      });
-      
-      fetchMappings();
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error deleting mapping:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete mapping',
-        variant: 'destructive',
-      });
-      return Promise.reject(error);
-    }
-  };
-
-  const handleAddSuccess = () => {
-    setShowAddDialog(false);
-    fetchMappings();
-    toast({
-      title: 'Mapping added',
-      description: 'New mapping has been added successfully',
-    });
-  };
-
-  const handleDeleteSuccess = () => {
-    setShowDeleteDialog(false);
-    fetchMappings();
-  };
-
-  const getSyncDirectionLabel = (direction: string) => {
-    switch (direction) {
-      case 'to_supabase':
-        return <Badge>Glide → Supabase</Badge>;
-      case 'to_glide':
-        return <Badge>Supabase → Glide</Badge>;
-      case 'both':
-        return <Badge>Bidirectional</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2].map((i) => (
-          <Card key={i} className="p-6">
-            <Skeleton className="h-6 w-1/3 mb-4" />
-            <Skeleton className="h-4 w-1/2 mb-2" />
-            <Skeleton className="h-4 w-1/4 mb-6" />
-            <div className="flex justify-end">
-              <Skeleton className="h-9 w-24 ml-2" />
-              <Skeleton className="h-9 w-24 ml-2" />
-              <Skeleton className="h-9 w-24 ml-2" />
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+  const filteredMappings = mappings.filter(mapping => 
+    mapping.glide_table_display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    mapping.supabase_table.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    mapping.app_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Table Mappings</h2>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={fetchMappings}>
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search mappings..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchMappings} className="h-9">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button onClick={handleAddMapping}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Mapping
-          </Button>
+          <AddMappingButton />
         </div>
       </div>
 
-      {mappings.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">No mappings found</p>
-          <p className="mt-2">Create a mapping to start syncing data</p>
-          <Button className="mt-4" onClick={handleAddMapping}>
-            Add Mapping
-          </Button>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {mappings.map((mapping) => (
-            <Card key={mapping.id} className="p-6">
-              <div className="flex flex-col md:flex-row justify-between">
-                <div>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead onClick={() => handleSort('glide_table_display_name')} className="cursor-pointer">
                   <div className="flex items-center">
-                    <h3 className="text-lg font-medium mr-3">
-                      {mapping.glide_table_display_name || mapping.glide_table} → {mapping.supabase_table}
-                    </h3>
-                    {getSyncDirectionLabel(mapping.sync_direction)}
+                    Glide Table
+                    {sortField === 'glide_table_display_name' && (
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    App: {mapping.app_name || 'Unnamed App'}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Last Synced: {formatDateTime(mapping.last_sync_completed_at)}
-                  </p>
-                </div>
-                
-                <div className="flex items-center space-x-2 mt-4 md:mt-0">
-                  <div className="flex items-center mr-4">
-                    <Switch
-                      checked={mapping.enabled}
-                      onCheckedChange={() => handleToggleEnabled(mapping.id, mapping.enabled)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">
-                      {mapping.enabled ? (
-                        <ToggleRight className="h-5 w-5 text-green-500" />
+                </TableHead>
+                <TableHead onClick={() => handleSort('supabase_table')} className="cursor-pointer">
+                  <div className="flex items-center">
+                    Supabase Table
+                    {sortField === 'supabase_table' && (
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead onClick={() => handleSort('app_name')} className="cursor-pointer">
+                  <div className="flex items-center">
+                    App
+                    {sortField === 'app_name' && (
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="text-center">Direction</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24 mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24 mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredMappings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    {searchTerm ? 'No mappings found matching your search.' : 'No mappings found. Create your first mapping to start synchronizing data.'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMappings.map((mapping) => (
+                  <TableRow key={mapping.id} className="cursor-pointer" onClick={() => handleViewMapping(mapping.id)}>
+                    <TableCell className="font-medium">{mapping.glide_table_display_name}</TableCell>
+                    <TableCell>{mapping.supabase_table}</TableCell>
+                    <TableCell>{mapping.app_name}</TableCell>
+                    <TableCell className="text-center">
+                      {mapping.sync_direction === 'to_supabase' ? (
+                        <Badge variant="secondary">To Supabase</Badge>
+                      ) : mapping.sync_direction === 'to_glide' ? (
+                        <Badge variant="secondary">To Glide</Badge>
                       ) : (
-                        <ToggleLeft className="h-5 w-5 text-gray-400" />
+                        <Badge variant="secondary">Bidirectional</Badge>
                       )}
-                    </span>
-                  </div>
-                  
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/sync/mappings/${mapping.id}`)}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Details
-                  </Button>
-                  
-                  <Button variant="outline" size="sm" onClick={() => handleEditMapping(mapping.id)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  
-                  <Button variant="outline" size="sm" onClick={() => handleDeleteMapping(mapping)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <AddMappingDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onSuccess={handleAddSuccess}
-      />
-
-      {selectedMapping && (
-        <DeleteMappingDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          mapping={selectedMapping}
-          onSuccess={handleDeleteSuccess}
-          onDelete={() => handleDeleteMapping(selectedMapping)}
-        />
-      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {mapping.enabled ? (
+                        <Badge variant="success">Enabled</Badge>
+                      ) : (
+                        <Badge variant="outline">Disabled</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewMapping(mapping.id);
+                      }}>
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default MappingsList;
+}

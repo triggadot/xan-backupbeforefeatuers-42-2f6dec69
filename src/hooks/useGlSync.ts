@@ -3,173 +3,96 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSyncResult } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<ProductSyncResult | null>(null);
   const { toast } = useToast();
 
-  /**
-   * Initiates a sync operation between Glide and Supabase
-   */
   const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
     setIsLoading(true);
-    setLastResult(null);
     
     try {
-      console.log(`Starting sync for mapping ${mappingId} with connection ${connectionId}`);
+      console.log('Syncing data for mapping:', mappingId);
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'syncData',
+          connectionId,
+          mappingId,
+        },
+      });
+
+      if (error) throw error;
       
-      // Call the glSyncApi which uses the edge function
-      const result = await glSyncApi.syncData(connectionId, mappingId);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Sync failed');
-      }
-      
-      console.log('Sync result:', result);
-      
-      const syncResult: ProductSyncResult = {
-        success: result.success ?? false,
-        recordsProcessed: result.recordsProcessed || 0,
-        failedRecords: result.failedRecords || 0,
-        errors: result.errors || [],
-      };
-      
-      setLastResult(syncResult);
-      
-      if (syncResult.success) {
+      if (data.success) {
         toast({
           title: 'Sync completed',
-          description: `Successfully processed ${syncResult.recordsProcessed} records.`,
+          description: `Processed ${data.processed_records || 0} records successfully`,
         });
       } else {
         toast({
           title: 'Sync completed with issues',
-          description: result.error || `Processed ${syncResult.recordsProcessed} records with ${syncResult.failedRecords} failures.`,
+          description: `Failed records: ${data.failed_records || 0}`,
           variant: 'destructive',
         });
       }
       
-      return syncResult;
-    } catch (error) {
-      console.error('Error during sync:', error);
-      
-      const failedResult: ProductSyncResult = {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        recordsProcessed: 0,
-        failedRecords: 1
-      };
-      
-      setLastResult(failedResult);
-      
+      return data;
+    } catch (error: any) {
+      console.error('Error syncing data:', error);
       toast({
         title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred during sync',
+        description: error.message || 'An unknown error occurred',
         variant: 'destructive',
       });
-      
-      return failedResult;
+      return {
+        success: false,
+        error: error.message,
+      };
     } finally {
       setIsLoading(false);
     }
   };
-  
-  /**
-   * Retries a previously failed sync operation
-   */
-  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
+
+  const testConnection = async (connectionId: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    
     try {
-      // Call the retry RPC function
-      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', {
-        p_mapping_id: mappingId
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'testConnection',
+          connectionId,
+        },
       });
-      
-      if (error) {
-        throw new Error(`Failed to retry sync: ${error.message}`);
-      }
-      
-      if (data) {
-        toast({
-          title: 'Retry initiated',
-          description: 'The failed sync operation has been queued for retry.',
-        });
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error retrying sync:', error);
-      
-      toast({
-        title: 'Retry failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-      
-      return false;
+
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error testing connection:', error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
     } finally {
       setIsLoading(false);
     }
   };
-  
-  /**
-   * Validates a connection to the Glide API
-   */
-  const validateConnection = async (connectionId: string): Promise<boolean> => {
+
+  const fetchGlideTables = async (connectionId: string): Promise<{ tables?: any[]; error?: string }> => {
     setIsLoading(true);
-    
     try {
-      console.log(`Validating connection ${connectionId}`);
-      const result = await glSyncApi.testConnection(connectionId);
-      
-      const success = result.success;
-      
-      if (success) {
-        // Update connection status to active
-        await supabase
-          .from('gl_connections')
-          .update({ status: 'active' })
-          .eq('id', connectionId);
-          
-        toast({
-          title: 'Connection successful',
-          description: 'Successfully connected to Glide API.',
-        });
-      } else {
-        // Update connection status to error
-        await supabase
-          .from('gl_connections')
-          .update({ status: 'error' })
-          .eq('id', connectionId);
-          
-        toast({
-          title: 'Connection failed',
-          description: result.error || 'Unknown error occurred',
-          variant: 'destructive',
-        });
-      }
-      
-      return success;
-    } catch (error) {
-      console.error('Error validating connection:', error);
-      
-      // Update connection status to error
-      await supabase
-        .from('gl_connections')
-        .update({ status: 'error' })
-        .eq('id', connectionId);
-        
-      toast({
-        title: 'Connection validation failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'listGlideTables',
+          connectionId,
+        },
       });
-      
-      return false;
+
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching Glide tables:', error);
+      return {
+        error: error.message || 'Unknown error',
+      };
     } finally {
       setIsLoading(false);
     }
@@ -177,9 +100,8 @@ export function useGlSync() {
 
   return {
     syncData,
-    retryFailedSync,
-    validateConnection,
-    isLoading,
-    lastResult
+    testConnection,
+    fetchGlideTables,
+    isLoading
   };
 }

@@ -7,10 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 export function useGlSyncErrors(mappingId?: string) {
   const [syncErrors, setSyncErrors] = useState<GlSyncRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
-  const fetchSyncErrors = useCallback(async (includeResolved: boolean = false): Promise<void> => {
+  const fetchErrors = useCallback(async () => {
     if (!mappingId) {
       setSyncErrors([]);
       setIsLoading(false);
@@ -18,41 +17,18 @@ export function useGlSyncErrors(mappingId?: string) {
     }
     
     setIsLoading(true);
-    setHasError(false);
-    
     try {
-      console.log('Fetching sync errors for mapping ID:', mappingId);
       const { data, error } = await supabase
-        .from('gl_sync_errors')
-        .select('*')
-        .eq('mapping_id', mappingId)
-        .is('resolved_at', includeResolved ? null : null);
+        .rpc('gl_get_sync_errors', { p_mapping_id: mappingId });
       
-      if (error) {
-        console.error('Error fetching sync errors:', error);
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
       
-      const formattedErrors = data ? data.map((record: any) => ({
-        id: record.id,
-        mapping_id: record.mapping_id,
-        type: record.error_type as 'VALIDATION_ERROR' | 'TRANSFORM_ERROR' | 'API_ERROR' | 'RATE_LIMIT' | 'NETWORK_ERROR',
-        message: record.error_message,
-        record: record.record_data,
-        timestamp: record.created_at,
-        retryable: record.retryable,
-        resolved: record.resolved_at !== null,
-        resolution_notes: record.resolution_notes
-      })) : [];
-      
-      console.log('Sync errors:', formattedErrors);
-      setSyncErrors(formattedErrors);
+      setSyncErrors(data || []);
     } catch (error) {
       console.error('Error fetching sync errors:', error);
-      setHasError(true);
       toast({
-        title: 'Error fetching sync errors',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        title: 'Error',
+        description: 'Failed to fetch synchronization errors',
         variant: 'destructive',
       });
     } finally {
@@ -60,80 +36,60 @@ export function useGlSyncErrors(mappingId?: string) {
     }
   }, [mappingId, toast]);
 
-  const resolveError = useCallback(async (errorId: string, resolutionNotes?: string) => {
+  const resolveError = useCallback(async (errorId: string, notes?: string): Promise<boolean> => {
     try {
-      // Call the RPC function to resolve the error
-      const { data, error } = await supabase.rpc('gl_resolve_sync_error', { 
-        p_error_id: errorId,
-        p_resolution_notes: resolutionNotes || null
+      const { data, error } = await supabase
+        .rpc('gl_resolve_sync_error', { 
+          p_error_id: errorId,
+          p_resolution_notes: notes || null
+        });
+      
+      if (error) throw new Error(error.message);
+      
+      // Refresh errors after resolution
+      fetchErrors();
+      
+      toast({
+        title: 'Error resolved',
+        description: 'The error has been marked as resolved',
       });
       
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      if (data) {
-        toast({
-          title: 'Error resolved',
-          description: 'The sync error has been marked as resolved.',
-        });
-        
-        // Refresh the errors list
-        fetchSyncErrors();
-        return true;
-      } else {
-        toast({
-          title: 'Error not found',
-          description: 'Could not find the specified error.',
-          variant: 'destructive',
-        });
-        return false;
-      }
+      return true;
     } catch (error) {
       console.error('Error resolving sync error:', error);
       toast({
-        title: 'Error resolving sync error',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        title: 'Error',
+        description: 'Failed to resolve the error',
         variant: 'destructive',
       });
       return false;
     }
-  }, [fetchSyncErrors, toast]);
+  }, [fetchErrors, toast]);
 
-  // Set up realtime subscription for live updates
-  const setupRealtimeSubscription = useCallback(() => {
-    if (!mappingId) return () => {};
-    
-    const syncErrorsChannel = supabase
-      .channel('gl_error_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_sync_errors', filter: `mapping_id=eq.${mappingId}` }, 
-        () => {
-          // Refresh errors when they change
-          fetchSyncErrors();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(syncErrorsChannel);
-    };
-  }, [fetchSyncErrors, mappingId]);
-
+  // Initial load and setup realtime subscription
   useEffect(() => {
-    fetchSyncErrors();
+    fetchErrors();
     
-    // Set up realtime subscription
-    const cleanup = setupRealtimeSubscription();
-    
-    return cleanup;
-  }, [fetchSyncErrors, setupRealtimeSubscription]);
+    if (mappingId) {
+      // Subscribe to real-time changes in sync errors
+      const channel = supabase
+        .channel('sync-errors-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'gl_sync_errors', filter: `mapping_id=eq.${mappingId}` },
+          fetchErrors
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [mappingId, fetchErrors]);
 
   return {
     syncErrors,
     isLoading,
-    hasError,
-    refreshErrors: fetchSyncErrors,
+    refreshErrors: fetchErrors,
     resolveError
   };
 }
