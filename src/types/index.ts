@@ -1,4 +1,3 @@
-
 // Base entity type with common fields
 export interface BaseEntity {
   id: string;
@@ -60,6 +59,9 @@ export interface BaseDocument extends BaseEntity {
 export interface PurchaseOrder extends BaseDocument {
   status: 'draft' | 'sent' | 'received' | 'cancelled';
   expectedDeliveryDate?: Date;
+  amountPaid?: number;
+  balance?: number;
+  paymentStatus?: 'PAID' | 'PARTIAL' | 'UNPAID';
 }
 
 // Estimate type

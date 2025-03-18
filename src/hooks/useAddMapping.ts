@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +50,9 @@ export function useAddMapping() {
         };
       }
       
+      // Convert the column_mappings to a plain object for database storage
+      const serializedColumnMappings = JSON.parse(JSON.stringify(columnMappings));
+      
       // Create the mapping
       const { error } = await supabase
         .from('gl_mappings')
@@ -57,7 +61,7 @@ export function useAddMapping() {
           glide_table: glideTable,
           glide_table_display_name: glideTableDisplayName,
           supabase_table: supabaseTable,
-          column_mappings: columnMappings,
+          column_mappings: serializedColumnMappings,
           sync_direction: syncDirection,
           enabled: true
         });

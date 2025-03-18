@@ -33,20 +33,10 @@ export function useRealtimeSyncLogs({
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
+      // First query the basic sync logs
       let query = supabase
         .from('gl_sync_logs')
-        .select(`
-          *,
-          gl_mappings!gl_sync_logs_mapping_id_fkey (
-            glide_table,
-            glide_table_display_name,
-            supabase_table,
-            sync_direction,
-            gl_connections (
-              app_name
-            )
-          )
-        `)
+        .select('*')
         .order('started_at', { ascending: false })
         .limit(limit);
       
@@ -66,40 +56,107 @@ export function useRealtimeSyncLogs({
         }
       }
       
-      const { data, error } = await query;
+      const { data: logData, error } = await query;
       
       if (error) throw error;
       
-      // Safely validate and transform the response data
-      const formattedLogs = (data || []).map(log => {
-        // Create a base log object with required properties
-        const baseLog: SyncLog = {
-          id: log.id || '',
-          mapping_id: log.mapping_id || null,
-          started_at: log.started_at || '',
-          completed_at: log.completed_at || null,
-          status: log.status || '',
-          message: log.message || null,
-          records_processed: log.records_processed || null
-        };
+      // If we need to include details, fetch them separately
+      if (includeDetails && logData && logData.length > 0) {
+        const syncLogsWithDetails: SyncLog[] = [];
         
-        // If we don't need details, return just the base log
-        if (!includeDetails) return baseLog;
+        // Create mapping IDs array to fetch related data
+        const mappingIds = logData
+          .map(log => log.mapping_id)
+          .filter(Boolean) as string[];
         
-        // If we have mapping details, add them
-        const mappingData = log.gl_mappings || null;
-        
-        return {
-          ...baseLog,
-          glide_table: mappingData?.glide_table || null,
-          glide_table_display_name: mappingData?.glide_table_display_name || null,
-          supabase_table: mappingData?.supabase_table || null,
-          app_name: mappingData?.gl_connections?.app_name || null,
-          sync_direction: mappingData?.sync_direction || null
-        };
-      });
-      
-      setSyncLogs(formattedLogs);
+        // If we have mapping IDs, fetch the related mapping data
+        if (mappingIds.length > 0) {
+          const { data: mappingsData, error: mappingsError } = await supabase
+            .from('gl_mappings')
+            .select(`
+              id,
+              glide_table,
+              glide_table_display_name,
+              supabase_table,
+              sync_direction,
+              connection_id
+            `)
+            .in('id', mappingIds);
+          
+          if (mappingsError) {
+            console.error('Error fetching mapping details:', mappingsError);
+          }
+          
+          // If we have mappings, fetch the related connection data
+          const connectionIds = mappingsData
+            ?.map(mapping => mapping.connection_id)
+            .filter(Boolean) as string[] || [];
+          
+          let connectionsMap: Record<string, { app_name: string }> = {};
+          
+          if (connectionIds.length > 0) {
+            const { data: connectionsData, error: connectionsError } = await supabase
+              .from('gl_connections')
+              .select('id, app_name')
+              .in('id', connectionIds);
+            
+            if (connectionsError) {
+              console.error('Error fetching connection details:', connectionsError);
+            }
+            
+            // Create a map of connection IDs to connection data
+            connectionsMap = (connectionsData || []).reduce((acc, conn) => {
+              acc[conn.id] = { app_name: conn.app_name };
+              return acc;
+            }, {} as Record<string, { app_name: string }>);
+          }
+          
+          // Create a map of mapping IDs to mapping data with connection details
+          const mappingsMap = (mappingsData || []).reduce((acc, mapping) => {
+            acc[mapping.id] = {
+              ...mapping,
+              app_name: connectionsMap[mapping.connection_id]?.app_name
+            };
+            return acc;
+          }, {} as Record<string, any>);
+          
+          // Now combine the logs with their related data
+          for (const log of logData) {
+            const mappingDetails = log.mapping_id ? mappingsMap[log.mapping_id] : null;
+            
+            syncLogsWithDetails.push({
+              id: log.id,
+              mapping_id: log.mapping_id,
+              status: log.status,
+              message: log.message,
+              records_processed: log.records_processed,
+              started_at: log.started_at,
+              completed_at: log.completed_at,
+              glide_table: mappingDetails?.glide_table || null,
+              glide_table_display_name: mappingDetails?.glide_table_display_name || null,
+              supabase_table: mappingDetails?.supabase_table || null,
+              app_name: mappingDetails?.app_name || null,
+              sync_direction: mappingDetails?.sync_direction || null
+            });
+          }
+          
+          setSyncLogs(syncLogsWithDetails);
+        } else {
+          // If no mapping IDs, just use the log data as is
+          setSyncLogs(logData.map(log => ({
+            id: log.id,
+            mapping_id: log.mapping_id,
+            status: log.status,
+            message: log.message,
+            records_processed: log.records_processed,
+            started_at: log.started_at,
+            completed_at: log.completed_at
+          })));
+        }
+      } else {
+        // If we don't need details, just use the log data as is
+        setSyncLogs(logData || []);
+      }
     } catch (error) {
       console.error('Error fetching sync logs:', error);
       toast({

@@ -11,6 +11,13 @@ import { useGlSyncValidation } from '@/hooks/useGlSyncValidation';
 import { SyncStatusDisplay } from './SyncStatusDisplay';
 import { ValidationDisplay } from './ValidationDisplay';
 
+interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  errors?: string[];
+  details?: Record<string, string[]>;
+}
+
 export interface MappingDetailsCardProps {
   mapping: GlMapping;
   connectionName?: string | null;
@@ -34,7 +41,7 @@ export function MappingDetailsCard({
   useEffect(() => {
     // Auto-validate when component loads
     validateMappingConfig(mapping.id);
-  }, [mapping.id]);
+  }, [mapping.id, validateMappingConfig]);
 
   const handleRetry = async () => {
     if (status?.current_status === 'failed') {
