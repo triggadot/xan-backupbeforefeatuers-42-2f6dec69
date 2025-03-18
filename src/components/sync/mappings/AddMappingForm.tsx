@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { GlColumnMapping } from '@/types/glsync';
-import { convertToDbMapping } from '@/utils/gl-mapping-converters';
+import { convertToDbMapping, getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
+import { useGlSync } from '@/hooks/useGlSync';
 
 interface AddMappingFormProps {
   onSuccess?: () => Promise<void>;
@@ -27,10 +29,13 @@ const formSchema = z.object({
 export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connections, setConnections] = useState<any[]>([]);
+  const [glideTables, setGlideTables] = useState<any[]>([]);
   const [supaTables, setSupaTables] = useState<any[]>([]);
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+  const [isLoadingGlideTables, setIsLoadingGlideTables] = useState(false);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const { toast } = useToast();
+  const { fetchGlideTables } = useGlSync();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,10 +45,10 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
   });
   
   React.useEffect(() => {
-    fetchConnections();
+    loadConnections();
   }, []);
   
-  const fetchConnections = async () => {
+  const loadConnections = async () => {
     try {
       const { data, error } = await supabase
         .from('gl_connections')
@@ -64,7 +69,7 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
     }
   };
   
-  const fetchSupabaseTables = async () => {
+  const loadSupabaseTables = async () => {
     setIsLoadingTables(true);
     try {
       const { data, error } = await supabase
@@ -86,17 +91,50 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
     }
   };
   
+  const handleConnectionChange = async (connectionId: string) => {
+    form.setValue('connection_id', connectionId);
+    
+    // Clear glide table selection
+    form.setValue('glide_table', '');
+    form.setValue('glide_table_display_name', '');
+    
+    // Fetch Glide tables for the selected connection
+    setIsLoadingGlideTables(true);
+    try {
+      const result = await fetchGlideTables(connectionId);
+      if (result.tables) {
+        setGlideTables(result.tables);
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to fetch Glide tables',
+          variant: 'destructive',
+        });
+        setGlideTables([]);
+      }
+    } catch (error) {
+      console.error('Error fetching Glide tables:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch Glide tables',
+        variant: 'destructive',
+      });
+      setGlideTables([]);
+    } finally {
+      setIsLoadingGlideTables(false);
+    }
+  };
+  
+  const handleGlideTableChange = (tableId: string, displayName: string) => {
+    form.setValue('glide_table', tableId);
+    form.setValue('glide_table_display_name', displayName);
+  };
+  
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
       // Create a default column mapping with $rowID
-      const defaultMapping: Record<string, GlColumnMapping> = {
-        "$rowID": {
-          "glide_column_name": "$rowID",
-          "supabase_column_name": "glide_row_id",
-          "data_type": "string"
-        }
-      };
+      const defaultMapping = getDefaultColumnMappings();
       
       // Convert the mapping to a database-compatible format
       const dbMapping = convertToDbMapping({
@@ -149,8 +187,8 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
             <FormItem>
               <FormLabel>Glide Connection</FormLabel>
               <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value}
+                onValueChange={(value) => handleConnectionChange(value)} 
+                value={field.value}
                 disabled={isLoadingConnections}
               >
                 <FormControl>
@@ -189,9 +227,40 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Glide Table ID</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Enter Glide table ID" />
-                </FormControl>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    const selectedTable = glideTables.find(table => table.id === value);
+                    if (selectedTable) {
+                      handleGlideTableChange(value, selectedTable.display_name);
+                    }
+                  }}
+                  disabled={isLoadingGlideTables || glideTables.length === 0}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingGlideTables ? "Loading tables..." : "Select a Glide table"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {isLoadingGlideTables ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading tables...
+                      </div>
+                    ) : glideTables.length === 0 ? (
+                      <div className="p-2 text-center text-muted-foreground">
+                        No tables found
+                      </div>
+                    ) : (
+                      glideTables.map((table) => (
+                        <SelectItem key={table.id} value={table.id}>
+                          {table.display_name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -204,7 +273,7 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
               <FormItem>
                 <FormLabel>Glide Table Name</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter Glide table display name" />
+                  <Input {...field} placeholder="Enter Glide table display name" readOnly />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -220,10 +289,10 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
               <FormLabel>Supabase Table</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                defaultValue={field.value}
+                value={field.value}
                 onOpenChange={(open) => {
                   if (open && supaTables.length === 0) {
-                    fetchSupabaseTables();
+                    loadSupabaseTables();
                   }
                 }}
               >
@@ -262,7 +331,7 @@ export function AddMappingForm({ onSuccess }: AddMappingFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sync Direction</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select sync direction" />
