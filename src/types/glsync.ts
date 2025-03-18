@@ -1,3 +1,4 @@
+
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -179,4 +180,14 @@ export interface GlAccount {
   date_added_client?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+// Add MappingToValidate interface
+export interface MappingToValidate {
+  supabase_table: string;
+  column_mappings: Record<string, {
+    glide_column_name: string;
+    supabase_column_name: string;
+    data_type: string;
+  }>;
 }

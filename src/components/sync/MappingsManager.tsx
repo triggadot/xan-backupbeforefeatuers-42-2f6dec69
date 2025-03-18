@@ -103,7 +103,7 @@ const MappingsManager = () => {
           if (!exists) {
             allTables.push({
               id: mapping.glide_table,
-              display_name: mapping.glide_table_display_name || mapping.glide_table
+              displayName: mapping.glide_table_display_name || mapping.glide_table
             });
           }
         });

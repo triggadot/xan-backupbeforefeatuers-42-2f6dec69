@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
+import GlideTableSelector from '@/components/sync/GlideTableSelector';
 import { ConnectionSelect } from './ConnectionSelect';
 import { SupabaseTableSelect } from './SupabaseTableSelect';
 import { SyncDirectionSelect } from './SyncDirectionSelect';
