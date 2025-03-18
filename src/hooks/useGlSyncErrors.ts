@@ -23,14 +23,13 @@ export function useGlSyncErrors(mappingId?: string) {
     try {
       console.log('Fetching sync errors for mapping ID:', mappingId);
       const { data, error } = await supabase
-        .rpc('gl_get_sync_errors', { 
-          p_mapping_id: mappingId, 
-          p_limit: 100,
-          p_include_resolved: includeResolved
-        });
+        .from('gl_sync_errors')
+        .select('*')
+        .eq('mapping_id', mappingId)
+        .is('resolved_at', includeResolved ? null : null);
       
       if (error) {
-        console.error('RPC error:', error);
+        console.error('Error fetching sync errors:', error);
         throw new Error(error.message);
       }
       
@@ -62,11 +61,11 @@ export function useGlSyncErrors(mappingId?: string) {
 
   const resolveError = useCallback(async (errorId: string, resolutionNotes?: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc('gl_resolve_sync_error', { 
-          p_error_id: errorId,
-          p_resolution_notes: resolutionNotes || null
-        });
+      // Call the RPC function directly
+      const { data, error } = await supabase.rpc('gl_resolve_sync_error', { 
+        p_error_id: errorId,
+        p_resolution_notes: resolutionNotes || null
+      });
       
       if (error) {
         throw new Error(error.message);

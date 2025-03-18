@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -40,20 +39,20 @@ export interface GlSyncLog {
 }
 
 export interface GlSyncStatus {
-  connection_id: string;
   mapping_id: string;
-  last_sync_started_at: string | null;
-  last_sync_completed_at: string | null;
-  current_status: string | null;
-  enabled: boolean;
+  connection_id: string;
   app_name: string | null;
   glide_table: string;
   glide_table_display_name: string;
   supabase_table: string;
   sync_direction: string;
+  enabled: boolean;
+  current_status: string | null;
+  last_sync_started_at: string | null;
+  last_sync_completed_at: string | null;
   records_processed: number | null;
-  total_records: number | null;
   error_count: number | null;
+  total_records: number | null;
 }
 
 export interface GlRecentLog {
@@ -141,14 +140,21 @@ export interface GlideTable {
   display_name: string;
 }
 
+// Adding interfaces to match our new database functions
 export interface MappingValidationResult {
   is_valid: boolean;
   validation_message: string;
 }
-
+  
 export interface ColumnMappingSuggestion {
   glide_column_name: string;
   suggested_supabase_column: string;
   data_type: string;
   confidence: number;
+}
+
+export interface SyncErrorDisplayProps {
+  syncErrors: GlSyncRecord[];
+  onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
+  className?: string;
 }

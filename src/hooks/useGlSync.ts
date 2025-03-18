@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSyncResult, GlMapping, GlideTable } from '@/types/glsync';
+import { validateMapping } from '@/utils/gl-mapping-validator';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -15,15 +16,10 @@ export function useGlSync() {
     
     try {
       // First validate the mapping
-      const { data: validationData, error: validationError } = await supabase
-        .rpc('gl_validate_column_mapping', { p_mapping_id: mappingId });
+      const validationResult = await validateMapping(mappingId);
       
-      if (validationError) {
-        throw new Error(`Validation error: ${validationError.message}`);
-      }
-      
-      if (validationData && !validationData[0].is_valid) {
-        throw new Error(`Mapping validation failed: ${validationData[0].validation_message}`);
+      if (!validationResult.is_valid) {
+        throw new Error(`Mapping validation failed: ${validationResult.validation_message}`);
       }
       
       // If validation passes, proceed with sync
@@ -197,8 +193,10 @@ export function useGlSync() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase
-        .rpc('glsync_retry_failed_sync', { p_mapping_id: mappingId });
+      // Use a direct RPC call to start a sync retry
+      const { data, error } = await supabase.rpc('glsync_retry_failed_sync', { 
+        p_mapping_id: mappingId 
+      });
       
       if (error) {
         throw new Error(error.message);
