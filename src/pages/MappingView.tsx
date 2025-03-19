@@ -1,32 +1,32 @@
 
-import { useNavigate, useParams } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import MappingDetails from '@/components/sync/mappings/MappingDetails';
-import { Card, CardContent } from '@/components/ui/card';
+import SyncLayout from '@/components/sync/SyncLayout';
 
 const MappingView = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { mappingId } = useParams<{ mappingId: string }>();
-
+  
   const handleBack = () => {
     navigate('/sync/mappings');
   };
 
-  if (!mappingId) {
-    return (
-      <Card>
-        <CardContent className="py-10">
-          <div className="text-center">
-            <h2 className="text-lg font-medium">No mapping ID provided</h2>
-            <p className="text-muted-foreground mt-2">
-              Please select a mapping from the dashboard
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (!id) {
+    navigate('/sync/mappings');
+    return null;
   }
-
-  return <MappingDetails mappingId={mappingId} onBack={handleBack} />;
+  
+  return (
+    <SyncLayout>
+      <MappingDetails 
+        mappingId={id} 
+        onBack={handleBack} 
+      />
+    </SyncLayout>
+  );
 };
 
 export default MappingView;

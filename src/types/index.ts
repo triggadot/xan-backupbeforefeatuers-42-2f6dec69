@@ -16,6 +16,8 @@ export interface Account extends BaseEntity {
   notes?: string;
   status: 'active' | 'inactive';
   balance: number;
+  photo?: string; // Added this field for account photos
+  accounts_uid?: string; // Added this field to match database schema
 }
 
 // Database representation of gl_accounts

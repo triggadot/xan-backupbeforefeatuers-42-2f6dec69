@@ -1,71 +1,64 @@
 
 import React from 'react';
-import { SyncLog } from '@/types/syncLog';
-import { GlSyncLog } from '@/types/glsync';
+import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getStatusBadge } from './StatusBadgeUtils';
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatTimeAgo, formatDateTime, formatDuration } from '@/utils/date-utils';
+import { SyncLog } from '@/types/syncLog';
+import { Badge } from '@/components/ui/badge';
 
 interface SyncLogTableProps {
-  logs: SyncLog[] | GlSyncLog[];
-  isLoading: boolean;
-  showAppInfo?: boolean;
+  logs: SyncLog[];
 }
 
-export function SyncLogTable({ logs, isLoading, showAppInfo = false }: SyncLogTableProps) {
-  if (isLoading) {
+export const SyncLogTable: React.FC<SyncLogTableProps> = ({ logs }) => {
+  if (logs.length === 0) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="p-3 animate-pulse flex items-center justify-between">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
-          </div>
-        ))}
+      <div className="py-4 text-center text-muted-foreground">
+        No sync logs available
       </div>
     );
   }
 
-  if (logs.length === 0) {
-    return <p className="text-center py-4 text-muted-foreground">No synchronization logs found.</p>;
-  }
-
-  // Check if the logs have app_name property (SyncLog type)
-  const hasAppInfo = showAppInfo && 'app_name' in logs[0];
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="success">Completed</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'started':
+        return <Badge variant="outline">Started</Badge>;
+      case 'processing':
+        return <Badge variant="warning">Processing</Badge>;
+      case 'completed_with_errors':
+        return <Badge variant="warning">Completed with errors</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Status</TableHead>
-          {hasAppInfo && <TableHead>App</TableHead>}
-          {hasAppInfo && <TableHead>Table</TableHead>}
-          <TableHead>Started</TableHead>
-          <TableHead>Duration</TableHead>
-          <TableHead>Records</TableHead>
-          <TableHead>Message</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {logs.map(log => (
-          <TableRow key={log.id}>
-            <TableCell>{getStatusBadge(log.status)}</TableCell>
-            {hasAppInfo && 'app_name' in log && (
-              <TableCell>{log.app_name || '-'}</TableCell>
-            )}
-            {hasAppInfo && 'glide_table_display_name' in log && (
-              <TableCell>{log.glide_table_display_name || '-'}</TableCell>
-            )}
-            <TableCell>{formatTimeAgo(log.started_at)}</TableCell>
-            <TableCell>
-              {formatDuration(log.started_at, log.completed_at)}
-            </TableCell>
-            <TableCell>{log.records_processed || '-'}</TableCell>
-            <TableCell className="max-w-xs truncate">{log.message || '-'}</TableCell>
+    <div className="border rounded-md">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Records</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {logs.map((log) => (
+            <TableRow key={log.id}>
+              <TableCell className="whitespace-nowrap">
+                {format(new Date(log.started_at), 'MMM d, HH:mm')}
+              </TableCell>
+              <TableCell>{getStatusBadge(log.status)}</TableCell>
+              <TableCell>{log.records_processed || 0}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
-}
+};
+
+export default SyncLogTable;

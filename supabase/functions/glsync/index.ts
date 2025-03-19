@@ -367,15 +367,11 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
             supabaseRow.accounts_uid = `ACC${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
           }
           
-          // Ensure client_type is valid
+          // Ensure client_type is valid - use the normalized value
           if (supabaseRow.client_type) {
-            if (!['Customer', 'Vendor', 'Customer & Vendor'].includes(supabaseRow.client_type)) {
-              // Convert old values to new format
-              supabaseRow.client_type = supabaseRow.client_type === 'customer' ? 'Customer' :
-                                         supabaseRow.client_type === 'vendor' ? 'Vendor' :
-                                         supabaseRow.client_type === 'customer and vendor' ? 'Customer & Vendor' :
-                                         'Customer'; // Default to Customer if unknown
-            }
+            // Normalize client_type to match the constraint
+            const normalizedClientType = normalizeClientType(supabaseRow.client_type);
+            supabaseRow.client_type = normalizedClientType;
           }
         }
         
@@ -514,6 +510,26 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       }
     );
   }
+}
+
+// Helper function to normalize client type values
+function normalizeClientType(clientType: string | null | undefined): string | null {
+  if (!clientType) return null;
+  
+  // Normalize to match the exact values expected by the constraint
+  const normalized = clientType.trim();
+  
+  if (/customer\s*&\s*vendor/i.test(normalized) || 
+      /customer\s+and\s+vendor/i.test(normalized)) {
+    return 'Customer & Vendor';
+  } else if (/vendor/i.test(normalized)) {
+    return 'Vendor';
+  } else if (/customer/i.test(normalized)) {
+    return 'Customer';
+  }
+  
+  // If we can't determine the type, default to Customer
+  return 'Customer';
 }
 
 function transformValue(value: any, dataType: string): any {

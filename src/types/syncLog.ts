@@ -1,67 +1,35 @@
 
 export interface SyncLog {
   id: string;
-  mapping_id: string | null;
+  mapping_id: string;
   status: string;
-  message: string | null;
-  records_processed: number | null;
   started_at: string;
-  completed_at: string | null;
-  glide_table?: string | null;
-  glide_table_display_name?: string | null;
-  supabase_table?: string | null;
-  app_name?: string | null;
-  sync_direction?: string | null;
-  // Additional fields for error tracking
-  error_count?: number;
-  error_message?: string | null;
+  completed_at?: string;
+  records_processed?: number;
+  message?: string;
 }
 
-export interface Mapping {
+export interface SyncError {
   id: string;
-  connection_id: string;
-  glide_table: string;
-  glide_table_display_name: string;
-  supabase_table: string;
-  column_mappings: any; // This can be a string or an object depending on how it's stored
-  sync_direction: string;
-  enabled: boolean;
-  app_name?: string;
-  current_status?: string;
-  last_sync_completed_at?: string | null;
-  error_count?: number;
-  total_records?: number;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-export interface MappingToValidate {
-  supabase_table: string;
-  column_mappings: Record<string, {
-    glide_column_name: string;
-    supabase_column_name: string;
-    data_type: string;
-  }>;
-}
-
-// Added ValidationResult type for type checking validation results
-export interface ValidationResult {
-  isValid: boolean;
-  message: string;
-  details?: Record<string, string[]>;
-}
-
-// Type for filter states
-export type SyncLogFilter = 'all' | 'completed' | 'failed';
-
-// Add GlConnection type for mapping components to use
-export interface GlConnection {
-  id: string;
-  api_key: string;
-  app_id: string;
-  app_name: string;
+  mapping_id: string;
+  error_type: string;
+  error_message: string;
+  record_data?: any;
+  retryable: boolean;
   created_at: string;
-  last_sync: string;
-  settings: Record<string, any>; // Changed from Json to Record<string, any>
-  status: string;
+  resolved_at?: string;
+  resolution_notes?: string;
+}
+
+export interface UseSyncLogsOptions {
+  limit?: number;
+  mappingId?: string;
+  autoRefetch?: boolean;
+}
+
+export interface SyncLogsResult {
+  logs: SyncLog[];
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
 }

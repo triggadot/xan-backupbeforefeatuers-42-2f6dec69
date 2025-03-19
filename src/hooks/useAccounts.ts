@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Account, GlAccount } from '@/types';
 import { mapGlAccountToAccount } from '@/utils/mapping-utils';
+import { normalizeClientType } from '@/utils/gl-account-mappings';
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -71,14 +72,18 @@ export function useAccounts() {
       // Generate a unique Glide row ID with a prefix and timestamp
       const glideRowId = `A-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       
+      // Normalize client type to ensure it matches constraint
+      const normalizedClientType = normalizeClientType(accountData.type);
+      
       const { data, error } = await supabase
         .from('gl_accounts')
         .insert({
           account_name: accountData.name,
-          client_type: accountData.type,
+          client_type: normalizedClientType,
           email_of_who_added: accountData.email,
+          photo: accountData.photo, // Add photo field
           glide_row_id: glideRowId, // Use the generated ID for Glide sync
-          accounts_uid: accountData.accountUid || `ACC${Date.now().toString().slice(-6)}` // Generate a simple account UID if not provided
+          accounts_uid: accountData.accounts_uid || `ACC${Date.now().toString().slice(-6)}` // Generate a simple account UID if not provided
         })
         .select()
         .single();
@@ -110,9 +115,12 @@ export function useAccounts() {
       // Convert from Account format to gl_accounts format
       const updateData: Partial<GlAccount> = {};
       if (accountData.name) updateData.account_name = accountData.name;
-      if (accountData.type) updateData.client_type = accountData.type;
+      if (accountData.type) {
+        // Normalize client type to ensure it matches constraint
+        updateData.client_type = normalizeClientType(accountData.type);
+      }
       if (accountData.email) updateData.email_of_who_added = accountData.email;
-      if (accountData.accountUid) updateData.accounts_uid = accountData.accountUid;
+      if (accountData.accounts_uid) updateData.accounts_uid = accountData.accounts_uid;
       if (accountData.photo) updateData.photo = accountData.photo;
       
       const { data, error } = await supabase

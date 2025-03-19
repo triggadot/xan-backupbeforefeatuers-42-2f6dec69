@@ -109,3 +109,23 @@ export const validateAccountsMapping = (mapping: any): { isValid: boolean, messa
   
   return { isValid: true, message: 'Mapping is valid' };
 };
+
+// Function to normalize client type values to match the constraint
+export const normalizeClientType = (clientType: string | null | undefined): string | null => {
+  if (!clientType) return null;
+  
+  // Normalize to match the exact values expected by the constraint
+  const normalized = clientType.trim();
+  
+  if (/customer\s*&\s*vendor/i.test(normalized) || 
+      /customer\s+and\s+vendor/i.test(normalized)) {
+    return 'Customer & Vendor';
+  } else if (/vendor/i.test(normalized)) {
+    return 'Vendor';
+  } else if (/customer/i.test(normalized)) {
+    return 'Customer';
+  }
+  
+  // If we can't determine the type, default to Customer
+  return 'Customer';
+};
