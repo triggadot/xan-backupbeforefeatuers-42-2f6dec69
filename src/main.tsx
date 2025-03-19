@@ -15,11 +15,16 @@ import SignIn from './pages/SignIn.tsx';
 import RequireAuth from './components/RequireAuth.tsx';
 import SyncLayout from './components/sync/SyncLayout.tsx';
 import { AuthProvider } from './contexts/AuthProvider.tsx';
+import Dashboard from './pages/Dashboard.tsx';
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+  },
+  {
+    path: "/dashboard",
+    element: <RequireAuth><Dashboard /></RequireAuth>,
   },
   {
     path: "/signin",

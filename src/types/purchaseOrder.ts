@@ -17,6 +17,12 @@ export interface PurchaseOrder {
   updated_at: string;
   lineItems: PurchaseOrderItem[];
   vendorPayments: VendorPayment[];
+  
+  // Add properties needed by Supabase mapping
+  glide_row_id?: string;
+  rowid_accounts?: string;
+  po_date?: string;
+  purchase_order_uid?: string;
 }
 
 export interface PurchaseOrderItem {

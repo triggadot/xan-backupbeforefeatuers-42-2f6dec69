@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MappingListItem } from './MappingListItem';
@@ -10,6 +11,18 @@ export interface MappingsListProps {
   onToggleEnabled: (mapping: GlMapping) => Promise<void>;
   onDeleteMapping: (id: string) => Promise<void>;
   isLoading: boolean;
+  onMappingCreated: () => Promise<void>;
+}
+
+export interface MappingListItemProps {
+  mapping: GlMapping;
+  onViewMapping: (mappingId: string) => void;
+  onToggleEnabled: (mapping: GlMapping) => Promise<void>;
+  onDeleteMapping: (id: string) => Promise<void>;
+  isLoading: boolean;
+}
+
+export interface MappingListHeaderProps {
   onMappingCreated: () => Promise<void>;
 }
 

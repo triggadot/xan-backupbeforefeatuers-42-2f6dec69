@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AddMappingButton } from './AddMappingButton';
@@ -12,6 +13,14 @@ export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({
   connectionId,
   onMappingCreated 
 }) => {
+  // Create an async function to wrap the sync handler
+  const handleMappingCreated = async () => {
+    if (onMappingCreated) {
+      await onMappingCreated();
+    }
+    return Promise.resolve();
+  };
+  
   return (
     <Card className="shadow-none">
       <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-6">
@@ -24,11 +33,11 @@ export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({
         
         <div className="flex flex-col sm:flex-row gap-4">
           <AddMappingButton 
-            onSuccess={onMappingCreated}
+            onSuccess={handleMappingCreated}
             connectionId={connectionId}
           />
           
-          <CreateSchemaButton onMappingCreated={onMappingCreated ? onMappingCreated : async () => {}} />
+          <CreateSchemaButton onMappingCreated={handleMappingCreated} />
         </div>
       </CardContent>
     </Card>

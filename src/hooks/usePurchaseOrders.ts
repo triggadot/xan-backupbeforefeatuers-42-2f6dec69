@@ -1,306 +1,197 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
-interface UsePurchaseOrdersProps {
-  initialPurchaseOrders?: PurchaseOrder[];
-}
-
-export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersProps = {}) => {
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders || []);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function usePurchaseOrders() {
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const { toast } = useToast();
 
   const fetchPurchaseOrders = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const { data, error } = await supabase
+      setIsLoading(true);
+      setError('');
+
+      // Use the correct table name gl_purchase_orders
+      const { data, error: fetchError } = await supabase
         .from('gl_purchase_orders')
-        .select('*')
+        .select(`
+          *,
+          accounts:gl_accounts(account_name)
+        `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
+      if (fetchError) throw fetchError;
 
       if (data) {
-        setPurchaseOrders(data as unknown as PurchaseOrder[]);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  // Add getPurchaseOrder function
-  const getPurchaseOrder = useCallback(async (id: string): Promise<PurchaseOrder | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase
-        .from('gl_purchase_orders')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: error.message,
-        });
-        return null;
-      }
-
-      if (data) {
-        // Map database fields to domain object
-        const mockPO: PurchaseOrder = {
-          ...data,
-          id: data.id || '',
-          number: data.purchase_order_uid || `PO-${data.id}`,
-          vendorId: data.rowid_accounts || '',
-          accountName: data.vendor_name || data.account_name || 'Unknown Vendor', // Use account_name as fallback
-          date: new Date(data.po_date || data.created_at),
-          dueDate: data.due_date ? new Date(data.due_date) : (data.payment_date ? new Date(data.payment_date) : null), // Use payment_date as fallback
-          status: (data.payment_status || 'draft') as PurchaseOrder['status'],
-          total: data.total_amount || 0,
-          subtotal: data.total_amount || 0,
-          tax: 0,
-          amountPaid: data.total_paid || 0,
-          balance: data.balance || 0,
-          notes: data.po_notes || data.notes || '', // Use notes as fallback
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          lineItems: [],
-          vendorPayments: []
-        };
-        return mockPO;
-      }
-      return null;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
-      toast({
-        title: 'Error',
-        description: message,
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  // Add getPurchaseOrdersForAccount function
-  const getPurchaseOrdersForAccount = useCallback(async (accountId: string): Promise<PurchaseOrder[]> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data: account, error: accountError } = await supabase
-        .from('gl_accounts')
-        .select('*')
-        .eq('id', accountId)
-        .single();
-      
-      if (accountError) {
-        throw accountError;
-      }
-      
-      const { data, error } = await supabase
-        .from('gl_purchase_orders')
-        .select('*')
-        .eq('rowid_accounts', account.glide_row_id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        // Transform data to PurchaseOrder type - simplified for example
-        const orders = data.map((item: any) => ({
-          id: item.id,
-          number: item.purchase_order_uid || `PO-${item.id}`,
-          vendorId: item.rowid_accounts,
-          accountName: account.account_name,
-          date: new Date(item.po_date || item.created_at),
-          status: item.payment_status || 'draft',
-          total: item.total_amount || 0,
-          subtotal: item.total_amount || 0,
-          tax: 0,
-          amountPaid: item.total_paid || 0,
-          balance: item.balance || 0,
-          notes: item.po_notes,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          lineItems: [],
-          vendorPayments: []
+        const mappedPurchaseOrders: PurchaseOrder[] = data.map(po => ({
+          id: po.id,
+          number: po.purchase_order_uid || `PO-${po.id.slice(0, 8)}`,
+          vendorId: po.rowid_accounts || '',
+          accountName: po.accounts?.account_name || 'Unknown Vendor',
+          date: po.po_date ? new Date(po.po_date) : new Date(),
+          dueDate: null, // Handle missing due_date field
+          status: (po.payment_status as 'draft' | 'sent' | 'received' | 'partial' | 'complete') || 'draft',
+          total: po.total_amount || 0,
+          subtotal: po.total_amount || 0, // Assuming subtotal is the same as total for now
+          tax: 0, // Default if not provided
+          amountPaid: po.total_paid || 0,
+          balance: po.balance || 0,
+          notes: '', // Handle missing po_notes field
+          created_at: po.created_at,
+          updated_at: po.updated_at,
+          lineItems: [], // Default empty array
+          vendorPayments: [], // Default empty array
+          // Add Supabase-specific fields for mapping
+          glide_row_id: po.glide_row_id,
+          rowid_accounts: po.rowid_accounts,
+          po_date: po.po_date,
+          purchase_order_uid: po.purchase_order_uid
         }));
-        return orders;
+
+        setPurchaseOrders(mappedPurchaseOrders);
       }
-      return [];
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
-      toast({
-        title: 'Error',
-        description: message,
-      });
-      return [];
+    } catch (error) {
+      console.error('Error fetching purchase orders:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
-  useEffect(() => {
-    fetchPurchaseOrders();
+  // Function to get a specific purchase order by ID
+  const getPurchaseOrder = useCallback((id: string) => {
+    return purchaseOrders.find(po => po.id === id);
+  }, [purchaseOrders]);
 
-    const channel = supabase
-      .channel('purchase_orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gl_purchase_orders' }, (payload) => {
-        fetchPurchaseOrders();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchPurchaseOrders, toast]);
+  // Function to get purchase orders for a specific account
+  const getPurchaseOrdersForAccount = useCallback((accountId: string) => {
+    return purchaseOrders.filter(po => po.vendorId === accountId);
+  }, [purchaseOrders]);
 
   const addPurchaseOrder = async (newPurchaseOrder: Omit<PurchaseOrder, 'id' | 'created_at'>) => {
-    setIsLoading(true);
-    setError(null);
     try {
-      // Map domain object to database fields
+      // Prepare the PO data for Supabase
       const poData = {
-        purchase_order_uid: newPurchaseOrder.number,
         rowid_accounts: newPurchaseOrder.vendorId,
-        account_name: newPurchaseOrder.accountName, // Add account_name
-        po_date: newPurchaseOrder.date.toISOString(),
-        payment_date: newPurchaseOrder.dueDate?.toISOString(), // Use payment_date for dueDate
+        po_date: newPurchaseOrder.date instanceof Date ? newPurchaseOrder.date.toISOString() : newPurchaseOrder.date,
         payment_status: newPurchaseOrder.status,
         total_amount: newPurchaseOrder.total,
         total_paid: newPurchaseOrder.amountPaid,
         balance: newPurchaseOrder.balance,
-        notes: newPurchaseOrder.notes, // Use notes as fallback
-        glide_row_id: `po-${Date.now()}`, // Generate a unique glide_row_id
+        glide_row_id: uuidv4(), // Generate a new glide_row_id
+        purchase_order_uid: newPurchaseOrder.number || `PO-${Date.now()}`
       };
 
-      const { data, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from('gl_purchase_orders')
         .insert(poData)
         .select()
         .single();
 
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: error.message,
-        });
-      } else if (data && data.length > 0) {
-        setPurchaseOrders(prevOrders => [data[0] as unknown as PurchaseOrder, ...prevOrders]);
-        toast({
-          title: 'Success',
-          description: 'Purchase order added successfully',
-        });
+      if (insertError) throw insertError;
+
+      // Fix the toast call - use a single object parameter
+      toast({
+        title: 'Success',
+        description: 'Purchase Order created successfully',
+      });
+
+      if (data) {
+        await fetchPurchaseOrders(); // Refresh the list
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
+    } catch (error) {
+      console.error('Error adding purchase order:', error);
+      
+      // Fix the toast call - use a single object parameter
       toast({
         title: 'Error',
-        description: message,
+        description: error instanceof Error ? error.message : 'Failed to create purchase order',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      
+      throw error;
     }
   };
 
   const updatePurchaseOrder = async (id: string, updates: Partial<PurchaseOrder>) => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const { data, error } = await supabase
-        .from('gl_purchase_orders')
-        .update(updates)
-        .eq('id', id)
-        .select();
+      // Prepare the update data for Supabase
+      const updateData = {
+        rowid_accounts: updates.vendorId,
+        po_date: updates.date instanceof Date ? updates.date.toISOString() : updates.date,
+        payment_status: updates.status,
+        total_amount: updates.total,
+        total_paid: updates.amountPaid,
+        balance: updates.balance,
+        purchase_order_uid: updates.number
+      };
 
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: error.message,
-        });
-      } else if (data && data.length > 0) {
-        setPurchaseOrders(prevOrders =>
-          prevOrders.map(order => (order.id === id ? {...order, ...data[0]} as PurchaseOrder : order))
-        );
-        toast({
-          title: 'Success',
-          description: 'Purchase order updated successfully',
-        });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
+      const { error: updateError } = await supabase
+        .from('gl_purchase_orders')
+        .update(updateData)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Fix the toast call - use a single object parameter
+      toast({
+        title: 'Success',
+        description: 'Purchase Order updated successfully',
+      });
+
+      await fetchPurchaseOrders(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating purchase order:', error);
+      
+      // Fix the toast call - use a single object parameter
       toast({
         title: 'Error',
-        description: message,
+        description: error instanceof Error ? error.message : 'Failed to update purchase order',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      
+      throw error;
     }
   };
 
   const deletePurchaseOrder = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const { error } = await supabase
+      const { error: deleteError } = await supabase
         .from('gl_purchase_orders')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: error.message,
-        });
-      } else {
-        setPurchaseOrders(prevOrders => prevOrders.filter(order => order.id !== id));
-        toast({
-          title: 'Success',
-          description: 'Purchase order deleted',
-        });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(message);
+      if (deleteError) throw deleteError;
+
+      // Fix the toast call - use a single object parameter
+      toast({
+        title: 'Success',
+        description: 'Purchase Order deleted successfully',
+      });
+
+      setPurchaseOrders(previous => previous.filter(po => po.id !== id));
+    } catch (error) {
+      console.error('Error deleting purchase order:', error);
+      
+      // Fix the toast call - use a single object parameter
       toast({
         title: 'Error',
-        description: message,
+        description: error instanceof Error ? error.message : 'Failed to delete purchase order',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      
+      throw error;
     }
   };
+
+  useEffect(() => {
+    fetchPurchaseOrders();
+  }, [fetchPurchaseOrders]);
 
   return {
     purchaseOrders,
@@ -313,4 +204,4 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     getPurchaseOrder,
     getPurchaseOrdersForAccount
   };
-};
+}

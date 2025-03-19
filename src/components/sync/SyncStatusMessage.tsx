@@ -1,13 +1,15 @@
+
 import React from 'react';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 import { ErrorSeverity } from './ui/ErrorDisplay';
+import { GlSyncStatus } from '@/types/glsync';
 
 interface SyncStatusMessageProps {
   success?: boolean;
   message?: string;
   recordsProcessed?: number;
   failedRecords?: number;
-  status?: any;
+  status?: GlSyncStatus;
   isLoading?: boolean;
   error?: string;
 }
