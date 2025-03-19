@@ -20,7 +20,7 @@ export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({ validation
   }
 
   return (
-    <Alert variant={validation.isValid ? "default" : "destructive"} className={validation.isValid ? "border-green-500 bg-green-50 dark:bg-green-950/50" : ""}>
+    <Alert variant={validation.isValid ? "success" : "destructive"}>
       <div className="flex items-start">
         <div className="mr-2 mt-0.5">
           {validation.isValid ? (

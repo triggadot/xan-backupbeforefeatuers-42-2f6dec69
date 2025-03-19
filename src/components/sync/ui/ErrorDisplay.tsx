@@ -1,8 +1,9 @@
+
 import React from 'react';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-export type ErrorSeverity = 'error' | 'warning' | 'info';
+export type ErrorSeverity = 'error' | 'warning' | 'info' | 'success';
 
 interface ValidationError {
   message: string;
@@ -34,11 +35,12 @@ export function ErrorDisplay({
       ? errors.map(err => typeof err === 'string' ? { message: err } : err)
       : [];
   
-  // Determine styling based on severity
-  const severityStyles = {
-    error: 'bg-red-50 border-red-200 text-red-800',
-    warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    info: 'bg-blue-50 border-blue-200 text-blue-800'
+  // Map severity to Alert variant
+  const variantMap = {
+    'error': 'destructive',
+    'warning': 'default',
+    'info': 'default',
+    'success': 'success'
   };
   
   // Determine icon based on severity
@@ -46,16 +48,20 @@ export function ErrorDisplay({
     ? AlertCircle 
     : severity === 'warning' 
       ? AlertTriangle 
-      : Info;
+      : severity === 'success'
+        ? CheckCircle
+        : Info;
   
   const defaultTitle = severity === 'error' 
     ? 'Error' 
     : severity === 'warning' 
       ? 'Warning' 
-      : 'Information';
+      : severity === 'success'
+        ? 'Success'
+        : 'Information';
   
   return (
-    <Alert className={`${severityStyles[severity]} ${className}`}>
+    <Alert variant={variantMap[severity]} className={className}>
       <SeverityIcon className="h-4 w-4" />
       <AlertTitle>{title || defaultTitle}</AlertTitle>
       <AlertDescription>
