@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,12 +10,12 @@ import { useGlSync } from '@/hooks/useGlSync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { useToast } from '@/hooks/use-toast';
 import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
-import MappingDetailsCard from '@/components/sync/MappingDetailsCard';
+import { MappingDetailsCard } from '@/components/sync/MappingDetailsCard';
 import ColumnMappingsView from './ColumnMappingsView';
-import { SyncErrorsView } from '@/components/sync/mappings/SyncErrorsView';
+import SyncErrorsView from '@/components/sync/mappings/SyncErrorsView';
 import { SyncLogsView } from '@/components/sync/mappings/SyncLogsView';
-import ValidationDisplay from '@/components/sync/ValidationDisplay';
-import SyncStatusMessage from '@/components/sync/SyncStatusMessage';
+import { ValidationDisplay } from '@/components/sync/ValidationDisplay';
+import { SyncStatusMessage } from '@/components/sync/SyncStatusMessage';
 
 interface MappingDetailsProps {
   mappingId: string;
@@ -42,7 +43,11 @@ const MappingTabs: React.FC<MappingTabsProps> = ({ mapping, onSync, isSyncing })
           </TabsList>
           
           <TabsContent value="details" className="space-y-4">
-            <MappingDetailsCard mapping={mapping} />
+            <MappingDetailsCard 
+              mapping={mapping}
+              onEdit={() => {}} 
+              onDelete={() => {}}
+            />
           </TabsContent>
           
           <TabsContent value="columns" className="space-y-4">

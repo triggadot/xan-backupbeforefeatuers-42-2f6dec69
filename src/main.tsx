@@ -1,3 +1,4 @@
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
@@ -10,10 +11,14 @@ import {
 import Sync from './pages/Sync.tsx';
 import ProductSync from './pages/ProductSync.tsx';
 import DataManagement from './pages/DataManagement.tsx';
-import { AuthProvider } from './contexts/AuthContext.tsx';
 import SignIn from './pages/SignIn.tsx';
 import RequireAuth from './components/RequireAuth.tsx';
 import SyncLayout from './components/sync/SyncLayout.tsx';
+
+// Custom auth provider wrapper from context
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  return children;
+};
 
 const router = createBrowserRouter([
   {

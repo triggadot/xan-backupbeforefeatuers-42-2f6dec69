@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { AddMappingButton } from './AddMappingButton';
 import { CreateSchemaButton } from './CreateSchemaButton';
 
@@ -26,7 +25,7 @@ export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({
         
         <div className="flex flex-col sm:flex-row gap-4">
           <AddMappingButton 
-            onMappingAdded={onMappingCreated}
+            onSuccess={onMappingCreated}
             connectionId={connectionId}
           />
           

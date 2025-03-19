@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -152,7 +153,6 @@ export function useInvoices() {
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive',
       });
       setIsLoading(false);
       return [];
@@ -222,7 +222,6 @@ export function useInvoices() {
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive',
       });
       return null;
     }
@@ -303,7 +302,6 @@ export function useInvoices() {
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive',
       });
       return [];
     }

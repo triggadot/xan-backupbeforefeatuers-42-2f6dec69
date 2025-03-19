@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,11 @@ const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
     setSelectedMappingId(null);
   };
 
+  // Wrap deleteMapping to handle the return type
+  const handleDeleteMapping = async (id: string): Promise<void> => {
+    await deleteMapping(id);
+  };
+
   // If a specific mapping is selected, show its details
   if (selectedMappingId) {
     return (
@@ -40,7 +46,7 @@ const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
     <div className="container mx-auto px-4 pb-20">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Table Mappings</h1>
-        <AddMappingButton onMappingAdded={refreshMappings} connectionId={connectionId} />
+        <AddMappingButton onSuccess={refreshMappings} connectionId={connectionId} />
       </div>
 
       {connectionId && (
@@ -66,7 +72,7 @@ const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
           mappings={mappings as GlMapping[]} 
           onViewMapping={handleViewMapping}
           onToggleEnabled={toggleEnabled}
-          onDeleteMapping={deleteMapping}
+          onDeleteMapping={handleDeleteMapping}
           isLoading={isLoading}
         />
       )}

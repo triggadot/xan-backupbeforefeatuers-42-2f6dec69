@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import MappingListItem from './MappingListItem';
-import MappingListHeader from './MappingListHeader';
+import { MappingListItem } from './MappingListItem';
+import { MappingListHeader } from './MappingListHeader';
 import { GlMapping } from '@/types/glsync';
 
 export interface MappingsListProps {

@@ -1,14 +1,16 @@
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 
-interface SyncLayoutProps {
-  children: React.ReactNode;
+export interface SyncLayoutProps {
+  children: ReactNode;
 }
 
-const SyncLayout: React.FC<SyncLayoutProps> = ({ children }) => {
+export const SyncLayout: React.FC<SyncLayoutProps> = ({ children }) => {
   return (
-    <div className="h-full flex flex-col">
-      {children}
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-1 py-6 md:py-8 lg:py-10">
+        {children}
+      </main>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SupabaseTable {
@@ -11,7 +11,7 @@ export const useSupabaseTables = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchTables = async () => {
+  const fetchTables = useCallback(async () => {
     setIsLoading(true);
     setError('');
     
@@ -46,11 +46,11 @@ export const useSupabaseTables = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
   
   useEffect(() => {
     fetchTables();
-  }, []);
+  }, [fetchTables]);
   
   return { tables, isLoading, error, fetchTables };
 };

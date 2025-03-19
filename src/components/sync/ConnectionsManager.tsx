@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import ConnectionCard from './connections/ConnectionCard';
 import AddConnectionDialog from './connections/AddConnectionDialog';
@@ -19,6 +19,7 @@ export const ConnectionsManager: React.FC = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<GlConnection | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { status: string; message?: string }>>({});
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const { toast } = useToast();
 
   const fetchConnections = async () => {
@@ -56,6 +57,7 @@ export const ConnectionsManager: React.FC = () => {
       ...prev,
       [connectionId]: { status: 'testing' }
     }));
+    setIsTestingConnection(true);
 
     try {
       const { success, result, error } = await glSyncApi.testConnection(connectionId);
@@ -95,6 +97,8 @@ export const ConnectionsManager: React.FC = () => {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
@@ -111,12 +115,14 @@ export const ConnectionsManager: React.FC = () => {
         // Add the new connection to the state
         setConnections(prev => [...prev, result.connection]);
         setIsAddOpen(false);
+        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
+        return false;
       }
     } catch (error) {
       console.error('Error adding connection:', error);
@@ -125,6 +131,7 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to add connection',
         variant: 'destructive',
       });
+      return false;
     }
   };
 
@@ -144,12 +151,14 @@ export const ConnectionsManager: React.FC = () => {
         );
         setIsEditOpen(false);
         setSelectedConnection(null);
+        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
+        return false;
       }
     } catch (error) {
       console.error('Error updating connection:', error);
@@ -158,6 +167,7 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to update connection',
         variant: 'destructive',
       });
+      return false;
     }
   };
 
@@ -175,12 +185,14 @@ export const ConnectionsManager: React.FC = () => {
         setConnections(prev => prev.filter(conn => conn.id !== id));
         setIsDeleteOpen(false);
         setSelectedConnection(null);
+        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
+        return false;
       }
     } catch (error) {
       console.error('Error deleting connection:', error);
@@ -189,7 +201,20 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to delete connection',
         variant: 'destructive',
       });
+      return false;
     }
+  };
+
+  const handleAddSuccess = () => {
+    fetchConnections();
+  };
+
+  const handleEditSuccess = () => {
+    fetchConnections();
+  };
+
+  const handleDeleteSuccess = () => {
+    fetchConnections();
   };
 
   return (
@@ -229,6 +254,7 @@ export const ConnectionsManager: React.FC = () => {
               key={connection.id}
               connection={connection}
               testResult={testResults[connection.id]}
+              isTestingConnection={isTestingConnection}
               onTest={() => handleTestConnection(connection.id)}
               onEdit={() => {
                 setSelectedConnection(connection);
@@ -247,6 +273,7 @@ export const ConnectionsManager: React.FC = () => {
         open={isAddOpen}
         onOpenChange={setIsAddOpen}
         onSubmit={handleAddConnection}
+        onSuccess={handleAddSuccess}
       />
       
       {selectedConnection && (
@@ -256,6 +283,7 @@ export const ConnectionsManager: React.FC = () => {
             onOpenChange={setIsEditOpen}
             connection={selectedConnection}
             onSubmit={(updates) => handleUpdateConnection(selectedConnection.id, updates)}
+            onSuccess={handleEditSuccess}
           />
           
           <DeleteConnectionDialog
@@ -263,6 +291,7 @@ export const ConnectionsManager: React.FC = () => {
             onOpenChange={setIsDeleteOpen}
             connection={selectedConnection}
             onDelete={() => handleDeleteConnection(selectedConnection.id)}
+            onSuccess={handleDeleteSuccess}
           />
         </>
       )}

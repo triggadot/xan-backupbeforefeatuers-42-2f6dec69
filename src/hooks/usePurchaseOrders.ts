@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
@@ -18,7 +19,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     setError(null);
     try {
       const { data, error } = await supabase
-        .from('purchase_orders')
+        .from('gl_purchase_orders')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -32,7 +33,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
       }
 
       if (data) {
-        setPurchaseOrders(data);
+        setPurchaseOrders(data as unknown as PurchaseOrder[]);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -47,12 +48,131 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     }
   }, [toast]);
 
+  // Add getPurchaseOrder function
+  const getPurchaseOrder = useCallback(async (id: string): Promise<PurchaseOrder | null> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('gl_purchase_orders')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        setError(error.message);
+        toast({
+          title: 'Error',
+          description: error.message,
+        });
+        return null;
+      }
+
+      if (data) {
+        // Mock some data for now - in a real app, you'd fetch the line items and payments
+        const mockPO: PurchaseOrder = {
+          ...data,
+          id: data.id || '',
+          number: data.purchase_order_uid || `PO-${data.id}`,
+          vendorId: data.rowid_accounts || '',
+          accountName: data.vendor_name || 'Unknown Vendor',
+          date: new Date(data.po_date || data.created_at),
+          dueDate: data.due_date ? new Date(data.due_date) : null,
+          status: (data.payment_status || 'draft') as PurchaseOrder['status'],
+          total: data.total_amount || 0,
+          subtotal: data.total_amount || 0,
+          tax: 0,
+          amountPaid: data.total_paid || 0,
+          balance: data.balance || 0,
+          notes: data.po_notes || '',
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          lineItems: [],
+          vendorPayments: []
+        };
+        return mockPO;
+      }
+      return null;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
+      toast({
+        title: 'Error',
+        description: message,
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  // Add getPurchaseOrdersForAccount function
+  const getPurchaseOrdersForAccount = useCallback(async (accountId: string): Promise<PurchaseOrder[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data: account, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('id', accountId)
+        .single();
+      
+      if (accountError) {
+        throw accountError;
+      }
+      
+      const { data, error } = await supabase
+        .from('gl_purchase_orders')
+        .select('*')
+        .eq('rowid_accounts', account.glide_row_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        // Transform data to PurchaseOrder type - simplified for example
+        const orders = data.map((item: any) => ({
+          id: item.id,
+          number: item.purchase_order_uid || `PO-${item.id}`,
+          vendorId: item.rowid_accounts,
+          accountName: account.account_name,
+          date: new Date(item.po_date || item.created_at),
+          status: item.payment_status || 'draft',
+          total: item.total_amount || 0,
+          subtotal: item.total_amount || 0,
+          tax: 0,
+          amountPaid: item.total_paid || 0,
+          balance: item.balance || 0,
+          notes: item.po_notes,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          lineItems: [],
+          vendorPayments: []
+        }));
+        return orders;
+      }
+      return [];
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
+      toast({
+        title: 'Error',
+        description: message,
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchPurchaseOrders();
 
     const channel = supabase
       .channel('purchase_orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gl_purchase_orders' }, (payload) => {
         fetchPurchaseOrders();
       })
       .subscribe();
@@ -67,7 +187,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     setError(null);
     try {
       const { data, error } = await supabase
-        .from('purchase_orders')
+        .from('gl_purchase_orders')
         .insert([newPurchaseOrder])
         .select();
 
@@ -76,10 +196,9 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
         toast({
           title: 'Error',
           description: error.message,
-          variant: 'destructive',
         });
       } else if (data && data.length > 0) {
-        setPurchaseOrders(prevOrders => [data[0], ...prevOrders]);
+        setPurchaseOrders(prevOrders => [data[0] as unknown as PurchaseOrder, ...prevOrders]);
         toast({
           title: 'Success',
           description: 'Purchase order added successfully',
@@ -91,7 +210,6 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
       toast({
         title: 'Error',
         description: message,
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -103,7 +221,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     setError(null);
     try {
       const { data, error } = await supabase
-        .from('purchase_orders')
+        .from('gl_purchase_orders')
         .update(updates)
         .eq('id', id)
         .select();
@@ -113,11 +231,10 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
         toast({
           title: 'Error',
           description: error.message,
-          variant: 'destructive',
         });
       } else if (data && data.length > 0) {
         setPurchaseOrders(prevOrders =>
-          prevOrders.map(order => (order.id === id ? data[0] : order))
+          prevOrders.map(order => (order.id === id ? {...order, ...data[0]} as PurchaseOrder : order))
         );
         toast({
           title: 'Success',
@@ -130,7 +247,6 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
       toast({
         title: 'Error',
         description: message,
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -142,7 +258,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     setError(null);
     try {
       const { error } = await supabase
-        .from('purchase_orders')
+        .from('gl_purchase_orders')
         .delete()
         .eq('id', id);
 
@@ -151,7 +267,6 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
         toast({
           title: 'Error',
           description: error.message,
-          variant: 'destructive',
         });
       } else {
         setPurchaseOrders(prevOrders => prevOrders.filter(order => order.id !== id));
@@ -166,7 +281,6 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
       toast({
         title: 'Error',
         description: message,
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -181,5 +295,7 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     updatePurchaseOrder,
     deletePurchaseOrder,
     fetchPurchaseOrders,
+    getPurchaseOrder,
+    getPurchaseOrdersForAccount
   };
 };
