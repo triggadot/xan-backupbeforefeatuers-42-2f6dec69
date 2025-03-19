@@ -1,12 +1,130 @@
 
-import React, { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ProductsTable from '@/components/feature/product/ProductsTable';
+import ProductDialog from '@/components/feature/product/ProductDialog';
+import { useTableData } from '@/hooks/useTableData';
+import { useToast } from '@/hooks/use-toast';
+import { LoadingState } from '@/components/sync/LoadingState';
 
 const Products: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<any>(null);
+  
+  const { toast } = useToast();
+  const { 
+    data: products, 
+    isLoading: isLoadingProducts, 
+    error, 
+    fetchData: refreshProducts,
+    createRecord,
+    updateRecord,
+    deleteRecord
+  } = useTableData('gl_products');
+
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await refreshProducts();
+    setIsLoading(false);
+  };
+
+  const handleCreateProduct = async (productData: Record<string, unknown>) => {
+    try {
+      await createRecord(productData);
+      toast({
+        title: 'Success',
+        description: 'Product created successfully',
+      });
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create product',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateProduct = async (productData: Record<string, unknown>) => {
+    if (!currentProduct?.id) return;
+    
+    try {
+      await updateRecord(currentProduct.id, productData);
+      toast({
+        title: 'Success',
+        description: 'Product updated successfully',
+      });
+      setIsEditDialogOpen(false);
+      setCurrentProduct(null);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update product',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteProduct = async (product: any) => {
+    if (confirm(`Are you sure you want to delete ${product.display_name || 'this product'}?`)) {
+      try {
+        await deleteRecord(product.id);
+        toast({
+          title: 'Success',
+          description: 'Product deleted successfully',
+        });
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete product',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleEdit = (product: any) => {
+    setCurrentProduct(product);
+    setIsEditDialogOpen(true);
+  };
+
+  // Filter products based on search term
+  const filteredProducts = searchTerm
+    ? products.filter((product: any) => {
+        const searchFields = [
+          product.display_name,
+          product.vendor_product_name,
+          product.new_product_name,
+          product.category,
+        ].filter(Boolean);
+        
+        return searchFields.some(field => 
+          field.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      })
+    : products;
+
+  if (error) {
+    return (
+      <div className="container py-6 max-w-7xl">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+          <p>Error loading products: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-6 max-w-7xl">
@@ -15,32 +133,61 @@ const Products: React.FC = () => {
         
         <div className="flex w-full sm:w-auto gap-2">
           <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 w-full sm:w-64"
+              className="pl-9 pr-4 w-full sm:w-64"
             />
           </div>
           
           <Button 
             variant="outline" 
             size="icon"
-            disabled={isLoading}
+            onClick={handleRefresh}
+            disabled={isLoading || isLoadingProducts}
+            title="Refresh products"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </Button>
           
-          <Button>
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="gap-1"
+          >
+            <Plus size={18} />
             New Product
           </Button>
         </div>
       </div>
       
-      <div className="bg-muted p-8 rounded-md text-center">
-        <h3 className="font-medium text-lg mb-2">Product Management Coming Soon</h3>
-        <p className="text-muted-foreground">The product management functionality is currently being implemented.</p>
-      </div>
+      {isLoadingProducts ? (
+        <LoadingState />
+      ) : (
+        <ProductsTable 
+          products={filteredProducts} 
+          onEdit={handleEdit} 
+          onDelete={handleDeleteProduct}
+        />
+      )}
+
+      {/* Create Product Dialog */}
+      <ProductDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSubmit={handleCreateProduct}
+        title="Create New Product"
+      />
+
+      {/* Edit Product Dialog */}
+      <ProductDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSubmit={handleUpdateProduct}
+        title="Edit Product"
+        product={currentProduct}
+      />
     </div>
   );
 };
