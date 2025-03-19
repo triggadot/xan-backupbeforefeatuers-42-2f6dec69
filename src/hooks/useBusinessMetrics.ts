@@ -45,17 +45,49 @@ export function useBusinessMetrics() {
     setError(null);
     
     try {
-      // Fetch all metrics from the gl_business_metrics view
-      const { data: businessMetrics, error: metricsError } = await supabase
-        .from('gl_business_metrics')
-        .select('*')
-        .single();
+      // Fetch invoice and purchase order metrics from relevant functions
+      const { data: invoiceMetrics, error: invoiceError } = await supabase
+        .rpc('gl_get_invoice_metrics');
       
-      if (metricsError) throw metricsError;
+      if (invoiceError) throw invoiceError;
       
-      setMetrics(businessMetrics);
+      const { data: poMetrics, error: poError } = await supabase
+        .rpc('gl_get_purchase_order_metrics');
       
-      // Fetch document status from gl_current_status view with proper column selection
+      if (poError) throw poError;
+      
+      // Fetch account stats (customers and vendors)
+      const { data: accountStats, error: accountError } = await supabase
+        .rpc('gl_get_account_stats');
+      
+      if (accountError) throw accountError;
+      
+      // Count products
+      const { count: productCount, error: productError } = await supabase
+        .from('gl_products')
+        .select('id', { count: 'exact', head: true });
+      
+      if (productError) throw productError;
+      
+      // Combine all metrics into one object
+      const combinedMetrics: BusinessMetrics = {
+        total_invoices: invoiceMetrics.invoice_count || 0,
+        total_estimates: invoiceMetrics.estimate_count || 0,
+        total_purchase_orders: poMetrics.po_count || 0,
+        total_products: productCount || 0,
+        total_customers: accountStats.customer_count || 0,
+        total_vendors: accountStats.vendor_count || 0,
+        total_invoice_amount: invoiceMetrics.total_invoice_amount || 0,
+        total_payments_received: invoiceMetrics.total_payments_received || 0,
+        total_outstanding_balance: invoiceMetrics.total_outstanding_balance || 0,
+        total_purchase_amount: poMetrics.total_purchase_amount || 0,
+        total_payments_made: poMetrics.total_payments_made || 0,
+        total_purchase_balance: poMetrics.total_purchase_balance || 0
+      };
+      
+      setMetrics(combinedMetrics);
+      
+      // Fetch document status from gl_current_status view
       const { data: docStatusData, error: statusError } = await supabase
         .from('gl_current_status')
         .select('category, total_count, paid_count, unpaid_count, draft_count, total_amount, total_paid, balance_amount');
