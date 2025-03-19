@@ -1,97 +1,44 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SyncStatusBadge } from '@/components/sync/ui/SyncStatusBadge';
+import { formatTimestamp } from '@/utils/glsync-transformers';
 import { GlMapping } from '@/types/glsync';
-import { AlertCircle } from 'lucide-react';
 
 interface SyncDetailsPanelProps {
-  mapping: GlMapping | null;
-  error?: string;
+  mapping: GlMapping;
 }
 
-const SyncDetailsPanel: React.FC<SyncDetailsPanelProps> = ({ mapping, error }) => {
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Mapping Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center text-red-500">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            <p>{error}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!mapping) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Mapping Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No mapping data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Safely access column_mappings
-  let columnMappingsCount = 0;
-  try {
-    const columnMappings = typeof mapping.column_mappings === 'string' 
-      ? JSON.parse(mapping.column_mappings) 
-      : mapping.column_mappings;
-    
-    columnMappingsCount = Object.keys(columnMappings || {}).length;
-  } catch (e) {
-    console.error('Error parsing column mappings:', e);
-  }
-
+const SyncDetailsPanel: React.FC<SyncDetailsPanelProps> = ({ mapping }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mapping Details</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <dl className="grid grid-cols-1 gap-4">
+    <Card className="mb-4">
+      <CardContent className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm font-medium text-muted-foreground">Glide Table</dt>
-            <dd className="text-lg">{mapping.glide_table_display_name}</dd>
+            <h3 className="text-sm font-medium text-muted-foreground">Sync Status</h3>
+            <div className="mt-1">
+              <SyncStatusBadge status={mapping.current_status || 'unknown'} />
+            </div>
           </div>
+
           <div>
-            <dt className="text-sm font-medium text-muted-foreground">Supabase Table</dt>
-            <dd className="text-lg">{mapping.supabase_table}</dd>
+            <h3 className="text-sm font-medium text-muted-foreground">Last Synced</h3>
+            <p className="mt-1 text-sm">
+              {formatTimestamp(mapping.last_sync_completed_at)}
+            </p>
           </div>
+
           <div>
-            <dt className="text-sm font-medium text-muted-foreground">Sync Direction</dt>
-            <dd className="text-lg">
-              {mapping.sync_direction === 'to_supabase' ? 'Glide → Supabase' : 
-               mapping.sync_direction === 'to_glide' ? 'Supabase → Glide' : 
-               'Bidirectional'}
-            </dd>
+            <h3 className="text-sm font-medium text-muted-foreground">Records</h3>
+            <p className="mt-1 text-sm">{mapping.total_records || 0} total</p>
           </div>
+
           <div>
-            <dt className="text-sm font-medium text-muted-foreground">Status</dt>
-            <dd className="text-lg">
-              <Badge className={mapping.enabled ? "bg-green-500" : "bg-gray-500"}>
-                {mapping.enabled ? 'Enabled' : 'Disabled'}
-              </Badge>
-            </dd>
+            <h3 className="text-sm font-medium text-muted-foreground">Errors</h3>
+            <p className="mt-1 text-sm">{mapping.error_count || 0} errors</p>
           </div>
-          <div>
-            <dt className="text-sm font-medium text-muted-foreground">Column Mappings</dt>
-            <dd className="text-lg">
-              {columnMappingsCount > 0 
-                ? `${columnMappingsCount} columns mapped` 
-                : 'No column mappings defined'}
-            </dd>
-          </div>
-        </dl>
+        </div>
       </CardContent>
     </Card>
   );

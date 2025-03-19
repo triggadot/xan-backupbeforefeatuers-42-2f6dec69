@@ -53,3 +53,15 @@ export interface ValidationResult {
 
 // Type for filter states
 export type SyncLogFilter = 'all' | 'completed' | 'failed';
+
+// Add GlConnection type for mapping components to use
+export interface GlConnection {
+  id: string;
+  api_key: string;
+  app_id: string;
+  app_name: string;
+  created_at: string;
+  last_sync: string;
+  settings: Record<string, any>; // Changed from Json to Record<string, any>
+  status: string;
+}

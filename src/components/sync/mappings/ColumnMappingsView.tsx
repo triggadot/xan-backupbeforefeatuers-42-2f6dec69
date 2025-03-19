@@ -1,102 +1,75 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Edit2, Save } from 'lucide-react';
 import { GlMapping } from '@/types/glsync';
-import { AlertCircle } from 'lucide-react';
+import { QueryObserverResult } from '@tanstack/react-query';
 
-interface ColumnMappingsViewProps {
-  mapping: GlMapping | null;
-  error?: string;
+export interface ColumnMappingsViewProps {
+  mapping: GlMapping;
+  onSave?: () => Promise<QueryObserverResult<GlMapping, Error>>;
 }
 
-export function ColumnMappingsView({ mapping, error }: ColumnMappingsViewProps) {
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardDescription className="flex items-center text-red-500">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="p-4 text-center text-muted-foreground">
-            Unable to display column mappings due to an error.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+const ColumnMappingsView: React.FC<ColumnMappingsViewProps> = ({ mapping, onSave }) => {
+  const columnMappings = typeof mapping.column_mappings === 'string' 
+    ? JSON.parse(mapping.column_mappings) 
+    : mapping.column_mappings;
 
-  // Check if mapping exists and column_mappings is valid
-  if (!mapping || !mapping.column_mappings) {
-    return (
-      <Card>
-        <CardContent className="p-0">
-          <div className="p-4 text-center text-muted-foreground">
-            No column mappings data available.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Ensure column_mappings is properly handled whether it's an object or string
-  let columnMappings = mapping.column_mappings;
-  if (typeof columnMappings === 'string') {
-    try {
-      columnMappings = JSON.parse(columnMappings);
-    } catch (e) {
-      console.error('Failed to parse column_mappings string:', e);
-      return (
-        <Card>
-          <CardHeader>
-            <CardDescription className="flex items-center text-red-500">
-              <AlertCircle className="h-5 w-5 mr-2" />
-              Invalid column mappings format
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="p-4 text-center text-muted-foreground">
-              Unable to display column mappings due to invalid format.
-            </div>
-          </CardContent>
-        </Card>
-      );
+  const handleSave = async () => {
+    if (onSave) {
+      await onSave();
     }
-  }
+  };
 
   return (
     <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Glide Column</TableHead>
-              <TableHead>Supabase Column</TableHead>
-              <TableHead>Data Type</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Object.keys(columnMappings).length === 0 ? (
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-md">Column Mappings</CardTitle>
+        {onSave && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSave}
+            className="ml-auto"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent>
+        {Object.keys(columnMappings).length > 0 ? (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                  No column mappings defined for this table.
-                </TableCell>
+                <TableHead>Glide Column</TableHead>
+                <TableHead>Supabase Column</TableHead>
+                <TableHead>Data Type</TableHead>
               </TableRow>
-            ) : (
-              Object.entries(columnMappings).map(([key, columnMapping]) => (
-                <TableRow key={key}>
-                  <TableCell>{columnMapping.glide_column_name}</TableCell>
-                  <TableCell>{columnMapping.supabase_column_name}</TableCell>
-                  <TableCell>{columnMapping.data_type}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(columnMappings).map(([key, mapping]) => {
+                const map = mapping as any;
+                return (
+                  <TableRow key={key}>
+                    <TableCell className="font-medium">{map.glide_column_name}</TableCell>
+                    <TableCell>{map.supabase_column_name}</TableCell>
+                    <TableCell>{map.data_type}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            No column mappings configured.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-}
+};
+
+export default ColumnMappingsView;

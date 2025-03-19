@@ -1,4 +1,3 @@
-
 # Glide Sync Architecture
 
 This document details the architecture and workflow of our Glide synchronization system.
@@ -38,14 +37,16 @@ The Glide sync system facilitates bidirectional data synchronization between our
 #### Glide API Endpoints
 - **Query Endpoint**: `https://api.glideapp.io/api/function/queryTables`
   - Used for reading data from Glide tables
-  - Supports pagination via continuation tokens
+  - Supports pagination via continuation tokens (next/startAt)
   - Handles table schema discovery and listing available tables
+  - Supports SQL-like filtering for Big Tables
   - Returns data in a standardized format with rows and next token
 
 - **Mutation Endpoint**: `https://api.glideapp.io/api/function/mutateTables`
   - Used for creating, updating, and deleting records in Glide
-  - Supports batch operations for efficiency
-  - Requires proper row identification with `$rowID` for updates/deletes
+  - Supports batch operations (up to 500 mutations per request)
+  - Requires specific mutation types and structure
+  - Returns success/failure status for each mutation
 
 #### Edge Functions
 - `glsync`: Main edge function handling sync operations:
@@ -149,79 +150,161 @@ The Glide sync system facilitates bidirectional data synchronization between our
 
 ## Mapping System
 
-### Glide CRUD Operations
+### Glide API Operations
 
-Glide API operations are mapped to standard CRUD functions:
+Glide API operations consist of queries and mutations that follow specific formats:
 
-1. **Create**:
-   - Uses mutateTables endpoint with 'create' operation type
-   - No $rowID required (Glide will generate one)
-   - Example:
-     ```json
-     {
-       "appID": "app123",
-       "mutations": [
-         {
-           "tableName": "Products",
-           "type": "create",
-           "values": { "name": "New Product", "price": 99.99 }
-         }
-       ]
+#### 1. Queries (Reading Data)
+
+The `queryTables` endpoint reads data from Glide tables. A basic request looks like:
+
+```json
+{
+  "appID": "YOUR_APP_ID",
+  "queries": [
+    {
+      "tableName": "YOUR_TABLE_NAME",
+      "startAt": "CONTINUATION_TOKEN" // Optional, for pagination
+    }
+  ]
+}
+```
+
+**Response format:**
+```json
+[
+  {
+    "rows": [
+      { "column1": "value1", "column2": "value2", "$rowID": "row123" },
+      // More rows...
+    ],
+    "next": "NEXT_CONTINUATION_TOKEN" // Optional, if more rows exist
+  }
+]
+```
+
+**Advanced Queries with SQL (for Big Tables):**
+
+```json
+{
+  "appID": "YOUR_APP_ID",
+  "queries": [
+    {
+      "sql": "SELECT * FROM \"TableName\" WHERE \"Column\" = $1 AND (\"OtherColumn\" = $2 OR \"AnotherColumn\" = $3) LIMIT 10",
+      "params": ["Value1", "Value2", "Value3"]
+    }
+  ]
+}
+```
+
+**Pagination Implementation:**
+
+```typescript
+async function getAllRows(apiKey: string, appId: string, tableName: string) {
+  let allRows = [];
+  let continuationToken = null;
+  
+  do {
+    const result = await fetchGlideTableData(apiKey, appId, tableName, continuationToken);
+    
+    if (result.error) {
+      throw new Error(`Error fetching data: ${result.error}`);
+    }
+    
+    allRows = [...allRows, ...result.rows];
+    continuationToken = result.next;
+    
+    // Log progress for large tables
+    console.log(`Retrieved ${allRows.length} rows so far...`);
+    
+  } while (continuationToken);
+  
+  return allRows;
+}
+```
+
+#### 2. Mutations (Creating, Updating, Deleting Data)
+
+The `mutateTables` endpoint writes data to Glide. The request format is:
+
+```json
+{
+  "appID": "YOUR_APP_ID",
+  "mutations": [
+    // Mutation operations (up to 500)
+  ]
+}
+```
+
+**Mutation Types:**
+
+1. **Add Row (`add-row-to-table`):**
+   ```json
+   {
+     "kind": "add-row-to-table",
+     "tableName": "YOUR_TABLE_NAME",
+     "columnValues": {
+       "Column1": "Value1",
+       "Column2": "Value2"
      }
-     ```
+   }
+   ```
 
-2. **Read**:
-   - Uses queryTables endpoint
-   - Can filter, sort, and paginate
-   - Example:
-     ```json
-     {
-       "appID": "app123",
-       "queries": [
-         {
-           "tableName": "Products",
-           "filter": { "price": { "gt": 50 } },
-           "sort": [{ "field": "name", "order": "asc" }],
-           "limit": 100
-         }
-       ]
-     }
-     ```
+2. **Update Row (`set-columns-in-row`):**
+   ```json
+   {
+     "kind": "set-columns-in-row",
+     "tableName": "YOUR_TABLE_NAME",
+     "columnValues": {
+       "Column1": "UpdatedValue1",
+       "Column2": "UpdatedValue2"
+     },
+     "rowID": "row123"
+   }
+   ```
 
-3. **Update**:
-   - Uses mutateTables endpoint with 'update' operation type
-   - Requires $rowID for identification
-   - Example:
-     ```json
-     {
-       "appID": "app123",
-       "mutations": [
-         {
-           "tableName": "Products",
-           "type": "update",
-           "rowID": "row123",
-           "values": { "price": 129.99 }
-         }
-       ]
-     }
-     ```
+3. **Delete Row (`delete-row`):**
+   ```json
+   {
+     "kind": "delete-row",
+     "tableName": "YOUR_TABLE_NAME",
+     "rowID": "row123"
+   }
+   ```
 
-4. **Delete**:
-   - Uses mutateTables endpoint with 'delete' operation type
-   - Requires $rowID for identification
-   - Example:
-     ```json
-     {
-       "appID": "app123",
-       "mutations": [
-         {
-           "tableName": "Products",
-           "type": "delete",
-           "rowID": "row123"
-         }
-       ]
-     }
-     ```
+**Batching Mutations Implementation:**
+
+```typescript
+async function sendBatchedMutations(apiKey: string, appId: string, mutations: any[]) {
+  const batchSize = 500; // Maximum allowed by Glide API
+  const batches = [];
+  const results = [];
+  
+  // Create batches of mutations
+  for (let i = 0; i < mutations.length; i += batchSize) {
+    batches.push(mutations.slice(i, i + batchSize));
+  }
+  
+  // Process each batch
+  for (const batch of batches) {
+    try {
+      const result = await sendGlideMutations(apiKey, appId, batch);
+      
+      if (result.error) {
+        console.error(`Batch error: ${result.error}`);
+        // Handle error (retry, log, etc.)
+      } else {
+        results.push(result.data);
+      }
+    } catch (error) {
+      console.error(`Exception in batch: ${error.message}`);
+      // Handle exception
+    }
+  }
+  
+  return results;
+}
+```
 
 ### Column Mapping Structure
 
@@ -233,7 +316,7 @@ Glide API operations are mapped to standard CRUD functions:
     "data_type": "string"
   },
   "product_name": {
-    "glide_column_name": "product_name",
+    "glide_column_name": "product_name", 
     "supabase_column_name": "vendor_product_name",
     "data_type": "string"
   }
@@ -259,51 +342,15 @@ Glide API operations are mapped to standard CRUD functions:
 
 ### Pagination
 
-- Glide API limits response size to 10,000 rows per request
-- Continuation tokens are used for fetching additional data
+- Glide API limits response size (up to 10,000 rows per request)
+- Continuation tokens (`next` in response, `startAt` in subsequent requests) are used for fetching additional data
 - Progress tracking is maintained throughout pagination
-
-```typescript
-async function getAllRows(apiKey, appId, tableName) {
-  let allRows = [];
-  let continuationToken = null;
-  
-  do {
-    const result = await fetchGlideTableData(apiKey, appId, tableName, continuationToken);
-    allRows = [...allRows, ...result.rows];
-    continuationToken = result.next;
-  } while (continuationToken);
-  
-  return allRows;
-}
-```
 
 ### Batching
 
 - Mutations are grouped into batches (max 500 per request)
 - Implementation balances throughput vs. error management
 - Each batch has independent error handling
-
-```typescript
-async function sendBatchedMutations(apiKey, appId, mutations) {
-  const batchSize = 500;
-  const batches = [];
-  
-  // Create batches of mutations
-  for (let i = 0; i < mutations.length; i += batchSize) {
-    batches.push(mutations.slice(i, i + batchSize));
-  }
-  
-  // Process each batch
-  const results = [];
-  for (const batch of batches) {
-    const result = await sendGlideMutations(apiKey, appId, batch);
-    results.push(result);
-  }
-  
-  return results;
-}
-```
 
 ### Rate Limiting
 
@@ -369,6 +416,108 @@ async function fetchWithRetry(fn, maxRetries = 3) {
 - Status views provide at-a-glance system health metrics
 - Performance metrics track sync efficiency and throughput
 - Console logging in edge functions for debugging
+
+## Future Improvements
+
+- Scheduled sync operations
+- Conflict resolution strategies for bidirectional sync
+- Webhook support for real-time updates
+- Enhanced retry mechanism for failed records
+- Customizable transformation rules
+- Multi-tenant support
+- Advanced filtering for selective sync
+- Schema change detection and auto-adaptation
+
+## Implementation Details
+
+### Glide to Supabase Sync Flow
+
+1. **Fetch data from Glide**:
+   ```typescript
+   // Query Glide table with pagination
+   async function syncGlideToSupabase(mapping, connection) {
+     let processedRecords = 0;
+     let continuationToken = null;
+     
+     do {
+       // Fetch batch of data from Glide
+       const { rows, next, error } = await fetchGlideTableData(
+         connection.api_key,
+         connection.app_id,
+         mapping.glide_table,
+         continuationToken
+       );
+       
+       if (error) {
+         throw new Error(`Failed to fetch data: ${error}`);
+       }
+       
+       // Transform and upsert records
+       const transformedRecords = rows.map(row => 
+         transformGlideToSupabase(row, mapping.column_mappings)
+       );
+       
+       // Upsert to Supabase
+       await upsertToSupabase(mapping.supabase_table, transformedRecords);
+       
+       // Update progress
+       processedRecords += rows.length;
+       continuationToken = next;
+       
+     } while (continuationToken);
+     
+     return processedRecords;
+   }
+   ```
+
+### Supabase to Glide Sync Flow
+
+1. **Fetch data from Supabase**:
+   ```typescript
+   async function syncSupabaseToGlide(mapping, connection) {
+     let processedRecords = 0;
+     
+     // Fetch data from Supabase table
+     const { data, error } = await supabase
+       .from(mapping.supabase_table)
+       .select('*');
+     
+     if (error) {
+       throw new Error(`Failed to fetch data: ${error.message}`);
+     }
+     
+     // Transform records for Glide
+     const mutations = data.map(record => {
+       const transformedRecord = transformSupabaseToGlide(
+         record, 
+         mapping.column_mappings
+       );
+       
+       // If record has Glide Row ID, update existing row
+       if (record.glide_row_id) {
+         return {
+           kind: "set-columns-in-row",
+           tableName: mapping.glide_table,
+           columnValues: transformedRecord,
+           rowID: record.glide_row_id
+         };
+       } 
+       // Otherwise create new row
+       else {
+         return {
+           kind: "add-row-to-table",
+           tableName: mapping.glide_table,
+           columnValues: transformedRecord
+         };
+       }
+     });
+     
+     // Send mutations in batches
+     await sendBatchedMutations(connection.api_key, connection.app_id, mutations);
+     
+     return mutations.length;
+   }
+   ```
 
 ## Future Improvements
 
