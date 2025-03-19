@@ -45,10 +45,9 @@ export function useBusinessMetrics() {
     setError(null);
     
     try {
-      // Fetch all metrics from the gl_business_metrics view
+      // Use PostgreSQL function directly instead of view
       const { data: businessMetrics, error: metricsError } = await supabase
-        .from('gl_business_metrics')
-        .select('*')
+        .rpc('gl_get_business_stats')
         .single();
       
       if (metricsError) {
@@ -56,7 +55,10 @@ export function useBusinessMetrics() {
         throw metricsError;
       }
       
-      setMetrics(businessMetrics);
+      // Make sure the response matches our BusinessMetrics interface
+      if (businessMetrics) {
+        setMetrics(businessMetrics as BusinessMetrics);
+      }
       
       // Fetch document status from gl_current_status view
       const { data: docStatusData, error: statusError } = await supabase
