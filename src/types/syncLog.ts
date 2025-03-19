@@ -23,11 +23,7 @@ export interface Mapping {
   glide_table: string;
   glide_table_display_name: string;
   supabase_table: string;
-  column_mappings: Record<string, {
-    glide_column_name: string;
-    supabase_column_name: string;
-    data_type: string;
-  }>;
+  column_mappings: any; // This can be a string or an object depending on how it's stored
   sync_direction: string;
   enabled: boolean;
   app_name?: string;

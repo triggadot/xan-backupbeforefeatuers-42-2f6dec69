@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { GlMapping } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 import { convertToGlMapping } from '@/utils/gl-mapping-converters';
+import { Mapping } from '@/types/syncLog';
 
 export function useProductMapping(mappingId: string) {
   const { toast } = useToast();
@@ -40,8 +41,22 @@ export function useProductMapping(mappingId: string) {
       
       console.log('Raw mapping data:', data);
       
+      // Prepare mapping for conversion
+      const rawMapping: Mapping = {
+        id: data.id,
+        connection_id: data.connection_id,
+        glide_table: data.glide_table,
+        glide_table_display_name: data.glide_table_display_name,
+        supabase_table: data.supabase_table,
+        column_mappings: data.column_mappings,
+        sync_direction: data.sync_direction,
+        enabled: data.enabled,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
       // Convert the raw data to a properly typed GlMapping using the converter utility
-      return convertToGlMapping(data);
+      return convertToGlMapping(rawMapping);
     },
     enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {

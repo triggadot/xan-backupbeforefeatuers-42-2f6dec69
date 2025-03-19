@@ -1,7 +1,4 @@
 
-// Assuming this is part of the current file, we'll add the interface definition here
-// and update the component implementation to make onBack optional and fix the refreshErrors call
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProductMapping } from '@/hooks/useProductMapping';
 import { useToast } from '@/hooks/use-toast';
 import MappingForm from './MappingForm';
-import ColumnMappingsView from './ColumnMappingsView';
+import { ColumnMappingsView } from './ColumnMappingsView';
 import SyncDetailsPanel from './SyncDetailsPanel';
 import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
 import SyncErrorsList from './SyncErrorsList';
@@ -26,7 +23,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   const [activeTab, setActiveTab] = useState<string>('details');
   const { toast } = useToast();
   
-  const { errors, isLoading: isErrorsLoading, refetch: refreshErrors } = useGlSyncErrors(mappingId);
+  const { syncErrors, isLoading: isErrorsLoading, refreshErrors } = useGlSyncErrors(mappingId);
   
   useEffect(() => {
     if (error) {
@@ -109,13 +106,13 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="columns">Column Mappings</TabsTrigger>
-          <TabsTrigger value="errors">Sync Errors {errors?.length ? `(${errors.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="errors">Sync Errors {syncErrors?.length ? `(${syncErrors.length})` : ''}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="details" className="space-y-4">
           <MappingForm 
-            mapping={mapping} 
-            connection={connection}
+            mapping={mapping}
+            connections={[connection]} 
             onSave={() => refetch()}
           />
           <SyncDetailsPanel mapping={mapping} />
@@ -135,9 +132,9 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
             </CardHeader>
             <CardContent>
               <SyncErrorsList 
-                errors={errors || []} 
+                errors={syncErrors || []} 
                 isLoading={isErrorsLoading} 
-                onResolve={() => refreshErrors()}
+                onResolve={(errorId) => refreshErrors().then(() => Promise.resolve(true))}
               />
             </CardContent>
           </Card>
