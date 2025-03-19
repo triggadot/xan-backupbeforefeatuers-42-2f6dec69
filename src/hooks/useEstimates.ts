@@ -29,10 +29,13 @@ export function useEstimates() {
       
       const enhancedEstimates = estimatesData.map((estimate) => {
         const account = estimate.account as unknown as { id: string; account_name: string }[] | null;
+        // Cast to the expected enum type
+        const status = estimate.status as 'draft' | 'pending' | 'converted';
+        
         return {
           ...estimate,
           accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
-          status: estimate.status as 'draft' | 'pending' | 'converted'
+          status: status
         } as Estimate;
       });
       
@@ -84,15 +87,17 @@ export function useEstimates() {
       
       // Format the estimate with related data
       const account = estimate.account as unknown as Account[] | null;
+      // Cast the status to the expected enum type
+      const status = estimate.status as 'draft' | 'pending' | 'converted';
       
-      const formattedEstimate = {
+      const formattedEstimate: Estimate = {
         ...estimate,
-        accountName: account && account.length > 0 ? account[0].name : 'Unknown',
+        accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
         account: account && account.length > 0 ? account[0] : undefined,
         estimateLines: estimateLines as EstimateLine[],
         credits: credits as CustomerCredit[],
-        status: estimate.status as 'draft' | 'pending' | 'converted'
-      } as Estimate;
+        status: status
+      };
       
       return formattedEstimate;
     } catch (err) {

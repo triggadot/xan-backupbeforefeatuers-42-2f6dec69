@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Edit, FileText, PlusCircle, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +60,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
   const [currentCredit, setCurrentCredit] = useState<CustomerCredit | null>(null);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
 
-  // Get status badge variant
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'converted':
@@ -74,13 +72,11 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     }
   };
 
-  // Format date string
   const formatDateString = (dateString?: string) => {
     if (!dateString) return 'No date';
     return format(new Date(dateString), 'MMM d, yyyy');
   };
 
-  // Handle estimate edit
   const handleEditEstimate = async (data: Partial<Estimate>) => {
     const updated = await onUpdate(estimate.id, data);
     if (updated) {
@@ -89,7 +85,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     setIsEditDialogOpen(false);
   };
 
-  // Handle estimate delete
   const handleDeleteEstimate = async () => {
     const success = await onDelete(estimate.id);
     if (success) {
@@ -98,7 +93,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     setIsDeleteDialogOpen(false);
   };
 
-  // Handle add/edit line
   const handleAddEditLine = async (data: Partial<EstimateLine>) => {
     if (currentLine) {
       await onUpdateLine(currentLine.id, data);
@@ -110,7 +104,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     onRefresh();
   };
 
-  // Handle delete line
   const handleDeleteLine = async (lineId: string) => {
     if (confirm('Are you sure you want to delete this line item?')) {
       await onDeleteLine(lineId);
@@ -118,7 +111,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     }
   };
 
-  // Handle add/edit credit
   const handleAddEditCredit = async (data: Partial<CustomerCredit>) => {
     if (currentCredit) {
       await onUpdateCredit(currentCredit.id, data);
@@ -130,7 +122,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     onRefresh();
   };
 
-  // Handle delete credit
   const handleDeleteCredit = async (creditId: string) => {
     if (confirm('Are you sure you want to delete this credit?')) {
       await onDeleteCredit(creditId);
@@ -138,7 +129,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     }
   };
 
-  // Handle convert to invoice
   const handleConvertToInvoice = async () => {
     await onConvertToInvoice(estimate.id);
     setIsConvertDialogOpen(false);
@@ -204,7 +194,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                 <User className="h-4 w-4 mr-2 mt-0.5" />
                 <div>
                   <p className="font-medium">{estimate.accountName || 'No customer assigned'}</p>
-                  {estimate.account?.email && (
+                  {estimate.account && estimate.account.email && (
                     <p className="text-sm text-muted-foreground">{estimate.account.email}</p>
                   )}
                 </div>
@@ -441,7 +431,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
         </CardFooter>
       </Card>
       
-      {/* Edit Estimate Dialog */}
       <EstimateDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
@@ -450,7 +439,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
         title="Edit Estimate"
       />
       
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -472,45 +460,38 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Add/Edit Line Dialog */}
-      {isAddLineOpen && (
-        <Dialog open={isAddLineOpen} onOpenChange={setIsAddLineOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{currentLine ? 'Edit Item' : 'Add Item'}</DialogTitle>
-            </DialogHeader>
-            <EstimateLineForm
-              estimateLine={currentLine || undefined}
-              onSubmit={handleAddEditLine}
-              onCancel={() => {
-                setCurrentLine(null);
-                setIsAddLineOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={isAddLineOpen} onOpenChange={setIsAddLineOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{currentLine ? 'Edit Item' : 'Add Item'}</DialogTitle>
+          </DialogHeader>
+          <EstimateLineForm
+            estimateLine={currentLine || undefined}
+            onSubmit={handleAddEditLine}
+            onCancel={() => {
+              setCurrentLine(null);
+              setIsAddLineOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       
-      {/* Add/Edit Credit Dialog */}
-      {isAddCreditOpen && (
-        <Dialog open={isAddCreditOpen} onOpenChange={setIsAddCreditOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{currentCredit ? 'Edit Credit' : 'Add Credit'}</DialogTitle>
-            </DialogHeader>
-            <CustomerCreditForm
-              credit={currentCredit || undefined}
-              onSubmit={handleAddEditCredit}
-              onCancel={() => {
-                setCurrentCredit(null);
-                setIsAddCreditOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={isAddCreditOpen} onOpenChange={setIsAddCreditOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{currentCredit ? 'Edit Credit' : 'Add Credit'}</DialogTitle>
+          </DialogHeader>
+          <CustomerCreditForm
+            credit={currentCredit || undefined}
+            onSubmit={handleAddEditCredit}
+            onCancel={() => {
+              setCurrentCredit(null);
+              setIsAddCreditOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       
-      {/* Convert to Invoice Dialog */}
       <AlertDialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -64,29 +64,19 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       setIsLoading(true);
       try {
         const { data, error } = await supabase
-          .rpc('gl_get_table_columns', { table_name: tableName }) as unknown as {
-            data: TableColumn[] | null;
-            error: Error | null;
-          };
+          .rpc('gl_get_table_columns' as any, { table_name: tableName });
 
         if (error) throw error;
-
-        if (data && Array.isArray(data)) {
-          const formattedColumns = data.map(col => ({
-            name: col.column_name,
-            type: col.data_type,
-            isPrimary: col.is_primary_key,
-            isNullable: col.is_nullable
-          }));
-          setColumns(formattedColumns);
-        }
+        setColumns(data as any);
       } catch (error) {
         console.error('Error fetching table columns:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load table structure',
-          variant: 'destructive',
-        });
+        if (error instanceof Error) {
+          toast({
+            title: 'Error',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -202,11 +192,8 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { error } = await supabase
-          .rpc('gl_admin_execute_sql', { sql_query: sql }) as unknown as {
-            data: string | null;
-            error: Error | null;
-          };
+        const { data, error } = await supabase
+          .rpc('gl_admin_execute_sql' as any, { sql_query: sql });
 
         if (error) throw error;
         
