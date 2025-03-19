@@ -1252,6 +1252,23 @@ export type Database = {
       }
     }
     Views: {
+      gl_business_metrics: {
+        Row: {
+          total_customers: number | null
+          total_estimates: number | null
+          total_invoice_amount: number | null
+          total_invoices: number | null
+          total_outstanding_balance: number | null
+          total_payments_made: number | null
+          total_payments_received: number | null
+          total_products: number | null
+          total_purchase_amount: number | null
+          total_purchase_balance: number | null
+          total_purchase_orders: number | null
+          total_vendors: number | null
+        }
+        Relationships: []
+      }
       gl_current_status: {
         Row: {
           balance_amount: number | null
@@ -1303,6 +1320,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gl_order_fulfillment: {
+        Row: {
+          customer_name: string | null
+          has_shipping: boolean | null
+          invoice_amount: number | null
+          invoice_id: string | null
+          invoice_rowid: string | null
+          payment_status: string | null
+          products: string | null
+          ship_date: string | null
+          total_items: number | null
+          tracking_number: string | null
+        }
+        Relationships: []
       }
       gl_product_sync_stats: {
         Row: {
@@ -1394,6 +1426,23 @@ export type Database = {
         Returns: {
           customer_count: number
           vendor_count: number
+        }[]
+      }
+      gl_get_business_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_invoices: number
+          total_estimates: number
+          total_purchase_orders: number
+          total_products: number
+          total_customers: number
+          total_vendors: number
+          total_invoice_amount: number
+          total_payments_received: number
+          total_outstanding_balance: number
+          total_purchase_amount: number
+          total_payments_made: number
+          total_purchase_balance: number
         }[]
       }
       gl_get_document_status: {
