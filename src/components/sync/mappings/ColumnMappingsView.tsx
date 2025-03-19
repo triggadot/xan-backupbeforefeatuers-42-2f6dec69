@@ -29,6 +29,7 @@ export function ColumnMappingsView({ mapping, error }: ColumnMappingsViewProps) 
     );
   }
 
+  // Check if mapping exists and column_mappings is valid
   if (!mapping || !mapping.column_mappings) {
     return (
       <Card>
@@ -39,6 +40,31 @@ export function ColumnMappingsView({ mapping, error }: ColumnMappingsViewProps) 
         </CardContent>
       </Card>
     );
+  }
+
+  // Ensure column_mappings is properly handled whether it's an object or string
+  let columnMappings = mapping.column_mappings;
+  if (typeof columnMappings === 'string') {
+    try {
+      columnMappings = JSON.parse(columnMappings);
+    } catch (e) {
+      console.error('Failed to parse column_mappings string:', e);
+      return (
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center text-red-500">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Invalid column mappings format
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-4 text-center text-muted-foreground">
+              Unable to display column mappings due to invalid format.
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
   }
 
   return (
@@ -53,14 +79,14 @@ export function ColumnMappingsView({ mapping, error }: ColumnMappingsViewProps) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(mapping.column_mappings).length === 0 ? (
+            {Object.keys(columnMappings).length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
                   No column mappings defined for this table.
                 </TableCell>
               </TableRow>
             ) : (
-              Object.entries(mapping.column_mappings).map(([key, columnMapping]) => (
+              Object.entries(columnMappings).map(([key, columnMapping]) => (
                 <TableRow key={key}>
                   <TableCell>{columnMapping.glide_column_name}</TableCell>
                   <TableCell>{columnMapping.supabase_column_name}</TableCell>

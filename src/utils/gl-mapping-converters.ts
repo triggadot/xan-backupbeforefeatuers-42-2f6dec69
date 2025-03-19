@@ -12,9 +12,16 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
   const convertedColumnMappings: Record<string, GlColumnMapping> = {};
   
   // Handle the case where column_mappings might be coming from a JSON field in Supabase
-  const columnMappings = typeof mapping.column_mappings === 'string' 
-    ? JSON.parse(mapping.column_mappings) 
-    : mapping.column_mappings;
+  let columnMappings: any;
+  
+  try {
+    columnMappings = typeof mapping.column_mappings === 'string' 
+      ? JSON.parse(mapping.column_mappings) 
+      : mapping.column_mappings;
+  } catch (e) {
+    console.error('Failed to parse column_mappings:', e);
+    columnMappings = {};
+  }
   
   if (columnMappings && typeof columnMappings === 'object') {
     Object.entries(columnMappings).forEach(([key, value]) => {

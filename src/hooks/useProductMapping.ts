@@ -16,6 +16,11 @@ export function useProductMapping(mappingId: string) {
     queryKey: ['glsync-mapping', mappingId],
     queryFn: async () => {
       console.log(`Fetching mapping with ID: ${mappingId}`);
+      
+      if (!mappingId || mappingId === ':mappingId') {
+        throw new Error('Invalid mapping ID');
+      }
+      
       const { data, error } = await supabase
         .from('gl_mappings')
         .select('*')
@@ -27,9 +32,9 @@ export function useProductMapping(mappingId: string) {
         throw error;
       }
       
-      if (!data || !data.column_mappings) {
-        console.warn('Missing column_mappings in data:', data);
-        throw new Error('Column mappings data not available');
+      if (!data) {
+        console.warn('No mapping data found for ID:', mappingId);
+        throw new Error('Mapping not found');
       }
       
       console.log('Raw mapping data:', data);
@@ -41,17 +46,20 @@ export function useProductMapping(mappingId: string) {
           parsedColumnMappings = JSON.parse(data.column_mappings);
         } catch (e) {
           console.error('Error parsing column_mappings:', e);
-          throw new Error('Invalid column mappings format');
+          // Instead of throwing, return with the raw string to allow the UI to handle it
+          parsedColumnMappings = {};
         }
+      }
+      
+      // Check if parsedColumnMappings is null or undefined and initialize to empty object if needed
+      if (!parsedColumnMappings) {
+        console.warn('Missing or null column_mappings in data:', data);
+        parsedColumnMappings = {};
       }
       
       return {
         ...data,
-        column_mappings: parsedColumnMappings as Record<string, { 
-          glide_column_name: string;
-          supabase_column_name: string;
-          data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
-        }>
+        column_mappings: parsedColumnMappings
       } as GlMapping;
     },
     enabled: !!mappingId && mappingId !== ':mappingId',

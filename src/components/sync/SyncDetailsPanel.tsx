@@ -40,6 +40,18 @@ export function SyncDetailsPanel({ mapping, error }: SyncDetailsPanelProps) {
     );
   }
 
+  // Safely access column_mappings
+  let columnMappingsCount = 0;
+  try {
+    const columnMappings = typeof mapping.column_mappings === 'string' 
+      ? JSON.parse(mapping.column_mappings) 
+      : mapping.column_mappings;
+    
+    columnMappingsCount = Object.keys(columnMappings || {}).length;
+  } catch (e) {
+    console.error('Error parsing column mappings:', e);
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -74,8 +86,8 @@ export function SyncDetailsPanel({ mapping, error }: SyncDetailsPanelProps) {
           <div>
             <dt className="text-sm font-medium text-muted-foreground">Column Mappings</dt>
             <dd className="text-lg">
-              {mapping.column_mappings && Object.keys(mapping.column_mappings).length > 0 
-                ? `${Object.keys(mapping.column_mappings).length} columns mapped` 
+              {columnMappingsCount > 0 
+                ? `${columnMappingsCount} columns mapped` 
                 : 'No column mappings defined'}
             </dd>
           </div>

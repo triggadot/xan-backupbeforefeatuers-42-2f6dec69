@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,15 @@ const MappingsManager = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const mappingIdFromUrl = urlParams.get('id');
 
+  useEffect(() => {
+    console.log("Current URL parameters:", mappingIdFromUrl);
+    if (mappingIdFromUrl) {
+      console.log("Found mapping ID in URL:", mappingIdFromUrl);
+    }
+  }, [mappingIdFromUrl]);
+
   const handleViewMapping = (mapping: GlMapping) => {
+    console.log("Viewing mapping:", mapping);
     setSelectedMapping(mapping);
     // Update the URL to include the mapping ID
     navigate(`/sync/mappings?id=${mapping.id}`);
@@ -59,6 +68,7 @@ const MappingsManager = () => {
 
   // If there's a mapping ID in the URL but no selected mapping yet, we'll render the mapping details
   if (selectedMapping || mappingIdFromUrl) {
+    console.log("Rendering MappingDetails for:", selectedMapping?.id || mappingIdFromUrl);
     return (
       <MappingDetails 
         mappingId={selectedMapping?.id || mappingIdFromUrl!} 
