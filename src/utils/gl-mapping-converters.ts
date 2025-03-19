@@ -30,7 +30,7 @@ export function convertToGlMapping(record: any): GlMapping {
   }
   
   return {
-    id: record.id,
+    id: record.id || record.mapping_id, // Support both direct ID and mapping_id from views
     connection_id: record.connection_id,
     glide_table: record.glide_table,
     glide_table_display_name: record.glide_table_display_name || record.glide_table,
@@ -62,6 +62,18 @@ export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
       "supabase_column_name": "glide_row_id",
       "data_type": "string"
     }
+  };
+}
+
+/**
+ * Converts a mapping object to a database-ready format
+ */
+export function convertToDbMapping(mapping: Partial<GlMapping>): any {
+  return {
+    ...mapping,
+    column_mappings: typeof mapping.column_mappings === 'string' 
+      ? mapping.column_mappings 
+      : JSON.stringify(mapping.column_mappings)
   };
 }
 

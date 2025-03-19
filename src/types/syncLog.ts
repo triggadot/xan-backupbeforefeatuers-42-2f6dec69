@@ -2,7 +2,7 @@
 export interface SyncLog {
   id: string;
   mapping_id: string;
-  status: string;
+  status: "started" | "processing" | "completed" | "failed" | "completed_with_errors";
   started_at: string;
   completed_at?: string;
   records_processed?: number;
