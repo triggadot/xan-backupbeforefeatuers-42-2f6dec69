@@ -1,4 +1,3 @@
-
 // Base entity type with common fields
 export interface BaseEntity {
   id: string;
@@ -61,6 +60,9 @@ export interface Product extends BaseEntity {
   category?: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
+  vendorName?: string;
+  totalQtyPurchased?: number;
+  inStock?: number;
 }
 
 // Line item for orders, estimates, and invoices

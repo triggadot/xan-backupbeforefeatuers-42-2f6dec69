@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { Product } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/utils/format-utils';
+import { formatCurrency } from '@/utils/mapping-utils';
 
 export interface ProductsTableProps {
   products: Product[];

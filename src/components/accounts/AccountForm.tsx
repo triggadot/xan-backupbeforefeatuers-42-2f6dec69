@@ -51,7 +51,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
     resolver: zodResolver(accountSchema),
     defaultValues: {
       name: defaultValues?.name || '',
-      type: defaultValues?.type || 'customer',
+      type: defaultValues?.type || 'Customer',
       email: defaultValues?.email || '',
       phone: defaultValues?.phone || '',
       address: defaultValues?.address || '',
