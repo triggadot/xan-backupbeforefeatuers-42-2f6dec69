@@ -21,6 +21,14 @@ export function convertToGlMapping(record: any): GlMapping {
     }
   }
   
+  // Ensure sync_direction is one of the valid types
+  const validDirections = ['to_supabase', 'to_glide', 'both'];
+  let syncDirection = record.sync_direction || 'to_supabase';
+  if (!validDirections.includes(syncDirection)) {
+    console.warn(`Invalid sync_direction: ${syncDirection}, defaulting to to_supabase`);
+    syncDirection = 'to_supabase';
+  }
+  
   return {
     id: record.id,
     connection_id: record.connection_id,
@@ -28,7 +36,7 @@ export function convertToGlMapping(record: any): GlMapping {
     glide_table_display_name: record.glide_table_display_name || record.glide_table,
     supabase_table: record.supabase_table,
     column_mappings: columnMappings,
-    sync_direction: record.sync_direction || 'to_supabase',
+    sync_direction: syncDirection as 'to_supabase' | 'to_glide' | 'both',
     enabled: record.enabled !== false, // Default to true if not specified
     created_at: record.created_at,
     updated_at: record.updated_at,

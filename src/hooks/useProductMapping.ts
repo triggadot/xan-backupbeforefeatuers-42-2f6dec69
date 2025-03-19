@@ -49,8 +49,10 @@ export function useProductMapping(mappingId: string) {
         glide_table: data.glide_table,
         glide_table_display_name: data.glide_table_display_name,
         supabase_table: data.supabase_table,
-        column_mappings: data.column_mappings,
-        sync_direction: data.sync_direction,
+        column_mappings: typeof data.column_mappings === 'string' 
+          ? JSON.parse(data.column_mappings) 
+          : data.column_mappings,
+        sync_direction: data.sync_direction as "to_supabase" | "to_glide" | "both",
         enabled: data.enabled,
         created_at: data.created_at,
         updated_at: data.updated_at

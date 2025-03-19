@@ -8,7 +8,34 @@ export function useGlSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [glideTables, setGlideTables] = useState<any[]>([]);
   const { toast } = useToast();
+
+  /**
+   * Fetch Glide tables for a connection
+   */
+  const fetchGlideTables = async (connectionId: string) => {
+    setIsLoading(true);
+    try {
+      const result = await glSyncApi.listGlideTables(connectionId);
+      if (result.success) {
+        setGlideTables(result.tables || []);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch Glide tables';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+      setGlideTables([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /**
    * Validates a mapping configuration
@@ -120,8 +147,11 @@ export function useGlSync() {
     syncData,
     retryFailedSync,
     validateMappingConfig,
+    fetchGlideTables,
+    glideTables,
     isSyncing,
     isRetrying,
+    isLoading,
     error
   };
 }

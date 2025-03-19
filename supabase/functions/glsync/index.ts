@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { testGlideConnection, getGlideTableColumns, fetchGlideTableData, updateGlideData } from '../shared/glide-api.ts'
 
@@ -75,12 +76,12 @@ Deno.serve(async (req) => {
       const uniqueTables = new Map();
       
       // Filter unique tables to avoid duplicates
-      data.forEach(item => {
+      (data || []).forEach(item => {
         // Only add if not already in map
         if (!uniqueTables.has(item.glide_table)) {
           uniqueTables.set(item.glide_table, {
             id: item.glide_table,
-            display_name: item.glide_table_display_name
+            display_name: item.glide_table_display_name || item.glide_table
           });
         }
       });
@@ -134,6 +135,7 @@ Deno.serve(async (req) => {
       
       // Use the most recently created mapping
       const mappingId = mappings[0].id;
+      console.log(`Using mapping ID ${mappingId} for accounts table`);
       return await syncData(supabase, connectionId, mappingId);
     }
     else {
@@ -352,8 +354,17 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       })
       .eq('id', logId);
     
-    // Process and transform the data for Supabase
-    const columnMappings = mapping.column_mappings;
+    // Parse column mappings - handle both string and object formats
+    let columnMappings = mapping.column_mappings;
+    if (typeof columnMappings === 'string') {
+      try {
+        columnMappings = JSON.parse(columnMappings);
+      } catch (e) {
+        console.error('Error parsing column mappings:', e);
+        throw new Error('Invalid column mapping format');
+      }
+    }
+    
     const transformedRows = [];
     const errors = [];
     
@@ -535,7 +546,7 @@ function normalizeClientType(clientType: string | null | undefined): string | nu
   if (!clientType) return null;
   
   // Normalize to match the exact values expected by the constraint
-  const normalized = String(clientType).trim();
+  const normalized = String(clientType).trim().toLowerCase();
   
   if (/customer\s*&\s*vendor/i.test(normalized) || 
       /customer\s+and\s+vendor/i.test(normalized) ||

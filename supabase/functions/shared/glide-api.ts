@@ -1,3 +1,4 @@
+
 interface GlideColumn {
   name: string;
   type?: string;
@@ -41,7 +42,7 @@ export async function getGlideTableColumns(apiKey: string, appId: string, tableI
     console.log('Glide API response:', JSON.stringify(data));
     
     // Check if we have columns data
-    if (!data[0] || !data[0].columns) {
+    if (!data || !data[0] || !data[0].columns) {
       return [];
     }
     
@@ -175,9 +176,10 @@ export async function fetchGlideTableData(apiKey: string, appId: string, tableId
     }
     
     const data = await response.json();
+    console.log('Fetched data:', JSON.stringify(data).substring(0, 500) + '...');
     
     // Check if we have data
-    if (!data[0] || !data[0].rows) {
+    if (!data || !data[0] || !data[0].rows) {
       return { rows: [], columns: {} };
     }
     
