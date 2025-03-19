@@ -63,6 +63,7 @@ export function useBusinessMetrics() {
       if (statusError) throw statusError;
       
       if (docStatusData) {
+        // Explicitly type the docStatusData as StatusMetrics[] to avoid type errors
         setStatusMetrics(docStatusData as StatusMetrics[]);
       }
       

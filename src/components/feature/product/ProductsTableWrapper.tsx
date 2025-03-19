@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Product } from '@/types';
-import { ProductsTable } from './ProductsTable';
+import ProductsTable from './ProductsTable';
 
 interface ProductsTableWrapperProps {
   products: Product[];
@@ -21,8 +21,7 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       products={products} 
       onEdit={onEdit} 
       onViewDetails={onViewDetails} 
-      // The delete handler is handled internally
-      onDeleteInternal={onDelete}
+      deleteProduct={onDelete}
     />
   );
 };
