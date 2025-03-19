@@ -17,6 +17,7 @@ export function useSupabaseTables() {
     
     setIsLoading(true);
     try {
+      // Use the correct information_schema reference (no public_ prefix)
       const { data, error } = await supabase
         .from('gl_tables_view')
         .select('table_name');
@@ -39,7 +40,7 @@ export function useSupabaseTables() {
 
   useEffect(() => {
     fetchTables();
-  }, []);
+  }, [fetchTables]);
 
   return { tables, isLoading, fetchTables };
 }

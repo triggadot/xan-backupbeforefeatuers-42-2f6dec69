@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
@@ -132,81 +131,6 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-async function testGlideConnection(supabase, connectionId: string) {
-  console.log(`Testing connection with ID: ${connectionId}`);
-  
-  try {
-    // Get connection details
-    const { data: connection, error: connectionError } = await supabase
-      .from('gl_connections')
-      .select('*')
-      .eq('id', connectionId)
-      .single();
-    
-    if (connectionError) {
-      throw connectionError;
-    }
-    
-    if (!connection) {
-      throw new Error('Connection not found');
-    }
-    
-    // Test the connection by fetching app data from Glide API
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: connection.app_id,
-        queries: []
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
-    }
-    
-    // Update connection status to active
-    await supabase
-      .from('gl_connections')
-      .update({ status: 'active' })
-      .eq('id', connectionId);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: 'Connection successful' 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-  } catch (error) {
-    console.error('Connection test failed:', error);
-    
-    // Update connection status to error
-    await supabase
-      .from('gl_connections')
-      .update({ status: 'error' })
-      .eq('id', connectionId);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200  // Still return 200 so front-end can handle the error message
-      }
-    );
-  }
-}
 
 async function getGlideColumnMappings(supabase, connectionId: string, tableId: string) {
   console.log(`Getting column mappings for table: ${tableId}`);
