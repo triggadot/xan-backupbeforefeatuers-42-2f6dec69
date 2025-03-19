@@ -18,12 +18,12 @@ const MappingView = () => {
   }
   
   return (
-    <SyncLayout>
+    <div className="container mx-auto py-6 max-w-7xl">
       <MappingDetails 
         mappingId={id} 
         onBack={handleBack} 
       />
-    </SyncLayout>
+    </div>
   );
 };
 

@@ -42,15 +42,15 @@ export function useGlSync() {
     }
   };
 
-  const syncData = useCallback(async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+  const syncData = useCallback(async (mappingId: string): Promise<ProductSyncResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
       // Log the start of sync for monitoring
-      console.log(`Starting sync for mapping ID: ${mappingId}, connection ID: ${connectionId}`);
+      console.log(`Starting sync for mapping ID: ${mappingId}`);
       
-      const result = await glSyncApi.syncData(connectionId, mappingId);
+      const result = await glSyncApi.syncData(mappingId);
       
       if (!result.success) {
         const errorMessage = result.error || 'An unknown error occurred during sync';
@@ -131,16 +131,16 @@ export function useGlSync() {
       };
     }
     
-    return syncData(connectionId, mappingId);
+    return syncData(mappingId);
   }, [getAccountsMappingId, syncData, toast]);
 
-  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
+  const retryFailedSync = async (mappingId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
     try {
       // Use syncData action instead of retryFailedSync
-      const result = await syncData(connectionId, mappingId);
+      const result = await syncData(mappingId);
       
       if (!result.success) {
         throw new Error(result.error);

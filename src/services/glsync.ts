@@ -23,6 +23,13 @@ export const glSyncApi = {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
+
+  /**
+   * Get connections - alias for listConnections for backwards compatibility
+   */
+  async getConnections() {
+    return this.listConnections();
+  },
   
   /**
    * Get a connection by ID
@@ -62,6 +69,13 @@ export const glSyncApi = {
       console.error('Error creating connection:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
+  },
+
+  /**
+   * Add a connection - alias for createConnection for backwards compatibility
+   */
+  async addConnection(connection: Omit<GlConnection, 'id' | 'created_at'>) {
+    return this.createConnection(connection);
   },
   
   /**
@@ -107,12 +121,28 @@ export const glSyncApi = {
   /**
    * Test a connection to Glide
    */
-  async testConnection(connection: { app_id: string, api_key: string }) {
+  async testConnection(connection: string | { app_id: string, api_key: string }) {
     try {
+      let connectionData: { app_id: string, api_key: string };
+      
+      if (typeof connection === 'string') {
+        // If connection is a string ID, fetch the connection first
+        const { data, error } = await supabase
+          .from('gl_connections')
+          .select('app_id, api_key')
+          .eq('id', connection)
+          .single();
+          
+        if (error) throw error;
+        connectionData = data;
+      } else {
+        connectionData = connection;
+      }
+      
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'testConnection',
-          connection
+          connection: connectionData
         }
       });
       
@@ -332,7 +362,7 @@ export const glSyncApi = {
   },
   
   /**
-   * Sync data
+   * Sync data with response format matching what components expect
    */
   async syncData(mappingId: string) {
     try {
@@ -345,10 +375,20 @@ export const glSyncApi = {
       
       if (error) throw error;
       
-      return { success: true, result: data };
+      return { 
+        success: true, 
+        result: data,
+        recordsProcessed: data.recordsProcessed || 0,
+        failedRecords: data.failedRecords || 0
+      };
     } catch (error) {
       console.error('Error syncing data:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        recordsProcessed: 0,
+        failedRecords: 0
+      };
     }
   },
   

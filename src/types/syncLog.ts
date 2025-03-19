@@ -7,7 +7,12 @@ export interface SyncLog {
   completed_at?: string;
   records_processed?: number;
   message?: string;
-  app_name?: string; // Added for compatibility
+  app_name?: string;
+  // Additional fields needed by components
+  glide_table?: string;
+  glide_table_display_name?: string;
+  supabase_table?: string;
+  sync_direction?: string;
 }
 
 export interface SyncError {
@@ -20,6 +25,12 @@ export interface SyncError {
   created_at: string;
   resolved_at?: string;
   resolution_notes?: string;
+  // Additional properties needed by components
+  type?: string;
+  message?: string;
+  record?: any;
+  timestamp?: string;
+  resolved?: boolean;
 }
 
 export interface UseSyncLogsOptions {
@@ -33,7 +44,7 @@ export interface SyncLogsResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  data?: SyncLog[]; // Added for compatibility with existing code
+  data: SyncLog[]; // Ensure this is required, not optional
 }
 
 export interface SyncLogFilter {
@@ -41,6 +52,8 @@ export interface SyncLogFilter {
   status?: string;
   fromDate?: Date;
   toDate?: Date;
+  // Allow string values for filtering by status
+  [key: string]: any;
 }
 
 export interface Mapping {
@@ -62,6 +75,7 @@ export interface Mapping {
   records_processed?: number;
   total_records?: number;
   error_count?: number;
+  app_name?: string;
 }
 
 export interface GlColumnMapping {

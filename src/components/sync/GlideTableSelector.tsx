@@ -15,6 +15,9 @@ export interface GlideTableSelectorProps {
   isLoading?: boolean;
   placeholder?: string;
   value?: string;
+  // Add missing props used by components
+  tables?: GlideTable[];
+  onTableChange?: (tableId: string) => void;
 }
 
 const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
@@ -25,13 +28,20 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   disabled = false,
   isLoading: externalLoading = false,
   placeholder = "Select a Glide table",
-  value
+  value,
+  tables: providedTables
 }) => {
   const [tables, setTables] = useState<GlideTable[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
+    // If tables are provided externally, use those instead of fetching
+    if (providedTables && providedTables.length > 0) {
+      setTables(providedTables);
+      return;
+    }
+    
     async function fetchGlideTables() {
       if (!connectionId) return;
       
@@ -65,13 +75,22 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
     }
     
     fetchGlideTables();
-  }, [connectionId, selectedTableId]);
+  }, [connectionId, selectedTableId, providedTables]);
   
   const handleTableChange = (tableId: string) => {
     const selectedTable = tables.find(t => t.id === tableId);
+    
+    // Handle legacy onTableChange
+    if (selectedTable && onTableChange) {
+      onTableChange(tableId);
+    }
+    
+    // Handle onTableSelect with display name
     if (selectedTable && onTableSelect) {
       onTableSelect(tableId, selectedTable.display_name);
     }
+    
+    // Handle onAddTable for full object
     if (selectedTable && onAddTable) {
       onAddTable(selectedTable);
     }

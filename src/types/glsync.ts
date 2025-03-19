@@ -100,7 +100,7 @@ export interface GlSyncStats {
   successful_syncs: number;
   failed_syncs: number;
   total_records_processed: number;
-  sync_date?: string; // Adding missing field
+  sync_date: string; // Make this required
 }
 
 // Interface for products in Glide
@@ -146,10 +146,6 @@ export interface GlSyncRecord {
 export interface MappingValidationResult {
   isValid: boolean;
   message: string;
-  
-  // SQL function returns these properties
-  is_valid?: boolean;
-  validation_message?: string;
 }
 
 // Data for validating mappings
@@ -161,3 +157,6 @@ export interface MappingToValidate {
   column_mappings: Record<string, GlColumnMapping>;
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
 }
+
+// Export GlSyncLog for consistency
+export type GlSyncLog = SyncLog;

@@ -6,7 +6,7 @@ import { MappingValidationResult } from '@/types/glsync';
 
 export function useGlSyncValidation() {
   const [validating, setValidating] = useState(false);
-  const [validation, setValidation] = useState<{ isValid: boolean; message: string } | null>(null);
+  const [validation, setValidation] = useState<MappingValidationResult | null>(null);
   const { toast } = useToast();
 
   const validateMappingConfig = useCallback(async (mappingId: string): Promise<boolean> => {
@@ -28,19 +28,23 @@ export function useGlSyncValidation() {
       // Success - get the results from the first row
       const result = data[0];
       
-      setValidation({
+      const validationResult: MappingValidationResult = {
         isValid: result.is_valid,
         message: result.validation_message
-      });
+      };
       
-      return result.is_valid;
+      setValidation(validationResult);
+      
+      return validationResult.isValid;
     } catch (error) {
       console.error('Error validating mapping configuration:', error);
       
-      setValidation({
+      const validationError: MappingValidationResult = {
         isValid: false,
         message: `Error during validation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      };
+      
+      setValidation(validationError);
       
       toast({
         title: 'Validation error',
