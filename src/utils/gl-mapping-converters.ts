@@ -18,10 +18,12 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
     // If column_mappings is a string, parse it as JSON
     if (typeof mapping.column_mappings === 'string') {
       columnMappings = JSON.parse(mapping.column_mappings);
+      console.log('Parsed column mappings from string:', columnMappings);
     } 
     // If it's already an object, use it directly
     else if (mapping.column_mappings && typeof mapping.column_mappings === 'object') {
       columnMappings = mapping.column_mappings;
+      console.log('Using column mappings as object:', columnMappings);
     } 
     // Default to empty object if neither
     else {
@@ -46,7 +48,7 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
       // Ensure data_type is one of the allowed types
       let dataType: "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" = "string";
       
-      if (isValidDataType(columnMapping.data_type)) {
+      if (columnMapping.data_type && isValidDataType(columnMapping.data_type)) {
         dataType = columnMapping.data_type;
       } else {
         console.warn(`Invalid data_type "${columnMapping.data_type}" for column "${key}", defaulting to "string"`);

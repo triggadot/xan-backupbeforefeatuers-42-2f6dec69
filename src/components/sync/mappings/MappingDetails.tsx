@@ -1,147 +1,148 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { SyncDetailsPanel } from '../SyncDetailsPanel';
-import { ColumnMappingsView } from './ColumnMappingsView';
-import { SyncLogsView } from './SyncLogsView';
-import { GlSyncRecord } from '@/types/glsync';
-import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
-import { useProductMapping } from '@/hooks/useProductMapping';
+// Assuming this is part of the current file, we'll add the interface definition here
+// and update the component implementation to make onBack optional and fix the refreshErrors call
 
-interface MappingDetailsProps {
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useProductMapping } from '@/hooks/useProductMapping';
+import { useToast } from '@/hooks/use-toast';
+import MappingForm from './MappingForm';
+import ColumnMappingsView from './ColumnMappingsView';
+import SyncDetailsPanel from './SyncDetailsPanel';
+import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
+import SyncErrorsList from './SyncErrorsList';
+import { GlMapping } from '@/types/glsync';
+
+export interface MappingDetailsProps {
   mappingId: string;
   onBack?: () => void; // Make onBack optional
 }
 
 const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
-  console.log("MappingDetails component mounted with mappingId:", mappingId);
-  
   const { mapping, connection, isLoading, error, refetch } = useProductMapping(mappingId);
-  const { 
-    syncErrors, 
-    isLoading: isLoadingErrors, 
-    refreshErrors, 
-    setIncludeResolved, 
-    includeResolved 
-  } = useGlSyncErrors(mappingId);
+  const [activeTab, setActiveTab] = useState<string>('details');
+  const { toast } = useToast();
   
-  const hasRowIdMapping = mapping?.column_mappings && 
-    Object.entries(mapping.column_mappings).some(
-      ([key, columnMapping]) => 
-        key === '$rowID' && 
-        columnMapping.supabase_column_name === 'glide_row_id'
-    );
-
+  const { errors, isLoading: isErrorsLoading, refetch: refreshErrors } = useGlSyncErrors(mappingId);
+  
   useEffect(() => {
-    console.log("Mapping loaded:", mapping);
-    if (mapping?.column_mappings) {
-      console.log("Column mappings:", mapping.column_mappings);
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
     }
-  }, [mapping]);
-
-  const toggleIncludeResolved = () => {
-    setIncludeResolved(!includeResolved);
-    refreshErrors(); // Call without argument
-  };
+  }, [error, toast]);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p className="text-muted-foreground">Loading mapping details...</p>
-      </div>
+      <Card>
+        <CardContent className="py-10">
+          <div className="flex justify-center items-center">
+            <RefreshCw className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading mapping details...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!mapping) {
+    return (
+      <Card>
+        <CardContent className="py-10">
+          <div className="text-center">
+            <h2 className="text-lg font-medium">Mapping not found</h2>
+            <p className="text-muted-foreground mt-2">
+              The requested mapping could not be found or has been deleted.
+            </p>
+            {onBack && (
+              <Button 
+                onClick={onBack}
+                variant="outline" 
+                className="mt-4"
+              >
+                Back to Mappings
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        {onBack && (
-          <Button variant="outline" onClick={onBack} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Mappings
-          </Button>
-        )}
-        <Button variant="outline" onClick={() => refetch()}>
-          Refresh Data
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          {onBack && (
+            <Button 
+              variant="ghost" 
+              onClick={onBack} 
+              className="mr-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          )}
+          <h1 className="text-2xl font-bold">
+            {mapping.glide_table_display_name} → {mapping.supabase_table}
+          </h1>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            refetch();
+            refreshErrors();
+          }}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SyncDetailsPanel mapping={mapping} error={error} />
-        <ColumnMappingsView mapping={mapping} error={error} />
-      </div>
-
-      <SyncLogsView mappingId={mappingId} />
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Sync Errors</h3>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={toggleIncludeResolved}
-              >
-                {includeResolved ? 'Hide Resolved' : 'Show Resolved'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refreshErrors()} // Call without argument
-              >
-                Refresh
-              </Button>
-            </div>
-          </div>
-          
-          {isLoadingErrors ? (
-            <div className="flex items-center justify-center h-24">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Loading sync errors...</span>
-            </div>
-          ) : syncErrors.length > 0 ? (
-            <div className="space-y-4">
-              {syncErrors.map((error: GlSyncRecord) => (
-                <div 
-                  key={error.id} 
-                  className={`border p-4 rounded-md ${error.resolved ? 'bg-gray-50' : ''}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {error.resolved && (
-                          <span className="text-green-500 mr-2">[Resolved]</span>
-                        )}
-                        {error.type}: {error.message}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {new Date(error.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  {error.record && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-sm text-blue-500">View Record Data</summary>
-                      <pre className="bg-gray-100 p-2 mt-2 rounded text-xs overflow-auto max-h-64">
-                        {JSON.stringify(error.record, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-4">
-              No sync errors found.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="columns">Column Mappings</TabsTrigger>
+          <TabsTrigger value="errors">Sync Errors {errors?.length ? `(${errors.length})` : ''}</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details" className="space-y-4">
+          <MappingForm 
+            mapping={mapping} 
+            connection={connection}
+            onSave={() => refetch()}
+          />
+          <SyncDetailsPanel mapping={mapping} />
+        </TabsContent>
+        
+        <TabsContent value="columns">
+          <ColumnMappingsView 
+            mapping={mapping as GlMapping}
+            onSave={() => refetch()}
+          />
+        </TabsContent>
+        
+        <TabsContent value="errors">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sync Errors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SyncErrorsList 
+                errors={errors || []} 
+                isLoading={isErrorsLoading} 
+                onResolve={() => refreshErrors()}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
