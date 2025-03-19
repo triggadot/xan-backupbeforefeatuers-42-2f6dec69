@@ -1,8 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
-import { Account } from '@/types/index';
+import { GlAccount } from '@/types/index';
 
 export function useEstimates() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -48,6 +49,7 @@ export function useEstimates() {
         description: errorMessage,
         variant: 'destructive',
       });
+      console.error('Error fetching estimates:', err);
       return [];
     } finally {
       setIsLoading(false);
@@ -85,7 +87,7 @@ export function useEstimates() {
       if (creditsError) throw creditsError;
       
       // Format the estimate with related data
-      const account = estimate.account as unknown as Account[] | null;
+      const account = estimate.account as unknown as GlAccount[] | null;
       // Cast the status to the expected enum type
       const status = estimate.status as 'draft' | 'pending' | 'converted';
       

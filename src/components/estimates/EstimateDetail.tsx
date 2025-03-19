@@ -194,9 +194,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                 <User className="h-4 w-4 mr-2 mt-0.5" />
                 <div>
                   <p className="font-medium">{estimate.accountName || 'No customer assigned'}</p>
-                  {estimate.account && estimate.account.email && (
-                    <p className="text-sm text-muted-foreground">{estimate.account.email}</p>
-                  )}
                   {estimate.account && estimate.account.email_of_who_added && (
                     <p className="text-sm text-muted-foreground">{estimate.account.email_of_who_added}</p>
                   )}
