@@ -1,16 +1,16 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
-import Sidebar from './Sidebar';
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import AppSidebar from './AppSidebar';
 import MobileHeader from './MobileHeader';
-import { SidebarProvider, useSidebar } from "@/components/blocks/sidebar";
 
 function MainContent() {
-  const { isOpen } = useSidebar();
+  const { state } = useSidebar();
   
   return (
     <div className={`flex-1 flex flex-col transition-all duration-300 ${
-      isOpen ? 'md:ml-64' : 'md:ml-20'
+      state === "expanded" ? 'md:ml-64' : 'md:ml-12'
     }`}>
       {/* Desktop Navbar - hidden on mobile */}
       <Navbar />
@@ -27,13 +27,13 @@ function MainContent() {
 
 function Layout() {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex flex-col md:flex-row w-full">
         {/* Mobile Header - visible on small screens */}
         <MobileHeader className="sticky top-0 z-50 w-full" />
         
         {/* Sidebar - hidden on mobile, visible on md screens and up */}
-        <Sidebar />
+        <AppSidebar />
         
         {/* Main Content */}
         <MainContent />
