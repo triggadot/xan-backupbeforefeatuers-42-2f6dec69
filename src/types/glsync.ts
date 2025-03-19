@@ -1,3 +1,4 @@
+
 // Definition for Glide table structure
 export interface GlideTable {
   id: string;
@@ -56,21 +57,25 @@ export interface GlConnection {
 
 // For sync status
 export interface GlSyncStatus {
-  id?: string;
-  status?: string;
-  connection_id: string;
-  glide_table: string;
-  glide_table_display_name: string;
-  supabase_table: string;
-  sync_direction: string;
-  enabled: boolean;
-  current_status: string;
-  last_sync_started_at?: string;
-  last_sync_completed_at?: string;
+  id: string;
+  mapping_id: string;
+  status: string;
+  last_sync?: string;
   records_processed?: number;
   total_records?: number;
   error_count?: number;
+  
+  // Additional fields from gl_mapping_status view
+  current_status?: string;
+  last_sync_started_at?: string;
+  last_sync_completed_at?: string;
+  connection_id?: string;
+  glide_table?: string;
+  glide_table_display_name?: string;
+  supabase_table?: string;
   app_name?: string;
+  enabled?: boolean;
+  sync_direction?: string;
 }
 
 // Recent sync logs
@@ -157,13 +162,3 @@ export interface MappingToValidate {
 export type GlSyncLog = SyncLog;
 
 import { SyncLog } from './syncLog';
-
-// Add the function to convert DB mapping to GL mapping format
-export function convertToDbMapping(mapping: GlMapping): any {
-  return {
-    ...mapping,
-    column_mappings: typeof mapping.column_mappings === 'string' 
-      ? mapping.column_mappings 
-      : JSON.stringify(mapping.column_mappings)
-  };
-}

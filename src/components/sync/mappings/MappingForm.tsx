@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { 
   Select, 
@@ -19,7 +20,7 @@ import {
   TabsTrigger 
 } from '@/components/ui/tabs';
 import { GlConnection, GlMapping, GlideTable } from '@/types/glsync';
-import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
+import GlideTableSelector from '../GlideTableSelector';
 import ColumnMappingEditor from '../ColumnMappingEditor';
 import { ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 

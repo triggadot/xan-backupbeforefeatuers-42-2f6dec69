@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GlideTable } from "@/types/glsync";
 import { Loader2 } from "lucide-react";

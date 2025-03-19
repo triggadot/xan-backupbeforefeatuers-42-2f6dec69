@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlMapping } from '@/types/glsync';
 import { convertToGlMapping } from '@/utils/gl-mapping-converters';
@@ -460,49 +461,6 @@ export const glSyncApi = {
     } catch (error) {
       console.error('Error resolving sync error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  },
-  
-  /**
-   * Validate a mapping configuration
-   */
-  async validateMapping(mappingId: string) {
-    try {
-      const { data, error } = await supabase
-        .rpc('gl_validate_column_mapping', { p_mapping_id: mappingId });
-      
-      if (error) throw error;
-      
-      return { 
-        isValid: data[0].is_valid, 
-        message: data[0].validation_message
-      };
-    } catch (error) {
-      console.error('Error validating mapping:', error);
-      return { 
-        isValid: false, 
-        message: error instanceof Error ? error.message : 'Error validating mapping'
-      };
-    }
-  },
-  
-  /**
-   * Creates a new sync log entry for a failed sync retry
-   */
-  async retryFailedSync(mappingId: string) {
-    try {
-      const { data, error } = await supabase
-        .rpc('glsync_retry_failed_sync', { p_mapping_id: mappingId });
-      
-      if (error) throw error;
-      
-      return { success: true, logId: data };
-    } catch (error) {
-      console.error('Error creating retry log:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Error creating retry log'
-      };
     }
   }
 };
