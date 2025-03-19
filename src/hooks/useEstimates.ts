@@ -1,9 +1,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
-import { GlAccount } from '@/types/index';
+import * as estimateService from '@/services/estimateService';
 
 export function useEstimates() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -16,44 +15,24 @@ export function useEstimates() {
     setError(null);
     
     try {
-      // Fetch estimates with account names
-      // Using a left join with the accounts table
-      const { data: estimatesData, error: estimatesError } = await supabase
-        .from('gl_estimates')
-        .select(`
-          *,
-          account:gl_accounts!rowid_accounts(*)
-        `);
+      // Step 1: Fetch the basic estimate data
+      const estimatesData = await estimateService.fetchEstimatesList();
       
-      if (estimatesError) throw estimatesError;
-      
-      // Get account details separately
-      const enhancedEstimates = await Promise.all(estimatesData.map(async (estimate) => {
-        let accountName = 'Unknown';
-        let accountData = null;
-        
-        if (estimate.rowid_accounts) {
-          const { data: accountData, error: accountError } = await supabase
-            .from('gl_accounts')
-            .select('*')
-            .eq('glide_row_id', estimate.rowid_accounts)
-            .single();
-            
-          if (!accountError && accountData) {
-            accountName = accountData.account_name || 'Unknown';
-          }
-        }
-        
-        // Cast to the expected enum type
-        const status = estimate.status as 'draft' | 'pending' | 'converted';
-        
-        return {
-          ...estimate,
-          accountName,
-          account: accountData,
-          status: status
-        } as Estimate;
-      }));
+      // Step 2: Enhance each estimate with account info
+      const enhancedEstimates = await Promise.all(
+        estimatesData.map(async (estimate) => {
+          const account = await estimateService.fetchEstimateAccount(estimate.rowid_accounts);
+          
+          // Cast to the expected enum type
+          const status = estimate.status as 'draft' | 'pending' | 'converted';
+          
+          return {
+            ...estimate,
+            accountName: account?.account_name || 'Unknown',
+            status: status
+          } as Estimate;
+        })
+      );
       
       setEstimates(enhancedEstimates);
       return enhancedEstimates;
@@ -74,61 +53,13 @@ export function useEstimates() {
 
   const getEstimate = useCallback(async (id: string): Promise<Estimate | null> => {
     try {
-      // Get the main estimate data
-      const { data: estimate, error: estimateError } = await supabase
-        .from('gl_estimates')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const estimate = await estimateService.fetchEstimateDetails(id);
       
-      if (estimateError) throw estimateError;
-      
-      // Get the account data separately
-      let account: GlAccount | undefined = undefined;
-      let accountName = 'Unknown';
-      
-      if (estimate.rowid_accounts) {
-        const { data: accountData, error: accountError } = await supabase
-          .from('gl_accounts')
-          .select('*')
-          .eq('glide_row_id', estimate.rowid_accounts)
-          .single();
-          
-        if (!accountError && accountData) {
-          account = accountData as GlAccount;
-          accountName = accountData.account_name || 'Unknown';
-        }
+      if (!estimate) {
+        throw new Error('Failed to fetch estimate details');
       }
       
-      // Get estimate lines
-      const { data: estimateLines, error: linesError } = await supabase
-        .from('gl_estimate_lines')
-        .select('*')
-        .eq('rowid_estimate_lines', estimate.glide_row_id);
-      
-      if (linesError) throw linesError;
-      
-      // Get credits applied to this estimate
-      const { data: credits, error: creditsError } = await supabase
-        .from('gl_customer_credits')
-        .select('*')
-        .eq('rowid_estimates', estimate.glide_row_id);
-      
-      if (creditsError) throw creditsError;
-      
-      // Cast the status to the expected enum type
-      const status = estimate.status as 'draft' | 'pending' | 'converted';
-      
-      const formattedEstimate: Estimate = {
-        ...estimate,
-        accountName,
-        account,
-        estimateLines: estimateLines as EstimateLine[],
-        credits: credits as CustomerCredit[],
-        status: status
-      };
-      
-      return formattedEstimate;
+      return estimate;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch estimate';
       toast({
@@ -143,29 +74,7 @@ export function useEstimates() {
 
   const createEstimate = useCallback(async (estimateData: Partial<Estimate>) => {
     try {
-      // Create glide_row_id for the estimate
-      const glideRowId = `EST-${Date.now()}`;
-      
-      // Basic estimate data
-      const newEstimate = {
-        status: 'draft' as const,
-        glide_row_id: glideRowId,
-        rowid_accounts: estimateData.rowid_accounts,
-        estimate_date: estimateData.estimate_date || new Date().toISOString(),
-        add_note: estimateData.add_note || false,
-        total_amount: 0,
-        total_credits: 0,
-        balance: 0
-      };
-      
-      // Insert the new estimate
-      const { data, error } = await supabase
-        .from('gl_estimates')
-        .insert(newEstimate)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const newEstimate = await estimateService.createEstimateRecord(estimateData);
       
       toast({
         title: 'Success',
@@ -173,7 +82,7 @@ export function useEstimates() {
       });
       
       await fetchEstimates();
-      return data as Estimate;
+      return newEstimate as Estimate;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create estimate';
       toast({
@@ -187,17 +96,7 @@ export function useEstimates() {
 
   const updateEstimate = useCallback(async (id: string, estimateData: Partial<Estimate>) => {
     try {
-      // Remove nested objects before updating
-      const { account, estimateLines, credits, ...updateData } = estimateData;
-      
-      const { data, error } = await supabase
-        .from('gl_estimates')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const updated = await estimateService.updateEstimateRecord(id, estimateData);
       
       toast({
         title: 'Success',
@@ -205,7 +104,7 @@ export function useEstimates() {
       });
       
       await fetchEstimates();
-      return data as Estimate;
+      return updated as Estimate;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update estimate';
       toast({
@@ -219,33 +118,7 @@ export function useEstimates() {
 
   const deleteEstimate = useCallback(async (id: string) => {
     try {
-      const { data: estimate } = await supabase
-        .from('gl_estimates')
-        .select('glide_row_id')
-        .eq('id', id)
-        .single();
-      
-      if (!estimate) throw new Error('Estimate not found');
-      
-      // Delete associated estimate lines
-      await supabase
-        .from('gl_estimate_lines')
-        .delete()
-        .eq('rowid_estimate_lines', estimate.glide_row_id);
-      
-      // Delete associated credits
-      await supabase
-        .from('gl_customer_credits')
-        .delete()
-        .eq('rowid_estimates', estimate.glide_row_id);
-      
-      // Delete the estimate itself
-      const { error } = await supabase
-        .from('gl_estimates')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await estimateService.deleteEstimateRecord(id);
       
       toast({
         title: 'Success',
@@ -267,27 +140,14 @@ export function useEstimates() {
 
   const addEstimateLine = useCallback(async (estimateGlideId: string, lineData: Partial<EstimateLine>) => {
     try {
-      const newLine = {
-        ...lineData,
-        rowid_estimate_lines: estimateGlideId,
-        glide_row_id: `EL-${Date.now()}`,
-        line_total: (lineData.qty_sold || 0) * (lineData.selling_price || 0)
-      };
-      
-      const { data, error } = await supabase
-        .from('gl_estimate_lines')
-        .insert(newLine)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const newLine = await estimateService.addEstimateLine(estimateGlideId, lineData);
       
       toast({
         title: 'Success',
         description: 'Estimate line added successfully',
       });
       
-      return data as EstimateLine;
+      return newLine as EstimateLine;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add estimate line';
       toast({
@@ -301,35 +161,14 @@ export function useEstimates() {
 
   const updateEstimateLine = useCallback(async (lineId: string, lineData: Partial<EstimateLine>) => {
     try {
-      // Calculate line total if qty or price is updated
-      let updateData = { ...lineData };
-      if (lineData.qty_sold !== undefined || lineData.selling_price !== undefined) {
-        const { data: existingLine } = await supabase
-          .from('gl_estimate_lines')
-          .select('qty_sold, selling_price')
-          .eq('id', lineId)
-          .single();
-          
-        const qty = lineData.qty_sold ?? existingLine?.qty_sold ?? 0;
-        const price = lineData.selling_price ?? existingLine?.selling_price ?? 0;
-        updateData.line_total = qty * price;
-      }
-      
-      const { data, error } = await supabase
-        .from('gl_estimate_lines')
-        .update(updateData)
-        .eq('id', lineId)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const updated = await estimateService.updateEstimateLine(lineId, lineData);
       
       toast({
         title: 'Success',
         description: 'Estimate line updated successfully',
       });
       
-      return data as EstimateLine;
+      return updated as EstimateLine;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update estimate line';
       toast({
@@ -343,12 +182,7 @@ export function useEstimates() {
 
   const deleteEstimateLine = useCallback(async (lineId: string) => {
     try {
-      const { error } = await supabase
-        .from('gl_estimate_lines')
-        .delete()
-        .eq('id', lineId);
-      
-      if (error) throw error;
+      await estimateService.deleteEstimateLine(lineId);
       
       toast({
         title: 'Success',
@@ -369,26 +203,14 @@ export function useEstimates() {
 
   const addCustomerCredit = useCallback(async (estimateGlideId: string, creditData: Partial<CustomerCredit>) => {
     try {
-      const newCredit = {
-        ...creditData,
-        rowid_estimates: estimateGlideId,
-        glide_row_id: `CR-${Date.now()}`
-      };
-      
-      const { data, error } = await supabase
-        .from('gl_customer_credits')
-        .insert(newCredit)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const newCredit = await estimateService.addCustomerCredit(estimateGlideId, creditData);
       
       toast({
         title: 'Success',
         description: 'Credit added successfully',
       });
       
-      return data as CustomerCredit;
+      return newCredit as CustomerCredit;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add credit';
       toast({
@@ -402,21 +224,14 @@ export function useEstimates() {
 
   const updateCustomerCredit = useCallback(async (creditId: string, creditData: Partial<CustomerCredit>) => {
     try {
-      const { data, error } = await supabase
-        .from('gl_customer_credits')
-        .update(creditData)
-        .eq('id', creditId)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const updated = await estimateService.updateCustomerCredit(creditId, creditData);
       
       toast({
         title: 'Success',
         description: 'Credit updated successfully',
       });
       
-      return data as CustomerCredit;
+      return updated as CustomerCredit;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update credit';
       toast({
@@ -430,12 +245,7 @@ export function useEstimates() {
 
   const deleteCustomerCredit = useCallback(async (creditId: string) => {
     try {
-      const { error } = await supabase
-        .from('gl_customer_credits')
-        .delete()
-        .eq('id', creditId);
-      
-      if (error) throw error;
+      await estimateService.deleteCustomerCredit(creditId);
       
       toast({
         title: 'Success',
@@ -456,56 +266,7 @@ export function useEstimates() {
 
   const convertToInvoice = useCallback(async (estimateId: string) => {
     try {
-      const estimate = await getEstimate(estimateId);
-      if (!estimate) throw new Error('Estimate not found');
-      
-      // Create a new invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .insert({
-          rowid_accounts: estimate.rowid_accounts,
-          glide_row_id: `INV-${Date.now()}`,
-          notes: estimate.add_note ? 'Converted from estimate' : null,
-          created_timestamp: new Date().toISOString(),
-          payment_status: 'unpaid'
-        })
-        .select()
-        .single();
-      
-      if (invoiceError) throw invoiceError;
-      
-      // Copy estimate lines to invoice lines
-      if (estimate.estimateLines && estimate.estimateLines.length > 0) {
-        const invoiceLines = estimate.estimateLines.map(line => ({
-          rowid_invoices: invoice.glide_row_id,
-          renamed_product_name: line.sale_product_name,
-          qty_sold: line.qty_sold,
-          selling_price: line.selling_price,
-          line_total: line.line_total,
-          product_sale_note: line.product_sale_note,
-          date_of_sale: new Date().toISOString(),
-          rowid_products: line.rowid_products,
-          glide_row_id: `IL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-        }));
-        
-        const { error: linesError } = await supabase
-          .from('gl_invoice_lines')
-          .insert(invoiceLines);
-        
-        if (linesError) throw linesError;
-      }
-      
-      // Update the estimate as converted and link to the invoice
-      const { error: updateError } = await supabase
-        .from('gl_estimates')
-        .update({
-          status: 'converted' as const,
-          valid_final_create_invoice_clicked: true,
-          rowid_invoices: invoice.glide_row_id
-        })
-        .eq('id', estimateId);
-      
-      if (updateError) throw updateError;
+      const invoice = await estimateService.convertEstimateToInvoice(estimateId);
       
       toast({
         title: 'Success',
@@ -523,7 +284,7 @@ export function useEstimates() {
       });
       return null;
     }
-  }, [fetchEstimates, getEstimate, toast]);
+  }, [fetchEstimates, toast]);
 
   useEffect(() => {
     fetchEstimates();

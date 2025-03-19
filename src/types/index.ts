@@ -21,15 +21,15 @@ export interface Account extends BaseEntity {
 // Database representation of gl_accounts
 export interface GlAccount {
   id: string;
-  account_name: string;
-  client_type: string;
-  email_of_who_added: string;
-  accounts_uid?: string;
-  photo?: string;
   date_added_client?: string;
-  created_at: string;
-  updated_at: string;
+  account_name?: string;
+  email_of_who_added?: string;
+  photo?: string;
   glide_row_id: string;
+  accounts_uid?: string;
+  client_type?: string;
+  updated_at?: string;
+  created_at?: string;
 }
 
 // Product type
