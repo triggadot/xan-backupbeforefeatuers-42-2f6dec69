@@ -718,4 +718,4 @@ function RowActions({ row }: { row: Row<Item> }) {
   );
 }
 
-export { TableDemo } 
+export { TableDemo }

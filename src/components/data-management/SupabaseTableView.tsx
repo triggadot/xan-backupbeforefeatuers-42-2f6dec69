@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTableData } from "@/hooks/useTableData";
 import { cn } from "@/lib/utils";
@@ -628,7 +629,7 @@ export default function SupabaseTableView({ tableName, displayName, description 
             .split("_")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" "),
-          accessorKey: col.accessorKey
+          accessorKey: col.id
         }))}
         onSubmit={handleCreate}
       />
@@ -645,7 +646,7 @@ export default function SupabaseTableView({ tableName, displayName, description 
             .split("_")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" "),
-          accessorKey: col.accessorKey
+          accessorKey: col.id
         }))}
         onSubmit={handleUpdate}
       />

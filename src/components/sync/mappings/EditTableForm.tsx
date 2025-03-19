@@ -199,7 +199,7 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { error } = await supabase.rpc<Database["public"]["Functions"]["gl_admin_execute_sql"]["Returns"]>(
+        const { error } = await supabase.rpc<string>(
           'gl_admin_execute_sql', 
           { sql_query: sql }
         );
@@ -386,4 +386,4 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       </CardContent>
     </Card>
   );
-} 
+}
