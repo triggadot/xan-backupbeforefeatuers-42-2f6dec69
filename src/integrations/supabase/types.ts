@@ -1634,6 +1634,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_type: "Customer" | "Vendor" | "Customer & Vendor"
       processing_state_type:
         | "initialized"
         | "pending"

@@ -46,22 +46,18 @@ export const mapPurchaseOrderItemToLineItem = (item: any): LineItem => {
 /**
  * Map database gl_accounts to Account type
  */
-export const mapGlAccountToAccount = (glAccount: GlAccount): Account => {
+export function mapGlAccountToAccount(glAccount: GlAccount): Account {
   return {
     id: glAccount.id,
-    name: glAccount.account_name || 'Unnamed Account',
-    type: (glAccount.client_type?.toLowerCase() as 'customer' | 'vendor' | 'both') || 'customer',
+    name: glAccount.account_name || '',
+    type: (glAccount.client_type as 'Customer' | 'Vendor' | 'Customer & Vendor') || 'Customer',
     email: glAccount.email_of_who_added || '',
-    phone: '',
-    address: '',
-    website: '',
-    notes: '',
+    createdAt: glAccount.created_at ? new Date(glAccount.created_at) : new Date(),
+    updatedAt: glAccount.updated_at ? new Date(glAccount.updated_at) : new Date(),
     status: 'active',
     balance: 0,
-    createdAt: new Date(glAccount.created_at),
-    updatedAt: new Date(glAccount.updated_at)
   };
-};
+}
 
 /**
  * Map database gl_invoices to Invoice type

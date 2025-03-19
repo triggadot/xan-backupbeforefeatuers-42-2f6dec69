@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 const accountSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  type: z.enum(['customer', 'vendor', 'both']),
+  type: z.enum(['Customer', 'Vendor', 'Customer & Vendor']),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
@@ -95,9 +95,9 @@ const AccountForm: React.FC<AccountFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="customer">Customer</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
+                    <SelectItem value="Customer">Customer</SelectItem>
+                    <SelectItem value="Vendor">Vendor</SelectItem>
+                    <SelectItem value="Customer & Vendor">Customer & Vendor</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

@@ -62,6 +62,7 @@ const EstimateForm: React.FC<EstimateFormProps> = ({
         const { data, error } = await supabase
           .from('gl_accounts')
           .select('id, glide_row_id, account_name')
+          .or('client_type.eq.Customer,client_type.eq.Customer & Vendor')
           .order('account_name');
         
         if (error) throw error;

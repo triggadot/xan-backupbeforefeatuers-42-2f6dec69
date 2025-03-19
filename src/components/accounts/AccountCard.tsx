@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Account } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,11 +13,11 @@ interface AccountCardProps {
 const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'customer':
+      case 'Customer':
         return 'bg-blue-100 text-blue-800';
-      case 'vendor':
+      case 'Vendor':
         return 'bg-purple-100 text-purple-800';
-      case 'both':
+      case 'Customer & Vendor':
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';

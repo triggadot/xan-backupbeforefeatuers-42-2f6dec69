@@ -9,7 +9,7 @@ export interface BaseEntity {
 // Account type - for customers and vendors
 export interface Account extends BaseEntity {
   name: string;
-  type: 'customer' | 'vendor' | 'both';
+  type: 'Customer' | 'Vendor' | 'Customer & Vendor';
   email: string;
   phone?: string;
   address?: string;
