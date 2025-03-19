@@ -14,11 +14,7 @@ import DataManagement from './pages/DataManagement.tsx';
 import SignIn from './pages/SignIn.tsx';
 import RequireAuth from './components/RequireAuth.tsx';
 import SyncLayout from './components/sync/SyncLayout.tsx';
-
-// Custom auth provider wrapper from context
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  return children;
-};
+import { AuthProvider } from './contexts/AuthProvider.tsx';
 
 const router = createBrowserRouter([
   {
