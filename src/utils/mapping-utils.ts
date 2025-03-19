@@ -1,105 +1,161 @@
+import { 
+  Invoice, 
+  LineItem, 
+  PurchaseOrder,
+  Account,
+  GlAccount,
+  GlInvoice,
+  GlInvoiceLine,
+  GlPurchaseOrder,
+  GlVendorPayment,
+  GlCustomerPayment,
+  Payment,
+  ProductDetails
+} from '@/types';
 
-import { Account, GlAccount, Invoice, PurchaseOrder, GlInvoice, GlPurchaseOrder, GlCustomerPayment, GlVendorPayment, Payment } from '@/types';
+/**
+ * Map database gl_invoice_lines to LineItem type
+ */
+export const mapToLineItem = (item: GlInvoiceLine): LineItem => {
+  return {
+    id: item.id,
+    productId: item.rowid_products || '',
+    description: item.renamed_product_name || 'Unknown Product',
+    quantity: Number(item.qty_sold) || 0,
+    unitPrice: Number(item.selling_price) || 0,
+    total: Number(item.line_total) || 0,
+    productDetails: item.productDetails
+  };
+};
 
-// Format currency values for display
-export const formatCurrency = (value: number | undefined): string => {
-  if (value === undefined) return '$0.00';
+/**
+ * Map database gl_purchase_order_lines to LineItem type
+ */
+export const mapPurchaseOrderItemToLineItem = (item: any): LineItem => {
+  return {
+    id: item.id,
+    productId: item.rowid_products || '',
+    description: item.product_name || 'Unknown Product',
+    quantity: Number(item.quantity) || 0,
+    unitPrice: Number(item.unit_price) || 0,
+    total: Number(item.total) || 0,
+    productDetails: item.productDetails
+  };
+};
+
+/**
+ * Map database gl_accounts to Account type
+ */
+export const mapGlAccountToAccount = (glAccount: GlAccount): Account => {
+  return {
+    id: glAccount.id,
+    name: glAccount.account_name || 'Unnamed Account',
+    type: (glAccount.client_type?.toLowerCase() as 'customer' | 'vendor' | 'both') || 'customer',
+    email: glAccount.email_of_who_added || '',
+    phone: '',
+    address: '',
+    website: '',
+    notes: '',
+    status: 'active',
+    balance: 0,
+    createdAt: new Date(glAccount.created_at),
+    updatedAt: new Date(glAccount.updated_at)
+  };
+};
+
+/**
+ * Map database gl_invoices to Invoice type
+ */
+export const mapGlInvoiceToInvoice = (
+  glInvoice: GlInvoice, 
+  accountName: string,
+  lineItems: GlInvoiceLine[],
+  payments: GlCustomerPayment[]
+): Invoice => {
+  const mappedLineItems = lineItems.map(mapToLineItem);
+  const subtotal = mappedLineItems.reduce((sum, item) => sum + item.total, 0);
   
+  const mappedPayments = payments.map((payment): Payment => ({
+    id: payment.id,
+    date: new Date(payment.date_of_payment || payment.created_at),
+    amount: Number(payment.payment_amount) || 0,
+    method: payment.type_of_payment,
+    notes: payment.payment_note
+  }));
+
+  const amountPaid = mappedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  
+  return {
+    id: glInvoice.id,
+    number: glInvoice.glide_row_id,
+    date: new Date(glInvoice.created_timestamp || glInvoice.created_at),
+    dueDate: glInvoice.invoice_order_date ? new Date(glInvoice.invoice_order_date) : undefined,
+    accountId: glInvoice.rowid_accounts,
+    accountName: accountName,
+    subtotal: subtotal,
+    tax: 0, // Would need to be calculated based on tax rate if available
+    total: subtotal,
+    notes: glInvoice.notes || '',
+    lineItems: mappedLineItems,
+    status: amountPaid >= subtotal ? 'paid' : amountPaid > 0 ? 'partial' : 'sent',
+    balance: subtotal - amountPaid,
+    amountPaid: amountPaid,
+    payments: mappedPayments,
+    createdAt: new Date(glInvoice.created_at),
+    updatedAt: new Date(glInvoice.updated_at)
+  };
+};
+
+/**
+ * Map database gl_purchase_orders to PurchaseOrder type
+ */
+export const mapGlPurchaseOrderToPurchaseOrder = (
+  glPurchaseOrder: GlPurchaseOrder, 
+  accountName: string,
+  lineItems: any[],
+  payments: GlVendorPayment[]
+): PurchaseOrder => {
+  const mappedLineItems = lineItems.map(item => ({
+    id: item.id,
+    productId: item.rowid_products || '',
+    description: item.product_name || 'Unknown Product',
+    quantity: Number(item.quantity) || 0,
+    unitPrice: Number(item.unit_price) || 0,
+    total: Number(item.total) || 0,
+    productDetails: item.productDetails
+  }));
+  
+  const subtotal = mappedLineItems.reduce((sum, item) => sum + item.total, 0);
+  const amountPaid = payments.reduce((sum, payment) => sum + Number(payment.payment_amount), 0);
+  
+  return {
+    id: glPurchaseOrder.id,
+    number: glPurchaseOrder.purchase_order_uid || glPurchaseOrder.glide_row_id,
+    date: new Date(glPurchaseOrder.po_date || glPurchaseOrder.created_at),
+    dueDate: glPurchaseOrder.date_payment_date_mddyyyy ? new Date(glPurchaseOrder.date_payment_date_mddyyyy) : undefined,
+    accountId: glPurchaseOrder.rowid_accounts,
+    accountName: accountName,
+    subtotal: subtotal,
+    tax: 0, // Would need to be calculated based on tax rate if available
+    total: subtotal,
+    notes: '',
+    lineItems: mappedLineItems,
+    status: amountPaid >= subtotal ? 'complete' : amountPaid > 0 ? 'partial' : 'sent',
+    balance: subtotal - amountPaid,
+    amountPaid: amountPaid,
+    vendorId: glPurchaseOrder.rowid_accounts,
+    createdAt: new Date(glPurchaseOrder.created_at),
+    updatedAt: new Date(glPurchaseOrder.updated_at)
+  };
+};
+
+/**
+ * Format currency amount
+ */
+export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-};
-
-// Map database GlAccount to application Account type
-export const mapGlAccountToAccount = (dbAccount: GlAccount): Account => {
-  // Map the client_type to the appropriate type
-  let accountType: 'customer' | 'vendor' | 'both' = 'customer';
-  
-  if (dbAccount.client_type) {
-    if (dbAccount.client_type.includes('vendor') && dbAccount.client_type.includes('customer')) {
-      accountType = 'both';
-    } else if (dbAccount.client_type.includes('vendor')) {
-      accountType = 'vendor';
-    } else if (dbAccount.client_type.includes('customer')) {
-      accountType = 'customer';
-    }
-  }
-  
-  return {
-    id: dbAccount.id,
-    name: dbAccount.account_name || '',
-    type: accountType,
-    email: dbAccount.email_of_who_added || '',
-    status: 'active', // Default status
-    balance: 0, // Default balance
-    createdAt: dbAccount.created_at ? new Date(dbAccount.created_at) : new Date(),
-    updatedAt: dbAccount.updated_at ? new Date(dbAccount.updated_at) : new Date(),
-  };
-};
-
-// Map database GlInvoice to application Invoice type
-export const mapGlInvoiceToInvoice = (dbInvoice: GlInvoice, accountName: string = 'Unknown', payments: GlCustomerPayment[] = []): Invoice => {
-  // Calculate the total and balance from the provided data
-  const total = dbInvoice.total_amount || 0;
-  const amountPaid = dbInvoice.total_paid || 0;
-  const balance = dbInvoice.balance || (total - amountPaid);
-  
-  // Map to the Invoice type
-  return {
-    id: dbInvoice.id,
-    number: dbInvoice.glide_row_id || '',
-    date: dbInvoice.invoice_order_date ? new Date(dbInvoice.invoice_order_date) : new Date(),
-    dueDate: undefined, // Not in the database schema
-    accountId: dbInvoice.rowid_accounts || '',
-    accountName: accountName,
-    subtotal: total, // Subtotal is same as total since we don't track tax separately
-    tax: 0, // Not in the database schema
-    total: total,
-    notes: dbInvoice.notes || '',
-    lineItems: [], // This would need to be populated separately
-    status: (dbInvoice.processed ? 'sent' : 'draft') as 'draft' | 'sent' | 'overdue' | 'paid' | 'partial',
-    balance: balance,
-    amountPaid: amountPaid,
-    payments: payments.map(payment => ({
-      id: payment.id,
-      date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(),
-      amount: payment.payment_amount || 0,
-      method: payment.type_of_payment,
-      notes: payment.payment_note
-    })),
-    createdAt: dbInvoice.created_at ? new Date(dbInvoice.created_at) : new Date(),
-    updatedAt: dbInvoice.updated_at ? new Date(dbInvoice.updated_at) : new Date(),
-  };
-};
-
-// Map database GlPurchaseOrder to application PurchaseOrder type
-export const mapGlPurchaseOrderToPurchaseOrder = (dbPO: GlPurchaseOrder, accountName: string = 'Unknown', payments: GlVendorPayment[] = []): PurchaseOrder => {
-  // Calculate the total and balance from the provided data
-  const total = dbPO.total_amount || 0;
-  const amountPaid = dbPO.total_paid || 0;
-  const balance = dbPO.balance || (total - amountPaid);
-  
-  // Map to the PurchaseOrder type
-  return {
-    id: dbPO.id,
-    number: dbPO.purchase_order_uid || '',
-    date: dbPO.po_date ? new Date(dbPO.po_date) : new Date(),
-    dueDate: undefined, // Not in the database schema
-    accountId: dbPO.rowid_accounts || '',
-    accountName: accountName,
-    subtotal: total, // Subtotal is same as total since we don't track tax separately
-    tax: 0, // Not in the database schema
-    total: total,
-    notes: '', // Not directly in the schema
-    lineItems: [], // This would need to be populated separately
-    status: 'received', // Default status
-    balance: balance,
-    amountPaid: amountPaid,
-    vendorId: dbPO.rowid_accounts || '',
-    createdAt: dbPO.created_at ? new Date(dbPO.created_at) : new Date(),
-    updatedAt: dbPO.updated_at ? new Date(dbPO.updated_at) : new Date(),
-  };
+    minimumFractionDigits: 2
+  }).format(amount);
 };

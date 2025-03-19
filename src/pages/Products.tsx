@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
+import ProductsTable from '@/components/feature/product/ProductsTable';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
@@ -17,8 +18,7 @@ const Products: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-
+  
   const { toast } = useToast();
   const { 
     data: rawProducts, 
@@ -30,13 +30,14 @@ const Products: React.FC = () => {
     deleteRecord
   } = useTableData('gl_products');
 
+  // Map the raw data to the Product type
   const products = React.useMemo(() => {
     return (rawProducts || []).map((product: any): Product => ({
       id: product.id,
       name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
       sku: product.glide_row_id || '',
       description: product.purchase_notes || '',
-      price: 0,
+      price: 0, // Would need to be calculated from invoice lines
       cost: product.cost || 0,
       quantity: product.total_qty_purchased || 0,
       category: product.category || '',
@@ -125,6 +126,7 @@ const Products: React.FC = () => {
     setIsDetailsDialogOpen(true);
   };
 
+  // Filter products based on search term
   const filteredProducts = searchTerm
     ? products.filter((product: Product) => {
         const searchFields = [
@@ -191,25 +193,15 @@ const Products: React.FC = () => {
       {isLoadingProducts ? (
         <LoadingState />
       ) : (
-        {selectedCategory === 'all' ? (
-          <ProductsTableWrapper 
-            products={filteredProducts} 
-            onEdit={handleEdit} 
-            onDelete={handleDeleteProduct} 
-            onViewDetails={handleViewDetails}
-          />
-        ) : (
-          <ProductsTableWrapper 
-            products={filteredProducts.filter(product => 
-              product.category?.toLowerCase() === selectedCategory.toLowerCase()
-            )} 
-            onEdit={handleEdit} 
-            onDelete={handleDeleteProduct} 
-            onViewDetails={handleViewDetails}
-          />
-        )}
+        <ProductsTable 
+          products={filteredProducts} 
+          onEdit={handleEdit} 
+          onDelete={handleDeleteProduct}
+          onViewDetails={handleViewDetails}
+        />
       )}
 
+      {/* Create Product Dialog */}
       <ProductDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
@@ -217,6 +209,7 @@ const Products: React.FC = () => {
         title="Create New Product"
       />
 
+      {/* Edit Product Dialog */}
       <ProductDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
@@ -225,6 +218,7 @@ const Products: React.FC = () => {
         product={currentProduct}
       />
       
+      {/* Product Details Dialog */}
       <ProductDetails
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}

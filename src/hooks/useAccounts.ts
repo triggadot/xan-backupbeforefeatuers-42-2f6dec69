@@ -65,25 +65,11 @@ export function useAccounts() {
 
   const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      // Map the type to the appropriate client_type format for database
-      let clientType: string;
-      switch (accountData.type) {
-        case 'both':
-          clientType = 'customer and vendor';
-          break;
-        case 'vendor':
-        case 'customer':
-          clientType = accountData.type;
-          break;
-        default:
-          clientType = 'customer';
-      }
-      
       const { data, error } = await supabase
         .from('gl_accounts')
         .insert({
           account_name: accountData.name,
-          client_type: clientType,
+          client_type: accountData.type,
           email_of_who_added: accountData.email,
           glide_row_id: 'A-' + Date.now(), // Generate a temporary ID for Glide sync
         })
@@ -117,20 +103,7 @@ export function useAccounts() {
       // Convert from Account format to gl_accounts format
       const updateData: Partial<GlAccount> = {};
       if (accountData.name) updateData.account_name = accountData.name;
-      
-      // Map the type to the appropriate client_type format if provided
-      if (accountData.type) {
-        switch (accountData.type) {
-          case 'both':
-            updateData.client_type = 'customer and vendor';
-            break;
-          case 'vendor':
-          case 'customer':
-            updateData.client_type = accountData.type;
-            break;
-        }
-      }
-      
+      if (accountData.type) updateData.client_type = accountData.type;
       if (accountData.email) updateData.email_of_who_added = accountData.email;
       
       const { data, error } = await supabase
