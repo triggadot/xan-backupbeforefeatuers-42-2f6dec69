@@ -249,6 +249,7 @@ export type Database = {
       gl_estimates: {
         Row: {
           add_note: boolean | null
+          balance: number | null
           created_at: string | null
           date_invoice_created_date: string | null
           estimate_date: string | null
@@ -259,11 +260,15 @@ export type Database = {
           is_a_sample: boolean | null
           rowid_accounts: string | null
           rowid_invoices: string | null
+          status: string | null
+          total_amount: number | null
+          total_credits: number | null
           updated_at: string | null
           valid_final_create_invoice_clicked: boolean | null
         }
         Insert: {
           add_note?: boolean | null
+          balance?: number | null
           created_at?: string | null
           date_invoice_created_date?: string | null
           estimate_date?: string | null
@@ -274,11 +279,15 @@ export type Database = {
           is_a_sample?: boolean | null
           rowid_accounts?: string | null
           rowid_invoices?: string | null
+          status?: string | null
+          total_amount?: number | null
+          total_credits?: number | null
           updated_at?: string | null
           valid_final_create_invoice_clicked?: boolean | null
         }
         Update: {
           add_note?: boolean | null
+          balance?: number | null
           created_at?: string | null
           date_invoice_created_date?: string | null
           estimate_date?: string | null
@@ -289,6 +298,9 @@ export type Database = {
           is_a_sample?: boolean | null
           rowid_accounts?: string | null
           rowid_invoices?: string | null
+          status?: string | null
+          total_amount?: number | null
+          total_credits?: number | null
           updated_at?: string | null
           valid_final_create_invoice_clicked?: boolean | null
         }
@@ -410,6 +422,7 @@ export type Database = {
       }
       gl_invoices: {
         Row: {
+          balance: number | null
           created_at: string | null
           created_timestamp: string | null
           doc_glideforeverlink: string | null
@@ -417,13 +430,17 @@ export type Database = {
           id: string
           invoice_order_date: string | null
           notes: string | null
+          payment_status: string | null
           processed: boolean | null
           rowid_accounts: string | null
           submitted_timestamp: string | null
+          total_amount: number | null
+          total_paid: number | null
           updated_at: string | null
           user_email: string | null
         }
         Insert: {
+          balance?: number | null
           created_at?: string | null
           created_timestamp?: string | null
           doc_glideforeverlink?: string | null
@@ -431,13 +448,17 @@ export type Database = {
           id?: string
           invoice_order_date?: string | null
           notes?: string | null
+          payment_status?: string | null
           processed?: boolean | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          total_amount?: number | null
+          total_paid?: number | null
           updated_at?: string | null
           user_email?: string | null
         }
         Update: {
+          balance?: number | null
           created_at?: string | null
           created_timestamp?: string | null
           doc_glideforeverlink?: string | null
@@ -445,9 +466,12 @@ export type Database = {
           id?: string
           invoice_order_date?: string | null
           notes?: string | null
+          payment_status?: string | null
           processed?: boolean | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          total_amount?: number | null
+          total_paid?: number | null
           updated_at?: string | null
           user_email?: string | null
         }
@@ -589,39 +613,54 @@ export type Database = {
       }
       gl_purchase_orders: {
         Row: {
+          balance: number | null
           created_at: string | null
           date_payment_date_mddyyyy: string | null
           docs_shortlink: string | null
           glide_row_id: string
           id: string
+          payment_status: string | null
           pdf_link: string | null
           po_date: string | null
+          product_count: number | null
           purchase_order_uid: string | null
           rowid_accounts: string | null
+          total_amount: number | null
+          total_paid: number | null
           updated_at: string | null
         }
         Insert: {
+          balance?: number | null
           created_at?: string | null
           date_payment_date_mddyyyy?: string | null
           docs_shortlink?: string | null
           glide_row_id: string
           id?: string
+          payment_status?: string | null
           pdf_link?: string | null
           po_date?: string | null
+          product_count?: number | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
+          total_amount?: number | null
+          total_paid?: number | null
           updated_at?: string | null
         }
         Update: {
+          balance?: number | null
           created_at?: string | null
           date_payment_date_mddyyyy?: string | null
           docs_shortlink?: string | null
           glide_row_id?: string
           id?: string
+          payment_status?: string | null
           pdf_link?: string | null
           po_date?: string | null
+          product_count?: number | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
+          total_amount?: number | null
+          total_paid?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1255,18 +1294,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gl_invoice_totals: {
-        Row: {
-          balance: number | null
-          glide_row_id: string | null
-          id: string | null
-          line_items_count: number | null
-          payment_status: string | null
-          total_amount: number | null
-          total_paid: number | null
-        }
-        Relationships: []
-      }
       gl_mapping_status: {
         Row: {
           app_name: string | null
@@ -1345,18 +1372,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      gl_purchase_order_totals: {
-        Row: {
-          balance: number | null
-          glide_row_id: string | null
-          id: string | null
-          payment_status: string | null
-          product_count: number | null
-          total_amount: number | null
-          total_paid: number | null
-        }
-        Relationships: []
       }
       gl_recent_logs: {
         Row: {
@@ -1545,6 +1560,24 @@ export type Database = {
       process_webhook_event: {
         Args: {
           p_event_id: string
+        }
+        Returns: undefined
+      }
+      update_estimate_totals: {
+        Args: {
+          estimate_id: string
+        }
+        Returns: undefined
+      }
+      update_invoice_totals: {
+        Args: {
+          invoice_id: string
+        }
+        Returns: undefined
+      }
+      update_po_totals: {
+        Args: {
+          po_id: string
         }
         Returns: undefined
       }

@@ -45,62 +45,24 @@ export function useBusinessMetrics() {
     setError(null);
     
     try {
-      // Fetch invoice metrics
-      const { data: invoiceMetricsArray, error: invoiceError } = await supabase
-        .rpc('gl_get_invoice_metrics');
+      // Fetch all metrics from the gl_business_metrics view
+      const { data: businessMetrics, error: metricsError } = await supabase
+        .from('gl_business_metrics')
+        .select('*')
+        .single();
       
-      if (invoiceError) throw invoiceError;
+      if (metricsError) throw metricsError;
       
-      // Fetch purchase order metrics
-      const { data: poMetricsArray, error: poError } = await supabase
-        .rpc('gl_get_purchase_order_metrics');
+      setMetrics(businessMetrics);
       
-      if (poError) throw poError;
-      
-      // Fetch product and account counts
-      const { data: productCount, error: productError } = await supabase
-        .from('gl_products')
-        .select('id', { count: 'exact', head: true });
-      
-      if (productError) throw productError;
-      
-      // Fetch customer and vendor counts
-      const { data: accountStatsArray, error: accountError } = await supabase
-        .rpc('gl_get_account_stats');
-      
-      if (accountError) throw accountError;
-      
-      // Extract the first item from each returned array
-      const invoiceMetrics = invoiceMetricsArray?.[0] || {};
-      const poMetrics = poMetricsArray?.[0] || {};
-      const accountStats = accountStatsArray?.[0] || {};
-      
-      // Combine data into business metrics
-      const combinedMetrics: BusinessMetrics = {
-        total_invoices: invoiceMetrics.invoice_count || 0,
-        total_estimates: invoiceMetrics.estimate_count || 0,
-        total_invoice_amount: invoiceMetrics.total_invoice_amount || 0,
-        total_payments_received: invoiceMetrics.total_payments_received || 0,
-        total_outstanding_balance: invoiceMetrics.total_outstanding_balance || 0,
-        total_purchase_orders: poMetrics.po_count || 0,
-        total_purchase_amount: poMetrics.total_purchase_amount || 0,
-        total_payments_made: poMetrics.total_payments_made || 0,
-        total_purchase_balance: poMetrics.total_purchase_balance || 0,
-        total_products: productCount?.count || 0,
-        total_customers: accountStats.customer_count || 0,
-        total_vendors: accountStats.vendor_count || 0
-      };
-      
-      setMetrics(combinedMetrics);
-      
-      // Fetch document status metrics separately
+      // Fetch document status from gl_current_status view
       const { data: docStatusData, error: statusError } = await supabase
-        .rpc('gl_get_document_status');
+        .from('gl_current_status')
+        .select('*');
       
       if (statusError) throw statusError;
       
-      // docStatusData is already an array, so we can set it directly
-      setStatusMetrics(docStatusData as StatusMetrics[] || []);
+      setStatusMetrics(docStatusData || []);
       
     } catch (error: any) {
       console.error('Error fetching business metrics:', error);
