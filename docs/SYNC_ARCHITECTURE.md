@@ -31,21 +31,42 @@ The Glide sync system facilitates bidirectional data synchronization between our
 - `gl_record_sync_error`: Records a sync error with contextual information
 - `gl_resolve_sync_error`: Marks an error as resolved with resolution notes
 - `glsync_retry_failed_sync`: Initiates a retry for a failed sync operation
+- `update_product_inventory`: Updates product inventory based on purchase and sales records
 
 ### 2. API Layer
 
+#### Glide API Endpoints
+- **Query Endpoint**: `https://api.glideapp.io/api/function/queryTables`
+  - Used for reading data from Glide tables
+  - Supports pagination via continuation tokens
+  - Handles table schema discovery and listing available tables
+  - Returns data in a standardized format with rows and next token
+
+- **Mutation Endpoint**: `https://api.glideapp.io/api/function/mutateTables`
+  - Used for creating, updating, and deleting records in Glide
+  - Supports batch operations for efficiency
+  - Requires proper row identification with `$rowID` for updates/deletes
+
 #### Edge Functions
 - `glsync`: Main edge function handling sync operations:
-  - Testing connections
-  - Listing Glide tables
-  - Fetching and synchronizing data
-  - Managing column mappings
-  - Handling errors and retries
+  - Testing connections to Glide API
+  - Listing Glide tables and retrieving schema information
+  - Fetching and synchronizing data in both directions
+  - Managing column mappings and data transformations
+  - Handling errors and implementing retry mechanisms
 
 #### Shared Utilities
 - `glide-api.ts`: Functions for interacting with Glide's API
+  - `testGlideConnection`: Validates API credentials
+  - `listGlideTables`: Retrieves available tables
+  - `getGlideTableColumns`: Discovers table schema
+  - `fetchGlideTableData`: Retrieves records with pagination
+  - `sendGlideMutations`: Sends batch operations to Glide
+
 - `cors.ts`: Utilities for handling CORS in edge functions
 - `glsync-transformers.ts`: Data transformation and validation utilities
+  - Handles type conversions between Glide and Supabase
+  - Manages bidirectional field mapping
 
 ### 3. Application Layer
 
@@ -62,6 +83,7 @@ The Glide sync system facilitates bidirectional data synchronization between our
 - `useGlSync`: Core hook for sync operations
 - `useGlSyncStatus`: Hook for fetching sync status information
 - `useGlSyncErrors`: Hook for retrieving and managing error records
+- `useProductMapping`: Hook for managing product-specific mappings
 
 ## Data Flow
 
@@ -73,9 +95,14 @@ The Glide sync system facilitates bidirectional data synchronization between our
    - Create sync log entry with status "started"
 
 2. **Data Retrieval**:
-   - Fetch data from Glide API with pagination handling
-   - Transform data according to mapping rules
-   - Validate data against Supabase schema
+   - **From Glide to Supabase**:
+     - Call Glide queryTables API with continuation tokens for pagination
+     - Transform received data according to mapping rules
+     - Apply data type conversions and validations
+   - **From Supabase to Glide**:
+     - Query Supabase tables with appropriate filters
+     - Transform data according to reverse mapping
+     - Prepare mutation payloads for Glide API
 
 3. **Data Processing**:
    - For each record:
@@ -85,16 +112,19 @@ The Glide sync system facilitates bidirectional data synchronization between our
      - Validate data integrity
 
 4. **Data Storage**:
-   - Upsert processed records to Supabase
-   - Record success/failure for each record
-   - Handle potential database constraints
-   - Log errors for failed records
+   - **To Supabase**:
+     - Upsert processed records to Supabase tables
+     - Update inventory and related records via triggers
+   - **To Glide**:
+     - Batch mutations in groups of up to 500 records
+     - Send to mutateTables API endpoint with proper operations
+     - Track success/failure of each batch
 
 5. **Finalization**:
    - Update sync log with completion status
    - Record metrics (records processed, errors, duration)
    - Update mapping status view
-   - Trigger any necessary post-sync operations
+   - Trigger any necessary post-sync operations (inventory updates, etc.)
 
 ### Error Handling
 
@@ -118,6 +148,80 @@ The Glide sync system facilitates bidirectional data synchronization between our
    - Enable retry operations for retryable errors
 
 ## Mapping System
+
+### Glide CRUD Operations
+
+Glide API operations are mapped to standard CRUD functions:
+
+1. **Create**:
+   - Uses mutateTables endpoint with 'create' operation type
+   - No $rowID required (Glide will generate one)
+   - Example:
+     ```json
+     {
+       "appID": "app123",
+       "mutations": [
+         {
+           "tableName": "Products",
+           "type": "create",
+           "values": { "name": "New Product", "price": 99.99 }
+         }
+       ]
+     }
+     ```
+
+2. **Read**:
+   - Uses queryTables endpoint
+   - Can filter, sort, and paginate
+   - Example:
+     ```json
+     {
+       "appID": "app123",
+       "queries": [
+         {
+           "tableName": "Products",
+           "filter": { "price": { "gt": 50 } },
+           "sort": [{ "field": "name", "order": "asc" }],
+           "limit": 100
+         }
+       ]
+     }
+     ```
+
+3. **Update**:
+   - Uses mutateTables endpoint with 'update' operation type
+   - Requires $rowID for identification
+   - Example:
+     ```json
+     {
+       "appID": "app123",
+       "mutations": [
+         {
+           "tableName": "Products",
+           "type": "update",
+           "rowID": "row123",
+           "values": { "price": 129.99 }
+         }
+       ]
+     }
+     ```
+
+4. **Delete**:
+   - Uses mutateTables endpoint with 'delete' operation type
+   - Requires $rowID for identification
+   - Example:
+     ```json
+     {
+       "appID": "app123",
+       "mutations": [
+         {
+           "tableName": "Products",
+           "type": "delete",
+           "rowID": "row123"
+         }
+       ]
+     }
+     ```
 
 ### Column Mapping Structure
 
@@ -180,11 +284,54 @@ async function getAllRows(apiKey, appId, tableName) {
 - Implementation balances throughput vs. error management
 - Each batch has independent error handling
 
+```typescript
+async function sendBatchedMutations(apiKey, appId, mutations) {
+  const batchSize = 500;
+  const batches = [];
+  
+  // Create batches of mutations
+  for (let i = 0; i < mutations.length; i += batchSize) {
+    batches.push(mutations.slice(i, i + batchSize));
+  }
+  
+  // Process each batch
+  const results = [];
+  for (const batch of batches) {
+    const result = await sendGlideMutations(apiKey, appId, batch);
+    results.push(result);
+  }
+  
+  return results;
+}
+```
+
 ### Rate Limiting
 
 - Implements exponential backoff for rate limited requests
 - Maximum retry attempts configurable via constants
 - Delay between retries increases with each attempt
+
+```typescript
+async function fetchWithRetry(fn, maxRetries = 3) {
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.status === 429) {
+        const delay = Math.pow(2, retries) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retries++;
+      } else {
+        throw error;
+      }
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
 
 ### Real-time Updates
 
