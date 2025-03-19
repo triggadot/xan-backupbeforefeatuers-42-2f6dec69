@@ -364,13 +364,24 @@ export const glSyncApi = {
   /**
    * Sync data with response format matching what components expect
    */
-  async syncData(mappingId: string) {
+  async syncData(connectionId: string, mappingId?: string) {
     try {
+      // Prepare the request body
+      const requestBody: any = {
+        action: 'syncData'
+      };
+      
+      // Include either connectionId or mappingId or both
+      if (connectionId) {
+        requestBody.connectionId = connectionId;
+      }
+      
+      if (mappingId) {
+        requestBody.mappingId = mappingId;
+      }
+
       const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'syncData',
-          mappingId
-        }
+        body: requestBody
       });
       
       if (error) throw error;

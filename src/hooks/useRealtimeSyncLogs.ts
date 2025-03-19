@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SyncLog, SyncLogFilter } from '@/types/syncLog';
+import { SyncLog, SyncLogFilter, UseSyncLogsOptions } from '@/types/syncLog';
 
 interface SyncLogsHookResult {
   logs: SyncLog[];
@@ -11,18 +11,23 @@ interface SyncLogsHookResult {
   refetch: () => Promise<void>;
   filterLogs: (filter: SyncLogFilter) => void;
   currentFilter: SyncLogFilter;
+  syncLogs: SyncLog[]; // Alias for logs for backward compatibility
+  refreshLogs: () => Promise<void>; // Alias for refetch
+  filter: SyncLogFilter; // Alias for currentFilter
+  setFilter: (filter: SyncLogFilter) => void; // Alias for filterLogs
+  data: SyncLog[]; // Required by SyncLogsResult
 }
 
 export function useRealtimeSyncLogs(
-  mappingId?: string,
-  limit: number = 10,
-  initialFilter?: SyncLogFilter
+  options?: UseSyncLogsOptions
 ): SyncLogsHookResult {
+  const mappingId = options?.mappingId;
+  const limit = options?.limit || 10;
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState<SyncLogFilter>(
-    initialFilter || { mappingId }
+    mappingId ? { mappingId } : {}
   );
   const { toast } = useToast();
 
@@ -43,9 +48,9 @@ export function useRealtimeSyncLogs(
           query = query.eq('mapping_id', currentFilter.mappingId);
         }
         
-        if (currentFilter.status === 'completed') {
+        if (currentFilter.status === "completed") {
           query = query.eq('status', 'completed');
-        } else if (currentFilter.status === 'failed') {
+        } else if (currentFilter.status === "failed") {
           query = query.eq('status', 'failed');
         }
         
@@ -133,5 +138,11 @@ export function useRealtimeSyncLogs(
     refetch: fetchLogs,
     filterLogs,
     currentFilter,
+    // Add aliases for backward compatibility
+    syncLogs: logs,
+    refreshLogs: fetchLogs,
+    filter: currentFilter,
+    setFilter: filterLogs,
+    data: logs
   };
 }

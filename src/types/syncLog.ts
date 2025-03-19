@@ -37,6 +37,7 @@ export interface UseSyncLogsOptions {
   limit?: number;
   mappingId?: string;
   autoRefetch?: boolean;
+  includeDetails?: boolean;
 }
 
 export interface SyncLogsResult {
@@ -45,6 +46,11 @@ export interface SyncLogsResult {
   error: string | null;
   refetch: () => Promise<void>;
   data: SyncLog[]; // Make this required, not optional
+  syncLogs?: SyncLog[]; // Backward compatibility
+  refreshLogs?: () => Promise<void>; // Backward compatibility
+  filter?: SyncLogFilter;
+  filterLogs?: (filter: SyncLogFilter) => void;
+  currentFilter?: SyncLogFilter;
 }
 
 export interface SyncLogFilter {

@@ -50,7 +50,7 @@ export type Database = {
           created_at: string | null
           date_added_client: string | null
           email_of_who_added: string | null
-          glide_row_id: string
+          glide_row_id: string | null
           id: string
           photo: string | null
           updated_at: string | null
@@ -62,7 +62,7 @@ export type Database = {
           created_at?: string | null
           date_added_client?: string | null
           email_of_who_added?: string | null
-          glide_row_id: string
+          glide_row_id?: string | null
           id?: string
           photo?: string | null
           updated_at?: string | null
@@ -74,7 +74,7 @@ export type Database = {
           created_at?: string | null
           date_added_client?: string | null
           email_of_who_added?: string | null
-          glide_row_id?: string
+          glide_row_id?: string | null
           id?: string
           photo?: string | null
           updated_at?: string | null
@@ -1572,6 +1572,10 @@ export type Database = {
           is_valid: boolean
           validation_message: string
         }[]
+      }
+      glsync_cleanup_duplicate_accounts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       glsync_retry_failed_sync: {
         Args: {
