@@ -15,20 +15,31 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
   let columnMappings: any;
   
   try {
-    columnMappings = typeof mapping.column_mappings === 'string' 
-      ? JSON.parse(mapping.column_mappings) 
-      : mapping.column_mappings;
+    // If column_mappings is a string, parse it as JSON
+    if (typeof mapping.column_mappings === 'string') {
+      columnMappings = JSON.parse(mapping.column_mappings);
+    } 
+    // If it's already an object, use it directly
+    else if (mapping.column_mappings && typeof mapping.column_mappings === 'object') {
+      columnMappings = mapping.column_mappings;
+    } 
+    // Default to empty object if neither
+    else {
+      console.warn('Invalid column_mappings format, using empty object');
+      columnMappings = {};
+    }
   } catch (e) {
-    console.error('Failed to parse column_mappings:', e);
+    console.error('Failed to parse column_mappings:', e, mapping.column_mappings);
     columnMappings = {};
   }
   
-  if (columnMappings && typeof columnMappings === 'object') {
+  // Ensure columnMappings is an object and not an array or primitive
+  if (columnMappings && typeof columnMappings === 'object' && !Array.isArray(columnMappings)) {
     Object.entries(columnMappings).forEach(([key, value]) => {
       // Ensure we have a proper object with the right properties
       const columnMapping = value as any;
       if (!columnMapping || typeof columnMapping !== 'object') {
-        console.warn(`Invalid column mapping for key "${key}"`);
+        console.warn(`Invalid column mapping for key "${key}"`, columnMapping);
         return;
       }
 
@@ -48,7 +59,7 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
       };
     });
   } else {
-    console.warn('column_mappings is not an object, creating default mapping');
+    console.warn('column_mappings is not a valid object, creating default mapping', columnMappings);
     // Add default mapping for $rowID if no mappings exist
     convertedColumnMappings['$rowID'] = {
       glide_column_name: '$rowID',
@@ -57,12 +68,28 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
     };
   }
   
+  // Ensure sync_direction is one of the allowed values
+  let syncDirection: 'to_supabase' | 'to_glide' | 'both' = 'to_supabase';
+  if (mapping.sync_direction === 'to_supabase' || 
+      mapping.sync_direction === 'to_glide' || 
+      mapping.sync_direction === 'both') {
+    syncDirection = mapping.sync_direction;
+  } else {
+    console.warn(`Invalid sync_direction "${mapping.sync_direction}", defaulting to "to_supabase"`);
+  }
+  
   return {
-    ...mapping,
-    // Ensure sync_direction is one of the allowed values
-    sync_direction: (mapping.sync_direction as 'to_supabase' | 'to_glide' | 'both') || 'to_supabase',
-    column_mappings: convertedColumnMappings
-  } as GlMapping;
+    id: mapping.id,
+    connection_id: mapping.connection_id,
+    glide_table: mapping.glide_table,
+    glide_table_display_name: mapping.glide_table_display_name || mapping.glide_table,
+    supabase_table: mapping.supabase_table,
+    column_mappings: convertedColumnMappings,
+    sync_direction: syncDirection,
+    enabled: !!mapping.enabled,
+    created_at: mapping.created_at || null,
+    updated_at: mapping.updated_at || null
+  };
 }
 
 // Convert GlMapping to a format suitable for database storage (plain JSON)

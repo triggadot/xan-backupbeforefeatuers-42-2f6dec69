@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { GlMapping } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
+import { convertToGlMapping } from '@/utils/gl-mapping-converters';
 
 export function useProductMapping(mappingId: string) {
   const { toast } = useToast();
@@ -39,28 +40,8 @@ export function useProductMapping(mappingId: string) {
       
       console.log('Raw mapping data:', data);
       
-      // Ensure column_mappings is properly parsed if it's a string
-      let parsedColumnMappings = data.column_mappings;
-      if (typeof data.column_mappings === 'string') {
-        try {
-          parsedColumnMappings = JSON.parse(data.column_mappings);
-        } catch (e) {
-          console.error('Error parsing column_mappings:', e);
-          // Instead of throwing, return with the raw string to allow the UI to handle it
-          parsedColumnMappings = {};
-        }
-      }
-      
-      // Check if parsedColumnMappings is null or undefined and initialize to empty object if needed
-      if (!parsedColumnMappings) {
-        console.warn('Missing or null column_mappings in data:', data);
-        parsedColumnMappings = {};
-      }
-      
-      return {
-        ...data,
-        column_mappings: parsedColumnMappings
-      } as GlMapping;
+      // Convert the raw data to a properly typed GlMapping using the converter utility
+      return convertToGlMapping(data);
     },
     enabled: !!mappingId && mappingId !== ':mappingId',
     meta: {

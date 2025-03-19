@@ -1,10 +1,15 @@
 
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import MappingDetails from '@/components/sync/mappings/MappingDetails';
 import { Card, CardContent } from '@/components/ui/card';
 
 const MappingView = () => {
+  const navigate = useNavigate();
   const { mappingId } = useParams<{ mappingId: string }>();
+
+  const handleBack = () => {
+    navigate('/sync/mappings');
+  };
 
   if (!mappingId) {
     return (
@@ -21,7 +26,7 @@ const MappingView = () => {
     );
   }
 
-  return <MappingDetails mappingId={mappingId} />;
+  return <MappingDetails mappingId={mappingId} onBack={handleBack} />;
 };
 
 export default MappingView;

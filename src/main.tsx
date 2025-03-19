@@ -58,6 +58,18 @@ const MappingsListWrapper = () => {
   return <MappingsList onEdit={handleEditMapping} />;
 };
 
+// Wrapper component for MappingDetails with navigation
+const MappingDetailsWrapper = () => {
+  const navigate = useNavigate();
+  const { mappingId } = useParams<{ mappingId: string }>();
+  
+  const handleBack = () => {
+    navigate('/sync/mappings');
+  };
+  
+  return <MappingDetails mappingId={mappingId || ':mappingId'} onBack={handleBack} />;
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
@@ -90,7 +102,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                         <Route index element={<SyncOverview />} />
                         <Route path="connections" element={<ConnectionsList />} />
                         <Route path="mappings" element={<MappingsListWrapper />} />
-                        <Route path="mappings/:mappingId" element={<MappingDetails mappingId=":mappingId" />} />
+                        <Route path="mappings/:mappingId" element={<MappingDetailsWrapper />} />
                         <Route path="products/:mappingId" element={<ProductSync />} />
                         <Route path="logs" element={<SyncLogs />} />
                       </Route>

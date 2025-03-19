@@ -13,7 +13,7 @@ import { useProductMapping } from '@/hooks/useProductMapping';
 
 interface MappingDetailsProps {
   mappingId: string;
-  onBack: () => void;
+  onBack?: () => void; // Make onBack optional
 }
 
 const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
@@ -44,7 +44,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
 
   const toggleIncludeResolved = () => {
     setIncludeResolved(!includeResolved);
-    refreshErrors(includeResolved);
+    refreshErrors(); // Call without argument
   };
 
   if (isLoading) {
@@ -59,10 +59,12 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button variant="outline" onClick={onBack} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Mappings
-        </Button>
+        {onBack && (
+          <Button variant="outline" onClick={onBack} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Mappings
+          </Button>
+        )}
         <Button variant="outline" onClick={() => refetch()}>
           Refresh Data
         </Button>
@@ -90,7 +92,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => refreshErrors(includeResolved)}
+                onClick={() => refreshErrors()} // Call without argument
               >
                 Refresh
               </Button>
