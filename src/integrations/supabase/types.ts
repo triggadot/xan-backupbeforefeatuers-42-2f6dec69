@@ -1420,6 +1420,45 @@ export type Database = {
         }
         Returns: Json
       }
+      gl_get_account_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          customer_count: number
+          vendor_count: number
+        }[]
+      }
+      gl_get_document_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category: string
+          total_count: number
+          paid_count: number
+          unpaid_count: number
+          draft_count: number
+          total_amount: number
+          total_paid: number
+          balance_amount: number
+        }[]
+      }
+      gl_get_invoice_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          invoice_count: number
+          estimate_count: number
+          total_invoice_amount: number
+          total_payments_received: number
+          total_outstanding_balance: number
+        }[]
+      }
+      gl_get_purchase_order_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          po_count: number
+          total_purchase_amount: number
+          total_payments_made: number
+          total_purchase_balance: number
+        }[]
+      }
       gl_get_sync_errors: {
         Args: {
           p_mapping_id: string

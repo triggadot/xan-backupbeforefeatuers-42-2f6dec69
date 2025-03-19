@@ -47,13 +47,13 @@ export function useBusinessMetrics() {
     try {
       // Fetch invoice metrics
       const { data: invoiceMetrics, error: invoiceError } = await supabase
-        .rpc('gl_get_invoice_metrics' as any);
+        .rpc('gl_get_invoice_metrics');
       
       if (invoiceError) throw invoiceError;
       
       // Fetch purchase order metrics
       const { data: poMetrics, error: poError } = await supabase
-        .rpc('gl_get_purchase_order_metrics' as any);
+        .rpc('gl_get_purchase_order_metrics');
       
       if (poError) throw poError;
       
@@ -66,7 +66,7 @@ export function useBusinessMetrics() {
       
       // Fetch customer and vendor counts
       const { data: accountStats, error: accountError } = await supabase
-        .rpc('gl_get_account_stats' as any);
+        .rpc('gl_get_account_stats');
       
       if (accountError) throw accountError;
       
@@ -90,7 +90,7 @@ export function useBusinessMetrics() {
       
       // Fetch document status metrics separately
       const { data: docStatusData, error: statusError } = await supabase
-        .rpc('gl_get_document_status' as any);
+        .rpc('gl_get_document_status');
       
       if (statusError) throw statusError;
       
