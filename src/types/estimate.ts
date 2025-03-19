@@ -1,5 +1,5 @@
 
-import { Account } from './index';
+import { GlAccount } from './index';
 
 export interface EstimateLine {
   id: string;
@@ -48,7 +48,7 @@ export interface Estimate {
   created_at?: string;
   updated_at?: string;
   accountName?: string;
-  account?: Account;
+  account?: GlAccount;
   estimateLines?: EstimateLine[];
   credits?: CustomerCredit[];
 }

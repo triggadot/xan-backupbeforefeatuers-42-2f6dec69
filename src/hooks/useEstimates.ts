@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -21,14 +20,14 @@ export function useEstimates() {
         .from('gl_estimates')
         .select(`
           *,
-          account:gl_accounts(id, account_name)
+          account:gl_accounts!rowid_accounts(id, account_name, glide_row_id)
         `)
         .order('created_at', { ascending: false });
       
       if (estimatesError) throw estimatesError;
       
       const enhancedEstimates = estimatesData.map((estimate) => {
-        const account = estimate.account as unknown as { id: string; account_name: string }[] | null;
+        const account = estimate.account as unknown as { id: string; account_name: string; glide_row_id: string }[] | null;
         // Cast to the expected enum type
         const status = estimate.status as 'draft' | 'pending' | 'converted';
         
@@ -62,7 +61,7 @@ export function useEstimates() {
         .from('gl_estimates')
         .select(`
           *,
-          account:gl_accounts(*)
+          account:gl_accounts!rowid_accounts(*)
         `)
         .eq('id', id)
         .single();
@@ -107,6 +106,7 @@ export function useEstimates() {
         description: errorMessage,
         variant: 'destructive',
       });
+      console.error('Error fetching estimate:', err);
       return null;
     }
   }, [toast]);
