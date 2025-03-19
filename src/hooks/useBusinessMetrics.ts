@@ -46,13 +46,13 @@ export function useBusinessMetrics() {
     
     try {
       // Fetch invoice metrics
-      const { data: invoiceMetrics, error: invoiceError } = await supabase
+      const { data: invoiceMetricsArray, error: invoiceError } = await supabase
         .rpc('gl_get_invoice_metrics');
       
       if (invoiceError) throw invoiceError;
       
       // Fetch purchase order metrics
-      const { data: poMetrics, error: poError } = await supabase
+      const { data: poMetricsArray, error: poError } = await supabase
         .rpc('gl_get_purchase_order_metrics');
       
       if (poError) throw poError;
@@ -65,25 +65,30 @@ export function useBusinessMetrics() {
       if (productError) throw productError;
       
       // Fetch customer and vendor counts
-      const { data: accountStats, error: accountError } = await supabase
+      const { data: accountStatsArray, error: accountError } = await supabase
         .rpc('gl_get_account_stats');
       
       if (accountError) throw accountError;
       
+      // Extract the first item from each returned array
+      const invoiceMetrics = invoiceMetricsArray?.[0] || {};
+      const poMetrics = poMetricsArray?.[0] || {};
+      const accountStats = accountStatsArray?.[0] || {};
+      
       // Combine data into business metrics
       const combinedMetrics: BusinessMetrics = {
-        total_invoices: invoiceMetrics?.invoice_count || 0,
-        total_estimates: invoiceMetrics?.estimate_count || 0,
-        total_invoice_amount: invoiceMetrics?.total_invoice_amount || 0,
-        total_payments_received: invoiceMetrics?.total_payments_received || 0,
-        total_outstanding_balance: invoiceMetrics?.total_outstanding_balance || 0,
-        total_purchase_orders: poMetrics?.po_count || 0,
-        total_purchase_amount: poMetrics?.total_purchase_amount || 0,
-        total_payments_made: poMetrics?.total_payments_made || 0,
-        total_purchase_balance: poMetrics?.total_purchase_balance || 0,
+        total_invoices: invoiceMetrics.invoice_count || 0,
+        total_estimates: invoiceMetrics.estimate_count || 0,
+        total_invoice_amount: invoiceMetrics.total_invoice_amount || 0,
+        total_payments_received: invoiceMetrics.total_payments_received || 0,
+        total_outstanding_balance: invoiceMetrics.total_outstanding_balance || 0,
+        total_purchase_orders: poMetrics.po_count || 0,
+        total_purchase_amount: poMetrics.total_purchase_amount || 0,
+        total_payments_made: poMetrics.total_payments_made || 0,
+        total_purchase_balance: poMetrics.total_purchase_balance || 0,
         total_products: productCount?.count || 0,
-        total_customers: accountStats?.customer_count || 0,
-        total_vendors: accountStats?.vendor_count || 0
+        total_customers: accountStats.customer_count || 0,
+        total_vendors: accountStats.vendor_count || 0
       };
       
       setMetrics(combinedMetrics);
@@ -94,6 +99,7 @@ export function useBusinessMetrics() {
       
       if (statusError) throw statusError;
       
+      // docStatusData is already an array, so we can set it directly
       setStatusMetrics(docStatusData as StatusMetrics[] || []);
       
     } catch (error: any) {
