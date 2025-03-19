@@ -1252,23 +1252,6 @@ export type Database = {
       }
     }
     Views: {
-      gl_business_metrics: {
-        Row: {
-          total_customers: number | null
-          total_estimates: number | null
-          total_invoice_amount: number | null
-          total_invoices: number | null
-          total_outstanding_balance: number | null
-          total_payments_made: number | null
-          total_payments_received: number | null
-          total_products: number | null
-          total_purchase_amount: number | null
-          total_purchase_balance: number | null
-          total_purchase_orders: number | null
-          total_vendors: number | null
-        }
-        Relationships: []
-      }
       gl_current_status: {
         Row: {
           balance_amount: number | null
@@ -1320,35 +1303,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      gl_order_fulfillment: {
-        Row: {
-          customer_name: string | null
-          has_shipping: boolean | null
-          invoice_amount: number | null
-          invoice_id: string | null
-          invoice_rowid: string | null
-          payment_status: string | null
-          products: string | null
-          ship_date: string | null
-          total_items: number | null
-          tracking_number: string | null
-        }
-        Relationships: []
-      }
-      gl_payment_history: {
-        Row: {
-          document_id: string | null
-          document_type: string | null
-          entity_name: string | null
-          entity_type: string | null
-          payment_amount: number | null
-          payment_date: string | null
-          payment_id: string | null
-          payment_note: string | null
-          payment_type: string | null
-        }
-        Relationships: []
       }
       gl_product_sync_stats: {
         Row: {
@@ -1492,6 +1446,25 @@ export type Database = {
           retryable: boolean | null
         }[]
       }
+      gl_get_sync_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          app_name: string | null
+          connection_id: string | null
+          current_status: string | null
+          enabled: boolean | null
+          error_count: number | null
+          glide_table: string | null
+          glide_table_display_name: string | null
+          last_sync_completed_at: string | null
+          last_sync_started_at: string | null
+          mapping_id: string | null
+          records_processed: number | null
+          supabase_table: string | null
+          sync_direction: string | null
+          total_records: number | null
+        }[]
+      }
       gl_get_table_columns: {
         Args: {
           table_name: string
@@ -1556,6 +1529,18 @@ export type Database = {
           p_mapping_id: string
         }
         Returns: string
+      }
+      is_customer: {
+        Args: {
+          account_type: string
+        }
+        Returns: boolean
+      }
+      is_vendor: {
+        Args: {
+          account_type: string
+        }
+        Returns: boolean
       }
       process_webhook_event: {
         Args: {
