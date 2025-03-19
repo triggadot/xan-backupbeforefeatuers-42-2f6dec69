@@ -36,7 +36,8 @@ export function ErrorDisplay({
       : [];
   
   // Map severity to Alert variant
-  const variantMap = {
+  // The key fix: Explicitly type this as an object with specific keys mapped to specific variant values
+  const variantMap: Record<ErrorSeverity, "default" | "destructive" | "success"> = {
     'error': 'destructive',
     'warning': 'default',
     'info': 'default',
