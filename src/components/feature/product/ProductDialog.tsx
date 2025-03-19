@@ -139,7 +139,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
               <Input
                 id="new_product_name"
                 placeholder="Enter product name"
-                value={formValues.new_product_name || ''}
+                value={formValues.new_product_name as string || ''}
                 onChange={e => handleChange('new_product_name', e.target.value)}
               />
             </div>
@@ -149,7 +149,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
               <Input
                 id="vendor_product_name"
                 placeholder="Enter vendor's product name"
-                value={formValues.vendor_product_name || ''}
+                value={formValues.vendor_product_name as string || ''}
                 onChange={e => handleChange('vendor_product_name', e.target.value)}
               />
             </div>
@@ -160,7 +160,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                 <Input
                   id="category"
                   placeholder="Enter product category"
-                  value={formValues.category || ''}
+                  value={formValues.category as string || ''}
                   onChange={e => handleChange('category', e.target.value)}
                 />
               </div>
@@ -194,7 +194,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  value={formValues.cost || ''}
+                  value={formValues.cost as string || ''}
                   onChange={e => handleChange('cost', e.target.value)}
                 />
               </div>
@@ -205,7 +205,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   id="total_qty_purchased"
                   type="number"
                   placeholder="1"
-                  value={formValues.total_qty_purchased || ''}
+                  value={formValues.total_qty_purchased as string | number || ''}
                   onChange={e => handleChange('total_qty_purchased', e.target.value)}
                 />
               </div>
@@ -246,7 +246,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
               <Textarea
                 id="purchase_notes"
                 placeholder="Additional notes about this product"
-                value={formValues.purchase_notes || ''}
+                value={formValues.purchase_notes as string || ''}
                 onChange={e => handleChange('purchase_notes', e.target.value)}
                 rows={3}
               />
@@ -287,7 +287,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                 <Textarea
                   id="terms_for_fronted_product"
                   placeholder="Terms for fronted product"
-                  value={formValues.terms_for_fronted_product || ''}
+                  value={formValues.terms_for_fronted_product as string || ''}
                   onChange={e => handleChange('terms_for_fronted_product', e.target.value)}
                   rows={2}
                 />
