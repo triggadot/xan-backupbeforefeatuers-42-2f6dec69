@@ -23,11 +23,12 @@ export function useProductMapping(mappingId: string) {
         throw new Error('Invalid mapping ID');
       }
       
+      // Using maybeSingle() instead of single() to handle the case of no results
       const { data, error } = await supabase
         .from('gl_mappings')
         .select('*')
         .eq('id', mappingId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching mapping:', error);
@@ -78,13 +79,16 @@ export function useProductMapping(mappingId: string) {
   } = useQuery({
     queryKey: ['glsync-connection', mapping?.connection_id],
     queryFn: async () => {
+      // Using maybeSingle() instead of single() to handle potential multiple or no results
       const { data, error } = await supabase
         .from('gl_connections')
         .select('*')
         .eq('id', mapping?.connection_id!)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
+      if (!data) throw new Error(`Connection not found with ID: ${mapping?.connection_id}`);
+      
       return data;
     },
     enabled: !!mapping?.connection_id,
