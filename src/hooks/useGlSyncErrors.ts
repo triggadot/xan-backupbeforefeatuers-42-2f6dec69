@@ -1,15 +1,24 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { GlSyncRecord } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Hook for managing sync errors for a specific mapping.
+ * Provides real-time error tracking, error resolution, and filtering capabilities.
+ * 
+ * @param {string} mappingId - Optional ID of the mapping to filter errors by
+ * @returns {Object} Object containing error data and management functions
+ */
 export function useGlSyncErrors(mappingId?: string) {
   const [syncErrors, setSyncErrors] = useState<GlSyncRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [includeResolved, setIncludeResolved] = useState(false);
   const { toast } = useToast();
 
+  /**
+   * Fetch errors for the specified mapping
+   */
   const fetchErrors = useCallback(async () => {
     if (!mappingId) {
       setSyncErrors([]);
@@ -28,7 +37,7 @@ export function useGlSyncErrors(mappingId?: string) {
 
       if (error) throw error;
 
-      // Transform data to match GlSyncRecord type
+      // Transform database records to GlSyncRecord type
       const formattedErrors = data.map((error: any) => ({
         id: error.id,
         mapping_id: error.mapping_id,
@@ -47,8 +56,8 @@ export function useGlSyncErrors(mappingId?: string) {
       })) as GlSyncRecord[];
 
       setSyncErrors(formattedErrors);
-    } catch (error) {
-      console.error('Error fetching sync errors:', error);
+    } catch (err) {
+      console.error('Error fetching sync errors:', err);
       toast({
         title: 'Error',
         description: 'Failed to fetch synchronization errors',
@@ -59,6 +68,7 @@ export function useGlSyncErrors(mappingId?: string) {
     }
   }, [mappingId, includeResolved, toast]);
 
+  // Set up real-time subscription and initial data fetch
   useEffect(() => {
     fetchErrors();
 
@@ -81,6 +91,9 @@ export function useGlSyncErrors(mappingId?: string) {
     };
   }, [mappingId, fetchErrors]);
 
+  /**
+   * Mark an error as resolved
+   */
   const resolveError = async (errorId: string, notes?: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase
@@ -108,11 +121,12 @@ export function useGlSyncErrors(mappingId?: string) {
         });
         return false;
       }
-    } catch (error) {
-      console.error('Error resolving sync error:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to resolve error';
+      console.error('Error resolving sync error:', err);
       toast({
         title: 'Error',
-        description: 'Failed to resolve error',
+        description: errorMessage,
         variant: 'destructive',
       });
       return false;

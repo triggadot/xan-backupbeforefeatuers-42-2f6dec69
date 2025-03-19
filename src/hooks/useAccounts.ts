@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -81,9 +80,9 @@ export function useAccounts() {
           account_name: accountData.name,
           client_type: normalizedClientType,
           email_of_who_added: accountData.email,
-          photo: accountData.photo, // Add photo field
-          glide_row_id: glideRowId, // Use the generated ID for Glide sync
-          accounts_uid: accountData.accounts_uid || `ACC${Date.now().toString().slice(-6)}` // Generate a simple account UID if not provided
+          photo: accountData.photo,
+          glide_row_id: glideRowId,
+          accounts_uid: accountData.accounts_uid || `ACC${Date.now().toString().slice(-6)}`
         })
         .select()
         .single();
@@ -186,7 +185,7 @@ export function useAccounts() {
     setIsSyncing(true);
     
     try {
-      // Call the sync edge function
+      // Call the glsync edge function for syncing data
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'syncData',
@@ -218,7 +217,7 @@ export function useAccounts() {
     }
   }, [fetchAccounts, toast]);
 
-  // Fetch accounts on component mount
+  // Set up realtime subscriptions
   useEffect(() => {
     fetchAccounts();
     
