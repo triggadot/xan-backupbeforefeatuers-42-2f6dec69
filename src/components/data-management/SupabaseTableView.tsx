@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useTableData } from "@/hooks/useTableData";
 import { cn } from "@/lib/utils";
 import {
@@ -109,6 +108,45 @@ export default function SupabaseTableView({ tableName, displayName, description 
     fetchData();
   }, [fetchData]);
 
+  // Handle record edit
+  const handleEdit = useCallback((record: TableRecord) => {
+    setCurrentRecord(record);
+    setIsEditDialogOpen(true);
+  }, []);
+
+  // Create a memoized row actions component to avoid dependency issues
+  const rowActionsCell = useCallback(({ row }: { row: Row<TableRecord> }) => {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <Ellipsis className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              if (confirm(`Are you sure you want to delete this record?`)) {
+                deleteRecord(row.original.id);
+              }
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }, [handleEdit, deleteRecord]);
+
   // Dynamically build columns from data
   const columns = useMemo<ColumnDef<TableRecord>[]>(() => {
     if (data.length === 0) {
@@ -117,7 +155,13 @@ export default function SupabaseTableView({ tableName, displayName, description 
           id: "select",
           header: ({ table }) => (
             <Checkbox
-              checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+              checked={
+                table.getIsAllPageRowsSelected() 
+                  ? true 
+                  : table.getIsSomePageRowsSelected() 
+                    ? "indeterminate" 
+                    : false
+              }
               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
               aria-label="Select all"
             />
@@ -205,7 +249,13 @@ export default function SupabaseTableView({ tableName, displayName, description 
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+            checked={
+              table.getIsAllPageRowsSelected() 
+                ? true 
+                : table.getIsSomePageRowsSelected() 
+                  ? "indeterminate" 
+                  : false
+            }
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
           />
@@ -224,12 +274,12 @@ export default function SupabaseTableView({ tableName, displayName, description 
       {
         id: "actions",
         header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => <RowActions row={row} />,
+        cell: rowActionsCell,
         enableSorting: false,
         enableHiding: false,
       },
     ];
-  }, [data]);
+  }, [data, rowActionsCell]);
 
   // React Table instance
   const table = useReactTable({
@@ -288,45 +338,6 @@ export default function SupabaseTableView({ tableName, displayName, description 
       setCurrentRecord(null);
     }
   };
-
-  // Handle record edit
-  const handleEdit = (record: TableRecord) => {
-    setCurrentRecord(record);
-    setIsEditDialogOpen(true);
-  };
-
-  // Row actions component
-  function RowActions({ row }: { row: Row<TableRecord> }) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
-            <Ellipsis className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => {
-              if (confirm(`Are you sure you want to delete this record?`)) {
-                deleteRecord(row.original.id);
-              }
-            }}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
 
   // Loading state
   if (isLoading && data.length === 0) {

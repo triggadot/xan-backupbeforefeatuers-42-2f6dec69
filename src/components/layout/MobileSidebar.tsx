@@ -8,7 +8,6 @@ import {
   FileCog,
   FileText,
   LayoutDashboard,
-  Menu,
   Package,
   Receipt,
   Settings,
@@ -16,10 +15,10 @@ import {
   Table,
   User2,
   Users,
+  X,
 } from "lucide-react"
 
 import {
-  Sidebar as SidebarComponent,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
@@ -38,9 +37,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-function Sidebar() {
+import { Button } from "@/components/ui/button"
+
+function MobileSidebar() {
   const location = useLocation()
-  const { isOpen, isMobile, toggleSidebar, setSidebarOpen } = useSidebar()
+  const { toggleSidebar } = useSidebar()
   
   const isActive = (path: string) => {
     if (path === "/") {
@@ -116,51 +117,22 @@ function Sidebar() {
     },
   ]
   
-  const renderMenuItem = (item: { title: string, url: string, icon: React.ElementType }, isActive: boolean) => {
-    const Icon = item.icon;
-    return (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton
-          asChild
-          className={isActive(item.url) ? "bg-accent text-accent-foreground" : ""}
-        >
-          <Link to={item.url} className="flex items-center">
-            <Icon className="h-5 w-5" />
-            <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-              {item.title}
-            </span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
-  };
-  
   return (
-    <SidebarComponent
-      open={isOpen}
-      onOpenChange={setSidebarOpen}
-      variant="float"
-      collapsible="icon"
-      className={`hidden md:flex fixed inset-y-0 left-0 z-20 flex-col border-r shadow-sm transition-all duration-300 ${
-        isOpen ? 'w-64' : 'w-20'
-      }`}
-    >
-      <SidebarContent>
-        <div className="flex h-14 items-center border-b px-4">
-          <Link to="/" className="flex items-center gap-2 text-primary font-semibold text-xl">
-            <BarChart3 className="h-6 w-6" />
-            <span className={`transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
-              Billow
-            </span>
-          </Link>
-          <div className="flex-1" />
-          <SidebarMenuButton onClick={toggleSidebar} variant="icon" className="md:flex">
-            <Menu className="h-5 w-5" />
-          </SidebarMenuButton>
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="flex h-14 items-center border-b px-4">
+        <Link to="/" className="flex items-center gap-2 text-primary font-semibold text-xl">
+          <BarChart3 className="h-6 w-6" />
+          <span>Billow</span>
+        </Link>
+        <div className="flex-1" />
+        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
 
+      <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className={isOpen ? '' : 'sr-only'}>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
@@ -168,12 +140,11 @@ function Sidebar() {
                   <SidebarMenuButton
                     asChild
                     className={isActive(item.url) ? "bg-accent text-accent-foreground" : ""}
+                    onClick={toggleSidebar}
                   >
                     <Link to={item.url}>
                       <item.icon className="h-5 w-5" />
-                      <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-                        {item.title}
-                      </span>
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -183,7 +154,7 @@ function Sidebar() {
         </SidebarGroup>
         
         <SidebarGroup>
-          <SidebarGroupLabel className={isOpen ? '' : 'sr-only'}>Documents</SidebarGroupLabel>
+          <SidebarGroupLabel>Documents</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {documentItems.map((item) => (
@@ -191,12 +162,11 @@ function Sidebar() {
                   <SidebarMenuButton
                     asChild
                     className={isActive(item.url) ? "bg-accent text-accent-foreground" : ""}
+                    onClick={toggleSidebar}
                   >
                     <Link to={item.url}>
                       <item.icon className="h-5 w-5" />
-                      <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-                        {item.title}
-                      </span>
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -206,7 +176,7 @@ function Sidebar() {
         </SidebarGroup>
         
         <SidebarGroup>
-          <SidebarGroupLabel className={isOpen ? '' : 'sr-only'}>Reports</SidebarGroupLabel>
+          <SidebarGroupLabel>Reports</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {reportItems.map((item) => (
@@ -214,12 +184,11 @@ function Sidebar() {
                   <SidebarMenuButton
                     asChild
                     className={isActive(item.url) ? "bg-accent text-accent-foreground" : ""}
+                    onClick={toggleSidebar}
                   >
                     <Link to={item.url}>
                       <item.icon className="h-5 w-5" />
-                      <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-                        {item.title}
-                      </span>
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -229,7 +198,7 @@ function Sidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className={isOpen ? '' : 'sr-only'}>Administration</SidebarGroupLabel>
+          <SidebarGroupLabel>Administration</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminItems.map((item) => (
@@ -237,12 +206,11 @@ function Sidebar() {
                   <SidebarMenuButton
                     asChild
                     className={isActive(item.url) ? "bg-accent text-accent-foreground" : ""}
+                    onClick={toggleSidebar}
                   >
                     <Link to={item.url}>
                       <item.icon className="h-5 w-5" />
-                      <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-                        {item.title}
-                      </span>
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -252,24 +220,22 @@ function Sidebar() {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className={isOpen ? '' : 'items-center'}>
+      <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
+            <SidebarMenuButton asChild onClick={toggleSidebar}>
               <Link to="/settings">
                 <Settings className="h-5 w-5" />
-                <span className={`ml-2 ${isOpen ? 'opacity-100' : 'opacity-0 absolute'}`}>
-                  Settings
-                </span>
+                <span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem className={isOpen ? '' : 'hidden md:hidden'}>
+          <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <User2 className="h-5 w-5" />
-                  <span className="ml-2">User Profile</span>
+                  <span>User Profile</span>
                   <ChevronUp className="ml-auto h-4 w-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -277,29 +243,22 @@ function Sidebar() {
                 side="top"
                 className="w-[--radix-popper-anchor-width]"
               >
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleSidebar}>
                   <Link to="/profile" className="w-full">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleSidebar}>
                   <Link to="/account" className="w-full">Account</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleSidebar}>
                   <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
-          <SidebarMenuItem className={isOpen ? 'hidden' : 'md:flex'}>
-            <SidebarMenuButton asChild>
-              <Link to="/profile">
-                <User2 className="h-5 w-5" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </SidebarComponent>
+    </div>
   )
 }
 
-export default Sidebar
+export default MobileSidebar 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,10 +63,11 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
     async function fetchTableColumns() {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.rpc<TableColumn[], { table_name: string }>(
-          'gl_get_table_columns', 
-          { table_name: tableName }
-        );
+        const { data, error } = await supabase
+          .rpc('gl_get_table_columns', { table_name: tableName }) as unknown as {
+            data: TableColumn[] | null;
+            error: Error | null;
+          };
 
         if (error) throw error;
 
@@ -84,8 +84,8 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
         console.error('Error fetching table columns:', error);
         toast({
           title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to fetch table columns',
-          variant: 'destructive'
+          description: 'Failed to load table structure',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -202,15 +202,13 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { data: result, error } = await supabase.rpc<string, { sql_query: string }>(
-          'gl_admin_execute_sql', 
-          { sql_query: sql }
-        );
+        const { error } = await supabase
+          .rpc('gl_admin_execute_sql', { sql_query: sql }) as unknown as {
+            data: string | null;
+            error: Error | null;
+          };
 
         if (error) throw error;
-        if (typeof result === 'object' && result !== null && 'error' in result) {
-          throw new Error(String(result.error));
-        }
         
         toast({
           title: 'Success',
