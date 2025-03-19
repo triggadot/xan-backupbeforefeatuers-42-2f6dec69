@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import ConnectionSelect from './ConnectionSelect';
-import SupabaseTableSelect from './SupabaseTableSelect';
-import SyncDirectionSelect from './SyncDirectionSelect';
+import { ConnectionSelect } from './ConnectionSelect';
+import { SupabaseTableSelect } from './SupabaseTableSelect';
+import { SyncDirectionSelect } from './SyncDirectionSelect';
 import { GlConnection, GlMapping } from '@/types/glsync';
 import { getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
 import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
@@ -105,6 +105,8 @@ const MappingForm: React.FC<MappingFormProps> = ({
               <FormLabel>Connection</FormLabel>
               <FormControl>
                 <ConnectionSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
                   onConnectionSelect={handleConnectionSelect}
                   selectedConnectionId={field.value}
                 />
@@ -122,6 +124,8 @@ const MappingForm: React.FC<MappingFormProps> = ({
               <FormLabel>Glide Table</FormLabel>
               <FormControl>
                 <GlideTableSelector
+                  value={field.value}
+                  onTableChange={field.onChange}
                   connectionId={form.getValues('connection_id')}
                   disabled={!form.getValues('connection_id')}
                   onTableSelect={handleGlideTableSelect}
@@ -141,6 +145,8 @@ const MappingForm: React.FC<MappingFormProps> = ({
               <FormLabel>Supabase Table</FormLabel>
               <FormControl>
                 <SupabaseTableSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
                   onTableSelect={(table) => form.setValue('supabase_table', table)}
                   selectedTable={field.value}
                 />
@@ -159,6 +165,7 @@ const MappingForm: React.FC<MappingFormProps> = ({
               <FormControl>
                 <SyncDirectionSelect
                   value={field.value}
+                  onValueChange={field.onChange}
                   onChange={(value) => form.setValue('sync_direction', value as 'to_supabase' | 'to_glide' | 'both')}
                 />
               </FormControl>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { 
@@ -9,34 +9,71 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { GlConnection } from '@/types/glsync';
+import { glSyncApi } from '@/services/glsync';
 
-interface Connection {
-  id: string;
-  app_name: string;
-  app_id: string;
-}
-
-interface ConnectionSelectProps {
-  connections: Connection[];
+export interface ConnectionSelectProps {
   value: string;
   onValueChange: (value: string) => void;
-  isLoading: boolean;
+  isLoading?: boolean;
   disabled?: boolean;
+  // Add the missing props
+  selectedConnectionId?: string;
+  onConnectionSelect?: (connection: GlConnection) => void;
 }
 
 export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
-  connections,
   value,
   onValueChange,
-  isLoading,
-  disabled = false
+  isLoading: isLoadingProp = false,
+  disabled = false,
+  // Handle the new props
+  selectedConnectionId,
+  onConnectionSelect
 }) => {
+  const [connections, setConnections] = useState<GlConnection[]>([]);
+  const [isLoading, setIsLoading] = useState(isLoadingProp);
+
+  useEffect(() => {
+    const fetchConnections = async () => {
+      setIsLoading(true);
+      try {
+        const { success, connections } = await glSyncApi.listConnections();
+        if (success) {
+          setConnections(connections);
+        }
+      } catch (error) {
+        console.error('Failed to fetch connections:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchConnections();
+  }, []);
+
+  const handleChange = (newValue: string) => {
+    // Update local state
+    onValueChange(newValue);
+    
+    // If onConnectionSelect is provided, call it with the selected connection
+    if (onConnectionSelect) {
+      const selectedConnection = connections.find(c => c.id === newValue);
+      if (selectedConnection) {
+        onConnectionSelect(selectedConnection);
+      }
+    }
+  };
+
+  // Use selectedConnectionId if provided, otherwise use value
+  const effectiveValue = selectedConnectionId || value;
+
   return (
     <div className="grid gap-2">
       <Label htmlFor="connection">Glide Connection</Label>
       <Select
-        value={value}
-        onValueChange={onValueChange}
+        value={effectiveValue}
+        onValueChange={handleChange}
         disabled={isLoading || disabled || connections.length === 0}
       >
         <SelectTrigger>

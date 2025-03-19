@@ -6,14 +6,21 @@ import AddMappingDialog from './AddMappingDialog';
 
 interface AddMappingButtonProps {
   onSuccess?: () => Promise<void>;
+  onMappingAdded?: () => void;
+  connectionId?: string;
 }
 
-export function AddMappingButton({ onSuccess }: AddMappingButtonProps) {
+export function AddMappingButton({ onSuccess, onMappingAdded, connectionId }: AddMappingButtonProps) {
   const [open, setOpen] = useState(false);
 
   const handleSuccess = async () => {
+    // Call both callbacks if they exist
     if (onSuccess) {
       await onSuccess();
+    }
+    
+    if (onMappingAdded) {
+      onMappingAdded();
     }
   };
 
@@ -27,7 +34,9 @@ export function AddMappingButton({ onSuccess }: AddMappingButtonProps) {
       <AddMappingDialog 
         open={open} 
         onOpenChange={setOpen} 
-        onSuccess={handleSuccess} 
+        onSuccess={onSuccess}
+        onMappingAdded={onMappingAdded}
+        connectionId={connectionId}
       />
     </>
   );

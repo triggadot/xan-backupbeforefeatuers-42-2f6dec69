@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { formatTimestamp } from '@/utils/glsync-transformers';
 import { supabase } from '@/integrations/supabase/client';
 import { getStatusBadge, getStatusIcon } from './ui/StatusBadgeUtils';
 import { ActiveMappingCard } from './overview/ActiveMappingCard';
+import { GlRecentLog, GlSyncStats } from '@/types/glsync';
 
 const SyncDashboard = () => {
   const [mappings, setMappings] = useState([]);
@@ -21,16 +23,21 @@ const SyncDashboard = () => {
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
-  // Use the full hook return values
-  const { 
-    allSyncStatuses,
-    recentLogs,
-    syncStats,
-    isLoading,
-    hasError,
-    errorMessage,
-    refreshData
-  } = useGlSyncStatus();
+  // Manually define these until the hook is updated
+  const [allSyncStatuses, setAllSyncStatuses] = useState([]);
+  const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
+  const [syncStats, setSyncStats] = useState<GlSyncStats | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Get whatever useGlSyncStatus actually provides
+  const { status, isLoading, error, refetch } = useGlSyncStatus();
+  
+  // Define a refresh function
+  const refreshData = useCallback(() => {
+    refetch();
+    // Additional refresh operations can be added here
+  }, [refetch]);
 
   const fetchMappings = useCallback(async () => {
     setIsLoadingMappings(true);
@@ -42,6 +49,9 @@ const SyncDashboard = () => {
       
       if (error) throw new Error(error.message);
       setMappings(data || []);
+      
+      // Update the sync statuses as well if this is what we're using
+      setAllSyncStatuses(data || []);
     } catch (error) {
       console.error('Error fetching mappings:', error);
       toast({
@@ -49,14 +59,67 @@ const SyncDashboard = () => {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
+      setHasError(true);
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsLoadingMappings(false);
     }
   }, [toast]);
 
+  // Also fetch recent logs
+  const fetchRecentLogs = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('gl_recent_logs')
+        .select('*')
+        .order('started_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      setRecentLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching recent logs:', error);
+    }
+  }, []);
+
+  // Fetch sync stats
+  const fetchSyncStats = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get total syncs and success/failed counts
+      const { data: statsData, error: statsError } = await supabase
+        .from('gl_sync_logs')
+        .select(`
+          status,
+          records_processed
+        `);
+      
+      if (statsError) throw statsError;
+      
+      if (statsData) {
+        const totalSyncs = statsData.length;
+        const successfulSyncs = statsData.filter(log => log.status === 'completed').length;
+        const failedSyncs = statsData.filter(log => log.status === 'error').length;
+        const totalRecordsProcessed = statsData.reduce((sum, log) => sum + (log.records_processed || 0), 0);
+        
+        setSyncStats({
+          syncs: totalSyncs,
+          successful_syncs: successfulSyncs,
+          failed_syncs: failedSyncs,
+          total_records_processed: totalRecordsProcessed,
+          sync_date: today
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching sync stats:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchMappings();
-    refreshData();
+    fetchRecentLogs();
+    fetchSyncStats();
     
     // Set up realtime subscription for mappings
     const mappingsChannel = supabase
@@ -69,10 +132,23 @@ const SyncDashboard = () => {
       )
       .subscribe();
     
+    // Set up realtime subscription for logs
+    const logsChannel = supabase
+      .channel('gl_logs_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'gl_sync_logs' },
+        () => {
+          fetchRecentLogs();
+          fetchSyncStats();
+        }
+      )
+      .subscribe();
+    
     return () => {
       supabase.removeChannel(mappingsChannel);
+      supabase.removeChannel(logsChannel);
     };
-  }, [fetchMappings, refreshData]);
+  }, [fetchMappings, fetchRecentLogs, fetchSyncStats]);
 
   const handleSync = async (connectionId: string, mappingId: string) => {
     setIsSyncing(prev => ({ ...prev, [mappingId]: true }));
@@ -110,10 +186,16 @@ const SyncDashboard = () => {
 
   const refreshAll = () => {
     fetchMappings();
+    fetchRecentLogs();
+    fetchSyncStats();
     refreshData();
   };
 
-  if (hasError) {
+  // Check if we have an error from the hook or from our fetch operations
+  const displayError = hasError || !!error;
+  const displayErrorMessage = errorMessage || error || 'There was an error connecting to the database. Please ensure the database tables have been created.';
+
+  if (displayError) {
     return (
       <div className="container mx-auto p-4">
         <Card>
@@ -122,7 +204,7 @@ const SyncDashboard = () => {
               <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
               <h3 className="text-lg font-medium">Unable to load synchronization dashboard</h3>
               <p className="text-muted-foreground">
-                {errorMessage || 'There was an error connecting to the database. Please ensure the database tables have been created.'}
+                {displayErrorMessage}
               </p>
               <Button onClick={refreshAll}>
                 <RefreshCw className="h-4 w-4 mr-2" />

@@ -11,6 +11,10 @@ export interface GlideTableSelectorProps {
   isLoading?: boolean;
   placeholder?: string;
   tables?: GlideTable[];
+  // Add the missing props
+  connectionId?: string;
+  selectedTableId?: string;
+  onTableSelect?: (tableId: string, displayName: string) => void;
 }
 
 export function GlideTableSelector({
@@ -20,7 +24,10 @@ export function GlideTableSelector({
   disabled = false,
   isLoading = false,
   placeholder = "Select a table",
-  tables = []
+  tables = [],
+  // Handle the new props
+  selectedTableId,
+  onTableSelect
 }: GlideTableSelectorProps) {
   const handleSelectChange = (newValue: string) => {
     if (newValue === 'add-new') {
@@ -31,14 +38,23 @@ export function GlideTableSelector({
     } else {
       // Find the selected table to get its display name
       const selectedTable = tables.find(table => table.id === newValue);
-      onTableChange(newValue, selectedTable?.display_name);
+      
+      // Use onTableSelect if provided, otherwise fall back to onTableChange
+      if (onTableSelect) {
+        onTableSelect(newValue, selectedTable?.display_name || '');
+      } else {
+        onTableChange(newValue, selectedTable?.display_name);
+      }
     }
   };
+  
+  // Use selectedTableId if provided, otherwise use value
+  const effectiveValue = selectedTableId || value;
   
   return (
     <div className="relative">
       <Select
-        value={value}
+        value={effectiveValue}
         onValueChange={handleSelectChange}
         disabled={disabled || isLoading}
       >

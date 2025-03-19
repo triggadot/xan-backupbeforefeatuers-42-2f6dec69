@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Database } from 'lucide-react';
-import { SchemaSetupDialog } from './SchemaSetupDialog';
+import SchemaSetupDialog from './SchemaSetupDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useConnections } from '@/hooks/useConnections';
 import { useGlSync } from '@/hooks/useGlSync';
@@ -65,4 +66,4 @@ export function CreateSchemaButton({ onMappingCreated }: CreateSchemaButtonProps
       )}
     </div>
   );
-} 
+}

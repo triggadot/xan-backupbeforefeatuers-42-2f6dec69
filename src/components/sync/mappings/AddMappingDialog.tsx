@@ -13,13 +13,16 @@ interface AddMappingDialogProps {
   onOpenChange: (open: boolean) => void;
   onMappingAdded?: () => void;
   connectionId?: string;
+  // Add the missing props
+  onSuccess?: () => Promise<void>;
 }
 
 const AddMappingDialog: React.FC<AddMappingDialogProps> = ({ 
   open, 
   onOpenChange,
   onMappingAdded,
-  connectionId
+  connectionId,
+  onSuccess
 }) => {
   const [activeTab, setActiveTab] = React.useState('add-mapping');
   const [selectedConnection, setSelectedConnection] = React.useState<GlConnection | null>(null);
@@ -30,6 +33,20 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
       setActiveTab('add-mapping');
     }
   }, [open]);
+
+  const handleMappingAdded = () => {
+    // Close the dialog
+    onOpenChange(false);
+    
+    // Call both callbacks if they exist
+    if (onMappingAdded) {
+      onMappingAdded();
+    }
+    
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,7 +63,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
           
           <TabsContent value="add-mapping" className="py-4">
             <AddMappingForm 
-              onMappingAdded={onMappingAdded} 
+              onMappingAdded={handleMappingAdded} 
               onClose={() => onOpenChange(false)}
               preselectedConnectionId={connectionId}
             />

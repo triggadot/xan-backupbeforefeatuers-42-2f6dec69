@@ -14,19 +14,19 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
   mapping,
   status: initialStatus 
 }) => {
-  // Pass only the mappingId to useGlSyncStatus according to its signature
-  const { syncStatus } = useGlSyncStatus(mapping.id);
+  // Use the status directly since useGlSyncStatus doesn't return syncStatus
+  const { status, isLoading } = useGlSyncStatus(mapping.id);
   
   const calculateProgress = () => {
-    if (!syncStatus) return 0;
+    if (!status) return 0;
     
-    if (syncStatus.records_processed === null || 
-        syncStatus.total_records === null || 
-        syncStatus.total_records === 0) {
+    if (status.records_processed === null || 
+        status.total_records === null || 
+        status.total_records === 0) {
       return 0;
     }
     
-    return Math.min(100, Math.round((syncStatus.records_processed / syncStatus.total_records) * 100));
+    return Math.min(100, Math.round((status.records_processed / status.total_records) * 100));
   };
 
   return (
@@ -39,7 +39,7 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Records Processed</span>
             <span>
-              {syncStatus?.records_processed || 0} / {syncStatus?.total_records || 0}
+              {status?.records_processed || 0} / {status?.total_records || 0}
             </span>
           </div>
           
@@ -49,15 +49,15 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
               <span className="capitalize">
-                {syncStatus?.current_status || 'Not synced'}
+                {status?.current_status || 'Not synced'}
               </span>
             </div>
             
-            {syncStatus?.last_sync_completed_at && (
+            {status?.last_sync_completed_at && (
               <div className="flex justify-between mt-2">
                 <span className="text-muted-foreground">Last Completed</span>
                 <span>
-                  {new Date(syncStatus.last_sync_completed_at).toLocaleString()}
+                  {new Date(status.last_sync_completed_at).toLocaleString()}
                 </span>
               </div>
             )}
