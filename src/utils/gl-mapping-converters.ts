@@ -64,3 +64,61 @@ export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
     }
   };
 }
+
+/**
+ * Normalizes client type values to match database constraints
+ */
+export function normalizeClientType(clientType: string | null | undefined): string | null {
+  if (!clientType) return null;
+  
+  // Normalize to match the exact values expected by the constraint
+  const normalized = String(clientType).trim().toLowerCase();
+  
+  if (/customer\s*&\s*vendor/i.test(normalized) || 
+      /customer\s+and\s+vendor/i.test(normalized) ||
+      /both/i.test(normalized)) {
+    return 'Customer & Vendor';
+  } else if (/vendor/i.test(normalized)) {
+    return 'Vendor';
+  } else if (/customer/i.test(normalized)) {
+    return 'Customer';
+  }
+  
+  // If we can't determine the type, default to Customer
+  return 'Customer';
+}
+
+/**
+ * Transforms a value to the specified data type
+ */
+export function transformValue(value: any, dataType: string): any {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  
+  switch (dataType) {
+    case 'string':
+    case 'email-address':
+    case 'image-uri':
+      return String(value);
+    case 'number':
+      return Number(value);
+    case 'boolean':
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+      }
+      return Boolean(value);
+    case 'date-time':
+      // If it's already a valid date string, return it
+      if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+        return value;
+      }
+      // If it's a number (timestamp), convert to ISO string
+      if (typeof value === 'number') {
+        return new Date(value).toISOString();
+      }
+      return null;
+    default:
+      return String(value);
+  }
+}
