@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,34 +8,39 @@ import { mapGlInvoiceToInvoice } from '@/utils/mapping-utils';
 async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
   if (!productGlideId) return null;
   
-  const { data, error } = await supabase
-    .from('gl_products')
-    .select('*')
-    .eq('glide_row_id', productGlideId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('gl_products')
+      .select('*')
+      .eq('glide_row_id', productGlideId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error fetching product details:', error);
+      return null;
+    }
     
-  if (error) {
-    console.error('Error fetching product details:', error);
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      glide_row_id: data.glide_row_id,
+      name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+      display_name: data.display_name,
+      vendor_product_name: data.vendor_product_name,
+      new_product_name: data.new_product_name,
+      cost: data.cost,
+      total_qty_purchased: data.total_qty_purchased,
+      category: data.category,
+      product_image1: data.product_image1,
+      purchase_notes: data.purchase_notes,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (err) {
+    console.error('Error fetching product details:', err);
     return null;
   }
-  
-  if (!data) return null;
-  
-  return {
-    id: data.id,
-    glide_row_id: data.glide_row_id,
-    name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
-    display_name: data.display_name,
-    vendor_product_name: data.vendor_product_name,
-    new_product_name: data.new_product_name,
-    cost: data.cost,
-    total_qty_purchased: data.total_qty_purchased,
-    category: data.category,
-    product_image1: data.product_image1,
-    purchase_notes: data.purchase_notes,
-    created_at: data.created_at,
-    updated_at: data.updated_at
-  };
 }
 
 export function useInvoices() {
@@ -61,6 +65,7 @@ export function useInvoices() {
       // Early return if no invoices
       if (!invoicesData || invoicesData.length === 0) {
         setInvoices([]);
+        setIsLoading(false);
         return [];
       }
       
@@ -139,6 +144,7 @@ export function useInvoices() {
       });
       
       setInvoices(mappedInvoices);
+      setIsLoading(false);
       return mappedInvoices;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices';
@@ -148,9 +154,8 @@ export function useInvoices() {
         description: errorMessage,
         variant: 'destructive',
       });
-      return [];
-    } finally {
       setIsLoading(false);
+      return [];
     }
   }, [toast]);
 
