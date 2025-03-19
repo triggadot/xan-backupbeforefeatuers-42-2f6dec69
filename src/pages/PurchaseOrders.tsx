@@ -107,7 +107,7 @@ const PurchaseOrders: React.FC = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="sent">Sent</SelectItem>
               <SelectItem value="received">Received</SelectItem>
@@ -121,7 +121,7 @@ const PurchaseOrders: React.FC = () => {
               <SelectValue placeholder="Filter by vendor" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Vendors</SelectItem>
+              <SelectItem value="all">All Vendors</SelectItem>
               {accounts.map(account => (
                 <SelectItem key={account.id} value={account.id}>
                   {account.name}
