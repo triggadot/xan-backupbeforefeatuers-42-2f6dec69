@@ -1,129 +1,106 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
-import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 
 export function usePurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { toast } = useToast();
 
   const fetchPurchaseOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
 
-      // Use the correct table name gl_purchase_orders
+      // Select from gl_purchase_orders table
       const { data, error: fetchError } = await supabase
         .from('gl_purchase_orders')
         .select(`
           *,
-          accounts:gl_accounts(account_name)
+          gl_accounts!gl_purchase_orders_rowid_accounts_fkey (
+            account_name
+          )
         `)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      if (data) {
-        const mappedPurchaseOrders: PurchaseOrder[] = data.map(po => ({
-          id: po.id,
-          number: po.purchase_order_uid || `PO-${po.id.slice(0, 8)}`,
-          vendorId: po.rowid_accounts || '',
-          accountName: po.accounts?.account_name || 'Unknown Vendor',
-          date: po.po_date ? new Date(po.po_date) : new Date(),
-          dueDate: null, // Handle missing due_date field
-          status: (po.payment_status as 'draft' | 'sent' | 'received' | 'partial' | 'complete') || 'draft',
-          total: po.total_amount || 0,
-          subtotal: po.total_amount || 0, // Assuming subtotal is the same as total for now
-          tax: 0, // Default if not provided
-          amountPaid: po.total_paid || 0,
-          balance: po.balance || 0,
-          notes: '', // Handle missing po_notes field
-          created_at: po.created_at,
-          updated_at: po.updated_at,
-          lineItems: [], // Default empty array
-          vendorPayments: [], // Default empty array
-          // Add Supabase-specific fields for mapping
-          glide_row_id: po.glide_row_id,
-          rowid_accounts: po.rowid_accounts,
-          po_date: po.po_date,
-          purchase_order_uid: po.purchase_order_uid
-        }));
+      // Convert the database response to PurchaseOrder objects
+      const formattedPurchaseOrders: PurchaseOrder[] = data.map(po => ({
+        id: po.id,
+        number: po.purchase_order_uid || '',
+        vendorId: po.rowid_accounts || '',
+        accountName: po.gl_accounts?.account_name || '',
+        date: new Date(po.po_date || po.created_at),
+        dueDate: po.payment_date ? new Date(po.payment_date) : null,
+        status: po.payment_status || 'draft',
+        total: po.total_amount || 0,
+        subtotal: po.total_amount || 0, // Assuming no tax breakdown
+        tax: 0, // Assuming no tax data available
+        amountPaid: po.total_paid || 0,
+        balance: po.balance || 0,
+        notes: '',
+        created_at: po.created_at,
+        updated_at: po.updated_at,
+        lineItems: [],
+        vendorPayments: [],
+        glide_row_id: po.glide_row_id,
+        rowid_accounts: po.rowid_accounts,
+        po_date: po.po_date,
+        purchase_order_uid: po.purchase_order_uid
+      }));
 
-        setPurchaseOrders(mappedPurchaseOrders);
-      }
-    } catch (error) {
-      console.error('Error fetching purchase orders:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      setPurchaseOrders(formattedPurchaseOrders);
+    } catch (err) {
+      console.error('Error fetching purchase orders:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred fetching purchase orders');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Function to get a specific purchase order by ID
-  const getPurchaseOrder = useCallback((id: string) => {
-    return purchaseOrders.find(po => po.id === id);
-  }, [purchaseOrders]);
-
-  // Function to get purchase orders for a specific account
-  const getPurchaseOrdersForAccount = useCallback((accountId: string) => {
-    return purchaseOrders.filter(po => po.vendorId === accountId);
-  }, [purchaseOrders]);
-
-  const addPurchaseOrder = async (newPurchaseOrder: Omit<PurchaseOrder, 'id' | 'created_at'>) => {
+  const addPurchaseOrder = useCallback(async (newPurchaseOrder: Omit<PurchaseOrder, 'id' | 'created_at'>) => {
     try {
-      // Prepare the PO data for Supabase
-      const poData = {
+      setIsLoading(true);
+      setError('');
+
+      // Map the PurchaseOrder object to match database schema
+      const dbPurchaseOrder = {
         rowid_accounts: newPurchaseOrder.vendorId,
-        po_date: newPurchaseOrder.date instanceof Date ? newPurchaseOrder.date.toISOString() : newPurchaseOrder.date,
+        po_date: newPurchaseOrder.date.toISOString(),
         payment_status: newPurchaseOrder.status,
         total_amount: newPurchaseOrder.total,
         total_paid: newPurchaseOrder.amountPaid,
         balance: newPurchaseOrder.balance,
-        glide_row_id: uuidv4(), // Generate a new glide_row_id
-        purchase_order_uid: newPurchaseOrder.number || `PO-${Date.now()}`
+        glide_row_id: newPurchaseOrder.glide_row_id,
+        purchase_order_uid: newPurchaseOrder.number
       };
 
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('gl_purchase_orders')
-        .insert(poData)
-        .select()
-        .single();
+        .insert(dbPurchaseOrder);
 
       if (insertError) throw insertError;
 
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Success',
-        description: 'Purchase Order created successfully',
-      });
-
-      if (data) {
-        await fetchPurchaseOrders(); // Refresh the list
-      }
-    } catch (error) {
-      console.error('Error adding purchase order:', error);
-      
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create purchase order',
-        variant: 'destructive',
-      });
-      
-      throw error;
+      await fetchPurchaseOrders();
+    } catch (err) {
+      console.error('Error adding purchase order:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred adding the purchase order');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [fetchPurchaseOrders]);
 
-  const updatePurchaseOrder = async (id: string, updates: Partial<PurchaseOrder>) => {
+  const updatePurchaseOrder = useCallback(async (id: string, updates: PurchaseOrder) => {
     try {
-      // Prepare the update data for Supabase
-      const updateData = {
+      setIsLoading(true);
+      setError('');
+
+      // Map the PurchaseOrder updates to match database schema
+      const dbUpdates = {
         rowid_accounts: updates.vendorId,
-        po_date: updates.date instanceof Date ? updates.date.toISOString() : updates.date,
+        po_date: updates.date.toISOString(),
         payment_status: updates.status,
         total_amount: updates.total,
         total_paid: updates.amountPaid,
@@ -133,34 +110,25 @@ export function usePurchaseOrders() {
 
       const { error: updateError } = await supabase
         .from('gl_purchase_orders')
-        .update(updateData)
+        .update(dbUpdates)
         .eq('id', id);
 
       if (updateError) throw updateError;
 
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Success',
-        description: 'Purchase Order updated successfully',
-      });
-
-      await fetchPurchaseOrders(); // Refresh the list
-    } catch (error) {
-      console.error('Error updating purchase order:', error);
-      
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update purchase order',
-        variant: 'destructive',
-      });
-      
-      throw error;
+      await fetchPurchaseOrders();
+    } catch (err) {
+      console.error('Error updating purchase order:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred updating the purchase order');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [fetchPurchaseOrders]);
 
-  const deletePurchaseOrder = async (id: string) => {
+  const deletePurchaseOrder = useCallback(async (id: string) => {
     try {
+      setIsLoading(true);
+      setError('');
+
       const { error: deleteError } = await supabase
         .from('gl_purchase_orders')
         .delete()
@@ -168,40 +136,22 @@ export function usePurchaseOrders() {
 
       if (deleteError) throw deleteError;
 
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Success',
-        description: 'Purchase Order deleted successfully',
-      });
-
-      setPurchaseOrders(previous => previous.filter(po => po.id !== id));
-    } catch (error) {
-      console.error('Error deleting purchase order:', error);
-      
-      // Fix the toast call - use a single object parameter
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete purchase order',
-        variant: 'destructive',
-      });
-      
-      throw error;
+      await fetchPurchaseOrders();
+    } catch (err) {
+      console.error('Error deleting purchase order:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred deleting the purchase order');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchPurchaseOrders();
   }, [fetchPurchaseOrders]);
 
   return {
     purchaseOrders,
     isLoading,
     error,
+    fetchPurchaseOrders,
     addPurchaseOrder,
     updatePurchaseOrder,
-    deletePurchaseOrder,
-    fetchPurchaseOrders,
-    getPurchaseOrder,
-    getPurchaseOrdersForAccount
+    deletePurchaseOrder
   };
 }

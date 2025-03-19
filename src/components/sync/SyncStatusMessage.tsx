@@ -30,7 +30,7 @@ export function SyncStatusMessage({
       <ErrorDisplay
         severity={status.error_count ? 'error' : 'info'}
         title={status.error_count ? 'Sync Failed' : 'Sync Completed'}
-        message={statusMessage}
+        errors={statusMessage}
       />
     );
   }

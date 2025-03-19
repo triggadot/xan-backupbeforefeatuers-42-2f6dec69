@@ -6,7 +6,6 @@ import './index.css'
 import {
   createBrowserRouter,
   RouterProvider,
-  Route,
 } from "react-router-dom";
 import Sync from './pages/Sync.tsx';
 import ProductSync from './pages/ProductSync.tsx';
@@ -21,6 +20,10 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+  },
+  {
+    path: "/auth",
+    element: <SignIn />,
   },
   {
     path: "/dashboard",

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ interface MappingsManagerProps {
   connectionId?: string;
 }
 
-const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
+export const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
   const [selectedMappingId, setSelectedMappingId] = useState<string | null>(null);
   const { mappings, isLoading, toggleEnabled, deleteMapping, refreshMappings } = useRealtimeMappings();
 
@@ -74,10 +73,9 @@ const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
           onToggleEnabled={toggleEnabled}
           onDeleteMapping={handleDeleteMapping}
           isLoading={isLoading}
+          onMappingCreated={refreshMappings}
         />
       )}
     </div>
   );
 };
-
-export default MappingsManager;

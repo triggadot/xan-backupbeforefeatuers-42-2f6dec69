@@ -1,177 +1,224 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, RefreshCcw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { GlMapping } from '@/types/glsync';
+import { useNavigate } from 'react-router-dom';
 import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import { useToast } from '@/hooks/use-toast';
-import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
+import { useGlSyncErrors } from '@/hooks/useGlSyncErrors';
+import { useGlSyncValidation } from '@/hooks/useGlSyncValidation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ColumnMappingsView } from './ColumnMappingsView';
 import { MappingDetailsCard } from '@/components/sync/MappingDetailsCard';
-import ColumnMappingsView from './ColumnMappingsView';
-import SyncErrorsView from '@/components/sync/mappings/SyncErrorsView';
-import { SyncLogsView } from '@/components/sync/mappings/SyncLogsView';
+import { SyncDetailsPanel } from './SyncDetailsPanel';
+import { SyncErrorsView } from '@/components/sync/mappings/SyncErrorsView';
+import { SyncLogsView } from './SyncLogsView';
 import { ValidationDisplay } from '@/components/sync/ValidationDisplay';
 import { SyncStatusMessage } from '@/components/sync/SyncStatusMessage';
+import { EditTableDialog } from './EditTableDialog';
+import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
+import { MappingDeleteDialog } from './MappingDeleteDialog';
 
 interface MappingDetailsProps {
   mappingId: string;
   onBack: () => void;
 }
 
-interface MappingTabsProps {
-  mapping: GlMapping;
-  onSync: () => Promise<void>;
-  isSyncing: boolean;
-}
-
-const MappingTabs: React.FC<MappingTabsProps> = ({ mapping, onSync, isSyncing }) => {
-  const [activeTab, setActiveTab] = useState('details');
-
-  return (
-    <Card>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="columns">Columns</TabsTrigger>
-            <TabsTrigger value="sync-logs">Sync Logs</TabsTrigger>
-            <TabsTrigger value="sync-errors">Sync Errors</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="details" className="space-y-4">
-            <MappingDetailsCard 
-              mapping={mapping}
-              onEdit={() => {}} 
-              onDelete={() => {}}
-            />
-          </TabsContent>
-          
-          <TabsContent value="columns" className="space-y-4">
-            <ColumnMappingsView mapping={mapping} />
-          </TabsContent>
-          
-          <TabsContent value="sync-logs" className="space-y-4">
-            <SyncLogsView mappingId={mapping.id} />
-          </TabsContent>
-          
-          <TabsContent value="sync-errors" className="space-y-4">
-            <SyncErrorsView mappingId={mapping.id} />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-};
-
 const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
-  const [mapping, setMapping] = useState<GlMapping | null>(null);
-  const { syncData, isLoading: isSyncing } = useGlSync();
-  const { status, isLoading, error, refetch } = useGlSyncStatus(mappingId);
-  const { toast } = useToast();
-
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('details');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  const { 
+    mapping, 
+    isLoading, 
+    error, 
+    refreshMapping, 
+    syncMapping,
+    toggleEnabled,
+    deleteMapping,
+    updateMapping
+  } = useGlSync(mappingId);
+  
+  const { errors, isLoading: isErrorsLoading, refreshErrors } = useGlSyncErrors(mappingId);
+  const { validation, isLoading: isValidationLoading, validateMapping } = useGlSyncValidation(mappingId);
+  
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  
   useEffect(() => {
-    const fetchMapping = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('gl_mappings')
-          .select('*')
-          .eq('id', mappingId)
-          .single();
-        
-        if (error) throw error;
-        
-        // Ensure column_mappings is an object
-        const mappingData = {
-          ...data,
-          column_mappings: data.column_mappings as Record<string, {
-            glide_column_name: string;
-            supabase_column_name: string;
-            data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
-          }>
-        } as GlMapping;
-        
-        setMapping(mappingData);
-      } catch (error) {
-        console.error('Error fetching mapping:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load mapping details',
-          variant: 'destructive',
-        });
-      }
-    };
-    
-    fetchMapping();
-  }, [mappingId, toast]);
-
+    refreshMapping();
+    refreshErrors();
+    validateMapping();
+  }, [mappingId, refreshMapping, refreshErrors, validateMapping]);
+  
   const handleSync = async () => {
-    if (!mapping) return;
+    setSyncRunning(true);
+    setSyncResult(null);
     
     try {
-      await syncData(mapping.connection_id, mapping.id);
-      toast({
-        title: 'Sync Started',
-        description: 'Sync operation has been started.',
+      const result = await syncMapping();
+      setSyncResult({
+        success: result.success,
+        message: result.message || (result.success ? 'Sync completed successfully' : 'Sync failed')
       });
-      refetch();
     } catch (error) {
-      console.error('Sync failed:', error);
-      toast({
-        title: 'Sync Failed',
-        description: error instanceof Error ? error.message : 'Failed to start sync operation.',
-        variant: 'destructive',
+      setSyncResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'An unknown error occurred'
       });
+    } finally {
+      setSyncRunning(false);
+      refreshErrors();
     }
   };
-
-  if (!mapping) {
+  
+  const handleEdit = () => {
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleDelete = () => {
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteMapping();
+      setIsDeleteDialogOpen(false);
+      onBack();
+    } catch (error) {
+      console.error('Error deleting mapping:', error);
+    }
+  };
+  
+  const handleEditSubmit = async (updates: any) => {
+    try {
+      await updateMapping(updates);
+      setIsEditDialogOpen(false);
+      refreshMapping();
+      validateMapping();
+      return true;
+    } catch (error) {
+      console.error('Error updating mapping:', error);
+      return false;
+    }
+  };
+  
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <Button onClick={onBack} variant="ghost" className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <h2 className="text-lg font-semibold">Loading...</h2>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (error || !mapping) {
+    return (
+      <div className="bg-destructive/10 p-4 rounded-md text-destructive">
+        <p>Error loading mapping: {error || 'Mapping not found'}</p>
+        <Button variant="outline" onClick={onBack} className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Mappings
+        </Button>
+      </div>
     );
   }
   
   return (
-    <div>
-      <div className="mb-4">
-        <Button onClick={onBack} variant="ghost">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={onBack} className="pl-0">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Mappings
         </Button>
-        <h1 className="text-2xl font-bold mt-2">Mapping Details</h1>
-        <SyncStatusMessage status={status} isLoading={isLoading} error={error} />
-        <ValidationDisplay mapping={mapping} />
+        
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              refreshMapping();
+              refreshErrors();
+              validateMapping();
+            }}
+            disabled={isLoading}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2">
-          <MappingTabs 
-            mapping={mapping} 
-            onSync={handleSync} 
-            isSyncing={isSyncing}
-          />
-        </div>
+      <MappingDetailsCard 
+        mapping={mapping} 
+        onEdit={handleEdit} 
+        onDelete={handleDelete}
+        isEnabled={mapping.enabled}
+        onToggleEnabled={() => toggleEnabled(mapping)}
+      />
+      
+      {validation && !isValidationLoading && (
+        <ValidationDisplay validation={validation} />
+      )}
+      
+      {syncResult && (
+        <SyncStatusMessage 
+          success={syncResult.success} 
+          message={syncResult.message} 
+        />
+      )}
+      
+      <SyncControlPanel 
+        onSync={handleSync} 
+        disabled={syncRunning || isLoading || !mapping.enabled} 
+        isRunning={syncRunning}
+        isValid={validation?.isValid || false}
+      />
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="columns">Columns</TabsTrigger>
+          <TabsTrigger value="errors">Errors ({errors.length})</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+        </TabsList>
         
-        <div>
-          <SyncControlPanel 
+        <TabsContent value="details" className="mt-6">
+          <SyncDetailsPanel mapping={mapping} />
+        </TabsContent>
+        
+        <TabsContent value="columns" className="mt-6">
+          <ColumnMappingsView 
             mapping={mapping} 
-            status={status}
-            onSyncComplete={refetch}
-            onSettingsChange={refetch}
+            onUpdate={handleEditSubmit} 
           />
-        </div>
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="errors" className="mt-6">
+          <SyncErrorsView 
+            errors={errors} 
+            isLoading={isErrorsLoading} 
+            onRefresh={refreshErrors}
+          />
+        </TabsContent>
+        
+        <TabsContent value="logs" className="mt-6">
+          <SyncLogsView mappingId={mappingId} />
+        </TabsContent>
+      </Tabs>
+      
+      <EditTableDialog 
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        mapping={mapping}
+        onSubmit={handleEditSubmit}
+      />
+      
+      <MappingDeleteDialog 
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        mappingName={mapping.glide_table_display_name || mapping.glide_table}
+      />
     </div>
   );
 };
