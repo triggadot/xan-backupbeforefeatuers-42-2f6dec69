@@ -9,28 +9,28 @@ export async function validateMapping(mappingId: string): Promise<MappingValidat
       
     if (error) {
       return {
-        is_valid: false,
-        validation_message: `Validation error: ${error.message}`
+        isValid: false,
+        message: `Validation error: ${error.message}`
       };
     }
     
     if (!data || !data[0]) {
       return {
-        is_valid: false,
-        validation_message: 'No validation result returned'
+        isValid: false,
+        message: 'No validation result returned'
       };
     }
     
     // Access the first element of the array since RPC returns an array
     const result = data[0];
     return {
-      is_valid: result.is_valid,
-      validation_message: result.validation_message
+      isValid: result.is_valid,
+      message: result.validation_message
     };
   } catch (error) {
     return {
-      is_valid: false,
-      validation_message: `Unexpected error during validation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      isValid: false,
+      message: `Unexpected error during validation: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }

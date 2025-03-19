@@ -7,6 +7,7 @@ export interface SyncLog {
   completed_at?: string;
   records_processed?: number;
   message?: string;
+  app_name?: string; // Added for compatibility
 }
 
 export interface SyncError {
@@ -32,6 +33,7 @@ export interface SyncLogsResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  data?: SyncLog[]; // Added for compatibility with existing code
 }
 
 export interface SyncLogFilter {

@@ -19,12 +19,10 @@ const MappingView = () => {
   
   return (
     <SyncLayout>
-      <div>
-        <MappingDetails 
-          mappingId={id} 
-          onBack={handleBack} 
-        />
-      </div>
+      <MappingDetails 
+        mappingId={id} 
+        onBack={handleBack} 
+      />
     </SyncLayout>
   );
 };

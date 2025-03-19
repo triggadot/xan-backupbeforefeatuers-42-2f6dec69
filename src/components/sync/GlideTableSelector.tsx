@@ -6,18 +6,26 @@ import { glSyncApi } from '@/services/glsync';
 import { Loader2 } from 'lucide-react';
 import { GlideTable } from '@/types/glsync';
 
-interface GlideTableSelectorProps {
+export interface GlideTableSelectorProps {
   connectionId: string;
   selectedTableId?: string;
   onTableSelect?: (tableId: string, tableName: string) => void;
+  onAddTable?: (table: GlideTable) => void;
   disabled?: boolean;
+  isLoading?: boolean;
+  placeholder?: string;
+  value?: string;
 }
 
 const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   connectionId,
   selectedTableId,
   onTableSelect,
-  disabled = false
+  onAddTable,
+  disabled = false,
+  isLoading: externalLoading = false,
+  placeholder = "Select a Glide table",
+  value
 }) => {
   const [tables, setTables] = useState<GlideTable[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,10 +72,13 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
     if (selectedTable && onTableSelect) {
       onTableSelect(tableId, selectedTable.display_name);
     }
+    if (selectedTable && onAddTable) {
+      onAddTable(selectedTable);
+    }
   };
   
   // If we're fetching a new connection's tables, show loading
-  if (loading) {
+  if (loading || externalLoading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -95,11 +106,11 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   return (
     <Select
       disabled={disabled || loading}
-      value={selectedTableId}
+      value={value || selectedTableId}
       onValueChange={handleTableChange}
     >
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select a Glide table" />
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {tables.map(table => (

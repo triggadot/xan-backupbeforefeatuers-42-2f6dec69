@@ -26,7 +26,7 @@ export function useGlSyncValidation() {
       }
       
       // Success - get the results from the first row
-      const result: MappingValidationResult = data[0];
+      const result = data[0];
       
       setValidation({
         isValid: result.is_valid,

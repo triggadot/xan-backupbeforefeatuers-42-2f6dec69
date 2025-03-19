@@ -62,3 +62,16 @@ export function convertToDbMapping(mapping: GlMapping): any {
   
   return dbMapping;
 }
+
+/**
+ * Returns default column mappings with $rowID mapping
+ */
+export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
+  return {
+    "$rowID": {
+      "glide_column_name": "Row ID",
+      "supabase_column_name": "glide_row_id", 
+      "data_type": "string"
+    }
+  };
+}

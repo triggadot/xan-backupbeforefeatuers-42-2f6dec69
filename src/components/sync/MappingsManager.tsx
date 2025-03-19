@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import AddMappingButton from './mappings/AddMappingButton';
-import MappingsList from './mappings/MappingsList';
+import { AddMappingButton } from './mappings/AddMappingButton';
+import { MappingsList } from './mappings/MappingsList';
 import MappingDetails from './mappings/MappingDetails';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
-import MappingsListSkeleton from './mappings/MappingsListSkeleton';
-import EmptyMappingsList from './mappings/EmptyMappingsList';
+import { MappingsListSkeleton } from './mappings/MappingsListSkeleton';
+import { EmptyMappingsList } from './mappings/EmptyMappingsList';
 
 interface MappingsManagerProps {
   connectionId?: string;
@@ -14,7 +14,7 @@ interface MappingsManagerProps {
 
 const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
   const [selectedMappingId, setSelectedMappingId] = useState<string | null>(null);
-  const { mappings, isLoading, toggleEnabled, deleteMapping, refreshMappings } = useRealtimeMappings(connectionId);
+  const { mappings, isLoading, toggleEnabled, deleteMapping, refreshMappings } = useRealtimeMappings();
 
   const handleViewMapping = (mappingId: string) => {
     setSelectedMappingId(mappingId);
