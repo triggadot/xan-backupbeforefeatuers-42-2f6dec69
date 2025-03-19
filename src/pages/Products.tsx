@@ -17,7 +17,8 @@ const Products: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
-  
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
   const { toast } = useToast();
   const { 
     data: rawProducts, 
@@ -190,12 +191,23 @@ const Products: React.FC = () => {
       {isLoadingProducts ? (
         <LoadingState />
       ) : (
-        <ProductsTableWrapper 
-          products={filteredProducts} 
-          onEdit={handleEdit} 
-          onDelete={handleDeleteProduct}
-          onViewDetails={handleViewDetails}
-        />
+        {selectedCategory === 'all' ? (
+          <ProductsTableWrapper 
+            products={filteredProducts} 
+            onEdit={handleEdit} 
+            onDelete={handleDeleteProduct} 
+            onViewDetails={handleViewDetails}
+          />
+        ) : (
+          <ProductsTableWrapper 
+            products={filteredProducts.filter(product => 
+              product.category?.toLowerCase() === selectedCategory.toLowerCase()
+            )} 
+            onEdit={handleEdit} 
+            onDelete={handleDeleteProduct} 
+            onViewDetails={handleViewDetails}
+          />
+        )}
       )}
 
       <ProductDialog

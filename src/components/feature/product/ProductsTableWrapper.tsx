@@ -22,7 +22,7 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       const product = products.find(p => p.id === id);
       if (product) {
         await onDelete(product);
-        return true;
+        return true; // Return true to indicate successful deletion
       }
       return false;
     } catch (error) {

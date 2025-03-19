@@ -767,6 +767,13 @@ export type Database = {
             foreignKeyName: "gl_sync_errors_mapping_id_fkey"
             columns: ["mapping_id"]
             isOneToOne: false
+            referencedRelation: "gl_mapping_status"
+            referencedColumns: ["mapping_id"]
+          },
+          {
+            foreignKeyName: "gl_sync_errors_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
             referencedRelation: "gl_mappings"
             referencedColumns: ["id"]
           },
@@ -1270,6 +1277,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gl_mapping_status: {
+        Row: {
+          app_name: string | null
+          connection_id: string | null
+          current_status: string | null
+          enabled: boolean | null
+          error_count: number | null
+          glide_table: string | null
+          glide_table_display_name: string | null
+          last_sync_completed_at: string | null
+          last_sync_started_at: string | null
+          mapping_id: string | null
+          records_processed: number | null
+          supabase_table: string | null
+          sync_direction: string | null
+          total_records: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gl_mappings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "gl_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gl_product_sync_stats: {
         Row: {
           app_name: string | null
@@ -1410,6 +1444,25 @@ export type Database = {
           resolution_notes: string | null
           resolved_at: string | null
           retryable: boolean | null
+        }[]
+      }
+      gl_get_sync_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          app_name: string | null
+          connection_id: string | null
+          current_status: string | null
+          enabled: boolean | null
+          error_count: number | null
+          glide_table: string | null
+          glide_table_display_name: string | null
+          last_sync_completed_at: string | null
+          last_sync_started_at: string | null
+          mapping_id: string | null
+          records_processed: number | null
+          supabase_table: string | null
+          sync_direction: string | null
+          total_records: number | null
         }[]
       }
       gl_get_table_columns: {
