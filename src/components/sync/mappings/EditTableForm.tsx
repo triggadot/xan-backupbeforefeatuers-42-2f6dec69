@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, PlusCircle, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Database } from "@/integrations/supabase/types";
 
 interface ColumnDefinition {
   name: string;
@@ -38,6 +40,14 @@ interface EditTableFormProps {
   onCancel: () => void;
 }
 
+// Custom type for gl_get_table_columns RPC return type
+type TableColumn = {
+  column_name: string;
+  data_type: string;
+  is_nullable: boolean;
+  is_primary_key: boolean;
+};
+
 export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormProps) {
   const [columns, setColumns] = useState<ColumnDefinition[]>([]);
   const [newColumnName, setNewColumnName] = useState('');
@@ -54,7 +64,7 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       setIsLoading(true);
       try {
         const { data, error } = await supabase
-          .rpc('gl_get_table_columns' as any, { table_name: tableName });
+          .rpc<TableColumn[]>('gl_get_table_columns', { table_name: tableName });
 
         if (error) throw error;
 
@@ -163,7 +173,12 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
     setIsUpdating(true);
     
     try {
-      // Build SQL for removing columns
+      // Validate inputs
+      const invalidColumns = columns.filter(col => col.isNew && (!col.name || !col.type));
+      if (invalidColumns.length > 0) {
+        throw new Error("All columns must have a name and type");
+      }
+
       let sql = '';
       
       // First handle column removals
@@ -184,9 +199,10 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { error } = await supabase.rpc('gl_admin_execute_sql' as any, { 
-          sql_query: sql 
-        });
+        const { error } = await supabase.rpc<Database["public"]["Functions"]["gl_admin_execute_sql"]["Returns"]>(
+          'gl_admin_execute_sql', 
+          { sql_query: sql }
+        );
 
         if (error) throw new Error(error.message);
         

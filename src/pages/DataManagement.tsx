@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
-import TableDataView from '@/components/data-management/TableDataView';
+import SupabaseTableView from '@/components/data-management/SupabaseTableView';
 import {
   Tabs,
   TabsContent,
@@ -125,7 +125,6 @@ export default function DataManagement() {
     );
   }
 
-
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8">
@@ -166,11 +165,20 @@ export default function DataManagement() {
 
           {filteredTables.map(table => (
             <TabsContent key={table.table_name} value={table.table_name} className="space-y-4">
-              <TableDataView 
-                tableName={table.table_name}
-                displayName={getTableInfo(table.table_name).displayName}
-                description={getTableInfo(table.table_name).description}
-              />
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-2xl">{getTableInfo(table.table_name).displayName}</CardTitle>
+                  <CardDescription>{getTableInfo(table.table_name).description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <SupabaseTableView 
+                    tableName={table.table_name}
+                    displayName={getTableInfo(table.table_name).displayName}
+                    description={getTableInfo(table.table_name).description}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
           ))}
         </Tabs>

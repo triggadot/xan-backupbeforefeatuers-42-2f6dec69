@@ -28,6 +28,7 @@ import ProductSync from './pages/ProductSync';
 import SyncLogs from './components/sync/SyncLogs';
 import DataManagement from './pages/DataManagement';
 import Products from './pages/Products';
+import TableDemoPage from './pages/TableDemo';
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -80,6 +81,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                       <Route path="purchase-orders" element={<PurchaseOrders />} />
                       <Route path="products" element={<Products />} />
                       <Route path="data-management" element={<DataManagement />} />
+                      <Route path="table-demo" element={<TableDemoPage />} />
                       
                       <Route path="sync" element={<SyncLayout />}>
                         <Route index element={<SyncOverview />} />

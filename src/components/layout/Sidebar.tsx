@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -11,6 +10,7 @@ import {
   Package,
   Receipt,
   ShoppingCart,
+  Table,
   Users,
 } from 'lucide-react';
 import {
@@ -156,6 +156,15 @@ const Sidebar: React.FC = () => {
                   <Link to="/data-management">
                     <Database className="h-5 w-5" />
                     <span>Database Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem className={isActive('/table-demo') ? 'active' : ''}>
+                <SidebarMenuButton asChild>
+                  <Link to="/table-demo">
+                    <Table className="h-5 w-5" />
+                    <span>Table Demo</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

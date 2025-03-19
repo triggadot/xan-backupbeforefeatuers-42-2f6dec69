@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -65,8 +64,8 @@ export function useBusinessMetrics() {
       setStatusMetrics(docStatusData || []);
       
     } catch (error: any) {
-      console.error('Error fetching business metrics:', error);
-      setError(error.message);
+      console.error('Unexpected error fetching business metrics:', error);
+      setError(error.message || 'An unexpected error occurred');
       toast({
         title: 'Error',
         description: 'Failed to fetch business metrics. Please try again later.',
