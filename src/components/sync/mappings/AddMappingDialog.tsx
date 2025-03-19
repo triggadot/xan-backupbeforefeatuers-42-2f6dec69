@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddMappingForm from './AddMappingForm';
 import SchemaSetupDialog from './SchemaSetupDialog';
-import ConnectionSelect from './ConnectionSelect';
+import { ConnectionSelect } from './ConnectionSelect';
 import { GlConnection } from '@/types/glsync';
 import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
 

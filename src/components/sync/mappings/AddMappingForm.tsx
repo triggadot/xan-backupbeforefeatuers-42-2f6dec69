@@ -6,10 +6,10 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
-import ConnectionSelect from './ConnectionSelect';
-import SupabaseTableSelect from './SupabaseTableSelect';
-import SyncDirectionSelect from './SyncDirectionSelect';
+import { Info } from 'lucide-react';
+import { ConnectionSelect } from './ConnectionSelect';
+import { SupabaseTableSelect } from './SupabaseTableSelect';
+import { SyncDirectionSelect } from './SyncDirectionSelect';
 import { GlConnection } from '@/types/glsync';
 import { useAddMapping } from '@/hooks/useAddMapping';
 import { getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
@@ -218,8 +218,8 @@ const AddMappingForm: React.FC<AddMappingFormProps> = ({
           )}
         />
 
-        <Alert variant="info" className="mt-6">
-          <InfoCircledIcon className="h-4 w-4" />
+        <Alert variant="default" className="mt-6">
+          <Info className="h-4 w-4" />
           <AlertDescription>
             After creating the mapping, you'll be able to configure column mappings.
           </AlertDescription>
