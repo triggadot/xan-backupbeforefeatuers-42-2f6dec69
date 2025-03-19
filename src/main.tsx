@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
@@ -29,6 +30,7 @@ import SyncLogs from './components/sync/SyncLogs';
 import DataManagement from './pages/DataManagement';
 import Products from './pages/Products';
 import TableDemoPage from './pages/TableDemo';
+import Estimates from './pages/Estimates';
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -78,6 +80,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                       <Route path="accounts" element={<Accounts />} />
                       <Route path="accounts/:id" element={<AccountDetail />} />
                       <Route path="invoices" element={<Invoices />} />
+                      <Route path="estimates" element={<Estimates />} />
                       <Route path="purchase-orders" element={<PurchaseOrders />} />
                       <Route path="products" element={<Products />} />
                       <Route path="data-management" element={<DataManagement />} />
