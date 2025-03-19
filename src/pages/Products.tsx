@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingState } from '@/components/sync/LoadingState';
+import { Product } from '@/types';
 
 const Products: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +21,7 @@ const Products: React.FC = () => {
   
   const { toast } = useToast();
   const { 
-    data: products, 
+    data: rawProducts, 
     isLoading: isLoadingProducts, 
     error, 
     fetchData: refreshProducts,
@@ -27,6 +29,24 @@ const Products: React.FC = () => {
     updateRecord,
     deleteRecord
   } = useTableData('gl_products');
+
+  // Map the raw data to the Product type
+  const products = React.useMemo(() => {
+    return (rawProducts || []).map((product: any): Product => ({
+      id: product.id,
+      name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+      sku: product.glide_row_id || '',
+      description: product.purchase_notes || '',
+      price: 0, // Would need to be calculated from invoice lines
+      cost: product.cost || 0,
+      quantity: product.total_qty_purchased || 0,
+      category: product.category || '',
+      status: 'active',
+      imageUrl: product.product_image1 || '',
+      createdAt: new Date(product.created_at || Date.now()),
+      updatedAt: new Date(product.updated_at || Date.now())
+    }));
+  }, [rawProducts]);
 
   useEffect(() => {
     refreshProducts();
@@ -108,12 +128,11 @@ const Products: React.FC = () => {
 
   // Filter products based on search term
   const filteredProducts = searchTerm
-    ? products.filter((product: any) => {
+    ? products.filter((product: Product) => {
         const searchFields = [
-          product.display_name,
-          product.vendor_product_name,
-          product.new_product_name,
+          product.name,
           product.category,
+          product.description
         ].filter(Boolean);
         
         return searchFields.some(field => 
@@ -151,7 +170,10 @@ const Products: React.FC = () => {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={handleRefresh}
+            onClick={() => {
+              setIsLoading(true);
+              refreshProducts().finally(() => setIsLoading(false));
+            }}
             disabled={isLoading || isLoadingProducts}
             title="Refresh products"
           >

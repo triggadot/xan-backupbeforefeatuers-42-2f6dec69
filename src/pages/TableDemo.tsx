@@ -1,4 +1,5 @@
-import { TableDemo } from "@/components/ui/table-demo";
+
+import TableDemo from "@/components/ui/table-demo";
 
 function TableDemoPage() {
   return (

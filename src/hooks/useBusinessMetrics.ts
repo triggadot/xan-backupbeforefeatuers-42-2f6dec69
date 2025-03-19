@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +55,7 @@ export function useBusinessMetrics() {
       
       setMetrics(businessMetrics);
       
-      // Fetch document status from gl_current_status view with explicitly named columns
+      // Fetch document status from gl_current_status view with correct syntax
       const { data: docStatusData, error: statusError } = await supabase
         .from('gl_current_status')
         .select(`
@@ -63,7 +64,7 @@ export function useBusinessMetrics() {
           paid_count,
           unpaid_count,
           draft_count,
-          total_amount:gl_current_status.total_amount,
+          total_amount,
           total_paid,
           balance_amount
         `);

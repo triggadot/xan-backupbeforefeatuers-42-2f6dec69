@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
@@ -31,10 +32,10 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+>(({ side = "right", className, children, ...props }, ref) => {
   // Check if children contain DialogTitle
   let hasDialogTitle = false
-  const childrenArray = React.Children.toArray(children)
+  const childrenArray = React.Children.toArray(children as React.ReactNode)
   
   // Check direct children
   childrenArray.forEach((child) => {

@@ -92,17 +92,21 @@ export function useProducts() {
 
   const createProduct = useCallback(async (product: Partial<Product>) => {
     try {
+      // Generate a temporary glide_row_id for new products
+      const tempGlideRowId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const { data, error } = await supabase
         .from('gl_products')
-        .insert([{
+        .insert({
           display_name: product.name,
           new_product_name: product.name,
           cost: product.cost || 0,
           total_qty_purchased: product.quantity || 0,
           category: product.category,
           product_image1: product.imageUrl,
-          purchase_notes: product.description
-        }])
+          purchase_notes: product.description,
+          glide_row_id: tempGlideRowId // Add the required glide_row_id field
+        })
         .select();
       
       if (error) throw error;
