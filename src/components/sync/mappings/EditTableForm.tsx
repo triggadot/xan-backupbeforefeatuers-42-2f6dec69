@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,7 +64,12 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
     async function fetchTableColumns() {
       setIsLoading(true);
       try {
-        const { data: columns } = await supabase.rpc<TableColumn[]>('gl_get_table_columns', { table_name: tableName });
+        const { data, error } = await supabase.rpc<TableColumn[], { table_name: string }>(
+          'gl_get_table_columns', 
+          { table_name: tableName }
+        );
+
+        if (error) throw error;
 
         if (data && Array.isArray(data)) {
           const formattedColumns = data.map(col => ({
@@ -196,9 +202,15 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { data: result } = await supabase.rpc<string>('gl_admin_execute_sql', { sql_query: sql });
+        const { data: result, error } = await supabase.rpc<string, { sql_query: string }>(
+          'gl_admin_execute_sql', 
+          { sql_query: sql }
+        );
 
-        if (result) throw new Error(result);
+        if (error) throw error;
+        if (typeof result === 'object' && result !== null && 'error' in result) {
+          throw new Error(String(result.error));
+        }
         
         toast({
           title: 'Success',

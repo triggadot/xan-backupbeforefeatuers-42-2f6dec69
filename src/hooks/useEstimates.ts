@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +31,8 @@ export function useEstimates() {
         const account = estimate.account as unknown as { id: string; account_name: string }[] | null;
         return {
           ...estimate,
-          accountName: account && account.length > 0 ? account[0].account_name : 'Unknown'
+          accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
+          status: estimate.status as 'draft' | 'pending' | 'converted'
         } as Estimate;
       });
       
@@ -82,13 +84,15 @@ export function useEstimates() {
       
       // Format the estimate with related data
       const account = estimate.account as unknown as Account[] | null;
-      const formattedEstimate: Estimate = {
+      
+      const formattedEstimate = {
         ...estimate,
         accountName: account && account.length > 0 ? account[0].name : 'Unknown',
         account: account && account.length > 0 ? account[0] : undefined,
         estimateLines: estimateLines as EstimateLine[],
-        credits: credits as CustomerCredit[]
-      };
+        credits: credits as CustomerCredit[],
+        status: estimate.status as 'draft' | 'pending' | 'converted'
+      } as Estimate;
       
       return formattedEstimate;
     } catch (err) {
@@ -109,7 +113,7 @@ export function useEstimates() {
       
       // Basic estimate data
       const newEstimate = {
-        status: 'draft',
+        status: 'draft' as const,
         glide_row_id: glideRowId,
         rowid_accounts: estimateData.rowid_accounts,
         estimate_date: estimateData.estimate_date || new Date().toISOString(),
@@ -460,7 +464,7 @@ export function useEstimates() {
       const { error: updateError } = await supabase
         .from('gl_estimates')
         .update({
-          status: 'converted',
+          status: 'converted' as const,
           valid_final_create_invoice_clicked: true,
           rowid_invoices: invoice.glide_row_id
         })
