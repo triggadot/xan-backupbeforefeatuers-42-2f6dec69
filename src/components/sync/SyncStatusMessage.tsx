@@ -50,9 +50,9 @@ export function SyncStatusMessage({
 
   return (
     <ErrorDisplay
-      errors={formattedMessage}
-      title={title}
       severity={severity}
+      title={title}
+      errors={formattedMessage}
     />
   );
 }

@@ -128,6 +128,75 @@ export const SyncDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+<<<<<<< Updated upstream
+=======
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold">Active Mappings</h2>
+            <Button variant="outline" size="sm" onClick={refreshAll}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+
+          {isLoadingMappings ? (
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2].map((i) => (
+                <Card key={i} className="p-6">
+                  <Skeleton className="h-6 w-1/2 mb-4" />
+                  <Skeleton className="h-4 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2 mb-6" />
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-9 w-24" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : mappings.length === 0 ? (
+            <Card className="p-6 text-center">
+              <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-muted-foreground">No active mappings found.</p>
+              <p className="mt-2">
+                Create a connection and set up table mappings to start synchronizing data.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {mappings
+                .filter(status => status.enabled)
+                .map((status) => (
+                  <div key={status.mapping_id} className="col-span-1">
+                    <ActiveMappingCard 
+                      status={status} 
+                      onSync={handleSync} 
+                      isSyncing={isSyncing[status.mapping_id] || false} 
+                    />
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
+          <SyncMetricsCard 
+            syncStats={syncStats ? [syncStats] : []} 
+            isLoading={isLoading} 
+          />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Recent Activity</h2>
+>>>>>>> Stashed changes
         
         <Card>
           <CardHeader className="pb-2">

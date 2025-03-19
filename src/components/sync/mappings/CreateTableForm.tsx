@@ -26,6 +26,7 @@ const formSchema = z.object({
   createIndexes: z.boolean().default(true),
 });
 
+<<<<<<< Updated upstream
 export interface CreateTableFormProps {
   onSuccess: (tableName: string) => void;
   onCancel: () => void;
@@ -33,6 +34,34 @@ export interface CreateTableFormProps {
   connectionId?: string;
   glideTable?: string;
   glideTableDisplayName?: string;
+=======
+const DEFAULT_COLUMNS: ColumnDefinition[] = [
+  { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
+  { name: 'glide_row_id', type: 'text', isPrimary: false, isNullable: false },
+  { name: 'created_at', type: 'timestamp with time zone', isPrimary: false, isNullable: false },
+  { name: 'updated_at', type: 'timestamp with time zone', isPrimary: false, isNullable: true }
+];
+
+const DATA_TYPES = [
+  { value: 'text', label: 'Text' },
+  { value: 'integer', label: 'Integer' },
+  { value: 'numeric', label: 'Numeric/Decimal' },
+  { value: 'boolean', label: 'Boolean' },
+  { value: 'timestamp with time zone', label: 'Timestamp' },
+  { value: 'date', label: 'Date' },
+  { value: 'jsonb', label: 'JSON' },
+  { value: 'uuid', label: 'UUID' }
+];
+
+interface CreateTableFormProps {
+  connectionId?: string;
+  glideTable?: string;
+  glideTableDisplayName?: string;
+  onCancel: () => void;
+  onSuccess: () => void;
+  isCompact?: boolean;
+  onTableCreated?: (tableName: string) => void;
+>>>>>>> Stashed changes
 }
 
 export const CreateTableForm: React.FC<CreateTableFormProps> = ({
@@ -42,9 +71,23 @@ export const CreateTableForm: React.FC<CreateTableFormProps> = ({
   connectionId,
   glideTable,
   glideTableDisplayName,
+<<<<<<< Updated upstream
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+=======
+  onCancel,
+  onSuccess,
+  isCompact = false,
+  onTableCreated
+}: CreateTableFormProps) {
+  const [tableName, setTableName] = useState('gl_');
+  const [columns, setColumns] = useState<ColumnDefinition[]>([...DEFAULT_COLUMNS]);
+  const [newColumnName, setNewColumnName] = useState('');
+  const [newColumnType, setNewColumnType] = useState('text');
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
+>>>>>>> Stashed changes
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,6 +124,7 @@ export const CreateTableForm: React.FC<CreateTableFormProps> = ({
         throw new Error(funcError.message);
       }
 
+<<<<<<< Updated upstream
       if (data?.error) {
         throw new Error(data.error);
       }
@@ -89,6 +133,39 @@ export const CreateTableForm: React.FC<CreateTableFormProps> = ({
     } catch (err) {
       console.error('Error creating table:', err);
       setError(err instanceof Error ? err.message : 'An error occurred creating the table');
+=======
+      // Create the table in Supabase
+      const { data, error: createError } = await supabase.rpc(
+        'gl_admin_execute_sql', 
+        { sql_statement: sql }
+      );
+
+      if (createError) throw new Error(createError.message);
+
+      toast({
+        title: 'Success',
+        description: `Table ${tableName} created successfully`
+      });
+
+      onSuccess();
+      
+      // Reset form
+      setTableName('gl_');
+      setColumns([...DEFAULT_COLUMNS]);
+      setNewColumnName('');
+      setNewColumnType('text');
+
+      if (onTableCreated) {
+        onTableCreated(tableName);
+      }
+    } catch (error) {
+      console.error('Error creating table:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create table',
+        variant: 'destructive'
+      });
+>>>>>>> Stashed changes
     } finally {
       setIsSubmitting(false);
     }

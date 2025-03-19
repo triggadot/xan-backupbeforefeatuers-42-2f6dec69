@@ -6,8 +6,16 @@ import { RecentSyncsCard } from './RecentSyncsCard';
 import { SyncMetricsCard } from './SyncMetricsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+<<<<<<< Updated upstream
 export const SyncOverview: React.FC = () => {
   const { allStatuses, isLoading } = useGlSyncStatus();
+=======
+const SyncOverview = () => {
+  const { allStatuses: allSyncStatuses, isLoading, error } = useGlSyncStatus();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('all');
+>>>>>>> Stashed changes
 
   // Calculate stats
   const totalMappings = allStatuses.length;
