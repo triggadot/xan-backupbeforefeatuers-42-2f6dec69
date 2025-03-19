@@ -9,7 +9,6 @@ export interface SupabaseTableSelectProps {
   onValueChange: (value: string) => void;
   isLoading?: boolean;
   disabled?: boolean;
-  // Added missing props
   onTableSelect?: (table: string) => void;
   selectedTable?: string;
 }
@@ -19,7 +18,6 @@ export const SupabaseTableSelect: React.FC<SupabaseTableSelectProps> = ({
   onValueChange,
   isLoading: externalLoading = false,
   disabled = false,
-  // Handle added props
   onTableSelect,
   selectedTable
 }) => {

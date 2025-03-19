@@ -153,6 +153,8 @@ const AddMappingForm: React.FC<AddMappingFormProps> = ({
               <FormLabel>Connection</FormLabel>
               <FormControl>
                 <ConnectionSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
                   onConnectionSelect={handleConnectionSelect}
                   selectedConnectionId={field.value}
                 />
@@ -170,6 +172,8 @@ const AddMappingForm: React.FC<AddMappingFormProps> = ({
               <FormLabel>Glide Table</FormLabel>
               <FormControl>
                 <GlideTableSelector
+                  value={field.value}
+                  onTableChange={field.onChange}
                   connectionId={form.getValues('connection_id')}
                   disabled={!form.getValues('connection_id') || isLoadingTables}
                   onTableSelect={handleGlideTableSelect}
@@ -189,6 +193,8 @@ const AddMappingForm: React.FC<AddMappingFormProps> = ({
               <FormLabel>Supabase Table</FormLabel>
               <FormControl>
                 <SupabaseTableSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
                   onTableSelect={(table) => form.setValue('supabase_table', table)}
                   selectedTable={field.value}
                 />
@@ -207,6 +213,7 @@ const AddMappingForm: React.FC<AddMappingFormProps> = ({
               <FormControl>
                 <SyncDirectionSelect
                   value={field.value}
+                  onValueChange={field.onChange}
                   onChange={(value) => form.setValue('sync_direction', value as 'to_supabase' | 'to_glide' | 'both')}
                 />
               </FormControl>

@@ -34,7 +34,7 @@ export function AddMappingButton({ onSuccess, onMappingAdded, connectionId }: Ad
       <AddMappingDialog 
         open={open} 
         onOpenChange={setOpen} 
-        onSuccess={onSuccess}
+        onSuccess={handleSuccess}
         onMappingAdded={onMappingAdded}
         connectionId={connectionId}
       />

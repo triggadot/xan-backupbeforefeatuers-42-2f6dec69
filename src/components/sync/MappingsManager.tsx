@@ -7,6 +7,7 @@ import MappingDetails from './mappings/MappingDetails';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
 import { MappingsListSkeleton } from './mappings/MappingsListSkeleton';
 import { EmptyMappingsList } from './mappings/EmptyMappingsList';
+import { GlMapping } from '@/types/glsync';
 
 interface MappingsManagerProps {
   connectionId?: string;
@@ -59,10 +60,10 @@ const MappingsManager: React.FC<MappingsManagerProps> = ({ connectionId }) => {
       {isLoading ? (
         <MappingsListSkeleton />
       ) : mappings.length === 0 ? (
-        <EmptyMappingsList connectionId={connectionId} />
+        <EmptyMappingsList connectionId={connectionId} onMappingCreated={refreshMappings} />
       ) : (
         <MappingsList 
-          mappings={mappings}
+          mappings={mappings as GlMapping[]} 
           onViewMapping={handleViewMapping}
           onToggleEnabled={toggleEnabled}
           onDeleteMapping={deleteMapping}

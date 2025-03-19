@@ -13,7 +13,6 @@ interface AddMappingDialogProps {
   onOpenChange: (open: boolean) => void;
   onMappingAdded?: () => void;
   connectionId?: string;
-  // Add the missing props
   onSuccess?: () => Promise<void>;
 }
 
@@ -73,6 +72,7 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
             <SchemaSetupDialog 
               onClose={() => onOpenChange(false)}
               onSchemaCreated={() => setActiveTab('add-mapping')} 
+              connectionId={connectionId || ''}
             />
           </TabsContent>
         </Tabs>

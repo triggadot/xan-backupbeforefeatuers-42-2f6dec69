@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,20 +22,16 @@ const SyncDashboard = () => {
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
-  // Manually define these until the hook is updated
   const [allSyncStatuses, setAllSyncStatuses] = useState([]);
   const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
   const [syncStats, setSyncStats] = useState<GlSyncStats | null>(null);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-  // Get whatever useGlSyncStatus actually provides
   const { status, isLoading, error, refetch } = useGlSyncStatus();
   
-  // Define a refresh function
   const refreshData = useCallback(() => {
     refetch();
-    // Additional refresh operations can be added here
   }, [refetch]);
 
   const fetchMappings = useCallback(async () => {
@@ -50,7 +45,6 @@ const SyncDashboard = () => {
       if (error) throw new Error(error.message);
       setMappings(data || []);
       
-      // Update the sync statuses as well if this is what we're using
       setAllSyncStatuses(data || []);
     } catch (error) {
       console.error('Error fetching mappings:', error);
@@ -66,7 +60,6 @@ const SyncDashboard = () => {
     }
   }, [toast]);
 
-  // Also fetch recent logs
   const fetchRecentLogs = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -82,12 +75,10 @@ const SyncDashboard = () => {
     }
   }, []);
 
-  // Fetch sync stats
   const fetchSyncStats = useCallback(async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Get total syncs and success/failed counts
       const { data: statsData, error: statsError } = await supabase
         .from('gl_sync_logs')
         .select(`
@@ -121,7 +112,6 @@ const SyncDashboard = () => {
     fetchRecentLogs();
     fetchSyncStats();
     
-    // Set up realtime subscription for mappings
     const mappingsChannel = supabase
       .channel('gl_mappings_changes')
       .on('postgres_changes', 
@@ -132,7 +122,6 @@ const SyncDashboard = () => {
       )
       .subscribe();
     
-    // Set up realtime subscription for logs
     const logsChannel = supabase
       .channel('gl_logs_changes')
       .on('postgres_changes',
@@ -191,7 +180,6 @@ const SyncDashboard = () => {
     refreshData();
   };
 
-  // Check if we have an error from the hook or from our fetch operations
   const displayError = hasError || !!error;
   const displayErrorMessage = errorMessage || error || 'There was an error connecting to the database. Please ensure the database tables have been created.';
 
@@ -271,7 +259,7 @@ const SyncDashboard = () => {
         <div>
           <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
           <SyncMetricsCard 
-            syncStats={syncStats} 
+            data={syncStats as GlSyncStats} 
             isLoading={isLoading} 
           />
         </div>

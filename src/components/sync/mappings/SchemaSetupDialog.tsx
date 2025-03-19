@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import ConnectionSelect from './ConnectionSelect';
-import CreateTableForm from './CreateTableForm';
+import { ConnectionSelect } from './ConnectionSelect';
+import { CreateTableForm } from './CreateTableForm';
 import { GlConnection } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
@@ -23,9 +23,20 @@ type SchemaSetupFormValues = z.infer<typeof schemaSetupSchema>;
 interface SchemaSetupDialogProps {
   onClose: () => void;
   onSchemaCreated?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  connectionId?: string;
+  onSuccess?: () => void;
 }
 
-const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ onClose, onSchemaCreated }) => {
+const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ 
+  onClose, 
+  onSchemaCreated,
+  open,
+  onOpenChange,
+  connectionId,
+  onSuccess 
+}) => {
   const [activeTab, setActiveTab] = useState('sync-table');
   const [selectedConnection, setSelectedConnection] = useState<GlConnection | null>(null);
   const [selectedGlideTable, setSelectedGlideTable] = useState<string | null>(null);
@@ -37,7 +48,7 @@ const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ onClose, onSchema
   const form = useForm<SchemaSetupFormValues>({
     resolver: zodResolver(schemaSetupSchema),
     defaultValues: {
-      connection_id: '',
+      connection_id: connectionId || '',
       glide_table: '',
     },
   });
@@ -92,6 +103,8 @@ const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ onClose, onSchema
                     <FormLabel>Connection</FormLabel>
                     <FormControl>
                       <ConnectionSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
                         onConnectionSelect={handleConnectionSelect}
                         selectedConnectionId={field.value}
                       />
@@ -109,6 +122,8 @@ const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ onClose, onSchema
                     <FormLabel>Glide Table</FormLabel>
                     <FormControl>
                       <GlideTableSelector
+                        value={field.value}
+                        onTableChange={field.onChange}
                         connectionId={form.getValues('connection_id')}
                         disabled={!form.getValues('connection_id')}
                         onTableSelect={handleGlideTableSelect}
@@ -145,6 +160,9 @@ const SchemaSetupDialog: React.FC<SchemaSetupDialogProps> = ({ onClose, onSchema
                   description: 'Table schema created successfully',
                 });
                 onSchemaCreated?.();
+                if (onSuccess) {
+                  onSuccess();
+                }
               }}
             />
           )}

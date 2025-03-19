@@ -11,6 +11,7 @@ interface ConnectionCardProps {
   onDelete: (connection: GlConnection) => void;
   onTest: (id: string) => void;
   isTestingConnection: boolean;
+  testResult?: { status: string; message?: string };
 }
 
 const ConnectionCard = ({ 
@@ -18,7 +19,8 @@ const ConnectionCard = ({
   onEdit, 
   onDelete, 
   onTest, 
-  isTestingConnection 
+  isTestingConnection,
+  testResult 
 }: ConnectionCardProps) => {
   return (
     <Card key={connection.id} className="p-6">

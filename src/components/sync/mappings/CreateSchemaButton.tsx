@@ -62,6 +62,7 @@ export function CreateSchemaButton({ onMappingCreated }: CreateSchemaButtonProps
           onOpenChange={setOpen}
           connectionId={selectedConnection}
           onSuccess={onMappingCreated}
+          onClose={() => setOpen(false)}
         />
       )}
     </div>

@@ -17,7 +17,6 @@ export interface ConnectionSelectProps {
   onValueChange: (value: string) => void;
   isLoading?: boolean;
   disabled?: boolean;
-  // Add the missing props
   selectedConnectionId?: string;
   onConnectionSelect?: (connection: GlConnection) => void;
 }
@@ -27,7 +26,6 @@ export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
   onValueChange,
   isLoading: isLoadingProp = false,
   disabled = false,
-  // Handle the new props
   selectedConnectionId,
   onConnectionSelect
 }) => {

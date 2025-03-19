@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { GlRecentLog, GlSyncStats, GlSyncStatus } from '@/types/glsync';
@@ -27,7 +28,30 @@ export const useGlSyncStatus = (mappingId?: string) => {
           .single();
         
         if (error) throw error;
-        setStatus(data);
+        
+        // Convert database record to GlSyncStatus
+        const syncStatus: GlSyncStatus = {
+          id: data.mapping_id,
+          status: data.current_status || 'pending',
+          mapping_id: data.mapping_id,
+          connection_id: data.connection_id,
+          glide_table: data.glide_table,
+          glide_table_display_name: data.glide_table_display_name,
+          supabase_table: data.supabase_table,
+          column_mappings: data.column_mappings,
+          sync_direction: data.sync_direction,
+          enabled: data.enabled,
+          app_name: data.app_name,
+          last_sync_started_at: data.last_sync_started_at,
+          last_sync_completed_at: data.last_sync_completed_at,
+          records_processed: data.records_processed,
+          total_records: data.total_records,
+          error_count: data.error_count,
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
+        
+        setStatus(syncStatus);
       } 
       // Otherwise fetch all statuses
       else {
@@ -37,7 +61,30 @@ export const useGlSyncStatus = (mappingId?: string) => {
           .order('last_sync_started_at', { ascending: false });
         
         if (error) throw error;
-        setAllSyncStatuses(data || []);
+        
+        // Convert database records to GlSyncStatus[]
+        const statuses: GlSyncStatus[] = (data || []).map(item => ({
+          id: item.mapping_id,
+          status: item.current_status || 'pending',
+          mapping_id: item.mapping_id,
+          connection_id: item.connection_id,
+          glide_table: item.glide_table,
+          glide_table_display_name: item.glide_table_display_name,
+          supabase_table: item.supabase_table,
+          column_mappings: item.column_mappings,
+          sync_direction: item.sync_direction,
+          enabled: item.enabled,
+          app_name: item.app_name,
+          last_sync_started_at: item.last_sync_started_at,
+          last_sync_completed_at: item.last_sync_completed_at,
+          records_processed: item.records_processed,
+          total_records: item.total_records,
+          error_count: item.error_count,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
+        
+        setAllSyncStatuses(statuses);
       }
       
       // Fetch recent logs

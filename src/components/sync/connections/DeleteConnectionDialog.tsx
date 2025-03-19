@@ -19,13 +19,15 @@ interface DeleteConnectionDialogProps {
   onOpenChange: (open: boolean) => void;
   connection: GlConnection;
   onSuccess: () => void;
+  onDelete?: () => Promise<void>;
 }
 
 const DeleteConnectionDialog: React.FC<DeleteConnectionDialogProps> = ({ 
   open, 
   onOpenChange,
   connection,
-  onSuccess 
+  onSuccess,
+  onDelete
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();

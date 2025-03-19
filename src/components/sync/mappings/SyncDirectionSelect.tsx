@@ -7,7 +7,6 @@ export interface SyncDirectionSelectProps {
   value: 'to_supabase' | 'to_glide' | 'both';
   onValueChange: (value: string) => void;
   disabled?: boolean;
-  // Added missing prop
   onChange?: (value: string) => void;
 }
 
