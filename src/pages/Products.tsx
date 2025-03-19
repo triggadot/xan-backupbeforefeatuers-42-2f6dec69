@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ProductsTable from '@/components/feature/product/ProductsTable';
+import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
@@ -30,14 +29,13 @@ const Products: React.FC = () => {
     deleteRecord
   } = useTableData('gl_products');
 
-  // Map the raw data to the Product type
   const products = React.useMemo(() => {
     return (rawProducts || []).map((product: any): Product => ({
       id: product.id,
       name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
       sku: product.glide_row_id || '',
       description: product.purchase_notes || '',
-      price: 0, // Would need to be calculated from invoice lines
+      price: 0,
       cost: product.cost || 0,
       quantity: product.total_qty_purchased || 0,
       category: product.category || '',
@@ -126,7 +124,6 @@ const Products: React.FC = () => {
     setIsDetailsDialogOpen(true);
   };
 
-  // Filter products based on search term
   const filteredProducts = searchTerm
     ? products.filter((product: Product) => {
         const searchFields = [
@@ -193,7 +190,7 @@ const Products: React.FC = () => {
       {isLoadingProducts ? (
         <LoadingState />
       ) : (
-        <ProductsTable 
+        <ProductsTableWrapper 
           products={filteredProducts} 
           onEdit={handleEdit} 
           onDelete={handleDeleteProduct}
@@ -201,7 +198,6 @@ const Products: React.FC = () => {
         />
       )}
 
-      {/* Create Product Dialog */}
       <ProductDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
@@ -209,7 +205,6 @@ const Products: React.FC = () => {
         title="Create New Product"
       />
 
-      {/* Edit Product Dialog */}
       <ProductDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
@@ -218,7 +213,6 @@ const Products: React.FC = () => {
         product={currentProduct}
       />
       
-      {/* Product Details Dialog */}
       <ProductDetails
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}

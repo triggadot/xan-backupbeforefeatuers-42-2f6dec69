@@ -13,9 +13,10 @@ import { formatTimestamp } from '@/utils/glsync-transformers';
 import { supabase } from '@/integrations/supabase/client';
 import { getStatusBadge, getStatusIcon } from './ui/StatusBadgeUtils';
 import { ActiveMappingCard } from './overview/ActiveMappingCard';
+import { GlSyncStatus } from '@/types/glsync';
 
 const SyncDashboard = () => {
-  const [mappings, setMappings] = useState([]);
+  const [mappings, setMappings] = useState<GlSyncStatus[]>([]);
   const [isLoadingMappings, setIsLoadingMappings] = useState(true);
   const { syncData } = useGlSync();
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
@@ -35,10 +36,9 @@ const SyncDashboard = () => {
   const fetchMappings = useCallback(async () => {
     setIsLoadingMappings(true);
     try {
+      // Use rpc instead of direct table query for the view
       const { data, error } = await supabase
-        .from('gl_mapping_status')
-        .select('*')
-        .order('last_sync_started_at', { ascending: false });
+        .rpc('gl_get_sync_status');
       
       if (error) throw new Error(error.message);
       setMappings(data || []);
@@ -58,11 +58,11 @@ const SyncDashboard = () => {
     fetchMappings();
     refreshData();
     
-    // Set up realtime subscription for mappings
+    // Set up realtime subscription for sync logs rather than the view directly
     const mappingsChannel = supabase
-      .channel('gl_mappings_changes')
+      .channel('gl_sync_logs_changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status' }, 
+        { event: '*', schema: 'public', table: 'gl_sync_logs' }, 
         () => {
           fetchMappings();
         }

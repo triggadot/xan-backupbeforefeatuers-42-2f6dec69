@@ -17,10 +17,9 @@ export function useGlSyncStatus(mappingId?: string) {
   const fetchSyncStatus = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Use rpc instead of direct table query for the view
       const { data, error } = await supabase
-        .from('gl_mapping_status')
-        .select('*')
-        .order('last_sync_started_at', { ascending: false });
+        .rpc('gl_get_sync_status');
       
       if (error) throw error;
       
@@ -28,8 +27,8 @@ export function useGlSyncStatus(mappingId?: string) {
       setAllSyncStatuses(data as GlSyncStatus[]);
       
       // If mappingId is provided, find and set the specific status
-      if (mappingId) {
-        const statusForMapping = data.find(status => status.mapping_id === mappingId);
+      if (mappingId && data) {
+        const statusForMapping = data.find((status: GlSyncStatus) => status.mapping_id === mappingId);
         setSyncStatus(statusForMapping || null);
       } else {
         setSyncStatus(null);
@@ -95,9 +94,9 @@ export function useGlSyncStatus(mappingId?: string) {
     
     // Set up a realtime subscription for sync status updates
     const channel = supabase
-      .channel('gl-mapping-status-changes')
+      .channel('gl-sync-status-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status' }, 
+        { event: '*', schema: 'public', table: 'gl_sync_logs' }, 
         () => refreshData()
       )
       .subscribe();

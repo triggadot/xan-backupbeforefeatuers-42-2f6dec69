@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -223,17 +222,13 @@ export const glSyncApi = {
   // Get sync status for all mappings
   async getSyncStatus(): Promise<GlSyncStatus[]> {
     const { data, error } = await supabase
-      .from('gl_mapping_status')
-      .select('*')
-      .order('last_sync_started_at', { ascending: false });
+      .rpc('gl_get_sync_status');
     
     if (error) {
-      if (error.code === '42P01') {
-        return [];
-      }
-      throw new Error(error.message);
+      console.error("Error fetching sync status:", error);
+      return [];
     }
-    return data as unknown as GlSyncStatus[];
+    return data as GlSyncStatus[];
   },
 
   // Get recent sync logs with additional info

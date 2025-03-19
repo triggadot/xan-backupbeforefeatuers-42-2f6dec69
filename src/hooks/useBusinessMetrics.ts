@@ -46,21 +46,44 @@ export function useBusinessMetrics() {
     
     try {
       // Fetch invoice and purchase order metrics from relevant functions
-      const { data: invoiceMetrics, error: invoiceError } = await supabase
+      const { data: invoiceMetricsData, error: invoiceError } = await supabase
         .rpc('gl_get_invoice_metrics');
       
       if (invoiceError) throw invoiceError;
       
-      const { data: poMetrics, error: poError } = await supabase
+      // These are single row results, not arrays
+      const invoiceMetrics = invoiceMetricsData || {
+        invoice_count: 0,
+        estimate_count: 0,
+        total_invoice_amount: 0,
+        total_payments_received: 0, 
+        total_outstanding_balance: 0
+      };
+      
+      const { data: poMetricsData, error: poError } = await supabase
         .rpc('gl_get_purchase_order_metrics');
       
       if (poError) throw poError;
       
+      // These are single row results, not arrays
+      const poMetrics = poMetricsData || {
+        po_count: 0,
+        total_purchase_amount: 0,
+        total_payments_made: 0,
+        total_purchase_balance: 0
+      };
+      
       // Fetch account stats (customers and vendors)
-      const { data: accountStats, error: accountError } = await supabase
+      const { data: accountStatsData, error: accountError } = await supabase
         .rpc('gl_get_account_stats');
       
       if (accountError) throw accountError;
+      
+      // These are single row results, not arrays
+      const accountStats = accountStatsData || {
+        customer_count: 0,
+        vendor_count: 0
+      };
       
       // Count products
       const { count: productCount, error: productError } = await supabase
