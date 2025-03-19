@@ -17,27 +17,43 @@ export function useEstimates() {
     
     try {
       // Fetch estimates with account names
+      // Using a left join with the accounts table
       const { data: estimatesData, error: estimatesError } = await supabase
         .from('gl_estimates')
         .select(`
           *,
-          account:gl_accounts!rowid_accounts(id, account_name, glide_row_id)
-        `)
-        .order('created_at', { ascending: false });
+          account:gl_accounts!rowid_accounts(*)
+        `);
       
       if (estimatesError) throw estimatesError;
       
-      const enhancedEstimates = estimatesData.map((estimate) => {
-        const account = estimate.account as unknown as { id: string; account_name: string; glide_row_id: string }[] | null;
+      // Get account details separately
+      const enhancedEstimates = await Promise.all(estimatesData.map(async (estimate) => {
+        let accountName = 'Unknown';
+        let accountData = null;
+        
+        if (estimate.rowid_accounts) {
+          const { data: accountData, error: accountError } = await supabase
+            .from('gl_accounts')
+            .select('*')
+            .eq('glide_row_id', estimate.rowid_accounts)
+            .single();
+            
+          if (!accountError && accountData) {
+            accountName = accountData.account_name || 'Unknown';
+          }
+        }
+        
         // Cast to the expected enum type
         const status = estimate.status as 'draft' | 'pending' | 'converted';
         
         return {
           ...estimate,
-          accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
+          accountName,
+          account: accountData,
           status: status
         } as Estimate;
-      });
+      }));
       
       setEstimates(enhancedEstimates);
       return enhancedEstimates;
@@ -61,14 +77,28 @@ export function useEstimates() {
       // Get the main estimate data
       const { data: estimate, error: estimateError } = await supabase
         .from('gl_estimates')
-        .select(`
-          *,
-          account:gl_accounts!rowid_accounts(*)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
       if (estimateError) throw estimateError;
+      
+      // Get the account data separately
+      let account: GlAccount | undefined = undefined;
+      let accountName = 'Unknown';
+      
+      if (estimate.rowid_accounts) {
+        const { data: accountData, error: accountError } = await supabase
+          .from('gl_accounts')
+          .select('*')
+          .eq('glide_row_id', estimate.rowid_accounts)
+          .single();
+          
+        if (!accountError && accountData) {
+          account = accountData as GlAccount;
+          accountName = accountData.account_name || 'Unknown';
+        }
+      }
       
       // Get estimate lines
       const { data: estimateLines, error: linesError } = await supabase
@@ -86,15 +116,13 @@ export function useEstimates() {
       
       if (creditsError) throw creditsError;
       
-      // Format the estimate with related data
-      const account = estimate.account as unknown as GlAccount[] | null;
       // Cast the status to the expected enum type
       const status = estimate.status as 'draft' | 'pending' | 'converted';
       
       const formattedEstimate: Estimate = {
         ...estimate,
-        accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
-        account: account && account.length > 0 ? account[0] : undefined,
+        accountName,
+        account,
         estimateLines: estimateLines as EstimateLine[],
         credits: credits as CustomerCredit[],
         status: status
