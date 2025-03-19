@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Table,
@@ -12,24 +13,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit, Trash2, Plus, Search } from "lucide-react";
 import { Product } from "@/types";
-import { useProducts } from "@/hooks/useProducts";
 import { useToast } from "@/hooks/use-toast";
 
-const ProductsTable: React.FC = () => {
-  const { products, isLoading, error, deleteProduct } = useProducts();
+interface ProductsTableProps {
+  products: Product[];
+  deleteProduct: (id: string) => Promise<boolean>;
+  onEdit: (product: Product) => void;
+  onAdd: () => void;
+}
+
+const ProductsTable: React.FC<ProductsTableProps> = ({ 
+  products,
+  deleteProduct,
+  onEdit,
+  onAdd
+}) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [showEditProduct, setShowEditProduct] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 10;
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    (product.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Calculate pagination
@@ -39,8 +47,7 @@ const ProductsTable: React.FC = () => {
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
   const handleEdit = (product: Product) => {
-    setCurrentProduct(product);
-    setShowEditProduct(true);
+    onEdit(product);
   };
 
   const handleDelete = async (id: string) => {
@@ -92,7 +99,7 @@ const ProductsTable: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button onClick={() => setShowAddProduct(true)} className="whitespace-nowrap">
+        <Button onClick={onAdd} className="whitespace-nowrap">
           <Plus className="mr-2 h-4 w-4" /> Add Product
         </Button>
       </div>
@@ -112,7 +119,7 @@ const ProductsTable: React.FC = () => {
                       : "indeterminate"
                   }
                   onCheckedChange={(value) => {
-                    if (value) {
+                    if (value === true) {
                       setSelectedProducts(filteredProducts.map(p => p.id));
                     } else {
                       setSelectedProducts([]);
@@ -129,19 +136,7 @@ const ProductsTable: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  Loading products...
-                </TableCell>
-              </TableRow>
-            ) : error ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-red-500">
-                  Error loading products: {error}
-                </TableCell>
-              </TableRow>
-            ) : currentProducts.length === 0 ? (
+            {currentProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   No products found.
@@ -154,7 +149,7 @@ const ProductsTable: React.FC = () => {
                     <Checkbox
                       checked={selectedProducts.includes(product.id)}
                       onCheckedChange={(checked) => {
-                        if (checked) {
+                        if (checked === true) {
                           setSelectedProducts([...selectedProducts, product.id]);
                         } else {
                           setSelectedProducts(selectedProducts.filter(id => id !== product.id));
@@ -165,7 +160,7 @@ const ProductsTable: React.FC = () => {
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>${product.cost?.toFixed(2) || '0.00'}</TableCell>
-                  <TableCell>{product.total_qty_purchased || 0}</TableCell>
+                  <TableCell>{product.quantity || 0}</TableCell>
                   <TableCell>{product.category || 'Uncategorized'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
@@ -236,8 +231,6 @@ const ProductsTable: React.FC = () => {
           </Button>
         </div>
       )}
-
-      {/* Add/Edit Product Modals would go here */}
     </div>
   );
 };

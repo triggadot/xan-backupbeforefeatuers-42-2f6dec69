@@ -13,7 +13,7 @@ async function fetchProductDetails(productGlideId: string | null | undefined): P
     .from('gl_products')
     .select('*')
     .eq('glide_row_id', productGlideId)
-    .single();
+    .maybeSingle();
     
   if (error) {
     console.error('Error fetching product details:', error);
@@ -149,7 +149,19 @@ export function usePurchaseOrders() {
         const lineItems = productsByPO[po.glide_row_id] || [];
         const payments = paymentsByPO[po.glide_row_id] || [];
         
-        return mapGlPurchaseOrderToPurchaseOrder(po, accountName, lineItems, payments);
+        const result = mapGlPurchaseOrderToPurchaseOrder(po, accountName, lineItems, payments);
+        
+        // Add vendor payments to the result for UI purposes
+        return {
+          ...result,
+          vendorPayments: payments.map(payment => ({
+            id: payment.id,
+            date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
+            amount: Number(payment.payment_amount) || 0,
+            method: 'Payment',
+            notes: payment.vendor_purchase_note || ''
+          }))
+        };
       });
       
       setPurchaseOrders(mappedPOs);
@@ -236,12 +248,24 @@ export function usePurchaseOrders() {
       if (paymentsError) throw paymentsError;
       
       // Map to domain object
-      return mapGlPurchaseOrderToPurchaseOrder(
+      const purchaseOrder = mapGlPurchaseOrderToPurchaseOrder(
         po as GlPurchaseOrder, 
         account?.account_name || 'Unknown Vendor', 
         lineItems, 
         payments as GlVendorPayment[] || []
       );
+      
+      // Add vendor payments to the result for UI purposes
+      return {
+        ...purchaseOrder,
+        vendorPayments: (payments || []).map(payment => ({
+          id: payment.id,
+          date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
+          amount: Number(payment.payment_amount) || 0,
+          method: 'Payment',
+          notes: payment.vendor_purchase_note || ''
+        }))
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchase order';
       toast({
