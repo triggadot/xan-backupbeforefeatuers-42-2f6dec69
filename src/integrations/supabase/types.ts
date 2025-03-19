@@ -1297,7 +1297,9 @@ export type Database = {
       gl_mapping_status: {
         Row: {
           app_name: string | null
+          column_mappings: Json | null
           connection_id: string | null
+          created_at: string | null
           current_status: string | null
           enabled: boolean | null
           error_count: number | null
@@ -1310,6 +1312,7 @@ export type Database = {
           supabase_table: string | null
           sync_direction: string | null
           total_records: number | null
+          updated_at: string | null
         }
         Relationships: [
           {
@@ -1365,6 +1368,7 @@ export type Database = {
           glide_table: string | null
           glide_table_display_name: string | null
           id: string | null
+          mapping_id: string | null
           message: string | null
           records_processed: number | null
           started_at: string | null
@@ -1386,7 +1390,7 @@ export type Database = {
       }
       gl_tables_view: {
         Row: {
-          table_name: string | null
+          table_name: unknown | null
         }
         Relationships: []
       }
@@ -1499,7 +1503,9 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           app_name: string | null
+          column_mappings: Json | null
           connection_id: string | null
+          created_at: string | null
           current_status: string | null
           enabled: boolean | null
           error_count: number | null
@@ -1512,6 +1518,7 @@ export type Database = {
           supabase_table: string | null
           sync_direction: string | null
           total_records: number | null
+          updated_at: string | null
         }[]
       }
       gl_get_table_columns: {
