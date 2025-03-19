@@ -1,4 +1,3 @@
-
 export interface SyncLog {
   id: string;
   mapping_id: string;
@@ -40,6 +39,14 @@ export interface UseSyncLogsOptions {
   includeDetails?: boolean;
 }
 
+export interface SyncLogFilter {
+  mappingId?: string;
+  status?: string;
+  fromDate?: Date;
+  toDate?: Date;
+  [key: string]: any; // Allow string values for filtering by status
+}
+
 export interface SyncLogsResult {
   logs: SyncLog[];
   isLoading: boolean;
@@ -51,14 +58,6 @@ export interface SyncLogsResult {
   filter?: SyncLogFilter;
   filterLogs?: (filter: SyncLogFilter) => void;
   currentFilter?: SyncLogFilter;
-}
-
-export interface SyncLogFilter {
-  mappingId?: string;
-  status?: string;
-  fromDate?: Date;
-  toDate?: Date;
-  [key: string]: any; // Allow string values for filtering by status
 }
 
 export interface Mapping {

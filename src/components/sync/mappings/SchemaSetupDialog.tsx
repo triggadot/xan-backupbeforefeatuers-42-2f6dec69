@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2, Database } from 'lucide-react';
 import { GlideTable } from '@/types/glsync';
-import GlideTableSelector from '@/components/sync/GlideTableSelector';
+import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useAddMapping } from '@/hooks/useAddMapping';
@@ -235,4 +235,4 @@ export function SchemaSetupDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

@@ -1,110 +1,94 @@
-
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { GlMapping } from '@/types/glsync';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { convertToGlMapping } from '@/utils/gl-mapping-converters';
-import { Mapping } from '@/types/syncLog';
+import { supabase } from '@/integrations/supabase/client';
+import { GlMapping, GlColumnMapping } from '@/types/glsync';
 
-export function useProductMapping(mappingId: string) {
+interface UseProductMappingProps {
+  mappingId?: string;
+}
+
+export function useProductMapping({ mappingId }: UseProductMappingProps = {}) {
+  const [mapping, setMapping] = useState<GlMapping | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { 
-    data: mapping, 
-    isLoading: isMappingLoading,
-    error: mappingError,
-    refetch 
-  } = useQuery({
-    queryKey: ['glsync-mapping', mappingId],
-    queryFn: async () => {
-      console.log(`Fetching mapping with ID: ${mappingId}`);
-      
-      if (!mappingId || mappingId === ':mappingId') {
-        throw new Error('Invalid mapping ID');
-      }
-      
+  const fetchMapping = useCallback(async () => {
+    if (!mappingId) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
       const { data, error } = await supabase
         .from('gl_mappings')
         .select('*')
         .eq('id', mappingId)
         .single();
-      
+
       if (error) {
-        console.error('Error fetching mapping:', error);
         throw error;
       }
-      
-      if (!data) {
-        console.warn('No mapping data found for ID:', mappingId);
-        throw new Error('Mapping not found');
-      }
-      
-      console.log('Raw mapping data:', data);
-      
-      // Prepare mapping for conversion
-      const rawMapping: Mapping = {
-        id: data.id,
-        connection_id: data.connection_id,
-        glide_table: data.glide_table,
-        glide_table_display_name: data.glide_table_display_name,
-        supabase_table: data.supabase_table,
-        column_mappings: data.column_mappings,
-        sync_direction: data.sync_direction,
-        enabled: data.enabled,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      };
-      
-      // Convert the raw data to a properly typed GlMapping using the converter utility
-      return convertToGlMapping(rawMapping);
-    },
-    enabled: !!mappingId && mappingId !== ':mappingId',
-    meta: {
-      onError: (error: any) => {
-        console.error('Error fetching mapping:', error);
-        toast({
-          title: 'Error fetching mapping',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    }
-  });
 
-  const { 
-    data: connection, 
-    isLoading: isConnectionLoading,
-    error: connectionError
-  } = useQuery({
-    queryKey: ['glsync-connection', mapping?.connection_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('gl_connections')
-        .select('*')
-        .eq('id', mapping?.connection_id!)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!mapping?.connection_id,
-    meta: {
-      onError: (error: any) => {
-        console.error('Error fetching connection:', error);
-        toast({
-          title: 'Error fetching connection',
-          description: error.message,
-          variant: 'destructive',
-        });
+      if (!data) {
+        setError('Mapping not found');
+        return;
       }
+
+      const rawMapping = data;
+
+      // Convert column_mappings to the correct type
+      const columnMappings: Record<string, GlColumnMapping> = typeof rawMapping.column_mappings === 'string'
+        ? JSON.parse(rawMapping.column_mappings)
+        : rawMapping.column_mappings;
+
+      // Ensure sync_direction is the correct type
+      const syncDirection = rawMapping.sync_direction as "to_supabase" | "to_glide" | "both";
+
+      setMapping({
+        id: rawMapping.id,
+        connection_id: rawMapping.connection_id,
+        glide_table: rawMapping.glide_table,
+        glide_table_display_name: rawMapping.glide_table_display_name,
+        supabase_table: rawMapping.supabase_table,
+        column_mappings: columnMappings,
+        sync_direction: syncDirection,
+        enabled: rawMapping.enabled,
+        created_at: rawMapping.created_at,
+        updated_at: rawMapping.updated_at,
+        current_status: rawMapping.current_status,
+        last_sync_started_at: rawMapping.last_sync_started_at,
+        last_sync_completed_at: rawMapping.last_sync_completed_at,
+        records_processed: rawMapping.records_processed,
+        total_records: rawMapping.total_records,
+        error_count: rawMapping.error_count,
+        app_name: rawMapping.app_name
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch mapping';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, [mappingId, toast]);
+
+  useEffect(() => {
+    if (mappingId) {
+      fetchMapping();
+    }
+  }, [mappingId, fetchMapping]);
 
   return {
     mapping,
-    connection,
-    isLoading: isMappingLoading || isConnectionLoading,
-    error: mappingError ? (mappingError as Error).message : connectionError ? (connectionError as Error).message : undefined,
-    refetch
+    isLoading,
+    error,
+    fetchMapping,
   };
 }

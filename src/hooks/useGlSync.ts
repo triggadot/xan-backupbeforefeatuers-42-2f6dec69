@@ -8,6 +8,7 @@ export function useGlSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   /**
@@ -41,15 +42,19 @@ export function useGlSync() {
         throw new Error(result.error);
       }
 
+      // Extract metrics from the result
+      const recordsProcessed = result.result?.recordsProcessed || 0;
+      const failedRecords = result.result?.failedRecords || 0;
+
       toast({
         title: 'Sync Completed',
-        description: `Processed ${result.recordsProcessed} records with ${result.failedRecords} errors.`,
+        description: `Processed ${recordsProcessed} records with ${failedRecords} errors.`,
       });
 
       return {
         success: true,
-        recordsProcessed: result.recordsProcessed || 0,
-        failedRecords: result.failedRecords || 0
+        recordsProcessed: recordsProcessed,
+        failedRecords: failedRecords
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred during sync';
@@ -122,6 +127,7 @@ export function useGlSync() {
     validateMappingConfig,
     isSyncing,
     isRetrying,
+    isLoading,
     error
   };
 }
