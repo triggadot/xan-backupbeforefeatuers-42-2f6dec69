@@ -1,8 +1,6 @@
 
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import MappingDetails from '@/components/sync/mappings/MappingDetails';
 import SyncLayout from '@/components/sync/SyncLayout';
 
@@ -21,10 +19,12 @@ const MappingView = () => {
   
   return (
     <SyncLayout>
-      <MappingDetails 
-        mappingId={id} 
-        onBack={handleBack} 
-      />
+      <div>
+        <MappingDetails 
+          mappingId={id} 
+          onBack={handleBack} 
+        />
+      </div>
     </SyncLayout>
   );
 };

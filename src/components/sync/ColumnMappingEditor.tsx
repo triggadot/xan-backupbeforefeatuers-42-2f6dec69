@@ -8,10 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { glSyncApi } from '@/services/glsync';
 import { PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Create a more specific interface for column mapping only
 interface ColumnMappingOnly {
   supabase_table: string;
   column_mappings: Record<string, GlColumnMapping>;
@@ -36,7 +35,6 @@ const dataTypeOptions = [
   { value: 'email-address', label: 'Email' },
 ];
 
-// Changed from const to export const to properly export the component
 export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mapping, onUpdate }) => {
   const [newGlideColumnId, setNewGlideColumnId] = useState('');
   const [newGlideColumnName, setNewGlideColumnName] = useState('');
@@ -46,8 +44,7 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
   const [loading, setLoading] = useState(false);
   const [hasRowIdMapping, setHasRowIdMapping] = useState(false);
   const { toast } = useToast();
-  
-  // Get the column mappings as an array for easier rendering
+
   const columnMappings = Object.entries(mapping.column_mappings || {}).map(
     ([glideColumnId, columnMapping]) => ({
       glideColumnId,
@@ -55,7 +52,6 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
     })
   );
 
-  // Check if there's a $rowID mapping
   useEffect(() => {
     const rowIdMapping = Object.entries(mapping.column_mappings || {}).find(
       ([glideColumnId]) => glideColumnId === '$rowID'
@@ -67,8 +63,17 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
     async function fetchSupabaseColumns() {
       try {
         setLoading(true);
-        const columns = await glSyncApi.getSupabaseTableColumns(mapping.supabase_table);
-        setSupabaseColumns(columns);
+        const result = await glSyncApi.getSupabaseTableColumns(mapping.supabase_table);
+        if (result && Array.isArray(result)) {
+          setSupabaseColumns(result);
+        } else {
+          console.error('Unexpected result format from getSupabaseTableColumns:', result);
+          toast({
+            title: 'Error',
+            description: 'Failed to fetch Supabase table columns: unexpected response format',
+            variant: 'destructive',
+          });
+        }
       } catch (error) {
         console.error('Error fetching Supabase columns:', error);
         toast({
@@ -84,7 +89,7 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
     if (mapping.supabase_table) {
       fetchSupabaseColumns();
     }
-  }, [mapping.supabase_table]);
+  }, [mapping.supabase_table, toast]);
 
   const handleAddColumnMapping = () => {
     if (!newGlideColumnId || !newGlideColumnName || !newSupabaseColumnName) {
@@ -108,7 +113,6 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
 
     onUpdate(updatedMapping);
     
-    // Reset form
     setNewGlideColumnId('');
     setNewGlideColumnName('');
     setNewSupabaseColumnName('');
@@ -282,5 +286,4 @@ export const ColumnMappingEditor: React.FC<ColumnMappingEditorProps> = ({ mappin
   );
 };
 
-// Export as default as well for backward compatibility
 export default ColumnMappingEditor;

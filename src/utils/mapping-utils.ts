@@ -20,3 +20,37 @@ export function mapGlAccountToAccount(glAccount: GlAccount): Account {
     accounts_uid: glAccount.accounts_uid,
   };
 }
+
+/**
+ * Format currency values for display
+ */
+export function formatCurrency(amount: number | null | undefined, currency: string = 'USD'): string {
+  if (amount === null || amount === undefined) return '-';
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}
+
+/**
+ * Maps data from gl_invoices table to Invoice interface
+ */
+export function mapGlInvoiceToInvoice(glInvoice: any): any {
+  return {
+    id: glInvoice.id,
+    // Add other mapping fields here
+  };
+}
+
+/**
+ * Maps data from gl_purchase_orders table to PurchaseOrder interface
+ */
+export function mapGlPurchaseOrderToPurchaseOrder(glPO: any): any {
+  return {
+    id: glPO.id,
+    // Add other mapping fields here
+  };
+}

@@ -33,3 +33,37 @@ export interface SyncLogsResult {
   error: string | null;
   refetch: () => Promise<void>;
 }
+
+export interface SyncLogFilter {
+  mappingId?: string;
+  status?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+export interface Mapping {
+  id: string;
+  connection_id: string;
+  glide_table: string;
+  glide_table_display_name: string;
+  supabase_table: string;
+  column_mappings: Record<string, GlColumnMapping>;
+  sync_direction: 'to_supabase' | 'to_glide' | 'both';
+  enabled: boolean;
+  created_at?: string;
+  updated_at?: string;
+  
+  // Metrics fields 
+  current_status?: string;
+  last_sync_started_at?: string;
+  last_sync_completed_at?: string;
+  records_processed?: number;
+  total_records?: number;
+  error_count?: number;
+}
+
+export interface GlColumnMapping {
+  glide_column_name: string;
+  supabase_column_name: string;
+  data_type: string;
+}

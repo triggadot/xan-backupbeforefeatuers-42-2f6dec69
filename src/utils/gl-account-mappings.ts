@@ -1,6 +1,13 @@
 
 import { GlColumnMapping, GlMapping } from '@/types/glsync';
 
+// Account type enum values
+export const ACCOUNT_TYPES = {
+  CUSTOMER: 'Customer',
+  VENDOR: 'Vendor',
+  BOTH: 'Customer & Vendor'
+};
+
 // Default column mappings for the accounts table based on provided data
 export const getAccountsColumnMappings = (): Record<string, GlColumnMapping> => {
   return {
@@ -119,13 +126,13 @@ export const normalizeClientType = (clientType: string | null | undefined): stri
   
   if (/customer\s*&\s*vendor/i.test(normalized) || 
       /customer\s+and\s+vendor/i.test(normalized)) {
-    return 'Customer & Vendor';
+    return ACCOUNT_TYPES.BOTH;
   } else if (/vendor/i.test(normalized)) {
-    return 'Vendor';
+    return ACCOUNT_TYPES.VENDOR;
   } else if (/customer/i.test(normalized)) {
-    return 'Customer';
+    return ACCOUNT_TYPES.CUSTOMER;
   }
   
   // If we can't determine the type, default to Customer
-  return 'Customer';
+  return ACCOUNT_TYPES.CUSTOMER;
 };
