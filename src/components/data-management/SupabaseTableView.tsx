@@ -86,7 +86,7 @@ interface SupabaseTableViewProps {
 
 export default function SupabaseTableView({ tableName, displayName, description }: SupabaseTableViewProps) {
   const { data, isLoading, error, fetchData, createRecord, updateRecord, deleteRecord } = useTableData<TableRecord>(
-    tableName as any
+    tableName as 'gl_accounts' | 'gl_mappings' | 'gl_products' | 'gl_tables_view'
   );
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
