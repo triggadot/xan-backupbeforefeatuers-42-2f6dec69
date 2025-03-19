@@ -8,8 +8,8 @@ const Dashboard: React.FC = () => {
   const { metrics, statusMetrics, isLoading } = useBusinessMetrics();
 
   return (
-    <div className="container mx-auto py-10 space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="container mx-auto py-4 space-y-4">
+      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
       
       <BusinessMetricsCard metrics={metrics} isLoading={isLoading} />
       

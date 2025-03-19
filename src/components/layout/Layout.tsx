@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
@@ -12,7 +13,7 @@ function MainContent() {
     <div className={`flex-1 flex flex-col transition-all duration-300 md:ml-12 ${isExpanded ? 'md:ml-64' : ''}`}>
       {/* Main Content Area */}
       <main className="flex-1 bg-background overflow-auto">
-        <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+        <div className="container mx-auto p-2 md:p-4 max-w-full">
           <Outlet />
         </div>
       </main>

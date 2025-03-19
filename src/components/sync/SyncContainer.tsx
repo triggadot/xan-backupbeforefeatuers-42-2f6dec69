@@ -10,7 +10,7 @@ export interface SyncContainerProps {
 
 export function SyncContainer({ children, mapping, onSyncComplete }: SyncContainerProps) {
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-7xl">
+    <div className="container mx-auto py-3 space-y-4 max-w-full">
       {children}
     </div>
   );

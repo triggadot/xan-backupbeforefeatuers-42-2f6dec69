@@ -29,13 +29,17 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  children: React.ReactNode;
+}
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ side = "right", className, children, ...props }, ref) => {
+  DialogContentProps
+>(({ className, children, ...props }, ref) => {
   // Check if children contain DialogTitle
   let hasDialogTitle = false
-  const childrenArray = React.Children.toArray(children as React.ReactNode)
+  const childrenArray = React.Children.toArray(children)
   
   // Check direct children
   childrenArray.forEach((child) => {

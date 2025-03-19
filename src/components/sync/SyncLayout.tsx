@@ -28,17 +28,17 @@ const SyncLayout: React.FC = () => {
   )?.id || 'overview';
 
   return (
-    <div className="container mx-auto py-6 max-w-7xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div className="container mx-auto py-3 max-w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Glide Sync</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Glide Sync</h1>
           <p className="text-muted-foreground mt-1">
             Manage and monitor data synchronization between Glide and Supabase
           </p>
         </div>
       </div>
 
-      <Tabs value={currentTab} className="space-y-6">
+      <Tabs value={currentTab} className="space-y-4">
         <TabsList className="grid grid-cols-4 max-w-2xl">
           {tabs.map(tab => (
             <TabsTrigger 
@@ -51,7 +51,7 @@ const SyncLayout: React.FC = () => {
           ))}
         </TabsList>
         
-        <div className="mt-6">
+        <div className="mt-4">
           <Outlet />
         </div>
       </Tabs>

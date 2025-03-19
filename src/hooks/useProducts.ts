@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,8 +93,8 @@ export function useProducts() {
 
   const createProduct = useCallback(async (product: Partial<Product>) => {
     try {
-      // Generate a temporary glide_row_id for new products
-      const tempGlideRowId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Generate a glide_row_id for new products
+      const tempGlideRowId = `temp_${uuidv4()}`;
       
       const { data, error } = await supabase
         .from('gl_products')
@@ -105,7 +106,7 @@ export function useProducts() {
           category: product.category,
           product_image1: product.imageUrl,
           purchase_notes: product.description,
-          glide_row_id: tempGlideRowId // Add the required glide_row_id field
+          glide_row_id: tempGlideRowId
         })
         .select();
       
