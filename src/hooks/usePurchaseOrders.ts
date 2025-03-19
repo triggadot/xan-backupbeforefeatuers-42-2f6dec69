@@ -2,8 +2,42 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PurchaseOrder, GlPurchaseOrder, GlVendorPayment, LineItem } from '@/types';
+import { PurchaseOrder, GlPurchaseOrder, GlVendorPayment, LineItem, ProductDetails } from '@/types';
 import { mapGlPurchaseOrderToPurchaseOrder } from '@/utils/mapping-utils';
+
+// Fetch product details (reusing the same function as in other services)
+async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
+  if (!productGlideId) return null;
+  
+  const { data, error } = await supabase
+    .from('gl_products')
+    .select('*')
+    .eq('glide_row_id', productGlideId)
+    .single();
+    
+  if (error) {
+    console.error('Error fetching product details:', error);
+    return null;
+  }
+  
+  if (!data) return null;
+  
+  return {
+    id: data.id,
+    glide_row_id: data.glide_row_id,
+    name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+    display_name: data.display_name,
+    vendor_product_name: data.vendor_product_name,
+    new_product_name: data.new_product_name,
+    cost: data.cost,
+    total_qty_purchased: data.total_qty_purchased,
+    category: data.category,
+    product_image1: data.product_image1,
+    purchase_notes: data.purchase_notes,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
+}
 
 export function usePurchaseOrders() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -71,13 +105,31 @@ export function usePurchaseOrders() {
           acc[poId] = [];
         }
         if (poId) {
+          // Include the product itself as productDetails
+          const productDetails: ProductDetails = {
+            id: product.id,
+            glide_row_id: product.glide_row_id,
+            name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+            display_name: product.display_name,
+            vendor_product_name: product.vendor_product_name,
+            new_product_name: product.new_product_name,
+            cost: product.cost,
+            total_qty_purchased: product.total_qty_purchased,
+            category: product.category,
+            product_image1: product.product_image1,
+            purchase_notes: product.purchase_notes,
+            created_at: product.created_at,
+            updated_at: product.updated_at
+          };
+          
           acc[poId].push({
             id: product.id,
             rowid_products: product.glide_row_id,
             product_name: product.new_product_name || product.vendor_product_name,
             quantity: product.total_qty_purchased || 1,
             unit_price: product.cost || 0,
-            total: (product.total_qty_purchased || 1) * (product.cost || 0)
+            total: (product.total_qty_purchased || 1) * (product.cost || 0),
+            productDetails: productDetails
           });
         }
         return acc;
@@ -145,15 +197,35 @@ export function usePurchaseOrders() {
       
       if (productsError) throw productsError;
       
-      // Transform products to line items
-      const lineItems = (products || []).map(product => ({
-        id: product.id,
-        rowid_products: product.glide_row_id,
-        product_name: product.new_product_name || product.vendor_product_name,
-        quantity: product.total_qty_purchased || 1,
-        unit_price: product.cost || 0,
-        total: (product.total_qty_purchased || 1) * (product.cost || 0)
-      }));
+      // Transform products to line items with productDetails
+      const lineItems = (products || []).map(product => {
+        // Include the product itself as productDetails
+        const productDetails: ProductDetails = {
+          id: product.id,
+          glide_row_id: product.glide_row_id,
+          name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+          display_name: product.display_name,
+          vendor_product_name: product.vendor_product_name,
+          new_product_name: product.new_product_name,
+          cost: product.cost,
+          total_qty_purchased: product.total_qty_purchased,
+          category: product.category,
+          product_image1: product.product_image1,
+          purchase_notes: product.purchase_notes,
+          created_at: product.created_at,
+          updated_at: product.updated_at
+        };
+        
+        return {
+          id: product.id,
+          rowid_products: product.glide_row_id,
+          product_name: product.new_product_name || product.vendor_product_name,
+          quantity: product.total_qty_purchased || 1,
+          unit_price: product.cost || 0,
+          total: (product.total_qty_purchased || 1) * (product.cost || 0),
+          productDetails: productDetails
+        };
+      });
       
       // Fetch payments
       const { data: payments, error: paymentsError } = await supabase

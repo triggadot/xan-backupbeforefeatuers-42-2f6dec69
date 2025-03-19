@@ -2,8 +2,42 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Invoice, GlInvoice, GlInvoiceLine, GlCustomerPayment, GlAccount } from '@/types';
+import { Invoice, GlInvoice, GlInvoiceLine, GlCustomerPayment, GlAccount, ProductDetails } from '@/types';
 import { mapGlInvoiceToInvoice } from '@/utils/mapping-utils';
+
+// Fetch product details for an invoice line
+async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
+  if (!productGlideId) return null;
+  
+  const { data, error } = await supabase
+    .from('gl_products')
+    .select('*')
+    .eq('glide_row_id', productGlideId)
+    .single();
+    
+  if (error) {
+    console.error('Error fetching product details:', error);
+    return null;
+  }
+  
+  if (!data) return null;
+  
+  return {
+    id: data.id,
+    glide_row_id: data.glide_row_id,
+    name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+    display_name: data.display_name,
+    vendor_product_name: data.vendor_product_name,
+    new_product_name: data.new_product_name,
+    cost: data.cost,
+    total_qty_purchased: data.total_qty_purchased,
+    category: data.category,
+    product_image1: data.product_image1,
+    purchase_notes: data.purchase_notes,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
+}
 
 export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -64,8 +98,22 @@ export function useInvoices() {
         
       if (paymentsError) throw paymentsError;
       
+      // Enhance line items with product details
+      const enhancedLineItems = await Promise.all(
+        (lineItemsData || []).map(async (line) => {
+          if (line.rowid_products) {
+            const productDetails = await fetchProductDetails(line.rowid_products);
+            return {
+              ...line,
+              productDetails: productDetails || undefined
+            };
+          }
+          return line;
+        })
+      );
+      
       // Group line items and payments by invoice ID
-      const lineItemsByInvoice = (lineItemsData || []).reduce((acc, item) => {
+      const lineItemsByInvoice = enhancedLineItems.reduce((acc, item) => {
         if (!acc[item.rowid_invoices]) {
           acc[item.rowid_invoices] = [];
         }
@@ -135,6 +183,20 @@ export function useInvoices() {
       
       if (lineItemsError) throw lineItemsError;
       
+      // Enhance line items with product details
+      const enhancedLineItems = await Promise.all(
+        (lineItems || []).map(async (line) => {
+          if (line.rowid_products) {
+            const productDetails = await fetchProductDetails(line.rowid_products);
+            return {
+              ...line,
+              productDetails: productDetails || undefined
+            };
+          }
+          return line;
+        })
+      );
+      
       // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_customer_payments')
@@ -147,7 +209,7 @@ export function useInvoices() {
       return mapGlInvoiceToInvoice(
         invoice as GlInvoice, 
         account?.account_name || 'Unknown Account', 
-        lineItems as GlInvoiceLine[] || [], 
+        enhancedLineItems as GlInvoiceLine[] || [], 
         payments as GlCustomerPayment[] || []
       );
     } catch (err) {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Edit, FileText, PlusCircle, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -288,8 +289,30 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                           <td className="px-4 py-2">
                             <div>
                               <p className="font-medium">{line.sale_product_name}</p>
+                              {line.productDetails && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  {line.productDetails.product_image1 && (
+                                    <img 
+                                      src={line.productDetails.product_image1} 
+                                      alt={line.productDetails.name} 
+                                      className="h-8 w-8 rounded object-cover"
+                                    />
+                                  )}
+                                  <div className="text-xs text-muted-foreground">
+                                    {line.productDetails.category && (
+                                      <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-xs mr-1">
+                                        {line.productDetails.category}
+                                      </span>
+                                    )}
+                                    {line.productDetails.vendor_product_name && 
+                                      line.productDetails.vendor_product_name !== line.sale_product_name && (
+                                      <span>Original: {line.productDetails.vendor_product_name}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               {line.product_sale_note && (
-                                <p className="text-xs text-muted-foreground">{line.product_sale_note}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{line.product_sale_note}</p>
                               )}
                             </div>
                           </td>

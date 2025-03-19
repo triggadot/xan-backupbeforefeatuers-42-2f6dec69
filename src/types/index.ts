@@ -1,3 +1,4 @@
+
 // Base entity type with common fields
 export interface BaseEntity {
   id: string;
@@ -32,6 +33,23 @@ export interface GlAccount {
   created_at?: string;
 }
 
+// Product details type for use in line items
+export interface ProductDetails {
+  id: string;
+  glide_row_id: string;
+  name: string;
+  display_name?: string;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  cost?: number;
+  total_qty_purchased?: number;
+  category?: string;
+  product_image1?: string;
+  purchase_notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Product type
 export interface Product extends BaseEntity {
   name: string;
@@ -53,6 +71,7 @@ export interface LineItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  productDetails?: ProductDetails;
 }
 
 // Database representation of gl_invoice_lines
@@ -70,6 +89,7 @@ export interface GlInvoiceLine {
   created_at: string;
   updated_at: string;
   glide_row_id: string;
+  productDetails?: ProductDetails;
 }
 
 // Database representation of gl_customer_payments

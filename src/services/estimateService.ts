@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
-import { GlAccount } from '@/types';
+import { GlAccount, ProductDetails } from '@/types';
 
 // Fetch all estimates with basic info
 export async function fetchEstimatesList() {
@@ -31,15 +31,63 @@ export async function fetchEstimateAccount(accountGlideId: string | undefined | 
   return data;
 }
 
-// Fetch estimate lines
-export async function fetchEstimateLines(estimateGlideId: string) {
+// Fetch product details for a given product ID
+export async function fetchProductDetails(productGlideId: string | undefined | null): Promise<ProductDetails | null> {
+  if (!productGlideId) return null;
+  
   const { data, error } = await supabase
+    .from('gl_products')
+    .select('*')
+    .eq('glide_row_id', productGlideId)
+    .single();
+    
+  if (error) {
+    console.error('Error fetching product details:', error);
+    return null;
+  }
+  
+  if (!data) return null;
+  
+  return {
+    id: data.id,
+    glide_row_id: data.glide_row_id,
+    name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+    display_name: data.display_name,
+    vendor_product_name: data.vendor_product_name,
+    new_product_name: data.new_product_name,
+    cost: data.cost,
+    total_qty_purchased: data.total_qty_purchased,
+    category: data.category,
+    product_image1: data.product_image1,
+    purchase_notes: data.purchase_notes,
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
+}
+
+// Fetch estimate lines with product details
+export async function fetchEstimateLines(estimateGlideId: string) {
+  const { data: lines, error } = await supabase
     .from('gl_estimate_lines')
     .select('*')
     .eq('rowid_estimate_lines', estimateGlideId);
   
   if (error) throw error;
-  return data || [];
+  if (!lines || lines.length === 0) return [];
+  
+  // Fetch product details for each line that has a product reference
+  const enhancedLines = await Promise.all(lines.map(async (line) => {
+    if (line.rowid_products) {
+      const productDetails = await fetchProductDetails(line.rowid_products);
+      return {
+        ...line,
+        productDetails: productDetails || undefined
+      };
+    }
+    return line;
+  }));
+  
+  return enhancedLines;
 }
 
 // Fetch credits for an estimate
@@ -68,7 +116,7 @@ export async function fetchEstimateDetails(id: string): Promise<Estimate | null>
     // Get account data
     const account = await fetchEstimateAccount(estimate.rowid_accounts);
     
-    // Get estimate lines and credits
+    // Get estimate lines with product details and credits
     const estimateLines = await fetchEstimateLines(estimate.glide_row_id);
     const credits = await fetchEstimateCredits(estimate.glide_row_id);
     
@@ -295,7 +343,7 @@ export async function convertEstimateToInvoice(estimateId: string) {
       line_total: line.line_total,
       product_sale_note: line.product_sale_note,
       date_of_sale: new Date().toISOString(),
-      rowid_products: line.rowid_products,
+      rowid_products: line.rowid_products, // Preserve the product reference
       glide_row_id: `IL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     }));
     

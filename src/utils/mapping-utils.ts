@@ -1,4 +1,3 @@
-
 import { 
   Invoice, 
   LineItem, 
@@ -10,7 +9,8 @@ import {
   GlPurchaseOrder,
   GlVendorPayment,
   GlCustomerPayment,
-  Payment
+  Payment,
+  ProductDetails
 } from '@/types';
 
 /**
@@ -23,7 +23,8 @@ export const mapToLineItem = (item: GlInvoiceLine): LineItem => {
     description: item.renamed_product_name || 'Unknown Product',
     quantity: Number(item.qty_sold) || 0,
     unitPrice: Number(item.selling_price) || 0,
-    total: Number(item.line_total) || 0
+    total: Number(item.line_total) || 0,
+    productDetails: item.productDetails
   };
 };
 
@@ -37,7 +38,8 @@ export const mapPurchaseOrderItemToLineItem = (item: any): LineItem => {
     description: item.product_name || 'Unknown Product',
     quantity: Number(item.quantity) || 0,
     unitPrice: Number(item.unit_price) || 0,
-    total: Number(item.total) || 0
+    total: Number(item.total) || 0,
+    productDetails: item.productDetails
   };
 };
 
@@ -119,7 +121,8 @@ export const mapGlPurchaseOrderToPurchaseOrder = (
     description: item.product_name || 'Unknown Product',
     quantity: Number(item.quantity) || 0,
     unitPrice: Number(item.unit_price) || 0,
-    total: Number(item.total) || 0
+    total: Number(item.total) || 0,
+    productDetails: item.productDetails
   }));
   
   const subtotal = mappedLineItems.reduce((sum, item) => sum + item.total, 0);

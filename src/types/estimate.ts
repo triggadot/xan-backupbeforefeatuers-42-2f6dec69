@@ -1,5 +1,5 @@
 
-import { GlAccount } from './index';
+import { GlAccount, ProductDetails } from './index';
 
 export interface EstimateLine {
   id: string;
@@ -14,6 +14,7 @@ export interface EstimateLine {
   glide_row_id: string;
   created_at?: string;
   updated_at?: string;
+  productDetails?: ProductDetails;
 }
 
 export interface CustomerCredit {
