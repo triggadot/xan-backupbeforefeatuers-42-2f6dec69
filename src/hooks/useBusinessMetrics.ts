@@ -54,10 +54,19 @@ export function useBusinessMetrics() {
       
       setMetrics(businessMetrics);
       
-      // Fetch document status from gl_current_status view
+      // Fetch document status from gl_current_status view with explicitly named columns
       const { data: docStatusData, error: statusError } = await supabase
         .from('gl_current_status')
-        .select('*');
+        .select(`
+          category,
+          total_count,
+          paid_count,
+          unpaid_count,
+          draft_count,
+          total_amount:gl_current_status.total_amount,
+          total_paid,
+          balance_amount
+        `);
       
       if (statusError) throw statusError;
       

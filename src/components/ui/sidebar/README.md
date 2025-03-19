@@ -11,6 +11,39 @@ This directory contains a comprehensive sidebar component for React applications
 - Persistent state via cookies
 - Various sidebar components for building complex navigation
 
+## Hover Behavior
+
+The sidebar now includes an enhanced hover behavior in collapsed mode:
+
+1. When collapsed, hovering over the sidebar will temporarily expand it to show all labels
+2. Moving the mouse away will collapse it back to icon-only mode
+3. This provides a better user experience by showing context when needed while maintaining a compact UI
+
+Example with hover effect:
+
+```tsx
+function AppSidebar() {
+  const [isHovering, setIsHovering] = useState(false)
+  const { state } = useSidebar()
+  const isExpanded = state === "expanded"
+  
+  // Show labels on hover or when expanded
+  const showLabels = isExpanded || isHovering
+  
+  return (
+    <div 
+      className={`transition-width duration-300 ${isExpanded || isHovering ? "w-64" : "w-12"}`}
+      onMouseEnter={() => !isExpanded && setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <Sidebar>
+        {/* sidebar content */}
+      </Sidebar>
+    </div>
+  )
+}
+```
+
 ## Usage
 
 ### Basic Example
