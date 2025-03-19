@@ -15,7 +15,6 @@ export interface GlideTableSelectorProps {
   isLoading?: boolean;
   placeholder?: string;
   value?: string;
-  // Add missing props used by components
   tables?: GlideTable[];
   onTableChange?: (tableId: string) => void;
 }
@@ -29,7 +28,8 @@ const GlideTableSelector: React.FC<GlideTableSelectorProps> = ({
   isLoading: externalLoading = false,
   placeholder = "Select a Glide table",
   value,
-  tables: providedTables
+  tables: providedTables,
+  onTableChange
 }) => {
   const [tables, setTables] = useState<GlideTable[]>([]);
   const [loading, setLoading] = useState(false);

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MappingDetails from '@/components/sync/mappings/MappingDetails';
 import SyncLayout from '@/components/sync/SyncLayout';
 
-const MappingView = () => {
+const MappingView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   

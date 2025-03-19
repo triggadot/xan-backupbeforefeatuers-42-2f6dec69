@@ -44,7 +44,7 @@ export interface SyncLogsResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  data: SyncLog[]; // Ensure this is required, not optional
+  data: SyncLog[]; // Make this required, not optional
 }
 
 export interface SyncLogFilter {
@@ -52,8 +52,7 @@ export interface SyncLogFilter {
   status?: string;
   fromDate?: Date;
   toDate?: Date;
-  // Allow string values for filtering by status
-  [key: string]: any;
+  [key: string]: any; // Allow string values for filtering by status
 }
 
 export interface Mapping {

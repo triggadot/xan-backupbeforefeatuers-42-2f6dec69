@@ -517,10 +517,11 @@ function normalizeClientType(clientType: string | null | undefined): string | nu
   if (!clientType) return null;
   
   // Normalize to match the exact values expected by the constraint
-  const normalized = clientType.trim();
+  const normalized = String(clientType).trim();
   
   if (/customer\s*&\s*vendor/i.test(normalized) || 
-      /customer\s+and\s+vendor/i.test(normalized)) {
+      /customer\s+and\s+vendor/i.test(normalized) ||
+      /both/i.test(normalized)) {
     return 'Customer & Vendor';
   } else if (/vendor/i.test(normalized)) {
     return 'Vendor';

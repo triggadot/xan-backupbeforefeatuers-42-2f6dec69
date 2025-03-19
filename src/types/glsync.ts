@@ -158,5 +158,7 @@ export interface MappingToValidate {
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
 }
 
-// Export GlSyncLog for consistency
+// Export sync log type for consistency
 export type GlSyncLog = SyncLog;
+
+import { SyncLog } from './syncLog';
