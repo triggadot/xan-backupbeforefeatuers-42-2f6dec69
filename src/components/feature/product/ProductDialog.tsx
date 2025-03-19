@@ -15,6 +15,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface ProductDialogProps {
   open: boolean;
@@ -54,7 +59,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         cost: '',
         total_qty_purchased: 1,
         purchase_notes: '',
-        rowid_accounts: ''
+        rowid_accounts: '',
+        samples: false,
+        fronted: false,
+        miscellaneous_items: false,
+        product_purchase_date: null,
+        terms_for_fronted_product: ''
       });
     }
   }, [product, open]);
@@ -117,7 +127,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -202,6 +212,36 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="product_purchase_date">Purchase Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formValues.product_purchase_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formValues.product_purchase_date ? (
+                      format(new Date(formValues.product_purchase_date as string), "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formValues.product_purchase_date ? new Date(formValues.product_purchase_date as string) : undefined}
+                    onSelect={(date) => handleChange('product_purchase_date', date?.toISOString())}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="purchase_notes">Notes</Label>
               <Textarea
                 id="purchase_notes"
@@ -211,15 +251,48 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                 rows={3}
               />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="samples"
-                checked={!!formValues.samples}
-                onCheckedChange={(checked) => handleChange('samples', checked)}
-              />
-              <Label htmlFor="samples">Sample Item</Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="samples"
+                  checked={!!formValues.samples}
+                  onCheckedChange={(checked) => handleChange('samples', checked)}
+                />
+                <Label htmlFor="samples">Sample Item</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="fronted"
+                  checked={!!formValues.fronted}
+                  onCheckedChange={(checked) => handleChange('fronted', checked)}
+                />
+                <Label htmlFor="fronted">Fronted Item</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="miscellaneous_items"
+                  checked={!!formValues.miscellaneous_items}
+                  onCheckedChange={(checked) => handleChange('miscellaneous_items', checked)}
+                />
+                <Label htmlFor="miscellaneous_items">Miscellaneous</Label>
+              </div>
             </div>
+            
+            {formValues.fronted && (
+              <div className="grid gap-2">
+                <Label htmlFor="terms_for_fronted_product">Fronted Terms</Label>
+                <Textarea
+                  id="terms_for_fronted_product"
+                  placeholder="Terms for fronted product"
+                  value={formValues.terms_for_fronted_product || ''}
+                  onChange={e => handleChange('terms_for_fronted_product', e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>

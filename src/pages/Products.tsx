@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ProductsTable from '@/components/feature/product/ProductsTable';
 import ProductDialog from '@/components/feature/product/ProductDialog';
+import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingState } from '@/components/sync/LoadingState';
@@ -14,6 +15,7 @@ const Products: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
   
   const { toast } = useToast();
@@ -99,6 +101,11 @@ const Products: React.FC = () => {
     setCurrentProduct(product);
     setIsEditDialogOpen(true);
   };
+  
+  const handleViewDetails = (product: any) => {
+    setCurrentProduct(product);
+    setIsDetailsDialogOpen(true);
+  };
 
   // Filter products based on search term
   const filteredProducts = searchTerm
@@ -169,6 +176,7 @@ const Products: React.FC = () => {
           products={filteredProducts} 
           onEdit={handleEdit} 
           onDelete={handleDeleteProduct}
+          onViewDetails={handleViewDetails}
         />
       )}
 
@@ -187,6 +195,14 @@ const Products: React.FC = () => {
         onSubmit={handleUpdateProduct}
         title="Edit Product"
         product={currentProduct}
+      />
+      
+      {/* Product Details Dialog */}
+      <ProductDetails
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        product={currentProduct}
+        onEdit={handleEdit}
       />
     </div>
   );
