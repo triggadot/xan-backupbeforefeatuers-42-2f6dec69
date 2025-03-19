@@ -63,10 +63,7 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
     async function fetchTableColumns() {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .rpc<TableColumn[]>('gl_get_table_columns', { table_name: tableName });
-
-        if (error) throw error;
+        const { data: columns } = await supabase.rpc<TableColumn[]>('gl_get_table_columns', { table_name: tableName });
 
         if (data && Array.isArray(data)) {
           const formattedColumns = data.map(col => ({
@@ -199,12 +196,9 @@ export function EditTableForm({ tableName, onSuccess, onCancel }: EditTableFormP
       
       // If we have changes to apply
       if (sql) {
-        const { error } = await supabase.rpc<string>(
-          'gl_admin_execute_sql', 
-          { sql_query: sql }
-        );
+        const { data: result } = await supabase.rpc<string>('gl_admin_execute_sql', { sql_query: sql });
 
-        if (error) throw new Error(error.message);
+        if (result) throw new Error(result);
         
         toast({
           title: 'Success',

@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import EstimateLineForm from './EstimateLineForm';
 import CustomerCreditForm from './CustomerCreditForm';
 import EstimateDialog from './EstimateDialog';
@@ -203,8 +204,8 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                 <User className="h-4 w-4 mr-2 mt-0.5" />
                 <div>
                   <p className="font-medium">{estimate.accountName || 'No customer assigned'}</p>
-                  {estimate.account?.email_of_who_added && (
-                    <p className="text-sm text-muted-foreground">{estimate.account.email_of_who_added}</p>
+                  {estimate.account?.email && (
+                    <p className="text-sm text-muted-foreground">{estimate.account.email}</p>
                   )}
                 </div>
               </div>

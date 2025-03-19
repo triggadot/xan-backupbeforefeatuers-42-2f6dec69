@@ -1,8 +1,8 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Estimate, EstimateLine, CustomerCredit, Account } from '@/types';
+import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
+import { Account } from '@/types/index';
 
 export function useEstimates() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -84,7 +84,7 @@ export function useEstimates() {
       const account = estimate.account as unknown as Account[] | null;
       const formattedEstimate: Estimate = {
         ...estimate,
-        accountName: account && account.length > 0 ? account[0].account_name : 'Unknown',
+        accountName: account && account.length > 0 ? account[0].name : 'Unknown',
         account: account && account.length > 0 ? account[0] : undefined,
         estimateLines: estimateLines as EstimateLine[],
         credits: credits as CustomerCredit[]
@@ -226,7 +226,6 @@ export function useEstimates() {
     }
   }, [fetchEstimates, toast]);
 
-  // Functions for estimate lines management
   const addEstimateLine = useCallback(async (estimateGlideId: string, lineData: Partial<EstimateLine>) => {
     try {
       const newLine = {
@@ -329,7 +328,6 @@ export function useEstimates() {
     }
   }, [toast]);
 
-  // Functions for customer credits management
   const addCustomerCredit = useCallback(async (estimateGlideId: string, creditData: Partial<CustomerCredit>) => {
     try {
       const newCredit = {
@@ -417,7 +415,6 @@ export function useEstimates() {
     }
   }, [toast]);
 
-  // Convert an estimate to an invoice
   const convertToInvoice = useCallback(async (estimateId: string) => {
     try {
       const estimate = await getEstimate(estimateId);
@@ -489,7 +486,6 @@ export function useEstimates() {
     }
   }, [fetchEstimates, getEstimate, toast]);
 
-  // Fetch estimates on component mount
   useEffect(() => {
     fetchEstimates();
   }, [fetchEstimates]);
