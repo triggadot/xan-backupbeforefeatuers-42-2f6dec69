@@ -259,7 +259,7 @@ const SyncDashboard = () => {
         <div>
           <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
           <SyncMetricsCard 
-            data={syncStats as GlSyncStats} 
+            syncStats={syncStats as GlSyncStats[]} 
             isLoading={isLoading} 
           />
         </div>

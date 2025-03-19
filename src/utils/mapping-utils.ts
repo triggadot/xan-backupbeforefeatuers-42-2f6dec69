@@ -1,4 +1,3 @@
-
 import { Account, GlAccount } from '@/types';
 import { normalizeClientType } from './gl-account-mappings';
 
@@ -39,9 +38,41 @@ export function formatCurrency(amount: number | null | undefined, currency: stri
  * Maps data from gl_invoices table to Invoice interface
  */
 export function mapGlInvoiceToInvoice(glInvoice: any): any {
+  // Extract data from the glInvoice object
+  const {
+    id,
+    invoice_number,
+    invoice_date,
+    due_date,
+    total_amount,
+    balance_due,
+    payment_status,
+    notes,
+    glide_row_id,
+    created_at,
+    updated_at
+  } = glInvoice;
+  
+  // Get related data that might be passed with the invoice
+  const accountName = glInvoice.accountName || 'Unknown Account';
+  const lineItems = glInvoice.lineItems || [];
+  const payments = glInvoice.payments || [];
+  
   return {
-    id: glInvoice.id,
-    // Add other mapping fields here
+    id,
+    invoiceNumber: invoice_number,
+    invoiceDate: invoice_date,
+    dueDate: due_date,
+    totalAmount: total_amount,
+    balanceDue: balance_due,
+    paymentStatus: payment_status || 'unpaid',
+    notes,
+    accountName,
+    lineItems,
+    payments,
+    glideRowId: glide_row_id,
+    createdAt: new Date(created_at || Date.now()),
+    updatedAt: new Date(updated_at || Date.now())
   };
 }
 

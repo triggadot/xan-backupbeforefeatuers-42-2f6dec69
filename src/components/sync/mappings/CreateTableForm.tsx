@@ -34,12 +34,22 @@ const DATA_TYPES = [
 ];
 
 interface CreateTableFormProps {
-  onTableCreated: (tableName: string) => void;
+  connectionId: string;
+  glideTable: string;
+  glideTableDisplayName: string;
   onCancel: () => void;
+  onSuccess: () => void;
   isCompact?: boolean;
 }
 
-export function CreateTableForm({ onTableCreated, onCancel, isCompact = false }: CreateTableFormProps) {
+export function CreateTableForm({
+  connectionId,
+  glideTable,
+  glideTableDisplayName,
+  onCancel,
+  onSuccess,
+  isCompact = false
+}: CreateTableFormProps) {
   const [tableName, setTableName] = useState('gl_');
   const [columns, setColumns] = useState<ColumnDefinition[]>([...DEFAULT_COLUMNS]);
   const [newColumnName, setNewColumnName] = useState('');
@@ -150,7 +160,7 @@ export function CreateTableForm({ onTableCreated, onCancel, isCompact = false }:
         description: `Table ${tableName} created successfully`
       });
 
-      onTableCreated(tableName);
+      onSuccess();
       
       // Reset form
       setTableName('gl_');

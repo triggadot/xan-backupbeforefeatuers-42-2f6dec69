@@ -1,4 +1,3 @@
-
 // Definition for Glide table structure
 export interface GlideTable {
   id: string;
@@ -73,6 +72,7 @@ export interface GlSyncStatus {
   glide_table?: string;
   glide_table_display_name?: string;
   supabase_table?: string;
+  column_mappings?: Record<string, GlColumnMapping>;
   app_name?: string;
   enabled?: boolean;
   sync_direction?: string;

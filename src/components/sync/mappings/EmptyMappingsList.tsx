@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { AddMappingButton } from './AddMappingButton';
@@ -6,7 +5,7 @@ import { CreateSchemaButton } from './CreateSchemaButton';
 
 interface EmptyMappingsListProps {
   connectionId?: string;
-  onMappingCreated?: () => void;
+  onMappingCreated?: () => Promise<void>;
 }
 
 export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({ 
@@ -29,7 +28,7 @@ export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({
             connectionId={connectionId}
           />
           
-          <CreateSchemaButton onMappingCreated={onMappingCreated ? onMappingCreated : () => {}} />
+          <CreateSchemaButton onMappingCreated={onMappingCreated ? onMappingCreated : async () => {}} />
         </div>
       </CardContent>
     </Card>

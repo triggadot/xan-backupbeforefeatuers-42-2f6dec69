@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
@@ -69,22 +68,22 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
       }
 
       if (data) {
-        // Mock some data for now - in a real app, you'd fetch the line items and payments
+        // Map database fields to domain object
         const mockPO: PurchaseOrder = {
           ...data,
           id: data.id || '',
           number: data.purchase_order_uid || `PO-${data.id}`,
           vendorId: data.rowid_accounts || '',
-          accountName: data.vendor_name || 'Unknown Vendor',
+          accountName: data.vendor_name || data.account_name || 'Unknown Vendor', // Use account_name as fallback
           date: new Date(data.po_date || data.created_at),
-          dueDate: data.due_date ? new Date(data.due_date) : null,
+          dueDate: data.due_date ? new Date(data.due_date) : (data.payment_date ? new Date(data.payment_date) : null), // Use payment_date as fallback
           status: (data.payment_status || 'draft') as PurchaseOrder['status'],
           total: data.total_amount || 0,
           subtotal: data.total_amount || 0,
           tax: 0,
           amountPaid: data.total_paid || 0,
           balance: data.balance || 0,
-          notes: data.po_notes || '',
+          notes: data.po_notes || data.notes || '', // Use notes as fallback
           created_at: data.created_at,
           updated_at: data.updated_at,
           lineItems: [],
@@ -186,10 +185,26 @@ export const usePurchaseOrders = ({ initialPurchaseOrders }: UsePurchaseOrdersPr
     setIsLoading(true);
     setError(null);
     try {
+      // Map domain object to database fields
+      const poData = {
+        purchase_order_uid: newPurchaseOrder.number,
+        rowid_accounts: newPurchaseOrder.vendorId,
+        account_name: newPurchaseOrder.accountName, // Add account_name
+        po_date: newPurchaseOrder.date.toISOString(),
+        payment_date: newPurchaseOrder.dueDate?.toISOString(), // Use payment_date for dueDate
+        payment_status: newPurchaseOrder.status,
+        total_amount: newPurchaseOrder.total,
+        total_paid: newPurchaseOrder.amountPaid,
+        balance: newPurchaseOrder.balance,
+        notes: newPurchaseOrder.notes, // Use notes as fallback
+        glide_row_id: `po-${Date.now()}`, // Generate a unique glide_row_id
+      };
+
       const { data, error } = await supabase
         .from('gl_purchase_orders')
-        .insert([newPurchaseOrder])
-        .select();
+        .insert(poData)
+        .select()
+        .single();
 
       if (error) {
         setError(error.message);

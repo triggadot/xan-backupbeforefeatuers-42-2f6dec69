@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { MappingListItem } from './MappingListItem';
@@ -11,6 +10,7 @@ export interface MappingsListProps {
   onToggleEnabled: (mapping: GlMapping) => Promise<void>;
   onDeleteMapping: (id: string) => Promise<void>;
   isLoading: boolean;
+  onMappingCreated: () => Promise<void>;
 }
 
 export const MappingsList: React.FC<MappingsListProps> = ({
@@ -18,11 +18,12 @@ export const MappingsList: React.FC<MappingsListProps> = ({
   onViewMapping,
   onToggleEnabled,
   onDeleteMapping,
-  isLoading
+  isLoading,
+  onMappingCreated
 }) => {
   return (
     <Card className="shadow-none">
-      <MappingListHeader />
+      <MappingListHeader onMappingCreated={onMappingCreated} />
       <div className="divide-y divide-border">
         {mappings.map((mapping) => (
           <MappingListItem

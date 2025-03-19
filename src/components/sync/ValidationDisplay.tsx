@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
@@ -11,10 +10,11 @@ interface ValidationResult {
 }
 
 interface ValidationDisplayProps {
-  validation: ValidationResult | null;
+  validation?: ValidationResult | null;
+  mapping?: any;
 }
 
-export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({ validation }) => {
+export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({ validation, mapping }) => {
   if (!validation) {
     return null;
   }

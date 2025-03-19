@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -141,7 +140,15 @@ export function useInvoices() {
         const lineItems = lineItemsByInvoice[invoice.glide_row_id] || [];
         const payments = paymentsByInvoice[invoice.glide_row_id] || [];
         
-        return mapGlInvoiceToInvoice(invoice, accountName, lineItems, payments);
+        // Pre-process the invoice data for mapping
+        const enrichedInvoice = {
+          ...invoice,
+          accountName,
+          lineItems,
+          payments
+        };
+        
+        return mapGlInvoiceToInvoice(enrichedInvoice);
       });
       
       setInvoices(mappedInvoices);
@@ -210,13 +217,15 @@ export function useInvoices() {
       
       if (paymentsError) throw paymentsError;
       
-      // Map to domain object
-      return mapGlInvoiceToInvoice(
-        invoice as GlInvoice, 
-        account?.account_name || 'Unknown Account', 
-        enhancedLineItems as GlInvoiceLine[] || [], 
-        payments as GlCustomerPayment[] || []
-      );
+      // Pre-process the invoice data for mapping
+      const enrichedInvoice = {
+        ...invoice,
+        accountName: account?.account_name || 'Unknown Account',
+        lineItems: enhancedLineItems as GlInvoiceLine[] || [],
+        payments: payments as GlCustomerPayment[] || []
+      };
+      
+      return mapGlInvoiceToInvoice(enrichedInvoice);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoice';
       toast({
@@ -295,7 +304,15 @@ export function useInvoices() {
         const lineItems = lineItemsByInvoice[invoice.glide_row_id] || [];
         const payments = paymentsByInvoice[invoice.glide_row_id] || [];
         
-        return mapGlInvoiceToInvoice(invoice, account.account_name, lineItems, payments);
+        // Pre-process the invoice data for mapping
+        const enrichedInvoice = {
+          ...invoice,
+          accountName: account.account_name,
+          lineItems,
+          payments
+        };
+        
+        return mapGlInvoiceToInvoice(enrichedInvoice);
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices for account';

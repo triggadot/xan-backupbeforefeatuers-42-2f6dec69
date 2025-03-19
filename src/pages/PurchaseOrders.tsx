@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RefreshCw, ShoppingCart } from 'lucide-react';
@@ -8,6 +7,7 @@ import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { useAccounts } from '@/hooks/useAccounts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PurchaseOrder } from '../types/purchaseOrder';
 
 const PurchaseOrders: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,13 +36,13 @@ const PurchaseOrders: React.FC = () => {
 
   // Apply filters
   const filteredPurchaseOrders = purchaseOrders.filter(po => {
-    const matchesSearch = 
+    const matchesSearch = searchTerm === '' || 
       po.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       po.accountName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = !selectedStatus || po.status === selectedStatus;
     
-    const matchesAccount = !selectedAccount || po.accountId === selectedAccount;
+    const matchesAccount = !selectedAccount || po.vendorId === selectedAccount;
     
     return matchesSearch && matchesStatus && matchesAccount;
   });

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -102,7 +101,7 @@ export const ConnectionsManager: React.FC = () => {
     }
   };
 
-  const handleAddConnection = async (connection: Omit<GlConnection, 'id' | 'created_at'>) => {
+  const handleAddConnection = async (connection: Omit<GlConnection, 'id' | 'created_at'>): Promise<void> => {
     try {
       const result = await glSyncApi.createConnection(connection);
       
@@ -115,14 +114,12 @@ export const ConnectionsManager: React.FC = () => {
         // Add the new connection to the state
         setConnections(prev => [...prev, result.connection]);
         setIsAddOpen(false);
-        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
-        return false;
       }
     } catch (error) {
       console.error('Error adding connection:', error);
@@ -131,11 +128,10 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to add connection',
         variant: 'destructive',
       });
-      return false;
     }
   };
 
-  const handleUpdateConnection = async (id: string, updates: Partial<GlConnection>) => {
+  const handleUpdateConnection = async (id: string, updates: Partial<GlConnection>): Promise<void> => {
     try {
       const result = await glSyncApi.updateConnection(id, updates);
       
@@ -151,14 +147,12 @@ export const ConnectionsManager: React.FC = () => {
         );
         setIsEditOpen(false);
         setSelectedConnection(null);
-        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
-        return false;
       }
     } catch (error) {
       console.error('Error updating connection:', error);
@@ -167,11 +161,10 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to update connection',
         variant: 'destructive',
       });
-      return false;
     }
   };
 
-  const handleDeleteConnection = async (id: string) => {
+  const handleDeleteConnection = async (id: string): Promise<void> => {
     try {
       const result = await glSyncApi.deleteConnection(id);
       
@@ -185,14 +178,12 @@ export const ConnectionsManager: React.FC = () => {
         setConnections(prev => prev.filter(conn => conn.id !== id));
         setIsDeleteOpen(false);
         setSelectedConnection(null);
-        return true;
       } else {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         });
-        return false;
       }
     } catch (error) {
       console.error('Error deleting connection:', error);
@@ -201,7 +192,6 @@ export const ConnectionsManager: React.FC = () => {
         description: 'Failed to delete connection',
         variant: 'destructive',
       });
-      return false;
     }
   };
 
