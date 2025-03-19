@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { testGlideConnection, getGlideTableColumns, fetchGlideTableData, updateGlideData } from '../shared/glide-api.ts'
 
@@ -119,17 +118,23 @@ Deno.serve(async (req) => {
       }
       
       // Find mapping ID for gl_accounts table
-      const { data: mapping, error: mappingError } = await supabase
+      const { data: mappings, error: mappingError } = await supabase
         .from('gl_mappings')
         .select('id')
         .eq('supabase_table', 'gl_accounts')
-        .single();
+        .order('created_at', { ascending: false });
       
-      if (mappingError || !mapping) {
+      if (mappingError) {
+        throw new Error('Error finding mapping for accounts table: ' + mappingError.message);
+      }
+      
+      if (!mappings || mappings.length === 0) {
         throw new Error('No mapping found for accounts table');
       }
       
-      return await syncData(supabase, connectionId, mapping.id);
+      // Use the most recently created mapping
+      const mappingId = mappings[0].id;
+      return await syncData(supabase, connectionId, mappingId);
     }
     else {
       throw new Error(`Unknown action: ${action}`);
@@ -160,7 +165,7 @@ async function getGlideColumnMappings(supabase, connectionId: string, tableId: s
       .from('gl_connections')
       .select('*')
       .eq('id', connectionId)
-      .single();
+      .maybeSingle();
     
     if (connectionError) {
       throw connectionError;
@@ -209,8 +214,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       status: 'started',
       message: 'Sync started'
     })
-    .select()
-    .single();
+    .select();
   
   if (logError) {
     console.error('Error creating sync log:', logError);
@@ -226,7 +230,21 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
     );
   }
   
-  const logId = logEntry.id;
+  if (!logEntry || logEntry.length === 0) {
+    console.error('No log entry was created');
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Failed to create sync log entry' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+  }
+  
+  const logId = logEntry[0].id;
   console.log(`Created sync log with ID: ${logId}`);
   
   try {
@@ -238,7 +256,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         .from('gl_connections')
         .select('*')
         .eq('id', connectionId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('Connection not found');
@@ -250,7 +268,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         .from('gl_mappings')
         .select('connection_id')
         .eq('id', mappingId)
-        .single();
+        .maybeSingle();
       
       if (mappingError) throw mappingError;
       if (!mapping) throw new Error('Mapping not found');
@@ -259,7 +277,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         .from('gl_connections')
         .select('*')
         .eq('id', mapping.connection_id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('Connection not found');
@@ -273,7 +291,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       .from('gl_mappings')
       .select('*')
       .eq('id', mappingId)
-      .single();
+      .maybeSingle();
     
     if (mappingError) {
       throw mappingError;
@@ -297,7 +315,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       connection.api_key, 
       connection.app_id, 
       mapping.glide_table,
-      1000
+      10000
     );
     
     if (!glideRows || glideRows.length === 0) {

@@ -1,3 +1,14 @@
+interface GlideColumn {
+  name: string;
+  type?: string;
+}
+
+interface GlideConnection {
+  id: string;
+  api_key: string;
+  app_id: string;
+  status?: string;
+}
 
 export async function getGlideTableColumns(apiKey: string, appId: string, tableId: string) {
   console.log(`Getting columns for Glide table: ${tableId}`);
@@ -34,11 +45,11 @@ export async function getGlideTableColumns(apiKey: string, appId: string, tableI
       return [];
     }
     
-    // Format columns for display
-    const columns = Object.entries(data[0].columns).map(([id, info]: [string, any]) => ({
+    // Format columns for display with type assertion
+    const columns = Object.entries(data[0].columns).map(([id, info]) => ({
       id,
-      name: info.name,
-      type: info.type || 'string'
+      name: (info as GlideColumn).name,
+      type: (info as GlideColumn).type || 'string'
     }));
     
     return columns;
@@ -48,14 +59,22 @@ export async function getGlideTableColumns(apiKey: string, appId: string, tableI
   }
 }
 
-export async function testGlideConnection(supabase: any, connectionId: string) {
+export async function testGlideConnection(
+  supabase: { 
+    from: (table: string) => { 
+      select: (columns: string) => any;
+      update: (data: Record<string, unknown>) => any;
+    } 
+  }, 
+  connectionId: string
+) {
   try {
     // Fetch connection details
     const { data: connection, error: connectionError } = await supabase
       .from('gl_connections')
       .select('*')
       .eq('id', connectionId)
-      .single();
+      .maybeSingle();
     
     if (connectionError) throw connectionError;
     
@@ -129,7 +148,7 @@ export async function testGlideConnection(supabase: any, connectionId: string) {
   }
 }
 
-export async function fetchGlideTableData(apiKey: string, appId: string, tableId: string, limit: number = 1000) {
+export async function fetchGlideTableData(apiKey: string, appId: string, tableId: string, limit: number = 10000) {
   console.log(`Fetching data from Glide table: ${tableId}, limit: ${limit}`);
   
   try {
@@ -172,34 +191,46 @@ export async function fetchGlideTableData(apiKey: string, appId: string, tableId
   }
 }
 
-export async function updateGlideData(apiKey: string, appId: string, tableId: string, rows: any[]) {
+export async function updateGlideData(apiKey: string, appId: string, tableId: string, rows: Array<object>) {
   console.log(`Updating data in Glide table: ${tableId}, rows count: ${rows.length}`);
   
   try {
-    const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: appId,
-        mutations: [
-          { 
-            tableName: tableId,
-            rows: rows
-          }
-        ]
-      })
-    });
+    // Implement batching for mutations (Glide has a limit of 500 mutations per request)
+    const batchSize = 500;
+    const results: any[] = [];
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
+    // Split rows into batches of batchSize
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batchRows = rows.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i / batchSize) + 1} with ${batchRows.length} rows`);
+      
+      const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appID: appId,
+          mutations: [
+            { 
+              tableName: tableId,
+              rows: batchRows
+            }
+          ]
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      results.push(data);
     }
     
-    const data = await response.json();
-    return data;
+    return results.length === 1 ? results[0] : results;
   } catch (error) {
     console.error('Error updating Glide data:', error);
     throw error;
