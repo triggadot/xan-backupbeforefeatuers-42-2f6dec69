@@ -9,9 +9,12 @@ export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
 
-  const fetchAccounts = useCallback(async () => {
+  const fetchAccounts = useCallback(async (forceRefresh = false) => {
+    if (accounts.length > 0 && !forceRefresh) return accounts;
+    
     setIsLoading(true);
     setError(null);
     
@@ -39,7 +42,7 @@ export function useAccounts() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [accounts.length, toast]);
 
   const getAccount = useCallback(async (id: string) => {
     try {
@@ -65,13 +68,17 @@ export function useAccounts() {
 
   const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
+      // Generate a unique Glide row ID with a prefix and timestamp
+      const glideRowId = `A-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
       const { data, error } = await supabase
         .from('gl_accounts')
         .insert({
           account_name: accountData.name,
           client_type: accountData.type,
           email_of_who_added: accountData.email,
-          glide_row_id: 'A-' + Date.now(), // Generate a temporary ID for Glide sync
+          glide_row_id: glideRowId, // Use the generated ID for Glide sync
+          accounts_uid: accountData.accountUid || `ACC${Date.now().toString().slice(-6)}` // Generate a simple account UID if not provided
         })
         .select()
         .single();
@@ -105,6 +112,8 @@ export function useAccounts() {
       if (accountData.name) updateData.account_name = accountData.name;
       if (accountData.type) updateData.client_type = accountData.type;
       if (accountData.email) updateData.email_of_who_added = accountData.email;
+      if (accountData.accountUid) updateData.accounts_uid = accountData.accountUid;
+      if (accountData.photo) updateData.photo = accountData.photo;
       
       const { data, error } = await supabase
         .from('gl_accounts')
@@ -165,19 +174,76 @@ export function useAccounts() {
     }
   }, [toast]);
 
+  const syncAccounts = useCallback(async (mappingId: string) => {
+    setIsSyncing(true);
+    
+    try {
+      // Call the sync edge function
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'syncData',
+          mappingId,
+        },
+      });
+      
+      if (error) throw error;
+      
+      // Refresh accounts after sync
+      await fetchAccounts(true);
+      
+      toast({
+        title: 'Sync Complete',
+        description: `Synced ${data.recordsProcessed || 0} accounts successfully.`,
+      });
+      
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sync accounts';
+      toast({
+        title: 'Sync Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [fetchAccounts, toast]);
+
   // Fetch accounts on component mount
   useEffect(() => {
     fetchAccounts();
+    
+    // Set up a realtime subscription for account changes
+    const channel = supabase
+      .channel('gl-accounts-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'gl_accounts' 
+        }, 
+        () => {
+          fetchAccounts(true);
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchAccounts]);
 
   return {
     accounts,
     isLoading,
+    isSyncing,
     error,
     fetchAccounts,
     getAccount,
     addAccount,
     updateAccount,
-    deleteAccount
+    deleteAccount,
+    syncAccounts
   };
 }

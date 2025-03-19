@@ -1,5 +1,6 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
-import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
+import { testGlideConnection, getGlideTableColumns, fetchGlideTableData, updateGlideData } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,11 +107,29 @@ Deno.serve(async (req) => {
       return await getGlideColumnMappings(supabase, connectionId, tableId);
     }
     else if (action === 'syncData') {
-      if (!connectionId || !mappingId) {
-        throw new Error('Connection ID and Mapping ID are required');
+      if (!connectionId && !mappingId) {
+        throw new Error('Either Connection ID or Mapping ID is required');
       }
       
       return await syncData(supabase, connectionId, mappingId);
+    }
+    else if (action === 'syncAccounts') {
+      if (!connectionId) {
+        throw new Error('Connection ID is required');
+      }
+      
+      // Find mapping ID for gl_accounts table
+      const { data: mapping, error: mappingError } = await supabase
+        .from('gl_mappings')
+        .select('id')
+        .eq('supabase_table', 'gl_accounts')
+        .single();
+      
+      if (mappingError || !mapping) {
+        throw new Error('No mapping found for accounts table');
+      }
+      
+      return await syncData(supabase, connectionId, mapping.id);
     }
     else {
       throw new Error(`Unknown action: ${action}`);
@@ -212,18 +231,41 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
   
   try {
     // Get connection details
-    const { data: connection, error: connectionError } = await supabase
-      .from('gl_connections')
-      .select('*')
-      .eq('id', connectionId)
-      .single();
+    let connection: GlConnection;
     
-    if (connectionError) {
-      throw connectionError;
-    }
-    
-    if (!connection) {
-      throw new Error('Connection not found');
+    if (connectionId) {
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', connectionId)
+        .single();
+      
+      if (error) throw error;
+      if (!data) throw new Error('Connection not found');
+      
+      connection = data;
+    } else {
+      // If connectionId not provided, get it from the mapping
+      const { data: mapping, error: mappingError } = await supabase
+        .from('gl_mappings')
+        .select('connection_id')
+        .eq('id', mappingId)
+        .single();
+      
+      if (mappingError) throw mappingError;
+      if (!mapping) throw new Error('Mapping not found');
+      
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', mapping.connection_id)
+        .single();
+      
+      if (error) throw error;
+      if (!data) throw new Error('Connection not found');
+      
+      connection = data;
+      connectionId = connection.id;
     }
     
     // Get mapping details
@@ -251,33 +293,35 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       .eq('id', logId);
     
     // Fetch data from Glide
-    const glideResponse = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: connection.app_id,
-        queries: [
-          { 
-            tableName: mapping.glide_table,
-            limit: 1000  // Just get a batch for this demo
-          }
-        ]
-      })
-    });
+    const { rows: glideRows, columns: glideColumns } = await fetchGlideTableData(
+      connection.api_key, 
+      connection.app_id, 
+      mapping.glide_table,
+      1000
+    );
     
-    if (!glideResponse.ok) {
-      const errorText = await glideResponse.text();
-      throw new Error(`Glide API returned: ${glideResponse.status} - ${errorText}`);
-    }
-    
-    const glideData = await glideResponse.json();
-    const tableData = glideData[0];
-    
-    if (!tableData || !tableData.rows) {
-      throw new Error('No data returned from Glide API');
+    if (!glideRows || glideRows.length === 0) {
+      await supabase
+        .from('gl_sync_logs')
+        .update({
+          status: 'completed',
+          message: 'No data found in Glide',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', logId);
+        
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          recordsProcessed: 0,
+          failedRecords: 0,
+          message: 'No data found in Glide'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
     }
     
     // Update log with progress
@@ -285,7 +329,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       .from('gl_sync_logs')
       .update({
         status: 'processing',
-        message: `Processing ${tableData.rows.length} records`,
+        message: `Processing ${glideRows.length} records`,
         records_processed: 0
       })
       .eq('id', logId);
@@ -295,7 +339,10 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
     const transformedRows = [];
     const errors = [];
     
-    for (const glideRow of tableData.rows) {
+    // Special handling for the accounts table to ensure required fields
+    const isAccountsTable = mapping.supabase_table === 'gl_accounts';
+    
+    for (const glideRow of glideRows) {
       try {
         const supabaseRow = {};
         
@@ -311,6 +358,25 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
           const dataType = mappingInfo.data_type;
           
           supabaseRow[supabaseColumnName] = transformValue(glideValue, dataType);
+        }
+        
+        // Special handling for accounts table
+        if (isAccountsTable) {
+          // Generate an accounts_uid if not present
+          if (!supabaseRow.accounts_uid) {
+            supabaseRow.accounts_uid = `ACC${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+          }
+          
+          // Ensure client_type is valid
+          if (supabaseRow.client_type) {
+            if (!['Customer', 'Vendor', 'Customer & Vendor'].includes(supabaseRow.client_type)) {
+              // Convert old values to new format
+              supabaseRow.client_type = supabaseRow.client_type === 'customer' ? 'Customer' :
+                                         supabaseRow.client_type === 'vendor' ? 'Vendor' :
+                                         supabaseRow.client_type === 'customer and vendor' ? 'Customer & Vendor' :
+                                         'Customer'; // Default to Customer if unknown
+            }
+          }
         }
         
         transformedRows.push(supabaseRow);
@@ -334,7 +400,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       }
     }
     
-    console.log(`Transformed ${transformedRows.length} rows`);
+    console.log(`Transformed ${transformedRows.length} rows for table ${mapping.supabase_table}`);
     
     // Insert/update the data in Supabase (upsert)
     if (transformedRows.length > 0) {

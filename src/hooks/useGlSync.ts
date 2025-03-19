@@ -1,8 +1,9 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { glSyncApi } from '@/services/glsync';
 import { GlideTable, ProductSyncResult } from '@/types/glsync';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useGlSync() {
   const { toast } = useToast();
@@ -41,11 +42,14 @@ export function useGlSync() {
     }
   };
 
-  const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+  const syncData = useCallback(async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Log the start of sync for monitoring
+      console.log(`Starting sync for mapping ID: ${mappingId}, connection ID: ${connectionId}`);
+      
       const result = await glSyncApi.syncData(connectionId, mappingId);
       
       if (!result.success) {
@@ -55,6 +59,11 @@ export function useGlSync() {
           title: 'Sync Error',
           description: errorMessage,
           variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Sync Complete',
+          description: `Successfully processed ${result.recordsProcessed} records with ${result.failedRecords} failures.`,
         });
       }
 
@@ -81,25 +90,65 @@ export function useGlSync() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  const getAccountsMappingId = useCallback(async (): Promise<string | null> => {
+    try {
+      // Find the mapping for gl_accounts table
+      const { data, error } = await supabase
+        .from('gl_mappings')
+        .select('id')
+        .eq('supabase_table', 'gl_accounts')
+        .single();
+      
+      if (error) {
+        console.error('Error fetching accounts mapping:', error);
+        return null;
+      }
+      
+      return data?.id || null;
+    } catch (error) {
+      console.error('Error getting accounts mapping ID:', error);
+      return null;
+    }
+  }, []);
+
+  const syncAccounts = useCallback(async (connectionId: string): Promise<ProductSyncResult> => {
+    const mappingId = await getAccountsMappingId();
+    
+    if (!mappingId) {
+      const errorMsg = 'No mapping found for accounts table';
+      toast({
+        title: 'Sync Error',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      return {
+        success: false,
+        error: errorMsg,
+        recordsProcessed: 0,
+        failedRecords: 0
+      };
+    }
+    
+    return syncData(connectionId, mappingId);
+  }, [getAccountsMappingId, syncData, toast]);
 
   const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Use syncData action instead of retryFailedSync since that's not a valid action type
-      const { data, error } = await glSyncApi.callSyncFunction({
-        action: "syncData",  // Changed from "retryFailedSync" to "syncData"
-        connectionId,
-        mappingId,
-      });
-
-      if (error) throw new Error(error.message);
+      // Use syncData action instead of retryFailedSync
+      const result = await syncData(connectionId, mappingId);
+      
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       
       toast({
-        title: 'Retry initiated',
-        description: 'Retry of failed synchronization has been initiated.',
+        title: 'Retry successful',
+        description: `Processed ${result.recordsProcessed} records during retry.`,
       });
       
       return true;
@@ -122,7 +171,9 @@ export function useGlSync() {
     glideTables,
     fetchGlideTables,
     syncData,
+    syncAccounts,
     retryFailedSync,
+    getAccountsMappingId,
     error
   };
 }

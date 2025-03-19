@@ -49,14 +49,63 @@ export const createAccountsMapping = (
   connectionId: string,
   glideTableId: string,
   glideTableDisplayName: string
-) => {
+): Partial<GlMapping> => {
   return {
     connection_id: connectionId,
-    glide_table: glideTableId, // "native-table-f8P9wLYyZnX4DJMLC1fS" based on the API example
+    glide_table: glideTableId,
     glide_table_display_name: glideTableDisplayName || 'Accounts',
     supabase_table: 'gl_accounts',
     column_mappings: getAccountsColumnMappings(),
     sync_direction: 'to_supabase' as const,
     enabled: true
   };
+};
+
+// Function to validate an accounts map
+export const validateAccountsMapping = (mapping: any): { isValid: boolean, message: string } => {
+  if (!mapping) {
+    return { isValid: false, message: 'No mapping provided' };
+  }
+  
+  // Check required fields
+  if (!mapping.connection_id || !mapping.glide_table || !mapping.supabase_table) {
+    return { isValid: false, message: 'Missing required fields in mapping' };
+  }
+  
+  // Check that supabase_table is gl_accounts
+  if (mapping.supabase_table !== 'gl_accounts') {
+    return { 
+      isValid: false, 
+      message: `Expected supabase_table to be 'gl_accounts', found '${mapping.supabase_table}'` 
+    };
+  }
+  
+  // Check required column mappings
+  const columnMappings = mapping.column_mappings || {};
+  const requiredGlideFields = ['$rowID'];
+  
+  for (const field of requiredGlideFields) {
+    if (!Object.keys(columnMappings).includes(field)) {
+      return { 
+        isValid: false, 
+        message: `Missing required Glide field mapping: ${field}` 
+      };
+    }
+  }
+  
+  // Check required Supabase columns
+  const requiredSupabaseColumns = ['glide_row_id'];
+  const mappedSupabaseColumns = Object.values(columnMappings)
+    .map((mapping: any) => mapping.supabase_column_name);
+  
+  for (const column of requiredSupabaseColumns) {
+    if (!mappedSupabaseColumns.includes(column)) {
+      return { 
+        isValid: false, 
+        message: `Missing required Supabase column mapping: ${column}` 
+      };
+    }
+  }
+  
+  return { isValid: true, message: 'Mapping is valid' };
 };
