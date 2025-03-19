@@ -1,3 +1,4 @@
+
 import { GlMapping, GlColumnMapping } from '@/types/glsync';
 import { Mapping } from '@/types/syncLog';
 
@@ -11,9 +12,11 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
   const convertedColumnMappings: Record<string, GlColumnMapping> = {};
   
   // Handle the case where column_mappings might be coming from a JSON field in Supabase
-  const columnMappings = mapping.column_mappings as any;
+  const columnMappings = typeof mapping.column_mappings === 'string' 
+    ? JSON.parse(mapping.column_mappings) 
+    : mapping.column_mappings;
   
-  if (columnMappings) {
+  if (columnMappings && typeof columnMappings === 'object') {
     Object.entries(columnMappings).forEach(([key, value]) => {
       // Ensure we have a proper object with the right properties
       const columnMapping = value as any;
@@ -38,6 +41,7 @@ export function convertToGlMapping(mapping: Mapping): GlMapping {
       };
     });
   } else {
+    console.warn('column_mappings is not an object, creating default mapping');
     // Add default mapping for $rowID if no mappings exist
     convertedColumnMappings['$rowID'] = {
       glide_column_name: '$rowID',

@@ -63,6 +63,7 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
     
     setIsLoading(true);
     try {
+      console.log(`Fetching mapping details for ID: ${mappingId}`);
       const { data, error } = await supabase
         .from('gl_mappings')
         .select('*, gl_connections(*)')
@@ -71,10 +72,28 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
       
       if (error) throw error;
       
+      console.log('Mapping data:', data);
+      
+      // Handle potential JSON string format
+      let columnMappings = data.column_mappings;
+      if (typeof columnMappings === 'string') {
+        try {
+          columnMappings = JSON.parse(columnMappings);
+        } catch (e) {
+          console.error('Error parsing column_mappings:', e);
+          toast({
+            title: 'Error',
+            description: 'Failed to parse column mappings data',
+            variant: 'destructive',
+          });
+          columnMappings = {};
+        }
+      }
+      
       // Convert the JSON data to the proper GlMapping type
       const mappingData = {
         ...data,
-        column_mappings: data.column_mappings as Record<string, {
+        column_mappings: columnMappings as Record<string, {
           glide_column_name: string;
           supabase_column_name: string;
           data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
@@ -349,7 +368,10 @@ const MappingDetails = ({ mappingId, onBack }: MappingDetailsProps) => {
         </TabsContent>
         
         <TabsContent value="column-mappings" className="pt-4">
-          <ColumnMappingsView mapping={mapping} />
+          <ColumnMappingsView 
+            mapping={mapping} 
+            error={mapping?.column_mappings ? undefined : "Column mappings data is not available or invalid"} 
+          />
         </TabsContent>
         
         <TabsContent value="table-schema" className="pt-4">

@@ -9,21 +9,45 @@ export function useProductMapping(mappingId: string) {
 
   const { 
     data: mapping, 
-    isLoading: isMappingLoading, 
+    isLoading: isMappingLoading,
+    error: mappingError,
     refetch 
   } = useQuery({
     queryKey: ['glsync-mapping', mappingId],
     queryFn: async () => {
+      console.log(`Fetching mapping with ID: ${mappingId}`);
       const { data, error } = await supabase
         .from('gl_mappings')
         .select('*')
         .eq('id', mappingId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching mapping:', error);
+        throw error;
+      }
+      
+      if (!data || !data.column_mappings) {
+        console.warn('Missing column_mappings in data:', data);
+        throw new Error('Column mappings data not available');
+      }
+      
+      console.log('Raw mapping data:', data);
+      
+      // Ensure column_mappings is properly parsed if it's a string
+      let parsedColumnMappings = data.column_mappings;
+      if (typeof data.column_mappings === 'string') {
+        try {
+          parsedColumnMappings = JSON.parse(data.column_mappings);
+        } catch (e) {
+          console.error('Error parsing column_mappings:', e);
+          throw new Error('Invalid column mappings format');
+        }
+      }
+      
       return {
         ...data,
-        column_mappings: data.column_mappings as unknown as Record<string, { 
+        column_mappings: parsedColumnMappings as Record<string, { 
           glide_column_name: string;
           supabase_column_name: string;
           data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
@@ -45,7 +69,8 @@ export function useProductMapping(mappingId: string) {
 
   const { 
     data: connection, 
-    isLoading: isConnectionLoading 
+    isLoading: isConnectionLoading,
+    error: connectionError
   } = useQuery({
     queryKey: ['glsync-connection', mapping?.connection_id],
     queryFn: async () => {
@@ -75,6 +100,7 @@ export function useProductMapping(mappingId: string) {
     mapping,
     connection,
     isLoading: isMappingLoading || isConnectionLoading,
+    error: mappingError ? (mappingError as Error).message : connectionError ? (connectionError as Error).message : undefined,
     refetch
   };
 }
