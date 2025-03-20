@@ -4,7 +4,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { VisuallyHidden } from "./visually-hidden"
 
 const Dialog = DialogPrimitive.Root
 
@@ -21,7 +20,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -29,14 +28,9 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-interface DialogContentProps 
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
-  children: React.ReactNode;
-}
-
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  DialogContentProps
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
   // Check if children contain DialogTitle
   let hasDialogTitle = false
@@ -45,22 +39,25 @@ const DialogContent = React.forwardRef<
   const childrenArray = React.Children.toArray(children)
   
   // Check direct children
-  childrenArray.forEach((child) => {
+  for (const child of childrenArray) {
     if (React.isValidElement(child) && child.type === DialogTitle) {
       hasDialogTitle = true
+      break
     }
     
     // Check DialogHeader children
     if (React.isValidElement(child) && child.type === DialogHeader) {
       const headerChildren = React.Children.toArray(child.props.children);
-      headerChildren.forEach((headerChild) => {
+      for (const headerChild of headerChildren) {
         if (React.isValidElement(headerChild) && headerChild.type === DialogTitle) {
           hasDialogTitle = true
+          break
         }
-      })
+      }
+      if (hasDialogTitle) break
     }
-  })
-  
+  }
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -72,16 +69,13 @@ const DialogContent = React.forwardRef<
         )}
         {...props}
       >
-        {!hasDialogTitle && (
-          <VisuallyHidden>
-            <DialogTitle>Dialog</DialogTitle>
-          </VisuallyHidden>
-        )}
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {!hasDialogTitle && (
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )

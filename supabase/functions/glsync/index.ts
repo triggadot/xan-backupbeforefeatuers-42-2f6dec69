@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
@@ -350,10 +349,18 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
     }
     
     const glideData = await glideResponse.json();
+    console.log('Glide API response:', JSON.stringify(glideData, null, 2));
+    
     const tableData = glideData[0];
     
     if (!tableData || !tableData.rows) {
       throw new Error('No data returned from Glide API');
+    }
+    
+    // Log first row for debugging
+    if (tableData.rows.length > 0) {
+      console.log('First row sample:', JSON.stringify(tableData.rows[0], null, 2));
+      console.log('Column mappings:', JSON.stringify(mapping.column_mappings, null, 2));
     }
     
     // Update log with progress
@@ -373,7 +380,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
     
     for (const glideRow of tableData.rows) {
       try {
-        const supabaseRow = {};
+        const supabaseRow: Record<string, any> = {};
         
         // Always map glide_row_id
         supabaseRow.glide_row_id = glideRow.$rowID;
@@ -382,11 +389,17 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         for (const [glideColumnId, mappingInfo] of Object.entries(columnMappings)) {
           if (glideColumnId === '$rowID') continue; // Already handled
           
-          const glideValue = glideRow[glideColumnId];
-          const supabaseColumnName = mappingInfo.supabase_column_name;
-          const dataType = mappingInfo.data_type;
+          const { glide_column_name, supabase_column_name, data_type } = mappingInfo as any;
+          const glideValue = glideRow[glide_column_name];
           
-          supabaseRow[supabaseColumnName] = transformValue(glideValue, dataType);
+          if (glideValue !== undefined) {
+            supabaseRow[supabase_column_name] = transformValue(glideValue, data_type);
+          }
+        }
+        
+        // Debug logging for the first few rows
+        if (transformedRows.length < 3) {
+          console.log(`Transformed row ${transformedRows.length}:`, JSON.stringify(supabaseRow, null, 2));
         }
         
         transformedRows.push(supabaseRow);

@@ -38,7 +38,6 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
     <ProductsTable 
       products={products} 
       onEdit={onEdit} 
-      onViewDetails={onViewDetails} 
       deleteProduct={handleDelete}
       onAdd={onAdd}
     />

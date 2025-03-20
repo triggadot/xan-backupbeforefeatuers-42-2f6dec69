@@ -90,7 +90,9 @@ export const transformGlideToSupabase = (
       return;
     }
     
+    // Get value from glide record using the glide_column_name
     const value = glideRecord[glide_column_name];
+    
     if (value !== undefined) {
       result[supabase_column_name] = convertValue(value, data_type);
     }
