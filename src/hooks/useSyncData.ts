@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlMapping, ProductSyncResult } from '@/types/glsync';
+import { ProductSyncResult } from '@/types/glsync';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseSyncDataResult {
-  syncData: (connectionId: string, mappingId: string) => Promise<ProductSyncResult>;
+  syncData: (connectionId: string, mappingId?: string) => Promise<ProductSyncResult>;
   isLoading: boolean;
   error: string | null;
 }
@@ -15,7 +15,7 @@ export function useSyncData(): UseSyncDataResult {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+  const syncData = async (connectionId: string, mappingId?: string): Promise<ProductSyncResult> => {
     setIsLoading(true);
     setError(null);
 
