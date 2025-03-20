@@ -31,13 +31,23 @@ export function useBusinessOperations() {
       // Fetch account metrics using mv_account_details for accurate customer/vendor counts
       const { data: accountMetrics, error: accountError } = await supabase
         .from('gl_accounts')
-        .select('id, is_customer, is_vendor');
+        .select('id, client_type');
         
       if (accountError) throw accountError;
       
-      // Count customers and vendors accurately using is_customer and is_vendor flags
-      const totalCustomers = accountMetrics?.filter(account => account.is_customer).length || 0;
-      const totalVendors = accountMetrics?.filter(account => account.is_vendor).length || 0;
+      // Count customers and vendors accurately based on client_type field
+      let totalCustomers = 0;
+      let totalVendors = 0;
+      
+      if (accountMetrics) {
+        accountMetrics.forEach(account => {
+          const { is_customer, is_vendor } = extractAccountFlags(
+            account.client_type as 'Customer' | 'Vendor' | 'Customer & Vendor'
+          );
+          if (is_customer) totalCustomers++;
+          if (is_vendor) totalVendors++;
+        });
+      }
       
       // Fetch invoice metrics
       const { data: invoiceMetrics, error: invoiceError } = await supabase

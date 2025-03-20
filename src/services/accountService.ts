@@ -15,7 +15,7 @@ export const fetchAllAccounts = async () => {
   if (error) throw error;
   
   return (data || []).map((account) => 
-    mapViewAccountToAccount(account as AccountFromView)
+    mapViewAccountToAccount(account as unknown as AccountFromView)
   );
 };
 
