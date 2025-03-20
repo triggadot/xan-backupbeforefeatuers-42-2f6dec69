@@ -1,31 +1,48 @@
+
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Card, CardContent } from '@/components/ui/card';
 import { GlSyncStats } from '@/types/glsync';
-import { formatDateBrief } from '@/utils/date-utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface SyncMetricsCardProps {
   syncStats: GlSyncStats[];
   isLoading: boolean;
 }
 
-const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
-  // Prepare chart data
-  const chartData = syncStats.map(stat => ({
-    ...stat,
-    date: formatDateBrief(stat.sync_date),
-  })).reverse();
+const SyncMetricsCard: React.FC<SyncMetricsCardProps> = ({ syncStats, isLoading }) => {
+  const formattedStats = syncStats.map(stat => ({
+    date: new Date(stat.sync_date).toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric' 
+    }),
+    successful: stat.successful_syncs,
+    failed: stat.failed_syncs,
+    records: stat.total_records_processed
+  })).reverse(); // Show most recent last
+
+  // Calculate totals
+  const totals = syncStats.reduce((acc, stat) => {
+    acc.totalSyncs += stat.syncs;
+    acc.totalSuccessful += stat.successful_syncs;
+    acc.totalFailed += stat.failed_syncs;
+    acc.totalRecords += stat.total_records_processed;
+    return acc;
+  }, { 
+    totalSyncs: 0, 
+    totalSuccessful: 0, 
+    totalFailed: 0, 
+    totalRecords: 0 
+  });
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Sync Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-[200px] w-full" />
+        <CardContent className="p-6">
+          <Skeleton className="h-[200px] w-full mb-4" />
           <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
@@ -34,72 +51,51 @@ const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
     );
   }
 
-  // Calculate totals from the stats
-  const totalSyncs = syncStats.reduce((sum, stat) => sum + stat.syncs, 0);
-  const totalRecords = syncStats.reduce((sum, stat) => sum + stat.total_records_processed, 0);
-  const successRate = totalSyncs ? 
-    Math.round((syncStats.reduce((sum, stat) => sum + stat.successful_syncs, 0) / totalSyncs) * 100) : 
-    0;
-
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Sync Activity</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorSyncs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorRecords" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Area 
-                type="monotone" 
-                dataKey="syncs" 
-                stroke="#8884d8" 
-                fillOpacity={1} 
-                fill="url(#colorSyncs)" 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="total_records_processed" 
-                stroke="#82ca9d" 
-                fillOpacity={1} 
-                fill="url(#colorRecords)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
-            <div className="text-sm text-muted-foreground">Total Syncs</div>
-            <div className="text-2xl font-semibold mt-1">{totalSyncs}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Success Rate: {successRate}%
-            </div>
+      <CardContent className="p-6">
+        {formattedStats.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-muted-foreground">No sync statistics available</p>
           </div>
-          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
-            <div className="text-sm text-muted-foreground">Records Processed</div>
-            <div className="text-2xl font-semibold mt-1">{totalRecords.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Across {syncStats.length} days
+        ) : (
+          <>
+            <div className="h-[200px] mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={formattedStats}>
+                  <XAxis dataKey="date" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="successful" name="Successful" fill="#10b981" />
+                  <Bar dataKey="failed" name="Failed" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-        </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-md">
+                <div className="text-2xl font-bold">{totals.totalSyncs}</div>
+                <div className="text-sm text-muted-foreground">Total Syncs</div>
+              </div>
+              
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-md">
+                <div className="text-2xl font-bold">{totals.totalRecords}</div>
+                <div className="text-sm text-muted-foreground">Records Processed</div>
+              </div>
+              
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-md">
+                <div className="text-2xl font-bold text-green-500">{totals.totalSuccessful}</div>
+                <div className="text-sm text-muted-foreground">Successful Syncs</div>
+              </div>
+              
+              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-md">
+                <div className="text-2xl font-bold text-red-500">{totals.totalFailed}</div>
+                <div className="text-sm text-muted-foreground">Failed Syncs</div>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

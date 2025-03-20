@@ -1,27 +1,50 @@
 
 import React from 'react';
-import {
-  AlertDialogContent,
-  AlertDialogHeader,
+import { 
+  AlertDialogContent, 
+  AlertDialogHeader, 
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from '@/components/ui/alert-dialog';
+import { Loader2 } from 'lucide-react';
 
 interface MappingDeleteDialogProps {
   isDeleting: boolean;
+  onCancel?: () => void;
+  onConfirm?: () => void;
 }
 
-export const MappingDeleteDialog: React.FC<MappingDeleteDialogProps> = ({ 
-  isDeleting 
-}) => {
+export function MappingDeleteDialog({ 
+  isDeleting, 
+  onCancel, 
+  onConfirm 
+}: MappingDeleteDialogProps) {
   return (
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Deleting Mapping</AlertDialogTitle>
+        <AlertDialogTitle>Delete Mapping</AlertDialogTitle>
+        <AlertDialogDescription>
+          Are you sure you want to delete this mapping? This action cannot be undone.
+        </AlertDialogDescription>
       </AlertDialogHeader>
-      <div className="flex items-center justify-center p-4">
-        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-        <span className="ml-2">Deleting...</span>
-      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel onClick={onCancel} disabled={isDeleting}>
+          Cancel
+        </AlertDialogCancel>
+        <AlertDialogAction onClick={onConfirm} disabled={isDeleting}>
+          {isDeleting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            'Delete'
+          )}
+        </AlertDialogAction>
+      </AlertDialogFooter>
     </AlertDialogContent>
   );
-};
+}

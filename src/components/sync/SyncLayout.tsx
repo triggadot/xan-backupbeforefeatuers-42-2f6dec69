@@ -27,6 +27,13 @@ const SyncLayout: React.FC = () => {
     (tab.id !== 'overview' && location.pathname.startsWith(tab.path))
   )?.id || 'overview';
 
+  const handleTabChange = (value: string) => {
+    const selectedTab = tabs.find(tab => tab.id === value);
+    if (selectedTab) {
+      navigate(selectedTab.path);
+    }
+  };
+
   return (
     <div className="container mx-auto py-3 max-w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
@@ -38,13 +45,12 @@ const SyncLayout: React.FC = () => {
         </div>
       </div>
 
-      <Tabs value={currentTab} className="space-y-4">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid grid-cols-4 max-w-2xl">
           {tabs.map(tab => (
             <TabsTrigger 
               key={tab.id} 
               value={tab.id}
-              onClick={() => navigate(tab.path)}
             >
               {tab.label}
             </TabsTrigger>

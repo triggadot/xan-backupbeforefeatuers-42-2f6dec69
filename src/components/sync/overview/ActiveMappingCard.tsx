@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,20 +16,34 @@ interface ActiveMappingCardProps {
 }
 
 export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCardProps) {
+  // Use optional chaining and nullish coalescing to safely access properties
+  const displayName = status.glide_table_display_name || status.glide_table || 'Unknown Table';
+  const appName = status.app_name || 'Unknown App';
+  const supababeTable = status.supabase_table || 'Unknown Table';
+  const currentStatus = status.current_status || 'not_synced';
+  
+  const handleSync = async () => {
+    if (status.connection_id && status.mapping_id) {
+      await onSync(status.connection_id, status.mapping_id);
+    }
+  };
+  
+  const isDisabled = isSyncing || currentStatus === 'processing' || !status.connection_id || !status.mapping_id;
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-base font-medium">
-              {status.glide_table_display_name}
+              {displayName}
             </CardTitle>
             <div className="text-sm text-muted-foreground">
-              {status.app_name} → {status.supabase_table}
+              {appName} → {supababeTable}
             </div>
           </div>
           <div className="flex items-center">
-            {getStatusBadge(status.current_status)}
+            {getStatusBadge(currentStatus)}
           </div>
         </div>
       </CardHeader>
@@ -38,10 +53,10 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Status:</span>
             <div className="flex items-center gap-1">
-              {getStatusIcon(status.current_status)}
+              {getStatusIcon(currentStatus)}
               <span>
-                {status.current_status
-                  ? status.current_status.charAt(0).toUpperCase() + status.current_status.slice(1)
+                {currentStatus
+                  ? currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)
                   : 'Not synced'}
               </span>
             </div>
@@ -57,11 +72,7 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
               Last sync: {formatTimestamp(status.last_sync_completed_at)}
             </div>
             <div className="flex space-x-2">
-              <Link to={
-                status.supabase_table === 'gl_products' 
-                  ? `/sync/products/${status.mapping_id}` 
-                  : `/sync/mappings/${status.mapping_id}`
-              }>
+              <Link to={`/sync/mappings?id=${status.mapping_id}`}>
                 <Button 
                   size="sm"
                   variant="outline"
@@ -72,8 +83,8 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
               </Link>
               <Button 
                 size="sm"
-                onClick={() => onSync(status.connection_id, status.mapping_id)}
-                disabled={isSyncing || status.current_status === 'processing'}
+                onClick={handleSync}
+                disabled={isDisabled}
               >
                 {isSyncing ? (
                   <>
@@ -93,4 +104,4 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
       </CardContent>
     </Card>
   );
-} 
+}
