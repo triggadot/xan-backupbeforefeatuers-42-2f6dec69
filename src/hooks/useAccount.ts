@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { useAccounts } from './useAccounts';
+import { useAccountsNew } from './useAccountsNew';
 import { Account } from '@/types/accountNew';
 
 export function useAccount(id: string) {
   const [account, setAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getAccount } = useAccounts();
+  const { getAccount } = useAccountsNew();
 
   useEffect(() => {
     const fetchAccount = async () => {
