@@ -1,5 +1,21 @@
 
-import { GlAccount, ProductDetails } from './index';
+export interface Estimate {
+  id: string;
+  glide_row_id: string;
+  rowid_accounts?: string;
+  accountName?: string;
+  rowid_invoices?: string;
+  status: 'draft' | 'pending' | 'converted';
+  total_amount: number;
+  total_credits: number;
+  balance: number;
+  estimate_date?: string;
+  valid_final_create_invoice_clicked?: boolean;
+  is_a_sample?: boolean;
+  glide_pdf_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface EstimateLine {
   id: string;
@@ -14,7 +30,6 @@ export interface EstimateLine {
   glide_row_id: string;
   created_at?: string;
   updated_at?: string;
-  productDetails?: ProductDetails;
 }
 
 export interface CustomerCredit {
@@ -30,26 +45,15 @@ export interface CustomerCredit {
   updated_at?: string;
 }
 
-export interface Estimate {
-  id: string;
-  glide_row_id: string;
-  rowid_accounts?: string;
-  rowid_invoices?: string;
-  status: 'draft' | 'pending' | 'converted';
-  total_amount: number;
-  total_credits: number;
-  balance: number;
-  estimate_date?: string;
-  valid_final_create_invoice_clicked?: boolean;
-  add_note?: boolean;
-  is_a_sample?: boolean;
-  glide_pdf_url?: string;
-  glide_pdf_url2?: string;
-  date_invoice_created_date?: string;
-  created_at?: string;
-  updated_at?: string;
-  accountName?: string;
-  account?: GlAccount;
-  estimateLines?: EstimateLine[];
-  credits?: CustomerCredit[];
+export interface EstimateWithDetails extends Estimate {
+  estimateLines: EstimateLine[];
+  credits: CustomerCredit[];
+}
+
+export interface EstimateFilters {
+  search?: string;
+  status?: string[];
+  accountId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }

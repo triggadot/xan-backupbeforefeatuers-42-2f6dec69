@@ -1,17 +1,17 @@
 
 import React from 'react';
-import { PurchaseOrder } from '@/types';
+import { PurchaseOrder } from '@/types/purchaseOrder';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/utils/mapping-utils';
+import { formatCurrency } from '@/utils/format-utils';
 import { ArrowRight, Calendar, FileText, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface PurchaseOrderCardProps {
   purchaseOrder: PurchaseOrder;
+  onClick: () => void;
 }
 
-const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) => {
+const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, onClick }) => {
   const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" | "success" | "warning" => {
     switch (status) {
       case 'draft':
@@ -30,6 +30,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) 
   };
 
   const formatDate = (date: Date) => {
+    if (!date) return 'No date';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -38,8 +39,8 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) 
   };
 
   return (
-    <Link to={`/purchase-orders/${purchaseOrder.id}`} className="block transition-transform hover:translate-y-[-2px]">
-      <Card className="overflow-hidden h-full hover:shadow-md transition-shadow">
+    <div onClick={onClick} className="block transition-transform hover:translate-y-[-2px]">
+      <Card className="overflow-hidden h-full hover:shadow-md transition-shadow cursor-pointer">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -53,17 +54,11 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) 
               <div className="flex gap-1 items-center text-sm text-muted-foreground">
                 <Calendar size={14} />
                 <span>{formatDate(purchaseOrder.date)}</span>
-                {purchaseOrder.dueDate && (
-                  <>
-                    <ArrowRight size={14} />
-                    <span>{formatDate(purchaseOrder.dueDate)}</span>
-                  </>
-                )}
               </div>
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground">
                 <FileText size={14} />
-                <span>{purchaseOrder.lineItems.length} items</span>
+                <span>{purchaseOrder.product_count || 0} items</span>
               </div>
               
               <div className="mt-4 flex items-center justify-between">
@@ -76,11 +71,11 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) 
                 
                 <div className="text-right">
                   <div className="font-medium">
-                    {formatCurrency(purchaseOrder.total)}
+                    {formatCurrency(purchaseOrder.total_amount)}
                   </div>
-                  {purchaseOrder.balance > 0 && purchaseOrder.amountPaid > 0 && (
+                  {purchaseOrder.total_paid > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      {formatCurrency(purchaseOrder.amountPaid)} paid
+                      {formatCurrency(purchaseOrder.total_paid)} paid
                     </div>
                   )}
                 </div>
@@ -89,7 +84,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder }) 
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 };
 

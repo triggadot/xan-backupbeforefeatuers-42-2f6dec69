@@ -1,148 +1,77 @@
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { RefreshCw, ShoppingCart } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
-import { useAccounts } from '@/hooks/useAccounts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
+import PurchaseOrderFilters from '@/components/purchase-orders/PurchaseOrderFilters';
+import { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import PurchaseOrderForm from '@/components/purchase-orders/PurchaseOrderForm';
 
-const PurchaseOrders: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { purchaseOrders, isLoading, error, fetchPurchaseOrders } = usePurchaseOrders();
-  const { accounts, fetchAccounts } = useAccounts();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedAccount, setSelectedAccount] = useState<string>('');
+const PurchaseOrders = () => {
+  const navigate = useNavigate();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterType>({});
 
-  useEffect(() => {
-    // Initialize filters from URL params
-    const accountId = searchParams.get('accountId');
-    if (accountId) {
-      setSelectedAccount(accountId);
-    }
-    
-    const status = searchParams.get('status');
-    if (status) {
-      setSelectedStatus(status);
-    }
-    
-    // Fetch data
+  const { 
+    purchaseOrders, 
+    isLoading, 
+    error, 
+    fetchPurchaseOrders,
+    createPurchaseOrder 
+  } = usePurchaseOrders(filters);
+
+  const handleCreatePurchaseOrder = async (data: any) => {
+    await createPurchaseOrder.mutateAsync(data);
+    setIsCreateDialogOpen(false);
     fetchPurchaseOrders();
-    fetchAccounts();
-  }, [searchParams, fetchPurchaseOrders, fetchAccounts]);
-
-  // Apply filters
-  const filteredPurchaseOrders = purchaseOrders.filter(po => {
-    const matchesSearch = 
-      po.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.accountName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = !selectedStatus || po.status === selectedStatus;
-    
-    const matchesAccount = !selectedAccount || po.accountId === selectedAccount;
-    
-    return matchesSearch && matchesStatus && matchesAccount;
-  });
-
-  const handleStatusChange = (value: string) => {
-    setSelectedStatus(value);
-    if (value) {
-      searchParams.set('status', value);
-    } else {
-      searchParams.delete('status');
-    }
-    setSearchParams(searchParams);
   };
 
-  const handleAccountChange = (value: string) => {
-    setSelectedAccount(value);
-    if (value) {
-      searchParams.set('accountId', value);
-    } else {
-      searchParams.delete('accountId');
-    }
-    setSearchParams(searchParams);
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedStatus('');
-    setSelectedAccount('');
-    setSearchParams({});
+  const handleViewPurchaseOrder = (id: string) => {
+    navigate(`/purchase-orders/${id}`);
   };
 
   return (
-    <div className="container py-6 max-w-7xl">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold">Purchase Orders</h1>
-        
-        <div className="flex w-full sm:w-auto gap-2">
-          <Button onClick={() => fetchPurchaseOrders()} disabled={isLoading} variant="outline" size="icon">
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          </Button>
-          
-          <Button>
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            New Purchase Order
-          </Button>
+    <div className="container py-6 space-y-6 animate-enter-bottom">
+      <Helmet>
+        <title>Purchase Orders | Billow</title>
+      </Helmet>
+
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
+          <p className="text-muted-foreground">
+            Manage vendor purchase orders and inventory
+          </p>
         </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <PlusCircle className="mr-1 h-4 w-4" /> New Purchase Order
+        </Button>
       </div>
-      
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative w-full">
-          <Input
-            placeholder="Search purchase orders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        
-        <div className="flex gap-3">
-          <Select value={selectedStatus} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-              <SelectItem value="complete">Complete</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedAccount} onValueChange={handleAccountChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by vendor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Vendors</SelectItem>
-              {accounts.map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {(selectedStatus || selectedAccount || searchTerm) && (
-            <Button variant="ghost" onClick={clearFilters}>
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      <PurchaseOrderList 
-        purchaseOrders={filteredPurchaseOrders} 
-        isLoading={isLoading} 
-        error={error} 
+
+      <PurchaseOrderFilters
+        filters={filters}
+        onFiltersChange={setFilters}
       />
+
+      <PurchaseOrderList
+        purchaseOrders={purchaseOrders}
+        isLoading={isLoading}
+        error={error}
+        onView={handleViewPurchaseOrder}
+      />
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Create New Purchase Order</DialogTitle>
+          </DialogHeader>
+          <PurchaseOrderForm onSubmit={handleCreatePurchaseOrder} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

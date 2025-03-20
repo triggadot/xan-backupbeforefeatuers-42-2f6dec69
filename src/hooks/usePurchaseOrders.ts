@@ -1,207 +1,85 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PurchaseOrder, GlPurchaseOrder, GlVendorPayment, LineItem, ProductDetails } from '@/types';
-import { mapGlPurchaseOrderToPurchaseOrder } from '@/utils/mapping-utils';
+import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment, PurchaseOrderFilters } from '@/types/purchaseOrder';
 
-// Fetch product details (reusing the same function as in other services)
-async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
-  if (!productGlideId) return null;
-  
-  const { data, error } = await supabase
-    .from('gl_products')
-    .select('*')
-    .eq('glide_row_id', productGlideId)
-    .maybeSingle();
-    
-  if (error) {
-    console.error('Error fetching product details:', error);
-    return null;
-  }
-  
-  if (!data) return null;
-  
-  return {
-    id: data.id,
-    glide_row_id: data.glide_row_id,
-    name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
-    display_name: data.display_name,
-    vendor_product_name: data.vendor_product_name,
-    new_product_name: data.new_product_name,
-    cost: data.cost,
-    total_qty_purchased: data.total_qty_purchased,
-    category: data.category,
-    product_image1: data.product_image1,
-    purchase_notes: data.purchase_notes,
-    created_at: data.created_at,
-    updated_at: data.updated_at
-  };
-}
-
-export function usePurchaseOrders() {
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function usePurchaseOrders(filters?: PurchaseOrderFilters) {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const fetchPurchaseOrders = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Fetch purchase orders
-      const { data: poData, error: poError } = await supabase
-        .from('gl_purchase_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (poError) throw poError;
-      
-      // Early return if no purchase orders
-      if (!poData || poData.length === 0) {
-        setPurchaseOrders([]);
-        return [];
-      }
-      
-      // Get all account IDs to fetch account names
-      const accountIds = [...new Set(poData.map(po => po.rowid_accounts))];
-      
-      // Fetch accounts
-      const { data: accountsData, error: accountsError } = await supabase
-        .from('gl_accounts')
-        .select('*')
-        .in('glide_row_id', accountIds);
-      
-      if (accountsError) throw accountsError;
-      
-      // Create a map of account ID to name
-      const accountMap = (accountsData || []).reduce((acc, account) => {
-        acc[account.glide_row_id] = account.account_name;
-        return acc;
-      }, {} as Record<string, string>);
-      
-      // Fetch all products for these purchase orders (assuming they're linked via gl_products)
-      const poIds = poData.map(po => po.glide_row_id);
-      const { data: productsData, error: productsError } = await supabase
-        .from('gl_products')
-        .select('*')
-        .in('rowid_purchase_orders', poIds);
-      
-      if (productsError) throw productsError;
-      
-      // Fetch all payments for these purchase orders
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('gl_vendor_payments')
-        .select('*')
-        .in('rowid_purchase_orders', poIds);
-        
-      if (paymentsError) throw paymentsError;
-      
-      // Group products and payments by purchase order ID
-      const productsByPO = (productsData || []).reduce((acc, product) => {
-        const poId = product.rowid_purchase_orders;
-        if (poId && !acc[poId]) {
-          acc[poId] = [];
-        }
-        if (poId) {
-          // Include the product itself as productDetails
-          const productDetails: ProductDetails = {
-            id: product.id,
-            glide_row_id: product.glide_row_id,
-            name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-            display_name: product.display_name,
-            vendor_product_name: product.vendor_product_name,
-            new_product_name: product.new_product_name,
-            cost: product.cost,
-            total_qty_purchased: product.total_qty_purchased,
-            category: product.category,
-            product_image1: product.product_image1,
-            purchase_notes: product.purchase_notes,
-            created_at: product.created_at,
-            updated_at: product.updated_at
-          };
-          
-          acc[poId].push({
-            id: product.id,
-            rowid_products: product.glide_row_id,
-            product_name: product.new_product_name || product.vendor_product_name,
-            quantity: product.total_qty_purchased || 1,
-            unit_price: product.cost || 0,
-            total: (product.total_qty_purchased || 1) * (product.cost || 0),
-            productDetails: productDetails
-          });
-        }
-        return acc;
-      }, {} as Record<string, any[]>);
-      
-      const paymentsByPO = (paymentsData || []).reduce((acc, payment) => {
-        if (!acc[payment.rowid_purchase_orders]) {
-          acc[payment.rowid_purchase_orders] = [];
-        }
-        acc[payment.rowid_purchase_orders].push(payment);
-        return acc;
-      }, {} as Record<string, GlVendorPayment[]>);
-      
-      // Map database objects to domain objects
-      const mappedPOs = poData.map((po: GlPurchaseOrder) => {
-        const accountName = accountMap[po.rowid_accounts] || 'Unknown Vendor';
-        const lineItems = productsByPO[po.glide_row_id] || [];
-        const payments = paymentsByPO[po.glide_row_id] || [];
-        
-        const result = mapGlPurchaseOrderToPurchaseOrder(po, accountName, lineItems, payments);
-        
-        // Add vendor payments to the result for UI purposes
-        return {
-          ...result,
-          vendorPayments: payments.map(payment => ({
-            id: payment.id,
-            date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
-            amount: Number(payment.payment_amount) || 0,
-            method: 'Payment',
-            notes: payment.vendor_purchase_note || ''
-          }))
-        };
-      });
-      
-      setPurchaseOrders(mappedPOs);
-      return mappedPOs;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchase orders';
-      setError(errorMessage);
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return [];
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  // Build query based on filters
+  const buildQuery = useCallback(() => {
+    let query = supabase
+      .from('mv_purchase_order_vendor_details')
+      .select('*')
+      .order('created_at', { ascending: false });
 
+    if (filters) {
+      if (filters.search) {
+        query = query.or(`purchase_order_uid.ilike.%${filters.search}%,account_name.ilike.%${filters.search}%`);
+      }
+
+      if (filters.status) {
+        query = query.eq('payment_status', filters.status);
+      }
+
+      if (filters.accountId) {
+        query = query.eq('id', filters.accountId);
+      }
+
+      if (filters.dateFrom) {
+        query = query.gte('po_date', filters.dateFrom.toISOString());
+      }
+
+      if (filters.dateTo) {
+        query = query.lte('po_date', filters.dateTo.toISOString());
+      }
+    }
+
+    return query;
+  }, [filters]);
+
+  // Fetch purchase orders
+  const { 
+    data: purchaseOrders = [], 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['purchaseOrders', filters],
+    queryFn: async () => {
+      const { data, error } = await buildQuery();
+      
+      if (error) throw error;
+      
+      return data.map(po => ({
+        ...po,
+        number: po.purchase_order_uid || `PO-${po.id.slice(0, 8)}`,
+        date: new Date(po.po_date || po.created_at),
+        status: po.payment_status || 'draft',
+        accountName: po.account_name || 'Unknown Vendor',
+        accountId: po.rowid_accounts,
+        lineItems: [],
+        vendorPayments: []
+      })) as PurchaseOrder[];
+    }
+  });
+
+  // Get a single purchase order with details
   const getPurchaseOrder = useCallback(async (id: string) => {
     try {
-      // Fetch the purchase order
+      // Get PO and account details
       const { data: po, error: poError } = await supabase
         .from('gl_purchase_orders')
-        .select('*')
+        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(account_name, accounts_uid)')
         .eq('id', id)
         .single();
       
       if (poError) throw poError;
-      if (!po) throw new Error('Purchase Order not found');
       
-      // Fetch the account
-      const { data: account, error: accountError } = await supabase
-        .from('gl_accounts')
-        .select('*')
-        .eq('glide_row_id', po.rowid_accounts)
-        .single();
-      
-      if (accountError) throw accountError;
-      
-      // Fetch products linked to this PO
+      // Get products for this PO
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
@@ -209,10 +87,23 @@ export function usePurchaseOrders() {
       
       if (productsError) throw productsError;
       
-      // Transform products to line items with productDetails
-      const lineItems = (products || []).map(product => {
-        // Include the product itself as productDetails
-        const productDetails: ProductDetails = {
+      // Get vendor payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_vendor_payments')
+        .select('*')
+        .eq('rowid_purchase_orders', po.glide_row_id);
+      
+      if (paymentsError) throw paymentsError;
+      
+      // Transform products to line items
+      const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
+        id: product.id,
+        rowid_products: product.glide_row_id,
+        product_name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+        quantity: product.total_qty_purchased || 1,
+        unit_price: product.cost || 0,
+        total: (product.total_qty_purchased || 1) * (product.cost || 0),
+        productDetails: {
           id: product.id,
           glide_row_id: product.glide_row_id,
           name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
@@ -226,46 +117,27 @@ export function usePurchaseOrders() {
           purchase_notes: product.purchase_notes,
           created_at: product.created_at,
           updated_at: product.updated_at
-        };
-        
-        return {
-          id: product.id,
-          rowid_products: product.glide_row_id,
-          product_name: product.new_product_name || product.vendor_product_name,
-          quantity: product.total_qty_purchased || 1,
-          unit_price: product.cost || 0,
-          total: (product.total_qty_purchased || 1) * (product.cost || 0),
-          productDetails: productDetails
-        };
-      });
+        }
+      }));
       
-      // Fetch payments
-      const { data: payments, error: paymentsError } = await supabase
-        .from('gl_vendor_payments')
-        .select('*')
-        .eq('rowid_purchase_orders', po.glide_row_id);
+      // Transform payments
+      const vendorPayments: VendorPayment[] = payments.map(payment => ({
+        id: payment.id,
+        date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
+        amount: payment.payment_amount || 0,
+        method: 'Payment',
+        notes: payment.vendor_purchase_note || ''
+      }));
       
-      if (paymentsError) throw paymentsError;
-      
-      // Map to domain object
-      const purchaseOrder = mapGlPurchaseOrderToPurchaseOrder(
-        po as GlPurchaseOrder, 
-        account?.account_name || 'Unknown Vendor', 
-        lineItems, 
-        payments as GlVendorPayment[] || []
-      );
-      
-      // Add vendor payments to the result for UI purposes
       return {
-        ...purchaseOrder,
-        vendorPayments: (payments || []).map(payment => ({
-          id: payment.id,
-          date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
-          amount: Number(payment.payment_amount) || 0,
-          method: 'Payment',
-          notes: payment.vendor_purchase_note || ''
-        }))
-      };
+        ...po,
+        accountName: po.gl_accounts?.account_name || 'Unknown Vendor',
+        number: po.purchase_order_uid || `PO-${po.id.slice(0, 8)}`,
+        date: new Date(po.po_date || po.created_at),
+        status: po.payment_status || 'draft',
+        lineItems,
+        vendorPayments
+      } as PurchaseOrder;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchase order';
       toast({
@@ -277,108 +149,403 @@ export function usePurchaseOrders() {
     }
   }, [toast]);
 
-  // Fetch purchase orders for a specific account (vendor)
-  const getPurchaseOrdersForAccount = useCallback(async (accountId: string) => {
-    try {
-      // Get the account's glide_row_id
-      const { data: account, error: accountError } = await supabase
-        .from('gl_accounts')
-        .select('*')
-        .eq('id', accountId)
+  // Create a new purchase order
+  const createPurchaseOrder = useMutation({
+    mutationFn: async (poData: Partial<PurchaseOrder>) => {
+      const glideRowId = `PO-${Date.now()}`;
+      
+      const newPo = {
+        glide_row_id: glideRowId,
+        rowid_accounts: poData.rowid_accounts,
+        po_date: poData.date ? new Date(poData.date).toISOString() : new Date().toISOString(),
+        payment_status: 'draft',
+        total_amount: 0,
+        total_paid: 0,
+        balance: 0,
+        product_count: 0
+      };
+      
+      const { data, error } = await supabase
+        .from('gl_purchase_orders')
+        .insert(newPo)
+        .select()
         .single();
       
-      if (accountError) throw accountError;
-      if (!account) throw new Error('Account not found');
-      
-      // Fetch purchase orders for this account
-      const { data: poData, error: poError } = await supabase
-        .from('gl_purchase_orders')
-        .select('*')
-        .eq('rowid_accounts', account.glide_row_id)
-        .order('created_at', { ascending: false });
-      
-      if (poError) throw poError;
-      
-      // Early return if no purchase orders
-      if (!poData || poData.length === 0) {
-        return [];
-      }
-      
-      // Get all PO IDs to fetch products and payments
-      const poIds = poData.map(po => po.glide_row_id);
-      
-      // Fetch all products for these purchase orders
-      const { data: productsData, error: productsError } = await supabase
-        .from('gl_products')
-        .select('*')
-        .in('rowid_purchase_orders', poIds);
-      
-      if (productsError) throw productsError;
-      
-      // Fetch all payments for these purchase orders
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('gl_vendor_payments')
-        .select('*')
-        .in('rowid_purchase_orders', poIds);
-        
-      if (paymentsError) throw paymentsError;
-      
-      // Group products and payments by purchase order ID
-      const productsByPO = (productsData || []).reduce((acc, product) => {
-        const poId = product.rowid_purchase_orders;
-        if (poId && !acc[poId]) {
-          acc[poId] = [];
-        }
-        if (poId) {
-          acc[poId].push({
-            id: product.id,
-            rowid_products: product.glide_row_id,
-            product_name: product.new_product_name || product.vendor_product_name,
-            quantity: product.total_qty_purchased || 1,
-            unit_price: product.cost || 0,
-            total: (product.total_qty_purchased || 1) * (product.cost || 0)
-          });
-        }
-        return acc;
-      }, {} as Record<string, any[]>);
-      
-      const paymentsByPO = (paymentsData || []).reduce((acc, payment) => {
-        if (!acc[payment.rowid_purchase_orders]) {
-          acc[payment.rowid_purchase_orders] = [];
-        }
-        acc[payment.rowid_purchase_orders].push(payment);
-        return acc;
-      }, {} as Record<string, GlVendorPayment[]>);
-      
-      // Map database objects to domain objects
-      return poData.map((po: GlPurchaseOrder) => {
-        const lineItems = productsByPO[po.glide_row_id] || [];
-        const payments = paymentsByPO[po.glide_row_id] || [];
-        
-        return mapGlPurchaseOrderToPurchaseOrder(po, account.account_name, lineItems, payments);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Purchase order created successfully',
       });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchase orders for account';
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create purchase order';
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
-      return [];
     }
-  }, [toast]);
+  });
 
-  // Fetch purchase orders on component mount
-  useEffect(() => {
-    fetchPurchaseOrders();
-  }, [fetchPurchaseOrders]);
+  // Update a purchase order
+  const updatePurchaseOrder = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: Partial<PurchaseOrder> }) => {
+      const updateData = {
+        ...data,
+        po_date: data.date ? new Date(data.date).toISOString() : undefined,
+        payment_status: data.status
+      };
+      
+      // Remove properties that don't exist in the table
+      delete updateData.date;
+      delete updateData.status;
+      delete updateData.accountName;
+      delete updateData.number;
+      delete updateData.lineItems;
+      delete updateData.vendorPayments;
+      
+      const { data: updated, error } = await supabase
+        .from('gl_purchase_orders')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return updated;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Purchase order updated successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update purchase order';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Delete a purchase order
+  const deletePurchaseOrder = useMutation({
+    mutationFn: async (id: string) => {
+      // Get the glide_row_id first
+      const { data: po } = await supabase
+        .from('gl_purchase_orders')
+        .select('glide_row_id')
+        .eq('id', id)
+        .single();
+      
+      if (!po) throw new Error('Purchase order not found');
+      
+      // Update any products to remove the PO reference
+      await supabase
+        .from('gl_products')
+        .update({ rowid_purchase_orders: null })
+        .eq('rowid_purchase_orders', po.glide_row_id);
+      
+      // Delete vendor payments
+      await supabase
+        .from('gl_vendor_payments')
+        .delete()
+        .eq('rowid_purchase_orders', po.glide_row_id);
+      
+      // Delete the PO
+      const { error } = await supabase
+        .from('gl_purchase_orders')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Purchase order deleted successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete purchase order';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Add product to purchase order
+  const addProduct = useMutation({
+    mutationFn: async ({ 
+      purchaseOrderId, 
+      productData 
+    }: { 
+      purchaseOrderId: string, 
+      productData: Partial<PurchaseOrderLineItem> 
+    }) => {
+      // Get PO's glide_row_id first
+      const { data: po } = await supabase
+        .from('gl_purchase_orders')
+        .select('glide_row_id')
+        .eq('id', purchaseOrderId)
+        .single();
+      
+      if (!po) throw new Error('Purchase order not found');
+      
+      const newProduct = {
+        glide_row_id: `PROD-${Date.now()}`,
+        display_name: productData.product_name,
+        rowid_purchase_orders: po.glide_row_id,
+        cost: productData.unit_price || 0,
+        total_qty_purchased: productData.quantity || 1,
+        purchase_notes: productData.productDetails?.purchase_notes
+      };
+      
+      const { data, error } = await supabase
+        .from('gl_products')
+        .insert(newProduct)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Product added successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add product';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Update product
+  const updateProduct = useMutation({
+    mutationFn: async ({ 
+      productId, 
+      productData 
+    }: { 
+      productId: string, 
+      productData: Partial<PurchaseOrderLineItem> 
+    }) => {
+      const updateData = {
+        display_name: productData.product_name,
+        cost: productData.unit_price,
+        total_qty_purchased: productData.quantity,
+        purchase_notes: productData.productDetails?.purchase_notes
+      };
+      
+      const { data, error } = await supabase
+        .from('gl_products')
+        .update(updateData)
+        .eq('id', productId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Product updated successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update product';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Delete product
+  const deleteProduct = useMutation({
+    mutationFn: async (productId: string) => {
+      const { error } = await supabase
+        .from('gl_products')
+        .delete()
+        .eq('id', productId);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Product removed successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove product';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Add vendor payment
+  const addPayment = useMutation({
+    mutationFn: async ({ 
+      purchaseOrderId, 
+      paymentData 
+    }: { 
+      purchaseOrderId: string, 
+      paymentData: Partial<VendorPayment> 
+    }) => {
+      // Get PO's glide_row_id first
+      const { data: po } = await supabase
+        .from('gl_purchase_orders')
+        .select('glide_row_id, rowid_accounts')
+        .eq('id', purchaseOrderId)
+        .single();
+      
+      if (!po) throw new Error('Purchase order not found');
+      
+      const newPayment = {
+        glide_row_id: `VPY-${Date.now()}`,
+        rowid_purchase_orders: po.glide_row_id,
+        rowid_accounts: po.rowid_accounts,
+        payment_amount: paymentData.amount || 0,
+        date_of_payment: paymentData.date ? new Date(paymentData.date).toISOString() : new Date().toISOString(),
+        vendor_purchase_note: paymentData.notes
+      };
+      
+      const { data, error } = await supabase
+        .from('gl_vendor_payments')
+        .insert(newPayment)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Payment added successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add payment';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Update payment
+  const updatePayment = useMutation({
+    mutationFn: async ({ 
+      paymentId, 
+      paymentData 
+    }: { 
+      paymentId: string, 
+      paymentData: Partial<VendorPayment> 
+    }) => {
+      const updateData = {
+        payment_amount: paymentData.amount,
+        date_of_payment: paymentData.date ? new Date(paymentData.date).toISOString() : undefined,
+        vendor_purchase_note: paymentData.notes
+      };
+      
+      const { data, error } = await supabase
+        .from('gl_vendor_payments')
+        .update(updateData)
+        .eq('id', paymentId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Payment updated successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update payment';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Delete payment
+  const deletePayment = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from('gl_vendor_payments')
+        .delete()
+        .eq('id', paymentId);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      toast({
+        title: 'Success',
+        description: 'Payment removed successfully',
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove payment';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  });
 
   return {
     purchaseOrders,
     isLoading,
     error,
-    fetchPurchaseOrders,
+    fetchPurchaseOrders: refetch,
     getPurchaseOrder,
-    getPurchaseOrdersForAccount
+    createPurchaseOrder,
+    updatePurchaseOrder,
+    deletePurchaseOrder,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addPayment,
+    updatePayment,
+    deletePayment
   };
 }

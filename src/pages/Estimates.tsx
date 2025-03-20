@@ -6,15 +6,15 @@ import { useEstimates } from '@/hooks/useEstimates';
 import EstimateList from '@/components/estimates/EstimateList';
 import { Button } from '@/components/ui/button';
 import { Estimate } from '@/types/estimate';
-import EstimateDialog from '@/components/estimates/EstimateDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import EstimateDetail from '@/components/estimates/EstimateDetail';
+import EstimateForm from '@/components/estimates/EstimateForm';
 
 const Estimates = () => {
   const {
     estimates,
     isLoading,
     error,
-    fetchEstimates,
     getEstimate,
     createEstimate,
     updateEstimate,
@@ -34,7 +34,7 @@ const Estimates = () => {
 
   // Handle create estimate
   const handleCreateEstimate = async (data: Partial<Estimate>) => {
-    await createEstimate(data);
+    await createEstimate.mutateAsync(data);
     setIsCreateDialogOpen(false);
   };
 
@@ -74,17 +74,18 @@ const Estimates = () => {
       {selectedEstimate ? (
         <EstimateDetail
           estimate={selectedEstimate}
+          isLoading={detailsLoading}
           onBack={handleBackToList}
           onRefresh={handleRefreshEstimate}
-          onUpdate={updateEstimate}
-          onDelete={deleteEstimate}
-          onAddLine={addEstimateLine}
-          onUpdateLine={updateEstimateLine}
-          onDeleteLine={deleteEstimateLine}
-          onAddCredit={addCustomerCredit}
-          onUpdateCredit={updateCustomerCredit}
-          onDeleteCredit={deleteCustomerCredit}
-          onConvertToInvoice={convertToInvoice}
+          onUpdate={updateEstimate.mutateAsync}
+          onDelete={deleteEstimate.mutateAsync}
+          onAddLine={addEstimateLine.mutateAsync}
+          onUpdateLine={updateEstimateLine.mutateAsync}
+          onDeleteLine={deleteEstimateLine.mutateAsync}
+          onAddCredit={addCustomerCredit.mutateAsync}
+          onUpdateCredit={updateCustomerCredit.mutateAsync}
+          onDeleteCredit={deleteCustomerCredit.mutateAsync}
+          onConvertToInvoice={convertToInvoice.mutateAsync}
         />
       ) : (
         <>
@@ -109,12 +110,17 @@ const Estimates = () => {
         </>
       )}
 
-      <EstimateDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onSubmit={handleCreateEstimate}
-        title="Create Estimate"
-      />
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Create Estimate</DialogTitle>
+          </DialogHeader>
+          <EstimateForm
+            onSubmit={handleCreateEstimate}
+            onCancel={() => setIsCreateDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

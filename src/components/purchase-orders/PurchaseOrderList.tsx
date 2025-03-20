@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PurchaseOrder } from '@/types';
+import { PurchaseOrder } from '@/types/purchaseOrder';
 import PurchaseOrderCard from './PurchaseOrderCard';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -8,9 +8,15 @@ interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
   isLoading: boolean;
   error: string | null;
+  onView: (id: string) => void;
 }
 
-const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ purchaseOrders, isLoading, error }) => {
+const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ 
+  purchaseOrders, 
+  isLoading, 
+  error, 
+  onView 
+}) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[200px]">
@@ -39,7 +45,11 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ purchaseOrders, i
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {purchaseOrders.map((purchaseOrder) => (
-        <PurchaseOrderCard key={purchaseOrder.id} purchaseOrder={purchaseOrder} />
+        <PurchaseOrderCard 
+          key={purchaseOrder.id} 
+          purchaseOrder={purchaseOrder} 
+          onClick={() => onView(purchaseOrder.id)}
+        />
       ))}
     </div>
   );
