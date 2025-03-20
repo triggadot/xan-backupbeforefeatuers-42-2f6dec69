@@ -23,7 +23,7 @@ const NewAccounts: React.FC = () => {
   const filteredAccounts = accounts.filter(account => 
     account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    account.type.toLowerCase().includes(searchTerm.toLowerCase())
+    (account.type && account.type.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleAddAccount = async (data: any) => {

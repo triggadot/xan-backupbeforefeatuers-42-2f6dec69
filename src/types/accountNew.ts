@@ -28,7 +28,7 @@ export interface AccountFromView {
 export interface Account {
   id: string;
   name: string;
-  type: 'customer' | 'vendor' | 'both';
+  type: 'Customer' | 'Vendor' | 'Customer & Vendor';
   email: string;
   phone?: string;
   address?: string;

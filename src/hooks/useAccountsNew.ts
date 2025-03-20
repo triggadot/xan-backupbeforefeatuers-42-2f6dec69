@@ -15,12 +15,10 @@ export function useAccountsNew() {
       id: viewAccount.account_id,
       name: viewAccount.account_name,
       type: viewAccount.is_customer && viewAccount.is_vendor 
-        ? 'both' 
+        ? 'Customer & Vendor' 
         : viewAccount.is_customer 
-          ? 'customer' 
-          : viewAccount.is_vendor 
-            ? 'vendor' 
-            : 'customer', // Default to customer if undefined
+          ? 'Customer' 
+          : 'Vendor', 
       email: viewAccount.email_of_who_added || '',
       phone: viewAccount.phone || '',
       address: viewAccount.address || '',
@@ -101,6 +99,10 @@ export function useAccountsNew() {
   // Add account still needs to use the original gl_accounts table
   const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'is_customer' | 'is_vendor' | 'invoice_count' | 'total_invoiced' | 'total_paid' | 'last_invoice_date' | 'last_payment_date'>) => {
     try {
+      // Set is_customer and is_vendor based on type
+      const is_customer = accountData.type === 'Customer' || accountData.type === 'Customer & Vendor';
+      const is_vendor = accountData.type === 'Vendor' || accountData.type === 'Customer & Vendor';
+      
       // Map from Account to gl_accounts structure
       const { data, error } = await supabase
         .from('gl_accounts')
@@ -112,6 +114,8 @@ export function useAccountsNew() {
           address: accountData.address,
           website: accountData.website,
           notes: accountData.notes,
+          is_customer: is_customer,
+          is_vendor: is_vendor,
           glide_row_id: accountData.glide_row_id || ('A-' + Date.now()), // Generate a temporary ID for Glide sync
         })
         .select()
@@ -148,7 +152,12 @@ export function useAccountsNew() {
       // Convert from Account format to gl_accounts format
       const updateData: Record<string, any> = {};
       if (accountData.name) updateData.account_name = accountData.name;
-      if (accountData.type) updateData.client_type = accountData.type;
+      if (accountData.type) {
+        updateData.client_type = accountData.type;
+        // Set is_customer and is_vendor based on type
+        updateData.is_customer = accountData.type === 'Customer' || accountData.type === 'Customer & Vendor';
+        updateData.is_vendor = accountData.type === 'Vendor' || accountData.type === 'Customer & Vendor';
+      }
       if (accountData.email) updateData.email_of_who_added = accountData.email;
       if (accountData.phone) updateData.phone = accountData.phone;
       if (accountData.address) updateData.address = accountData.address;

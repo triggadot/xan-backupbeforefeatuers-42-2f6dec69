@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -7,8 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Building, Mail, Phone, Globe, MapPin, Edit, Trash2, Package, FileText } from 'lucide-react';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { InvoiceListItem } from '@/types/invoiceView';
-import { PurchaseOrder } from '@/types/purchaseOrderView';
+import { useAccount } from '@/hooks/useAccount';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
 import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
@@ -19,10 +17,7 @@ import InvoiceList from '@/components/invoices/list/InvoiceList';
 const NewAccountDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getAccount } = useAccountsNew();
-  const [account, setAccount] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { account, isLoading, error } = useAccount(id || '');
   const [activeTab, setActiveTab] = useState('overview');
   const [accountInvoices, setAccountInvoices] = useState<any[]>([]);
   const [accountPurchaseOrders, setAccountPurchaseOrders] = useState<any[]>([]);
@@ -30,30 +25,6 @@ const NewAccountDetail: React.FC = () => {
   const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
   const invoicesHook = useInvoicesNew();
   const purchaseOrdersHook = usePurchaseOrders();
-
-  useEffect(() => {
-    const fetchAccount = async () => {
-      setIsLoading(true);
-      try {
-        if (id) {
-          const accountData = await getAccount(id);
-          if (accountData) {
-            setAccount(accountData);
-          } else {
-            setError('Account not found');
-          }
-        } else {
-          setError('Invalid account ID');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAccount();
-  }, [id, getAccount]);
 
   useEffect(() => {
     if (account) {
