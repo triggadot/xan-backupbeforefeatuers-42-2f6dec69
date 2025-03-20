@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { PlusIcon, RefreshCw } from 'lucide-react';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { PurchaseOrderFilters } from '@/types/purchaseOrder';
-import { PurchaseOrderForm } from '@/components/purchase-orders/PurchaseOrderForm';
-import { PurchaseOrderList } from '@/components/purchase-orders/PurchaseOrderList';
+import PurchaseOrderForm from '@/components/purchase-orders/PurchaseOrderForm';
+import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 
 // Update the import for PurchaseOrderFilters component
 // import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
@@ -85,9 +85,8 @@ const PurchaseOrders = () => {
           <DialogHeader>
             <DialogTitle>Create New Purchase Order</DialogTitle>
           </DialogHeader>
-          {/* Pass onSubmit properly */}
           <PurchaseOrderForm 
-            onSubmit={handleCreatePurchaseOrder}
+            onCancel={() => setIsCreateDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>

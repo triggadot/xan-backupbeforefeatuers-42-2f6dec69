@@ -1,181 +1,100 @@
 
 import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { InvoicePayment, AddPaymentInput } from '@/types/invoice';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export function useInvoices() {
+export const useInvoices = () => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchInvoices = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase
-        .from('gl_invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (err) {
-      console.error('Error fetching invoices:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      return { data: [], error: err };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addPayment = {
-    mutateAsync: async (paymentData: AddPaymentInput) => {
-      try {
-        // Generate a unique glide_row_id
-        const glideRowId = `PAY-${Date.now()}`;
-        
-        const { data, error } = await supabase
-          .from('gl_customer_payments')
-          .insert({
-            glide_row_id: glideRowId,
-            rowid_invoices: paymentData.invoiceId,
-            rowid_accounts: paymentData.accountId || null,
-            payment_amount: paymentData.amount,
-            date_of_payment: new Date(paymentData.paymentDate).toISOString(),
-            type_of_payment: paymentData.paymentMethod,
-            payment_note: paymentData.notes,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        toast({
-          title: "Payment Added",
-          description: "Payment has been recorded successfully.",
-        });
-
-        return data;
-      } catch (err) {
-        console.error('Error adding payment:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to record payment',
-          variant: "destructive",
-        });
-        throw err;
-      }
-    }
-  };
-
-  const deletePayment = {
-    mutateAsync: async ({ id, invoiceId }: { id: string, invoiceId: string }) => {
-      try {
-        const { error } = await supabase
-          .from('gl_customer_payments')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Payment Deleted",
-          description: "Payment has been deleted successfully.",
-        });
-
-        return true;
-      } catch (err) {
-        console.error('Error deleting payment:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to delete payment',
-          variant: "destructive",
-        });
-        throw err;
-      }
-    }
-  };
-
-  const deleteLineItem = {
-    mutateAsync: async ({ id, invoiceId }: { id: string, invoiceId: string }) => {
-      try {
-        const { error } = await supabase
-          .from('gl_invoice_lines')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Line Item Deleted",
-          description: "Line item has been deleted successfully.",
-        });
-
-        return true;
-      } catch (err) {
-        console.error('Error deleting line item:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to delete line item',
-          variant: "destructive",
-        });
-        throw err;
-      }
-    }
-  };
-
-  // Get a single invoice with all details
-  const getInvoice = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Get invoice details
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .select('*')
-        .eq('id', id)
+  // Add a payment to an invoice
+  const addPayment = useMutation({
+    mutationFn: async (paymentData: AddPaymentInput): Promise<InvoicePayment> => {
+      // Create a new payment record
+      const { data: payment, error } = await supabase
+        .from('gl_customer_payments')
+        .insert({
+          glide_row_id: `payment-${Date.now()}`, // Generate a unique ID
+          rowid_invoices: paymentData.invoiceId,
+          rowid_accounts: paymentData.accountId,
+          payment_amount: paymentData.amount,
+          date_of_payment: paymentData.paymentDate.toISOString(),
+          type_of_payment: paymentData.paymentMethod || '',
+          payment_note: paymentData.notes || ''
+        })
+        .select()
         .single();
 
-      if (invoiceError) throw invoiceError;
+      if (error) {
+        console.error('Error adding payment:', error);
+        throw new Error(`Failed to add payment: ${error.message}`);
+      }
 
-      // Fetch line items
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('gl_invoice_lines')
-        .select('*')
-        .eq('rowid_invoices', invoice.glide_row_id);
+      // Update the invoice status based on the remaining balance
+      // This would typically be handled by a trigger, but we'll do it manually for now
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('gl_invoices')
+        .select('total_amount, balance')
+        .eq('id', paymentData.invoiceId)
+        .single();
 
-      if (lineItemsError) throw lineItemsError;
+      if (invoiceError) {
+        console.error('Error getting invoice data:', invoiceError);
+      } else {
+        // Calculate the new balance
+        const currentBalance = Number(invoice.balance || 0);
+        const newBalance = Math.max(0, currentBalance - paymentData.amount);
+        const newStatus = newBalance <= 0 ? 'paid' : newBalance < Number(invoice.total_amount) ? 'partial' : 'unpaid';
 
-      // Fetch payments
-      const { data: payments, error: paymentsError } = await supabase
-        .from('gl_customer_payments')
-        .select('*')
-        .eq('rowid_invoices', invoice.glide_row_id);
+        // Update the invoice status and balance
+        const { error: updateError } = await supabase
+          .from('gl_invoices')
+          .update({
+            balance: newBalance,
+            payment_status: newStatus
+          })
+          .eq('id', paymentData.invoiceId);
 
-      if (paymentsError) throw paymentsError;
+        if (updateError) {
+          console.error('Error updating invoice status:', updateError);
+        }
+      }
 
+      // Format the result
       return {
-        ...invoice,
-        lineItems: lineItems || [],
-        payments: payments || []
+        id: payment.id,
+        invoiceId: payment.rowid_invoices,
+        accountId: payment.rowid_accounts,
+        amount: Number(payment.payment_amount),
+        paymentDate: new Date(payment.date_of_payment || payment.created_at),
+        paymentMethod: payment.type_of_payment || '',
+        notes: payment.payment_note || '',
+        date: new Date(payment.date_of_payment || payment.created_at),
+        createdAt: payment.created_at,
+        updatedAt: payment.updated_at
       };
-    } catch (err) {
-      console.error('Error fetching invoice details:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      return null;
-    } finally {
-      setIsLoading(false);
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Payment Added',
+        description: 'The payment has been recorded successfully.',
+      });
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to add payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
     }
-  };
+  });
 
   return {
-    fetchInvoices,
-    getInvoice,
-    addPayment,
-    deletePayment,
-    deleteLineItem,
-    isLoading,
-    error
+    addPayment
   };
-}
+};

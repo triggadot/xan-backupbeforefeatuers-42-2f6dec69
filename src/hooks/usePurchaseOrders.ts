@@ -27,7 +27,7 @@ export function usePurchaseOrders() {
       }
       
       if (filters?.status && filters.status.length > 0) {
-        query = query.in('payment_status', filters.status);
+        query = query.in('payment_status', filters.status[0]); // Changed to use single status for simplicity
       }
       
       if (filters?.accountId) {
@@ -48,7 +48,7 @@ export function usePurchaseOrders() {
       
       // Map the database results to the PurchaseOrder type
       const mappedPurchaseOrders: PurchaseOrder[] = (data || []).map(po => ({
-        id: po.po_id || po.id,
+        id: po.id, // Use id property
         glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
         number: po.purchase_order_uid || `PO-${po.id.substring(0, 8)}`,
@@ -158,7 +158,7 @@ export function usePurchaseOrders() {
         })),
         vendorPayments: (payments || []).map(payment => ({
           id: payment.id,
-          date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
+          date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(),
           amount: Number(payment.payment_amount || 0),
           method: '', // Vendor payments might not track payment method
           notes: payment.vendor_purchase_note || ''
@@ -190,7 +190,7 @@ export function usePurchaseOrders() {
         .insert({
           glide_row_id: glideRowId,
           rowid_accounts: data.accountId,
-          purchase_order_uid: data.purchase_order_uid || `PO#${Date.now()}`,
+          purchase_order_uid: data.number || `PO#${Date.now()}`,
           po_date: data.date?.toISOString() || new Date().toISOString(),
           docs_shortlink: data.docs_shortlink
         })

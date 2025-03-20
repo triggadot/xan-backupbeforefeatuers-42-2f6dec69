@@ -34,19 +34,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
 import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { CreateInvoiceInput, UpdateInvoiceInput, InvoiceWithDetails } from '@/types/invoice';
-import { LineItemFormArray } from './LineItemFormArray';
+import { LineItemFormArray, LineItemFormValues } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
 
-// Define a schema that matches what LineItemFormArray expects
-const lineItemSchema = z.object({
-  productId: z.string({
-    required_error: 'Please select a product',
-  }),
-  description: z.string().min(1, 'Description is required'),
-  quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
-  unitPrice: z.number().min(0, 'Price must be 0 or greater'),
-});
-
+// Define schema that matches LineItemFormValues
 const invoiceFormSchema = z.object({
   customerId: z.string({
     required_error: 'Please select a customer',
@@ -57,7 +48,12 @@ const invoiceFormSchema = z.object({
   dueDate: z.date().optional(),
   status: z.enum(['draft', 'sent']),
   notes: z.string().optional(),
-  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+  lineItems: z.array(z.object({
+    productId: z.string().min(1, 'Product is required'),
+    description: z.string().min(1, 'Description is required'),
+    quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
+    unitPrice: z.number().min(0, 'Price must be 0 or greater'),
+  })).min(1, 'At least one line item is required'),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
@@ -95,7 +91,12 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
       invoiceDate: new Date(),
       status: 'draft' as const,
       notes: '',
-      lineItems: [],
+      lineItems: [{
+        productId: '',
+        description: '',
+        quantity: 1,
+        unitPrice: 0
+      }],
     },
   });
 
@@ -295,7 +296,7 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
         <div>
           <h3 className="text-lg font-medium mb-4">Line Items</h3>
           <LineItemFormArray 
-            control={form.control} 
+            control={form.control as unknown as Control<LineItemFormValues>} 
             disabled={isSubmitting}
           />
         </div>
@@ -340,3 +341,5 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
     </Form>
   );
 }
+
+export default InvoiceForm;

@@ -40,6 +40,8 @@ export function MappingDebugView({ mapping, onTestSync }: MappingDebugViewProps)
               mapping={mapping} 
               columnMappings={mapping.column_mappings}
               onMappingUpdate={async () => onTestSync && await onTestSync()}
+              glideTable="glide_table"
+              supabaseTable="supabase_table"
             />
             
             {onTestSync && (

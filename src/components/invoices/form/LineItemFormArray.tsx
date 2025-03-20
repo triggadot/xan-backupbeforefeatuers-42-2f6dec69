@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import { AmountDisplay } from '../shared/AmountDisplay';
 
-interface FormValues {
+export interface LineItemFormValues {
   lineItems: {
     productId: string;
     description: string;
@@ -44,7 +44,7 @@ interface FormValues {
 }
 
 interface LineItemFormArrayProps {
-  control: Control<FormValues>;
+  control: Control<LineItemFormValues>;
   disabled?: boolean;
 }
 
@@ -67,14 +67,12 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
     });
   };
 
-  // Add empty line item if there are none
   useEffect(() => {
     if (fields.length === 0) {
       addEmptyLineItem();
     }
   }, [fields.length, append]);
 
-  // Calculate subtotal whenever line items change
   useEffect(() => {
     const total = control._formValues.lineItems?.reduce((sum, item) => {
       const quantity = Number(item.quantity) || 0;
@@ -87,7 +85,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
 
   return (
     <div className="space-y-4">
-      {/* Line Items Table */}
       <div className="rounded-md border overflow-hidden">
         <Table>
           <TableHeader>
@@ -102,14 +99,12 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
           </TableHeader>
           <TableBody>
             {fields.map((field, index) => {
-              // Get the quantity and price to calculate the total
               const quantity = control._formValues.lineItems?.[index]?.quantity || 0;
               const unitPrice = control._formValues.lineItems?.[index]?.unitPrice || 0;
               const total = quantity * unitPrice;
 
               return (
                 <TableRow key={field.id}>
-                  {/* Product */}
                   <TableCell>
                     <FormField
                       control={control}
@@ -118,18 +113,12 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                         <FormItem>
                           <Select
                             onValueChange={(value) => {
-                              
-                              // Update to fix the control.setValue TypeScript errors
                               const selectedProduct = products.find(p => p.id === value);
                               if (selectedProduct) {
                                 const description = selectedProduct.name || '';
-                                const price = 0; // You would set this to the product's price if available
-                                
-                                // Update the form values directly without using setValue
+                                const price = 0;
                                 control._formValues.lineItems[index].description = description;
                                 control._formValues.lineItems[index].unitPrice = price;
-                                
-                                // Use field.onChange for the React Hook Form fields
                                 field.onChange(value);
                               }
                             }}
@@ -162,7 +151,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                     />
                   </TableCell>
                   
-                  {/* Description */}
                   <TableCell>
                     <FormField
                       control={control}
@@ -182,7 +170,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                     />
                   </TableCell>
                   
-                  {/* Quantity */}
                   <TableCell>
                     <FormField
                       control={control}
@@ -208,7 +195,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                     />
                   </TableCell>
                   
-                  {/* Unit Price */}
                   <TableCell>
                     <FormField
                       control={control}
@@ -234,12 +220,10 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                     />
                   </TableCell>
                   
-                  {/* Total */}
                   <TableCell>
                     <AmountDisplay amount={total} className="font-medium" />
                   </TableCell>
                   
-                  {/* Remove Button */}
                   <TableCell>
                     <Button
                       type="button"
@@ -269,7 +253,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
         </Table>
       </div>
       
-      {/* Add Line Item Button */}
       <Button
         type="button"
         variant="outline"
@@ -282,7 +265,6 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
         Add Line Item
       </Button>
       
-      {/* Totals Section */}
       <div className="mt-4 border-t pt-4">
         <div className="flex justify-end">
           <div className="w-72 space-y-2">

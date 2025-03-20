@@ -1,3 +1,4 @@
+
 import { 
   Invoice, 
   LineItem, 
@@ -50,7 +51,7 @@ export const mapGlAccountToAccount = (glAccount: GlAccount): Account => {
   return {
     id: glAccount.id,
     name: glAccount.account_name || 'Unnamed Account',
-    type: (glAccount.client_type?.toLowerCase() as 'customer' | 'vendor' | 'both') || 'customer',
+    type: mapAccountType(glAccount.client_type || 'customer'),
     email: glAccount.email_of_who_added || '',
     phone: '',
     address: '',
