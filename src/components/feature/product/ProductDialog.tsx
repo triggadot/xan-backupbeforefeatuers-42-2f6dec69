@@ -35,6 +35,18 @@ interface Vendor {
   account_name: string;
 }
 
+const PRODUCT_CATEGORIES = [
+  'Flower',
+  'Vaporizers and Cartridges',
+  'Raw Mushrooms',
+  'THCA',
+  'Concentrates',
+  'Moon Rocks',
+  'Psychedelic Products',
+  'Edibles',
+  'Pre Rolls'
+];
+
 const ProductDialog: React.FC<ProductDialogProps> = ({
   open,
   onOpenChange,
@@ -55,7 +67,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       setFormValues({
         new_product_name: '',
         vendor_product_name: '',
-        category: '',
+        category: 'Flower', // Default category
         cost: '',
         total_qty_purchased: 1,
         purchase_notes: '',
@@ -64,7 +76,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         fronted: false,
         miscellaneous_items: false,
         product_purchase_date: null,
-        terms_for_fronted_product: ''
+        terms_for_fronted_product: '',
+        total_units_behind_sample: 0
       });
     }
   }, [product, open]);
@@ -116,6 +129,17 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     if (formattedValues.total_qty_purchased) {
       formattedValues.total_qty_purchased = parseInt(String(formattedValues.total_qty_purchased), 10);
     }
+    if (formattedValues.total_units_behind_sample) {
+      formattedValues.total_units_behind_sample = parseInt(String(formattedValues.total_units_behind_sample), 10);
+    }
+    
+    // Set samples_or_fronted based on samples and fronted values
+    formattedValues.samples_or_fronted = Boolean(formattedValues.samples || formattedValues.fronted);
+    
+    // Default category to Flower if miscellaneous is checked but no category
+    if (formattedValues.miscellaneous_items && !formattedValues.category) {
+      formattedValues.category = 'Flower';
+    }
     
     // Remove id for new records
     if (!product) {
@@ -141,6 +165,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                 placeholder="Enter product name"
                 value={formValues.new_product_name as string || ''}
                 onChange={e => handleChange('new_product_name', e.target.value)}
+                required
               />
             </div>
 
@@ -157,12 +182,21 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  placeholder="Enter product category"
-                  value={formValues.category as string || ''}
-                  onChange={e => handleChange('category', e.target.value)}
-                />
+                <Select 
+                  value={String(formValues.category || 'Flower')}
+                  onValueChange={value => handleChange('category', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid gap-2">
@@ -170,6 +204,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                 <Select 
                   value={String(formValues.rowid_accounts || '')}
                   onValueChange={value => handleChange('rowid_accounts', value)}
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select vendor" />
@@ -196,6 +231,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   placeholder="0.00"
                   value={formValues.cost as string || ''}
                   onChange={e => handleChange('cost', e.target.value)}
+                  required
                 />
               </div>
 
@@ -207,6 +243,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   placeholder="1"
                   value={formValues.total_qty_purchased as string | number || ''}
                   onChange={e => handleChange('total_qty_purchased', e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -234,7 +271,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   <Calendar
                     mode="single"
                     selected={formValues.product_purchase_date ? new Date(formValues.product_purchase_date as string) : undefined}
-                    onSelect={(date) => handleChange('product_purchase_date', date?.toISOString())}
+                    onSelect={(date) => {
+                      handleChange('product_purchase_date', date?.toISOString());
+                      handleChange('po_po_date', date?.toISOString()); // Set purchase order date to same
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -281,6 +321,19 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
               </div>
             </div>
             
+            {formValues.samples && (
+              <div className="grid gap-2">
+                <Label htmlFor="total_units_behind_sample">Units Behind Sample</Label>
+                <Input
+                  id="total_units_behind_sample"
+                  type="number"
+                  placeholder="0"
+                  value={formValues.total_units_behind_sample as string | number || '0'}
+                  onChange={e => handleChange('total_units_behind_sample', e.target.value)}
+                />
+              </div>
+            )}
+            
             {formValues.fronted && (
               <div className="grid gap-2">
                 <Label htmlFor="terms_for_fronted_product">Fronted Terms</Label>
@@ -290,6 +343,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                   value={formValues.terms_for_fronted_product as string || ''}
                   onChange={e => handleChange('terms_for_fronted_product', e.target.value)}
                   rows={2}
+                  required={!!formValues.fronted}
                 />
               </div>
             )}

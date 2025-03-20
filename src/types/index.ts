@@ -1,4 +1,3 @@
-
 // Base entity type with common fields
 export interface BaseEntity {
   id: string;
@@ -61,6 +60,17 @@ export interface Product extends BaseEntity {
   category?: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
+  vendorName?: string;
+  vendorId?: string;
+  
+  // Additional fields for business logic
+  isSample?: boolean;
+  isFronted?: boolean;
+  isMiscellaneous?: boolean;
+  purchaseDate?: Date | null;
+  frontedTerms?: string;
+  totalUnitsBehindSample?: number;
+  rawData?: any; // For storing the raw database record
 }
 
 // Line item for orders, estimates, and invoices

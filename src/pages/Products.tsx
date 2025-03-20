@@ -35,23 +35,29 @@ const Products: React.FC = () => {
 
   const handleCreateProduct = async (productData: Record<string, unknown>) => {
     try {
+      // Extract the product data and transform it to match our Product interface
       const result = await createProduct({
         name: productData.new_product_name as string,
         vendorId: productData.rowid_accounts as string,
         cost: Number(productData.cost || 0),
         quantity: Number(productData.total_qty_purchased || 0),
-        category: productData.category as string,
+        category: productData.category as string || 'Flower', // Default to Flower
         description: productData.purchase_notes as string,
         imageUrl: productData.product_image1 as string,
         isSample: Boolean(productData.samples),
         isFronted: Boolean(productData.fronted),
         isMiscellaneous: Boolean(productData.miscellaneous_items),
         purchaseDate: productData.product_purchase_date ? new Date(productData.product_purchase_date as string) : null,
-        frontedTerms: productData.terms_for_fronted_product as string
+        frontedTerms: productData.terms_for_fronted_product as string,
+        totalUnitsBehindSample: productData.samples ? Number(productData.total_units_behind_sample || 0) : undefined
       });
       
       if (result) {
         setIsCreateDialogOpen(false);
+        toast({
+          title: 'Success',
+          description: 'Product created and purchase order generated.',
+        });
       }
     } catch (error) {
       console.error('Error creating product:', error);
@@ -67,19 +73,21 @@ const Products: React.FC = () => {
     if (!currentProduct?.id) return;
     
     try {
+      // Extract the product data and transform it to match our Product interface
       const result = await updateProduct(currentProduct.id, {
         name: productData.new_product_name as string,
         vendorId: productData.rowid_accounts as string,
         cost: Number(productData.cost || 0),
         quantity: Number(productData.total_qty_purchased || 0),
-        category: productData.category as string,
+        category: productData.category as string || 'Flower', // Default to Flower
         description: productData.purchase_notes as string,
         imageUrl: productData.product_image1 as string,
         isSample: Boolean(productData.samples),
         isFronted: Boolean(productData.fronted),
         isMiscellaneous: Boolean(productData.miscellaneous_items),
         purchaseDate: productData.product_purchase_date ? new Date(productData.product_purchase_date as string) : null,
-        frontedTerms: productData.terms_for_fronted_product as string
+        frontedTerms: productData.terms_for_fronted_product as string,
+        totalUnitsBehindSample: productData.samples ? Number(productData.total_units_behind_sample || 0) : undefined
       });
       
       if (result) {
@@ -137,7 +145,7 @@ const Products: React.FC = () => {
         ].filter(Boolean);
         
         return searchFields.some(field => 
-          field.toLowerCase().includes(searchTerm.toLowerCase())
+          field?.toLowerCase().includes(searchTerm.toLowerCase())
         );
       })
     : products;
@@ -222,7 +230,7 @@ const Products: React.FC = () => {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         product={currentProduct?.rawData}
-        onEdit={handleEdit}
+        onEdit={() => currentProduct && handleEdit(currentProduct)}
       />
     </div>
   );

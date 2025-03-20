@@ -18,34 +18,42 @@ export function useProducts() {
     try {
       const { data, error } = await supabase
         .from('gl_products')
-        .select('*, gl_accounts(account_name, accounts_uid)')
+        .select(`
+          *,
+          gl_accounts(account_name, accounts_uid)
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      const mappedProducts = (data || []).map((product): Product => ({
-        id: product.id,
-        name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-        sku: product.glide_row_id,
-        description: product.purchase_notes || '',
-        price: 0, // Would need to be calculated from invoice lines
-        cost: product.cost || 0,
-        quantity: product.total_qty_purchased || 0,
-        category: product.category || '',
-        status: 'active',
-        imageUrl: product.product_image1 || '',
-        vendorName: product.gl_accounts?.account_name || '',
-        vendorId: product.rowid_accounts || '',
-        createdAt: new Date(product.created_at),
-        updatedAt: new Date(product.updated_at),
-        // Add additional fields from the database
-        isSample: product.samples || false,
-        isFronted: product.fronted || false,
-        isMiscellaneous: product.miscellaneous_items || false,
-        purchaseDate: product.product_purchase_date ? new Date(product.product_purchase_date) : null,
-        frontedTerms: product.terms_for_fronted_product || '',
-        rawData: product
-      }));
+      const mappedProducts = (data || []).map((product): Product => {
+        const vendorData = product.gl_accounts || {};
+        
+        return {
+          id: product.id,
+          name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+          sku: product.glide_row_id,
+          description: product.purchase_notes || '',
+          price: 0, // Would need to be calculated from invoice lines
+          cost: product.cost || 0,
+          quantity: product.total_qty_purchased || 0,
+          category: product.category || '',
+          status: 'active',
+          imageUrl: product.product_image1 || '',
+          vendorName: vendorData.account_name || '',
+          vendorId: product.rowid_accounts || '',
+          createdAt: new Date(product.created_at),
+          updatedAt: new Date(product.updated_at),
+          // Add additional fields from the database
+          isSample: product.samples || false,
+          isFronted: product.fronted || false,
+          isMiscellaneous: product.miscellaneous_items || false,
+          purchaseDate: product.product_purchase_date ? new Date(product.product_purchase_date) : null,
+          frontedTerms: product.terms_for_fronted_product || '',
+          totalUnitsBehindSample: product.total_units_behind_sample || 0,
+          rawData: product
+        };
+      });
       
       setProducts(mappedProducts);
       setIsLoading(false);
@@ -67,13 +75,18 @@ export function useProducts() {
     try {
       const { data, error } = await supabase
         .from('gl_products')
-        .select('*, gl_accounts(account_name, accounts_uid)')
+        .select(`
+          *,
+          gl_accounts(account_name, accounts_uid)
+        `)
         .eq('id', id)
         .single();
       
       if (error) throw error;
       
       if (!data) throw new Error('Product not found');
+      
+      const vendorData = data.gl_accounts || {};
       
       return {
         id: data.id,
@@ -86,7 +99,7 @@ export function useProducts() {
         category: data.category || '',
         status: 'active',
         imageUrl: data.product_image1 || '',
-        vendorName: data.gl_accounts?.account_name || '',
+        vendorName: vendorData.account_name || '',
         vendorId: data.rowid_accounts || '',
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
@@ -96,6 +109,7 @@ export function useProducts() {
         isMiscellaneous: data.miscellaneous_items || false,
         purchaseDate: data.product_purchase_date ? new Date(data.product_purchase_date) : null,
         frontedTerms: data.terms_for_fronted_product || '',
+        totalUnitsBehindSample: data.total_units_behind_sample || 0,
         rawData: data
       } as Product;
     } catch (err) {
@@ -115,24 +129,37 @@ export function useProducts() {
       // Generate a glide_row_id for new products
       const tempGlideRowId = `temp_${uuidv4()}`;
       
+      // Set default category if miscellaneous but no category provided
+      let category = product.category;
+      if (product.isMiscellaneous && !category) {
+        category = 'Flower'; // Default category
+      }
+      
       const { data, error } = await supabase
         .from('gl_products')
         .insert({
-          display_name: product.name,
+          glide_row_id: tempGlideRowId,
+          display_name: product.name, // Will be auto-calculated by trigger
           new_product_name: product.name,
           vendor_product_name: product.name, // Use the same name for both fields
           cost: product.cost || 0,
           total_qty_purchased: product.quantity || 0,
-          category: product.category || null,
+          category: category,
           product_image1: product.imageUrl || null,
           purchase_notes: product.description || null,
-          glide_row_id: tempGlideRowId,
           rowid_accounts: product.vendorId || null,
+          product_purchase_date: product.purchaseDate instanceof Date ? product.purchaseDate.toISOString() : null,
+          po_po_date: product.purchaseDate instanceof Date ? product.purchaseDate.toISOString() : null, // Same as purchase date
+          
+          // Special product flags
           samples: product.isSample || false,
           fronted: product.isFronted || false,
+          samples_or_fronted: product.isSample || product.isFronted || false,
           miscellaneous_items: product.isMiscellaneous || false,
-          product_purchase_date: product.purchaseDate instanceof Date ? product.purchaseDate.toISOString() : null,
-          terms_for_fronted_product: product.frontedTerms || null
+          
+          // Conditional fields based on product type
+          terms_for_fronted_product: product.isFronted ? (product.frontedTerms || null) : null,
+          total_units_behind_sample: product.isSample ? (product.totalUnitsBehindSample || 0) : null
         })
         .select();
       
@@ -162,23 +189,36 @@ export function useProducts() {
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
     setIsLoading(true);
     try {
+      // Set default category if miscellaneous but no category provided
+      let category = updates.category;
+      if (updates.isMiscellaneous && !category) {
+        category = 'Flower'; // Default category
+      }
+      
       const { data, error } = await supabase
         .from('gl_products')
         .update({
-          display_name: updates.name,
+          display_name: updates.name, // Will be auto-calculated by trigger
           new_product_name: updates.name,
           vendor_product_name: updates.name, // Update both name fields for consistency
           cost: updates.cost,
           total_qty_purchased: updates.quantity,
-          category: updates.category,
+          category: category,
           product_image1: updates.imageUrl,
           purchase_notes: updates.description,
           rowid_accounts: updates.vendorId,
+          product_purchase_date: updates.purchaseDate instanceof Date ? updates.purchaseDate.toISOString() : null,
+          po_po_date: updates.purchaseDate instanceof Date ? updates.purchaseDate.toISOString() : null,
+          
+          // Special product flags
           samples: updates.isSample,
           fronted: updates.isFronted,
+          samples_or_fronted: updates.isSample || updates.isFronted,
           miscellaneous_items: updates.isMiscellaneous,
-          product_purchase_date: updates.purchaseDate instanceof Date ? updates.purchaseDate.toISOString() : null,
-          terms_for_fronted_product: updates.frontedTerms
+          
+          // Conditional fields based on product type
+          terms_for_fronted_product: updates.isFronted ? (updates.frontedTerms || null) : null,
+          total_units_behind_sample: updates.isSample ? (updates.totalUnitsBehindSample || 0) : null
         })
         .eq('id', id)
         .select();
