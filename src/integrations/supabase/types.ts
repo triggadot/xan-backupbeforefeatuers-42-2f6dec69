@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           account_name: string | null
           accounts_uid: string | null
+          balance: number | null
           client_type: string | null
           created_at: string | null
           date_added_client: string | null
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           account_name?: string | null
           accounts_uid?: string | null
+          balance?: number | null
           client_type?: string | null
           created_at?: string | null
           date_added_client?: string | null
@@ -37,6 +39,7 @@ export type Database = {
         Update: {
           account_name?: string | null
           accounts_uid?: string | null
+          balance?: number | null
           client_type?: string | null
           created_at?: string | null
           date_added_client?: string | null
@@ -1053,17 +1056,21 @@ export type Database = {
       }
       mv_account_details: {
         Row: {
+          account_id: string | null
           account_name: string | null
           accounts_uid: string | null
+          balance: number | null
           client_type: string | null
           created_at: string | null
-          date_added_client: string | null
-          email_of_who_added: string | null
           glide_row_id: string | null
-          id: string | null
+          invoice_count: number | null
           is_customer: boolean | null
           is_vendor: boolean | null
+          last_invoice_date: string | null
+          last_payment_date: string | null
           photo: string | null
+          total_invoiced: number | null
+          total_paid: number | null
           updated_at: string | null
         }
         Relationships: []
@@ -1207,6 +1214,12 @@ export type Database = {
         }
         Returns: Json
       }
+      gl_calculate_account_balance: {
+        Args: {
+          account_id: string
+        }
+        Returns: number
+      }
       gl_calculate_product_inventory: {
         Args: {
           product_id: string
@@ -1348,6 +1361,10 @@ export type Database = {
           data_type: string
           confidence: number
         }[]
+      }
+      gl_update_all_account_balances: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       gl_update_product_payment_status: {
         Args: {
