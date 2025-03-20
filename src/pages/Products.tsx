@@ -6,67 +6,53 @@ import { Input } from '@/components/ui/input';
 import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
-import { useTableData } from '@/hooks/useTableData';
-import { useToast } from '@/hooks/use-toast';
 import { LoadingState } from '@/components/sync/LoadingState';
 import { Product } from '@/types';
+import { useProducts } from '@/hooks/useProducts';
+import { useToast } from '@/hooks/use-toast';
 
 const Products: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<any>(null);
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   
   const { toast } = useToast();
   const { 
-    data: rawProducts, 
-    isLoading: isLoadingProducts, 
+    products, 
+    isLoading, 
     error, 
-    fetchData: refreshProducts,
-    createRecord,
-    updateRecord,
-    deleteRecord
-  } = useTableData('gl_products');
+    fetchProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct
+  } = useProducts();
 
-  // Map the raw data to the Product type
-  const products = React.useMemo(() => {
-    return (rawProducts || []).map((product: any): Product => ({
-      id: product.id,
-      name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-      sku: product.glide_row_id || '',
-      description: product.purchase_notes || '',
-      price: 0, // Would need to be calculated from invoice lines
-      cost: product.cost || 0,
-      quantity: product.total_qty_purchased || 0,
-      category: product.category || '',
-      status: 'active',
-      imageUrl: product.product_image1 || '',
-      createdAt: new Date(product.created_at || Date.now()),
-      updatedAt: new Date(product.updated_at || Date.now())
-    }));
-  }, [rawProducts]);
-
-  useEffect(() => {
-    refreshProducts();
-  }, [refreshProducts]);
-
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    await refreshProducts();
-    setIsLoading(false);
+  const handleRefresh = () => {
+    fetchProducts();
   };
 
   const handleCreateProduct = async (productData: Record<string, unknown>) => {
     try {
-      await createRecord(productData);
-      toast({
-        title: 'Success',
-        description: 'Product created successfully',
+      const result = await createProduct({
+        name: productData.new_product_name as string,
+        vendorId: productData.rowid_accounts as string,
+        cost: Number(productData.cost || 0),
+        quantity: Number(productData.total_qty_purchased || 0),
+        category: productData.category as string,
+        description: productData.purchase_notes as string,
+        imageUrl: productData.product_image1 as string,
+        isSample: Boolean(productData.samples),
+        isFronted: Boolean(productData.fronted),
+        isMiscellaneous: Boolean(productData.miscellaneous_items),
+        purchaseDate: productData.product_purchase_date ? new Date(productData.product_purchase_date as string) : null,
+        frontedTerms: productData.terms_for_fronted_product as string
       });
-      setIsCreateDialogOpen(false);
-      refreshProducts();
+      
+      if (result) {
+        setIsCreateDialogOpen(false);
+      }
     } catch (error) {
       console.error('Error creating product:', error);
       toast({
@@ -81,13 +67,25 @@ const Products: React.FC = () => {
     if (!currentProduct?.id) return;
     
     try {
-      await updateRecord(currentProduct.id, productData);
-      toast({
-        title: 'Success',
-        description: 'Product updated successfully',
+      const result = await updateProduct(currentProduct.id, {
+        name: productData.new_product_name as string,
+        vendorId: productData.rowid_accounts as string,
+        cost: Number(productData.cost || 0),
+        quantity: Number(productData.total_qty_purchased || 0),
+        category: productData.category as string,
+        description: productData.purchase_notes as string,
+        imageUrl: productData.product_image1 as string,
+        isSample: Boolean(productData.samples),
+        isFronted: Boolean(productData.fronted),
+        isMiscellaneous: Boolean(productData.miscellaneous_items),
+        purchaseDate: productData.product_purchase_date ? new Date(productData.product_purchase_date as string) : null,
+        frontedTerms: productData.terms_for_fronted_product as string
       });
-      setIsEditDialogOpen(false);
-      setCurrentProduct(null);
+      
+      if (result) {
+        setIsEditDialogOpen(false);
+        setCurrentProduct(null);
+      }
     } catch (error) {
       console.error('Error updating product:', error);
       toast({
@@ -98,14 +96,10 @@ const Products: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (product: any) => {
-    if (confirm(`Are you sure you want to delete ${product.display_name || 'this product'}?`)) {
+  const handleDeleteProduct = async (product: Product) => {
+    if (confirm(`Are you sure you want to delete ${product.name || 'this product'}?`)) {
       try {
-        await deleteRecord(product.id);
-        toast({
-          title: 'Success',
-          description: 'Product deleted successfully',
-        });
+        await deleteProduct(product.id);
       } catch (error) {
         console.error('Error deleting product:', error);
         toast({
@@ -117,12 +111,12 @@ const Products: React.FC = () => {
     }
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setCurrentProduct(product);
     setIsEditDialogOpen(true);
   };
   
-  const handleViewDetails = (product: any) => {
+  const handleViewDetails = (product: Product) => {
     setCurrentProduct(product);
     setIsDetailsDialogOpen(true);
   };
@@ -138,7 +132,8 @@ const Products: React.FC = () => {
         const searchFields = [
           product.name,
           product.category,
-          product.description
+          product.description,
+          product.vendorName
         ].filter(Boolean);
         
         return searchFields.some(field => 
@@ -177,7 +172,7 @@ const Products: React.FC = () => {
             variant="outline" 
             size="icon"
             onClick={handleRefresh}
-            disabled={isLoading || isLoadingProducts}
+            disabled={isLoading}
             title="Refresh products"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
@@ -193,7 +188,7 @@ const Products: React.FC = () => {
         </div>
       </div>
       
-      {isLoadingProducts ? (
+      {isLoading ? (
         <LoadingState />
       ) : (
         <ProductsTableWrapper 
@@ -219,14 +214,14 @@ const Products: React.FC = () => {
         onOpenChange={setIsEditDialogOpen}
         onSubmit={handleUpdateProduct}
         title="Edit Product"
-        product={currentProduct}
+        product={currentProduct?.rawData}
       />
       
       {/* Product Details Dialog */}
       <ProductDetails
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
-        product={currentProduct}
+        product={currentProduct?.rawData}
         onEdit={handleEdit}
       />
     </div>

@@ -18,7 +18,7 @@ export function useProducts() {
     try {
       const { data, error } = await supabase
         .from('gl_products')
-        .select('*')
+        .select('*, gl_accounts(account_name, accounts_uid)')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -34,8 +34,17 @@ export function useProducts() {
         category: product.category || '',
         status: 'active',
         imageUrl: product.product_image1 || '',
+        vendorName: product.gl_accounts?.account_name || '',
+        vendorId: product.rowid_accounts || '',
         createdAt: new Date(product.created_at),
-        updatedAt: new Date(product.updated_at)
+        updatedAt: new Date(product.updated_at),
+        // Add additional fields from the database
+        isSample: product.samples || false,
+        isFronted: product.fronted || false,
+        isMiscellaneous: product.miscellaneous_items || false,
+        purchaseDate: product.product_purchase_date ? new Date(product.product_purchase_date) : null,
+        frontedTerms: product.terms_for_fronted_product || '',
+        rawData: product
       }));
       
       setProducts(mappedProducts);
@@ -58,7 +67,7 @@ export function useProducts() {
     try {
       const { data, error } = await supabase
         .from('gl_products')
-        .select('*')
+        .select('*, gl_accounts(account_name, accounts_uid)')
         .eq('id', id)
         .single();
       
@@ -77,8 +86,17 @@ export function useProducts() {
         category: data.category || '',
         status: 'active',
         imageUrl: data.product_image1 || '',
+        vendorName: data.gl_accounts?.account_name || '',
+        vendorId: data.rowid_accounts || '',
         createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
+        updatedAt: new Date(data.updated_at),
+        // Add additional fields
+        isSample: data.samples || false,
+        isFronted: data.fronted || false,
+        isMiscellaneous: data.miscellaneous_items || false,
+        purchaseDate: data.product_purchase_date ? new Date(data.product_purchase_date) : null,
+        frontedTerms: data.terms_for_fronted_product || '',
+        rawData: data
       } as Product;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product';
@@ -92,6 +110,7 @@ export function useProducts() {
   }, [toast]);
 
   const createProduct = useCallback(async (product: Partial<Product>) => {
+    setIsLoading(true);
     try {
       // Generate a glide_row_id for new products
       const tempGlideRowId = `temp_${uuidv4()}`;
@@ -101,12 +120,19 @@ export function useProducts() {
         .insert({
           display_name: product.name,
           new_product_name: product.name,
+          vendor_product_name: product.name, // Use the same name for both fields
           cost: product.cost || 0,
           total_qty_purchased: product.quantity || 0,
-          category: product.category,
-          product_image1: product.imageUrl,
-          purchase_notes: product.description,
-          glide_row_id: tempGlideRowId
+          category: product.category || null,
+          product_image1: product.imageUrl || null,
+          purchase_notes: product.description || null,
+          glide_row_id: tempGlideRowId,
+          rowid_accounts: product.vendorId || null,
+          samples: product.isSample || false,
+          fronted: product.isFronted || false,
+          miscellaneous_items: product.isMiscellaneous || false,
+          product_purchase_date: product.purchaseDate instanceof Date ? product.purchaseDate.toISOString() : null,
+          terms_for_fronted_product: product.frontedTerms || null
         })
         .select();
       
@@ -117,8 +143,10 @@ export function useProducts() {
         description: 'Product created successfully',
       });
       
-      fetchProducts();
-      return data;
+      await fetchProducts();
+      setIsLoading(false);
+      
+      return data ? data[0] : null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create product';
       toast({
@@ -126,22 +154,31 @@ export function useProducts() {
         description: errorMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
       return null;
     }
   }, [toast, fetchProducts]);
 
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('gl_products')
         .update({
           display_name: updates.name,
           new_product_name: updates.name,
+          vendor_product_name: updates.name, // Update both name fields for consistency
           cost: updates.cost,
           total_qty_purchased: updates.quantity,
           category: updates.category,
           product_image1: updates.imageUrl,
-          purchase_notes: updates.description
+          purchase_notes: updates.description,
+          rowid_accounts: updates.vendorId,
+          samples: updates.isSample,
+          fronted: updates.isFronted,
+          miscellaneous_items: updates.isMiscellaneous,
+          product_purchase_date: updates.purchaseDate instanceof Date ? updates.purchaseDate.toISOString() : null,
+          terms_for_fronted_product: updates.frontedTerms
         })
         .eq('id', id)
         .select();
@@ -153,8 +190,10 @@ export function useProducts() {
         description: 'Product updated successfully',
       });
       
-      fetchProducts();
-      return data;
+      await fetchProducts();
+      setIsLoading(false);
+      
+      return data ? data[0] : null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update product';
       toast({
@@ -162,11 +201,13 @@ export function useProducts() {
         description: errorMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
       return null;
     }
   }, [toast, fetchProducts]);
 
   const deleteProduct = useCallback(async (id: string) => {
+    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('gl_products')
@@ -181,6 +222,7 @@ export function useProducts() {
       });
       
       setProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+      setIsLoading(false);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete product';
@@ -189,6 +231,7 @@ export function useProducts() {
         description: errorMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
       return false;
     }
   }, [toast]);
