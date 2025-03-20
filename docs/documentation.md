@@ -14,53 +14,37 @@
 - Functions `is_customer()` and `is_vendor()` validate account types
 
 ### Account Balance Logic:
-- **Customer Balance**: Sum of unpaid invoice amounts
+- **Customer Balance**: Sum of unpaid invoice amounts and sample estimates
   - Calculated as `total_invoice_amount - total_payments_received`
-  - Positive balance means customer owes money
-- **Vendor Balance**: Sum of unpaid purchase order amounts plus sample product costs
-  - Calculated as `total_purchase_amount - total_payments_made`
-  - Negative balance means business owes vendor money
-  - Sample products (marked with `samples = true`) affect vendor balance without vendor payments
+  - **Positive balance means customer owes money to us**
+- **Vendor Balance**: Sum of unpaid purchase order amounts plus sample/fronted product costs
+  - Calculated as `(total_purchase_amount - total_payments_made) + (sample_product_value + fronted_product_value)`
+  - **Negative balance means we owe vendor money**
 
-### Required Implementation:
-- Update materialized view to include sample product values in vendor balance calculations
-- Create SQL function to calculate proper account balances
+### Balance Calculation Logic:
+The database now includes comprehensive balance calculations via the following functions:
 
 ```sql
--- Sample SQL to update account balance calculation
-CREATE OR REPLACE FUNCTION update_account_balance(account_id uuid)
-RETURNS void AS $$
-DECLARE
-    v_customer_balance numeric := 0;
-    v_vendor_balance numeric := 0;
-    v_total_balance numeric := 0;
-BEGIN
-    -- Calculate customer balance (invoices - payments)
-    SELECT COALESCE(SUM(i.balance), 0)
-    INTO v_customer_balance
-    FROM gl_invoices i
-    WHERE i.rowid_accounts = (SELECT glide_row_id FROM gl_accounts WHERE id = account_id);
-    
-    -- Calculate vendor balance (purchase orders - payments + sample products)
-    SELECT COALESCE(SUM(po.balance), 0) + 
-           COALESCE((SELECT SUM(p.cost * p.total_qty_purchased) 
-                     FROM gl_products p 
-                     WHERE p.rowid_accounts = (SELECT glide_row_id FROM gl_accounts WHERE id = account_id)
-                     AND p.samples = true), 0) * -1 -- Negate sample costs to show as money owed
-    INTO v_vendor_balance
-    FROM gl_purchase_orders po
-    WHERE po.rowid_accounts = (SELECT glide_row_id FROM gl_accounts WHERE id = account_id);
-    
-    -- Calculate total balance (customer - vendor)
-    v_total_balance := v_customer_balance + v_vendor_balance;
-    
-    -- Update the account
-    UPDATE gl_accounts
-    SET balance = v_total_balance
-    WHERE id = account_id;
-END;
-$$ LANGUAGE plpgsql;
+-- Main function to calculate account balance
+CREATE OR REPLACE FUNCTION gl_calculate_account_balance(account_id uuid)
+RETURNS numeric AS $$
 ```
+
+This function calculates:
+1. Customer balances (positive) from unpaid invoices and sample estimates 
+2. Vendor balances (negative) from unpaid purchase orders and sample/fronted products
+3. Returns a total balance where:
+   - Positive balance = They owe us money
+   - Negative balance = We owe them money
+
+The function includes triggers on all relevant tables to maintain up-to-date balances:
+- gl_invoices
+- gl_customer_payments
+- gl_purchase_orders
+- gl_vendor_payments
+- gl_products (for sample/fronted products)
+- gl_estimates (for sample estimates)
+- gl_customer_credits
 
 ## 2. Product Inventory Tracking
 
@@ -309,17 +293,18 @@ For optimal query performance, indexes have been created on frequently queried c
 2. ✅ Create product inventory calculation function
 3. ✅ Enhance materialized views with calculated fields
 4. ✅ Create required indexes for foreign key relationships
+5. ✅ Implement account balance calculation based on all relationships
 
 ### Phase 2: Business Logic Implementation (In Progress)
 1. ⏳ Implement conversion of estimates to invoices
 2. ✅ Update product inventory tracking logic
-3. ⏳ Enhance account balance calculations in the frontend
+3. ✅ Enhance account balance calculations in the frontend
 4. ⏳ Create shipping record integration with invoices
 
 ### Phase 3: Frontend Integration (Next)
 1. ⏳ Update dashboard to show new metrics
 2. ⏳ Add inventory indicators to product listing
-3. ⏳ Show account balances with appropriate positive/negative indicators
+3. ✅ Show account balances with appropriate positive/negative indicators
 4. ⏳ Create interface for estimate to invoice conversion
 5. ✅ Create unpaid inventory management interface
 
@@ -331,13 +316,19 @@ For optimal query performance, indexes have been created on frequently queried c
 
 ## 10. Conclusion and Next Steps
 
-The current implementation handles basic calculations for invoices, estimates, and purchase orders well. We have now implemented comprehensive inventory tracking, including specific handling for sample and fronted products.
+The current implementation handles comprehensive calculations for invoices, estimates, purchase orders, and account balances. We have implemented:
+
+1. ✅ Comprehensive inventory tracking including sample and fronted products 
+2. ✅ Account balance calculations that reflect the business relationships correctly:
+   - Positive balances: money owed to us
+   - Negative balances: money we owe to others
+3. ✅ Automatic balance updates via triggers when related records change
 
 The next critical steps are:
 1. Implement the estimate to invoice conversion function
-2. Update the account balance calculations to include sample product impacts
-3. Create frontend interfaces for managing unpaid inventory
-4. Enhance dashboard metrics to reflect accurate inventory and financial data
+2. Create frontend interfaces to better visualize account balances and financial relationships
+3. Enhance dashboard metrics to reflect accurate inventory and financial data
+4. Implement additional reporting features
 
 ## 11. Sample and Fronted Product Management
 
@@ -355,3 +346,4 @@ The next critical steps are:
 - Sample and fronted products affect vendor balance calculations
 - Inventory calculations take into account samples given out
 - The unpaid inventory management interface allows tracking and resolving unpaid product statuses
+- Account balances now provide a true representation of financial obligations

@@ -26,13 +26,20 @@ const NewAccountDetail: React.FC = () => {
   const invoicesHook = useInvoicesNew();
   const purchaseOrdersHook = usePurchaseOrders();
 
+  const getBalanceVariant = (balance: number = 0) => {
+    if (balance > 0) {
+      return 'success';
+    } else if (balance < 0) {
+      return 'danger';
+    }
+    return 'default';
+  };
+
   useEffect(() => {
     if (account) {
-      // Fetch invoices for this customer
       const fetchInvoices = async () => {
         setInvoicesLoading(true);
         try {
-          // Mock until we have the correct hook method
           const { data: allInvoices } = await invoicesHook.fetchInvoices();
           const customerInvoices = allInvoices?.filter(
             inv => inv.customerId === account.id
@@ -45,7 +52,6 @@ const NewAccountDetail: React.FC = () => {
         }
       };
 
-      // Fetch purchase orders for this vendor
       const fetchPurchaseOrders = async () => {
         setPurchaseOrdersLoading(true);
         try {
@@ -80,7 +86,6 @@ const NewAccountDetail: React.FC = () => {
   if (isLoading) {
     return (
       <div className="container py-6 space-y-6">
-        {/* Loading skeleton */}
         <div>Loading...</div>
       </div>
     );
@@ -205,7 +210,12 @@ const NewAccountDetail: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">Balance</div>
-                      <div className="text-2xl font-bold">{formatCurrency(account.balance || 0)}</div>
+                      <div className={`text-2xl font-bold ${account.balance > 0 ? 'text-green-600' : account.balance < 0 ? 'text-red-600' : ''}`}>
+                        <AmountDisplay 
+                          amount={account.balance || 0} 
+                          variant={getBalanceVariant(account.balance)}
+                        />
+                      </div>
                     </div>
                   </div>
                   {account.last_invoice_date && (
@@ -233,6 +243,17 @@ const NewAccountDetail: React.FC = () => {
                       <div className="text-sm text-muted-foreground">Total Ordered</div>
                       <div className="text-2xl font-bold">{formatCurrency(accountPurchaseOrders.reduce((sum, po) => sum + (po.total || 0), 0))}</div>
                     </div>
+                    {account.is_vendor && (
+                      <div className="col-span-2">
+                        <div className="text-sm text-muted-foreground">Balance (Negative = We owe vendor)</div>
+                        <div className="text-2xl font-bold">
+                          <AmountDisplay 
+                            amount={account.balance || 0} 
+                            variant={getBalanceVariant(account.balance)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

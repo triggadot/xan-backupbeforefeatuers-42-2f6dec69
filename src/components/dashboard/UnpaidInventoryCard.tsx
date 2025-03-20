@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { UnpaidProduct } from '@/types/product';
 import { formatCurrency } from '@/utils/format-utils';
 import { useRouter } from 'react-router-dom';
+import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface UnpaidInventoryCardProps {
   unpaidProducts: UnpaidProduct[];
@@ -56,14 +57,24 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-secondary/20 p-3 rounded-md">
                 <p className="text-xs text-muted-foreground">Samples</p>
-                <p className="text-lg font-bold">{formatCurrency(totalSampleValue)}</p>
+                <p className="text-lg font-bold">
+                  <AmountDisplay 
+                    amount={totalSampleValue} 
+                    variant="danger"
+                  />
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
                 </p>
               </div>
               <div className="bg-secondary/20 p-3 rounded-md">
                 <p className="text-xs text-muted-foreground">Fronted</p>
-                <p className="text-lg font-bold">{formatCurrency(totalFrontedValue)}</p>
+                <p className="text-lg font-bold">
+                  <AmountDisplay 
+                    amount={totalFrontedValue} 
+                    variant="danger"
+                  />
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
                 </p>
@@ -85,7 +96,10 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                     <p className="text-xs text-muted-foreground">{product.vendor_name}</p>
                   </div>
                   <div className="text-right">
-                    <span className="font-semibold">{formatCurrency(product.unpaid_value)}</span>
+                    <AmountDisplay 
+                      amount={product.unpaid_value} 
+                      variant="danger"
+                    />
                   </div>
                 </div>
               ))}

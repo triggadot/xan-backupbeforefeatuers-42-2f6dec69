@@ -5,6 +5,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UnpaidInventoryList from '@/components/feature/product/UnpaidInventoryList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 const UnpaidInventory: React.FC = () => {
   const { 
@@ -57,7 +58,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalSampleValue.toFixed(2)}
+              <AmountDisplay amount={totalSampleValue} variant="danger" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
@@ -73,7 +74,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalFrontedValue.toFixed(2)}
+              <AmountDisplay amount={totalFrontedValue} variant="danger" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
@@ -89,7 +90,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalUnpaidValue.toFixed(2)}
+              <AmountDisplay amount={totalUnpaidValue} variant="danger" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.length} products total

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UnpaidProduct } from '@/types/product';
 import { formatCurrency } from '@/utils/format-utils';
+import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface UnpaidInventoryListProps {
   products: UnpaidProduct[];
@@ -82,8 +83,12 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                 </Badge>
               </TableCell>
               <TableCell>{product.quantity}</TableCell>
-              <TableCell>{formatCurrency(product.cost)}</TableCell>
-              <TableCell>{formatCurrency(product.unpaid_value)}</TableCell>
+              <TableCell>
+                <AmountDisplay amount={product.cost} variant="default" />
+              </TableCell>
+              <TableCell>
+                <AmountDisplay amount={product.unpaid_value} variant="danger" />
+              </TableCell>
               <TableCell className="max-w-[200px] truncate">
                 {product.terms_for_fronted_product || '-'}
               </TableCell>

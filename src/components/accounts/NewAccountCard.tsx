@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
 import { Mail, Phone, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface AccountCardProps {
   account: Account;
@@ -34,6 +35,16 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
     } else {
       return 'Account';
     }
+  };
+
+  // Determine the variant for the balance display based on positive or negative
+  const getBalanceVariant = (balance: number) => {
+    if (balance > 0) {
+      return 'success'; // Positive: They owe us money (good for our business)
+    } else if (balance < 0) {
+      return 'danger'; // Negative: We owe them money
+    }
+    return 'default'; // Zero balance
   };
 
   return (
@@ -71,9 +82,10 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
                   {getAccountType(account)}
                 </Badge>
                 
-                <span className="font-medium">
-                  {formatCurrency(account.balance)}
-                </span>
+                <AmountDisplay 
+                  amount={account.balance} 
+                  variant={getBalanceVariant(account.balance)}
+                />
               </div>
             </div>
           </div>
