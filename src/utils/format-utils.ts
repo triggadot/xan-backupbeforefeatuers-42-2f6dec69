@@ -2,7 +2,7 @@
 /**
  * Format a number as currency
  */
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

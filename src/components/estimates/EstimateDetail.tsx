@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Edit, FileText, PlusCircle, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -5,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
-import { formatCurrency, formatDate } from '@/utils/format-utils';
+import { Estimate, EstimateLine, CustomerCredit, EstimateWithDetails } from '@/types/estimate';
+import { formatCurrency } from '@/utils/format-utils';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -23,7 +24,8 @@ import EstimateLineForm from './EstimateLineForm';
 import CustomerCreditForm from './CustomerCreditForm';
 import EstimateDialog from './EstimateDialog';
 
-const formatDate = (date: string | Date) => {
+// Local formatDate function, renamed to avoid conflict with import
+const formatDateString = (date: string | Date) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -32,7 +34,8 @@ const formatDate = (date: string | Date) => {
 };
 
 interface EstimateDetailProps {
-  estimate: Estimate;
+  estimate: EstimateWithDetails; // Changed to EstimateWithDetails to include lines and credits
+  isLoading?: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onUpdate: (id: string, data: Partial<Estimate>) => Promise<Estimate | null>;
@@ -48,6 +51,7 @@ interface EstimateDetailProps {
 
 const EstimateDetail: React.FC<EstimateDetailProps> = ({
   estimate,
+  isLoading,
   onBack,
   onRefresh,
   onUpdate,
@@ -80,7 +84,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
     }
   };
 
-  const formatDateString = (dateString?: string) => {
+  const formatDate = (dateString?: string) => {
     if (!dateString) return 'No date';
     return format(new Date(dateString), 'MMM d, yyyy');
   };
@@ -185,7 +189,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                 Estimate #{estimate.glide_row_id?.substring(4)}
               </CardTitle>
               <CardDescription>
-                Created on {formatDateString(estimate.created_at)}
+                Created on {formatDate(estimate.created_at)}
               </CardDescription>
             </div>
             <Badge variant={getStatusBadge(estimate.status)} className="h-fit">
@@ -202,9 +206,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                 <User className="h-4 w-4 mr-2 mt-0.5" />
                 <div>
                   <p className="font-medium">{estimate.accountName || 'No customer assigned'}</p>
-                  {estimate.account && estimate.account.email_of_who_added && (
-                    <p className="text-sm text-muted-foreground">{estimate.account.email_of_who_added}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -214,7 +215,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
               <div className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-sm">Date:</span>
-                  <span className="text-sm font-medium">{formatDateString(estimate.estimate_date)}</span>
+                  <span className="text-sm font-medium">{formatDate(estimate.estimate_date)}</span>
                 </div>
                 {estimate.is_a_sample && (
                   <div className="flex justify-between">
@@ -296,28 +297,6 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                           <td className="px-4 py-2">
                             <div>
                               <p className="font-medium">{line.sale_product_name}</p>
-                              {line.productDetails && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  {line.productDetails.product_image1 && (
-                                    <img 
-                                      src={line.productDetails.product_image1} 
-                                      alt={line.productDetails.name} 
-                                      className="h-8 w-8 rounded object-cover"
-                                    />
-                                  )}
-                                  <div className="text-xs text-muted-foreground">
-                                    {line.productDetails.category && (
-                                      <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-xs mr-1">
-                                        {line.productDetails.category}
-                                      </span>
-                                    )}
-                                    {line.productDetails.vendor_product_name && 
-                                      line.productDetails.vendor_product_name !== line.sale_product_name && (
-                                      <span>Original: {line.productDetails.vendor_product_name}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                               {line.product_sale_note && (
                                 <p className="text-xs text-muted-foreground mt-1">{line.product_sale_note}</p>
                               )}
@@ -396,7 +375,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                       {estimate.credits.map((credit) => (
                         <tr key={credit.id} className="border-b">
                           <td className="px-4 py-2">
-                            {credit.date_of_payment ? formatDateString(credit.date_of_payment) : 'No date'}
+                            {credit.date_of_payment ? formatDate(credit.date_of_payment) : 'No date'}
                           </td>
                           <td className="px-4 py-2">
                             <Badge variant="secondary">
@@ -440,12 +419,12 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
         
         <CardFooter className="flex justify-between">
           <div className="text-sm text-muted-foreground">
-            Last updated: {formatDate(estimate.updated_at)}
+            Last updated: {formatDateString(estimate.updated_at || '')}
           </div>
           
           {estimate.status !== 'converted' && (
             <Button 
-              disabled={estimate.estimateLines?.length === 0}
+              disabled={!estimate.estimateLines?.length}
               onClick={() => setIsConvertDialogOpen(true)}
             >
               <FileText className="h-4 w-4 mr-1" /> Convert to Invoice
