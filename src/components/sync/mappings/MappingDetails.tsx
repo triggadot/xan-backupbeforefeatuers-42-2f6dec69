@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +8,8 @@ import { GlMapping } from '@/types/glsync';
 import { ColumnMappingsView } from './ColumnMappingsView';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import SyncErrorsView from './SyncErrorsView';
-import SyncLogsView from './SyncLogsView';
+import { SyncErrorsView } from './SyncErrorsView';
+import { SyncLogsView } from './SyncLogsView';
 
 interface MappingDetailsProps {
   mapping?: GlMapping;
@@ -96,7 +97,7 @@ export const MappingDetails: React.FC<MappingDetailsProps> = ({
             
             <TabsContent value="columns">
               <ColumnMappingsView 
-                mappingId={mappingId} 
+                mapping={mapping}
                 glideTable={mapping.glide_table}
                 supabaseTable={mapping.supabase_table}
                 columnMappings={mapping.column_mappings}

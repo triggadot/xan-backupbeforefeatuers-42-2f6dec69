@@ -3,13 +3,13 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navigationConfig } from './navigationConfig';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import MobileSidebarContent from './MobileSidebarContent';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function AppSidebar() {
-  const { isMobile } = useMobile();
+  const { isMobile } = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -58,8 +58,8 @@ function DesktopSidebar({ isCollapsed, setIsCollapsed }: DesktopSidebarProps) {
       </div>
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid gap-1 px-2">
-          {navigationConfig.map((section) => (
-            <div key={section.title} className="mb-4">
+          {Object.entries(navigationConfig).map(([key, section]) => (
+            <div key={key} className="mb-4">
               {!isCollapsed && (
                 <h3 className="mb-1 px-4 text-xs font-medium text-muted-foreground">
                   {section.title}

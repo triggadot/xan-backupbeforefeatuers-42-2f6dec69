@@ -1,41 +1,26 @@
 
-import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import AppSidebar from './AppSidebar';
-import MobileHeader from './MobileHeader';
+import { Toaster } from "@/components/ui/toaster";
+import { Outlet } from "react-router-dom";
+import { AppSidebar } from "./AppSidebar";
+import Navbar from "./Navbar";
+import MobileHeader from "./MobileHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-function MainContent() {
-  const { state } = useSidebar();
-  const isExpanded = state === "expanded";
-  
+const Layout = () => {
+  const { isMobile } = useIsMobile();
+
   return (
-    <div className={`flex-1 flex flex-col transition-all duration-300 md:ml-12 ${isExpanded ? 'md:ml-64' : ''}`}>
-      {/* Main Content Area */}
-      <main className="flex-1 bg-background overflow-auto">
-        <div className="container mx-auto p-2 md:p-4 max-w-full">
+    <div className="flex h-screen overflow-hidden">
+      <AppSidebar />
+      <div className="flex-1 overflow-auto">
+        {isMobile ? <MobileHeader /> : <Navbar />}
+        <main className="container py-4 md:py-6 lg:py-8">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
+      <Toaster />
     </div>
   );
-}
-
-function Layout() {
-  return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex flex-col md:flex-row w-full bg-background text-foreground">
-        {/* Mobile Header - visible on small screens */}
-        <MobileHeader className="md:hidden sticky top-0 z-50 w-full" />
-        
-        {/* Sidebar - unified component for both mobile and desktop */}
-        <AppSidebar />
-        
-        {/* Main Content */}
-        <MainContent />
-      </div>
-    </SidebarProvider>
-  );
-}
+};
 
 export default Layout;

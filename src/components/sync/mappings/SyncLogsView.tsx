@@ -7,10 +7,12 @@ import { RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
+type SyncLogStatus = 'started' | 'completed' | 'failed';
+
 interface SyncLog {
   id: string;
   mapping_id: string;
-  status: 'started' | 'completed' | 'failed';
+  status: SyncLogStatus;
   message: string;
   records_processed: number;
   started_at: string;
@@ -37,7 +39,13 @@ export const SyncLogsView: React.FC<SyncLogsViewProps> = ({ mappingId }) => {
         .limit(50);
 
       if (error) throw error;
-      setLogs(data || []);
+      
+      const typedLogs = (data || []).map(log => ({
+        ...log,
+        status: log.status as SyncLogStatus
+      }));
+      
+      setLogs(typedLogs);
     } catch (err) {
       toast({
         title: 'Error',
@@ -53,7 +61,7 @@ export const SyncLogsView: React.FC<SyncLogsViewProps> = ({ mappingId }) => {
     fetchLogs();
   }, [mappingId]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: SyncLogStatus) => {
     switch (status) {
       case 'completed':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -115,5 +123,3 @@ export const SyncLogsView: React.FC<SyncLogsViewProps> = ({ mappingId }) => {
     </div>
   );
 };
-
-export default SyncLogsView;
