@@ -1,20 +1,24 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { UnpaidProduct } from '@/types/product';
+import { formatCurrency } from '@/utils/format-utils';
+import { useRouter } from 'react-router-dom';
 
 interface UnpaidInventoryCardProps {
   unpaidProducts: UnpaidProduct[];
   isLoading: boolean;
 }
 
-const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({ 
+const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
   unpaidProducts,
   isLoading
 }) => {
+  const router = useRouter();
+  
   const totalSampleValue = unpaidProducts
     .filter(p => p.unpaid_type === 'Sample')
     .reduce((sum, product) => sum + product.unpaid_value, 0);
@@ -23,87 +27,89 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
     .filter(p => p.unpaid_type === 'Fronted')
     .reduce((sum, product) => sum + product.unpaid_value, 0);
 
-  const totalUnpaidValue = totalSampleValue + totalFrontedValue;
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Unpaid Inventory</CardTitle>
-          <CardDescription>Loading unpaid inventory data...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[100px] flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleViewAll = () => {
+    router.push('/unpaid-inventory');
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Unpaid Inventory</CardTitle>
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold">
+          Unpaid Inventory
+        </CardTitle>
         <CardDescription>
-          Samples and fronted products requiring attention
+          Samples and fronted products
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="border rounded-md p-3">
-              <div className="text-sm text-muted-foreground mb-1">Samples</div>
-              <div className="text-xl font-bold">${totalSampleValue.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
+      <CardContent className="flex-1 overflow-hidden">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : unpaidProducts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground h-full flex items-center justify-center">
+            <p>No unpaid inventory found</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-secondary/20 p-3 rounded-md">
+                <p className="text-xs text-muted-foreground">Samples</p>
+                <p className="text-lg font-bold">{formatCurrency(totalSampleValue)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
+                </p>
+              </div>
+              <div className="bg-secondary/20 p-3 rounded-md">
+                <p className="text-xs text-muted-foreground">Fronted</p>
+                <p className="text-lg font-bold">{formatCurrency(totalFrontedValue)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
+                </p>
               </div>
             </div>
-            <div className="border rounded-md p-3">
-              <div className="text-sm text-muted-foreground mb-1">Fronted</div>
-              <div className="text-xl font-bold">${totalFrontedValue.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
-              </div>
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-3 bg-muted/30">
-            <div className="text-sm font-medium mb-1">Total Unpaid Value</div>
-            <div className="text-2xl font-bold">${totalUnpaidValue.toFixed(2)}</div>
-          </div>
-          
-          {unpaidProducts.length > 0 && (
-            <div className="border rounded-md p-3">
-              <div className="text-sm font-medium mb-2">Recent Unpaid Products</div>
-              <ul className="space-y-2">
-                {unpaidProducts.slice(0, 3).map(product => (
-                  <li key={product.id} className="text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-medium truncate max-w-[60%]" title={product.name}>
+            
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+              {unpaidProducts.slice(0, 5).map((product) => (
+                <div key={product.id} className="flex justify-between items-center border-b pb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-sm truncate max-w-[200px]" title={product.name}>
                         {product.name}
-                      </span>
-                      <span>${product.unpaid_value.toFixed(2)}</span>
+                      </h4>
+                      <Badge variant={product.unpaid_type === 'Sample' ? 'secondary' : 'outline'}>
+                        {product.unpaid_type}
+                      </Badge>
                     </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{product.vendor_name}</span>
-                      <span>{product.unpaid_type}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    <p className="text-xs text-muted-foreground">{product.vendor_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-semibold">{formatCurrency(product.unpaid_value)}</span>
+                  </div>
+                </div>
+              ))}
+              
+              {unpaidProducts.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{unpaidProducts.length - 5} more items
+                </p>
+              )}
             </div>
-          )}
-        </div>
+            
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={handleViewAll}
+              >
+                View All Unpaid Inventory
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button asChild variant="outline" className="w-full">
-          <Link to="/unpaid-inventory">
-            Manage Unpaid Inventory
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

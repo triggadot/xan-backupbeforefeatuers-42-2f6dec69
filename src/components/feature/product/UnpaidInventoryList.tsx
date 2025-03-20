@@ -92,7 +92,7 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handlePay(product.sku)}
+                    onClick={() => handlePay(product.glide_row_id)}
                   >
                     Pay
                   </Button>
@@ -100,7 +100,7 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleReturn(product.sku)}
+                      onClick={() => handleReturn(product.glide_row_id)}
                     >
                       Return
                     </Button>

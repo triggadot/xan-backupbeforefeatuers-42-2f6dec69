@@ -1017,6 +1017,40 @@ export type Database = {
         }
         Relationships: []
       }
+      gl_unpaid_inventory: {
+        Row: {
+          category: string | null
+          cost: number | null
+          created_at: string | null
+          date_timestamp_subm: string | null
+          display_name: string | null
+          email_email_of_user_who_added_product: string | null
+          fronted: boolean | null
+          glide_row_id: string | null
+          id: string | null
+          miscellaneous_items: boolean | null
+          new_product_name: string | null
+          po_po_date: string | null
+          po_poui_dfrom_add_prod: string | null
+          product_image1: string | null
+          product_purchase_date: string | null
+          purchase_notes: string | null
+          rowid_accounts: string | null
+          rowid_purchase_orders: string | null
+          rowid_vendor_payments: string | null
+          samples: boolean | null
+          samples_or_fronted: boolean | null
+          terms_for_fronted_product: string | null
+          total_qty_purchased: number | null
+          total_units_behind_sample: number | null
+          unpaid_type: string | null
+          unpaid_value: number | null
+          updated_at: string | null
+          vendor_name: string | null
+          vendor_product_name: string | null
+        }
+        Relationships: []
+      }
       mv_account_details: {
         Row: {
           account_name: string | null
@@ -1086,20 +1120,28 @@ export type Database = {
         Row: {
           category: string | null
           cost: number | null
+          current_inventory: number | null
           display_name: string | null
           fronted: boolean | null
+          fronted_value: number | null
+          inventory_value: number | null
           miscellaneous_items: boolean | null
           new_product_name: string | null
-          po_glide_id: string | null
+          payment_status: string | null
+          po_date: string | null
+          po_number: string | null
           product_glide_id: string | null
           product_id: string | null
           product_image1: string | null
           product_purchase_date: string | null
-          purchase_order_id: string | null
-          purchase_order_uid: string | null
+          sample_value: number | null
           samples: boolean | null
           samples_or_fronted: boolean | null
+          terms_for_fronted_product: string | null
           total_qty_purchased: number | null
+          total_sampled: number | null
+          total_sold: number | null
+          total_units_behind_sample: number | null
           vendor_glide_id: string | null
           vendor_id: string | null
           vendor_name: string | null
@@ -1164,6 +1206,12 @@ export type Database = {
           sql_query: string
         }
         Returns: Json
+      }
+      gl_calculate_product_inventory: {
+        Args: {
+          product_id: string
+        }
+        Returns: number
       }
       gl_get_account_stats: {
         Args: Record<PropertyKey, never>
@@ -1300,6 +1348,13 @@ export type Database = {
           data_type: string
           confidence: number
         }[]
+      }
+      gl_update_product_payment_status: {
+        Args: {
+          product_id: string
+          new_status: string
+        }
+        Returns: boolean
       }
       gl_validate_column_mapping: {
         Args: {
