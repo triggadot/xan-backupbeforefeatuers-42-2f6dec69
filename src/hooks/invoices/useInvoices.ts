@@ -37,7 +37,7 @@ export function useInvoices() {
           .insert({
             rowid_invoices: paymentData.invoiceId,
             main_payment_amount: paymentData.amount,
-            date_of_payment: paymentData.paymentDate,
+            date_of_payment: new Date(paymentData.paymentDate).toISOString(),
             payment_method: paymentData.paymentMethod,
             notes: paymentData.notes,
           })
@@ -120,8 +120,54 @@ export function useInvoices() {
     }
   };
 
+  // Additional function to get a single invoice with details
+  const getInvoice = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Implement your getInvoice logic here
+      // This is a placeholder - you'll need to replace with actual implementation
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('gl_invoices')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Fetch line items
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
+
+      if (lineItemsError) throw lineItemsError;
+
+      // Fetch payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
+
+      if (paymentsError) throw paymentsError;
+
+      return {
+        ...invoice,
+        lineItems: lineItems || [],
+        payments: payments || []
+      };
+    } catch (err) {
+      console.error('Error fetching invoice details:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     fetchInvoices,
+    getInvoice,
     addPayment,
     deletePayment,
     deleteLineItem,
