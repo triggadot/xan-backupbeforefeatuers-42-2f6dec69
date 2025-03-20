@@ -1017,6 +1017,123 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_account_details: {
+        Row: {
+          account_name: string | null
+          accounts_uid: string | null
+          client_type: string | null
+          created_at: string | null
+          date_added_client: string | null
+          email_of_who_added: string | null
+          glide_row_id: string | null
+          id: string | null
+          is_customer: boolean | null
+          is_vendor: boolean | null
+          photo: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      mv_estimate_customer_details: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          credit_count: number | null
+          customer_glide_id: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_uid: string | null
+          estimate_date: string | null
+          estimate_id: string | null
+          glide_row_id: string | null
+          is_a_sample: boolean | null
+          line_count: number | null
+          related_invoice_glide_id: string | null
+          status: string | null
+          total_amount: number | null
+          total_credits: number | null
+          total_qty: number | null
+          updated_at: string | null
+          valid_final_create_invoice_clicked: boolean | null
+        }
+        Relationships: []
+      }
+      mv_invoice_customer_details: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          customer_glide_id: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_uid: string | null
+          doc_glideforeverlink: string | null
+          glide_row_id: string | null
+          invoice_id: string | null
+          invoice_order_date: string | null
+          last_payment_date: string | null
+          line_count: number | null
+          notes: string | null
+          payment_count: number | null
+          payment_status: string | null
+          total_amount: number | null
+          total_paid: number | null
+          total_qty: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      mv_product_vendor_details: {
+        Row: {
+          category: string | null
+          cost: number | null
+          display_name: string | null
+          fronted: boolean | null
+          miscellaneous_items: boolean | null
+          new_product_name: string | null
+          po_glide_id: string | null
+          product_glide_id: string | null
+          product_id: string | null
+          product_image1: string | null
+          product_purchase_date: string | null
+          purchase_order_id: string | null
+          purchase_order_uid: string | null
+          samples: boolean | null
+          samples_or_fronted: boolean | null
+          total_qty_purchased: number | null
+          vendor_glide_id: string | null
+          vendor_id: string | null
+          vendor_name: string | null
+          vendor_product_name: string | null
+          vendor_uid: string | null
+        }
+        Relationships: []
+      }
+      mv_purchase_order_vendor_details: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          docs_shortlink: string | null
+          glide_row_id: string | null
+          last_payment_date: string | null
+          payment_count: number | null
+          payment_status: string | null
+          pdf_link: string | null
+          po_date: string | null
+          product_categories: string[] | null
+          product_count: number | null
+          purchase_order_id: string | null
+          purchase_order_uid: string | null
+          total_amount: number | null
+          total_items: number | null
+          total_paid: number | null
+          updated_at: string | null
+          vendor_glide_id: string | null
+          vendor_id: string | null
+          vendor_name: string | null
+          vendor_uid: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_invoice_uid: {
@@ -1229,6 +1346,10 @@ export type Database = {
         Args: {
           p_event_id: string
         }
+        Returns: undefined
+      }
+      refresh_all_materialized_views: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       update_estimate_totals: {

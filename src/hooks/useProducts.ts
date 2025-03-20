@@ -16,42 +16,37 @@ export function useProducts() {
     setError(null);
     
     try {
+      // Use the new materialized view for better performance
       const { data, error } = await supabase
-        .from('gl_products')
-        .select(`
-          *,
-          gl_accounts:rowid_accounts(account_name, accounts_uid)
-        `)
-        .order('created_at', { ascending: false });
+        .from('mv_product_vendor_details')
+        .select('*')
+        .order('product_purchase_date', { ascending: false });
       
       if (error) throw error;
       
       const mappedProducts = (data || []).map((product): Product => {
-        // Ensure vendorData is properly typed and handle potential null/undefined values
-        const vendorData = product.gl_accounts || { account_name: null, accounts_uid: null };
-        
         return {
-          id: product.id,
+          id: product.product_id,
           name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-          sku: product.glide_row_id,
-          description: product.purchase_notes || '',
+          sku: product.product_glide_id,
+          description: '', // Will need to fetch from gl_products if needed
           price: 0, // Would need to be calculated from invoice lines
           cost: product.cost || 0,
           quantity: product.total_qty_purchased || 0,
           category: product.category || '',
           status: 'active',
           imageUrl: product.product_image1 || '',
-          vendorName: vendorData.account_name || '',
-          vendorId: product.rowid_accounts || '',
-          createdAt: new Date(product.created_at),
-          updatedAt: new Date(product.updated_at),
-          // Add additional fields from the database
+          vendorName: product.vendor_name || '',
+          vendorId: product.vendor_glide_id || '',
+          createdAt: new Date(), // We'd need to add created_at to the view
+          updatedAt: new Date(), // We'd need to add updated_at to the view
+          // Additional fields from the database
           isSample: product.samples || false,
           isFronted: product.fronted || false,
           isMiscellaneous: product.miscellaneous_items || false,
           purchaseDate: product.product_purchase_date ? new Date(product.product_purchase_date) : null,
-          frontedTerms: product.terms_for_fronted_product || '',
-          totalUnitsBehindSample: product.total_units_behind_sample || 0,
+          frontedTerms: '', // Will need to fetch from gl_products if needed
+          totalUnitsBehindSample: 0, // Will need to fetch from gl_products if needed
           rawData: product
         };
       });
@@ -74,45 +69,90 @@ export function useProducts() {
 
   const getProduct = useCallback(async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('gl_products')
-        .select(`
-          *,
-          gl_accounts:rowid_accounts(account_name, accounts_uid)
-        `)
-        .eq('id', id)
+      // First try to get from the materialized view
+      const { data: mvData, error: mvError } = await supabase
+        .from('mv_product_vendor_details')
+        .select('*')
+        .eq('product_id', id)
         .single();
       
-      if (error) throw error;
+      if (mvError || !mvData) {
+        // Fallback to the original table for complete data
+        const { data, error } = await supabase
+          .from('gl_products')
+          .select(`
+            *,
+            gl_accounts:rowid_accounts(account_name, accounts_uid)
+          `)
+          .eq('id', id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (!data) throw new Error('Product not found');
+        
+        // Ensure vendorData is properly typed and handle potential null/undefined values
+        const vendorData = data.gl_accounts || { account_name: null, accounts_uid: null };
+        
+        return {
+          id: data.id,
+          name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+          sku: data.glide_row_id,
+          description: data.purchase_notes || '',
+          price: 0, // Would need to be calculated from invoice lines
+          cost: data.cost || 0,
+          quantity: data.total_qty_purchased || 0,
+          category: data.category || '',
+          status: 'active',
+          imageUrl: data.product_image1 || '',
+          vendorName: vendorData.account_name || '',
+          vendorId: data.rowid_accounts || '',
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+          // Add additional fields
+          isSample: data.samples || false,
+          isFronted: data.fronted || false,
+          isMiscellaneous: data.miscellaneous_items || false,
+          purchaseDate: data.product_purchase_date ? new Date(data.product_purchase_date) : null,
+          frontedTerms: data.terms_for_fronted_product || '',
+          totalUnitsBehindSample: data.total_units_behind_sample || 0,
+          rawData: data
+        } as Product;
+      }
       
-      if (!data) throw new Error('Product not found');
+      // Get additional details not in materialized view
+      const { data: detailsData, error: detailsError } = await supabase
+        .from('gl_products')
+        .select('purchase_notes, terms_for_fronted_product, total_units_behind_sample, created_at, updated_at')
+        .eq('id', id)
+        .single();
+        
+      if (detailsError) throw detailsError;
       
-      // Ensure vendorData is properly typed and handle potential null/undefined values
-      const vendorData = data.gl_accounts || { account_name: null, accounts_uid: null };
-      
+      // Map from materialized view data
       return {
-        id: data.id,
-        name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
-        sku: data.glide_row_id,
-        description: data.purchase_notes || '',
+        id: mvData.product_id,
+        name: mvData.display_name || mvData.new_product_name || mvData.vendor_product_name || 'Unnamed Product',
+        sku: mvData.product_glide_id,
+        description: detailsData?.purchase_notes || '',
         price: 0, // Would need to be calculated from invoice lines
-        cost: data.cost || 0,
-        quantity: data.total_qty_purchased || 0,
-        category: data.category || '',
+        cost: mvData.cost || 0,
+        quantity: mvData.total_qty_purchased || 0,
+        category: mvData.category || '',
         status: 'active',
-        imageUrl: data.product_image1 || '',
-        vendorName: vendorData.account_name || '',
-        vendorId: data.rowid_accounts || '',
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at),
+        imageUrl: mvData.product_image1 || '',
+        vendorName: mvData.vendor_name || '',
+        vendorId: mvData.vendor_glide_id || '',
+        createdAt: detailsData?.created_at ? new Date(detailsData.created_at) : new Date(),
+        updatedAt: detailsData?.updated_at ? new Date(detailsData.updated_at) : new Date(),
         // Add additional fields
-        isSample: data.samples || false,
-        isFronted: data.fronted || false,
-        isMiscellaneous: data.miscellaneous_items || false,
-        purchaseDate: data.product_purchase_date ? new Date(data.product_purchase_date) : null,
-        frontedTerms: data.terms_for_fronted_product || '',
-        totalUnitsBehindSample: data.total_units_behind_sample || 0,
-        rawData: data
+        isSample: mvData.samples || false,
+        isFronted: mvData.fronted || false,
+        isMiscellaneous: mvData.miscellaneous_items || false,
+        purchaseDate: mvData.product_purchase_date ? new Date(mvData.product_purchase_date) : null,
+        frontedTerms: detailsData?.terms_for_fronted_product || '',
+        totalUnitsBehindSample: detailsData?.total_units_behind_sample || 0,
+        rawData: { ...mvData, ...detailsData }
       } as Product;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product';
