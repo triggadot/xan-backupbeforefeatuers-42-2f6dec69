@@ -1,150 +1,87 @@
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, RefreshCw, ReceiptText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import InvoiceList from '@/components/invoices/InvoiceList';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useAccounts } from '@/hooks/useAccounts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { InvoiceFilterBar } from '@/components/invoices/list/InvoiceFilters';
+import { InvoiceTable } from '@/components/invoices/list/InvoiceTable';
+import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
+import { DeleteConfirmDialog } from '@/components/invoices/detail/DeleteConfirmDialog';
+import { InvoiceListItem, InvoiceFilters } from '@/types/invoice';
 
-const Invoices: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { invoices, isLoading, error, fetchInvoices } = useInvoices();
-  const { accounts, fetchAccounts } = useAccounts();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedAccount, setSelectedAccount] = useState<string>('');
+const InvoicesPage = () => {
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState<InvoiceFilters>({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceListItem | null>(null);
+  
+  const { invoices, isLoading, deleteInvoice } = useInvoices(filters);
 
-  useEffect(() => {
-    // Initialize filters from URL params
-    const accountId = searchParams.get('accountId');
-    if (accountId) {
-      setSelectedAccount(accountId);
-    }
-    
-    const status = searchParams.get('status');
-    if (status) {
-      setSelectedStatus(status);
-    }
-    
-    // Fetch data
-    fetchInvoices();
-    fetchAccounts();
-  }, [searchParams, fetchInvoices, fetchAccounts]);
-
-  // Apply filters
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
-      invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.accountName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = !selectedStatus || invoice.status === selectedStatus;
-    
-    const matchesAccount = !selectedAccount || invoice.accountId === selectedAccount;
-    
-    return matchesSearch && matchesStatus && matchesAccount;
-  });
-
-  const handleStatusChange = (value: string) => {
-    setSelectedStatus(value);
-    if (value) {
-      searchParams.set('status', value);
-    } else {
-      searchParams.delete('status');
-    }
-    setSearchParams(searchParams);
+  const handleCreateSuccess = (invoiceId: string) => {
+    setIsCreateDialogOpen(false);
+    navigate(`/invoices/${invoiceId}`);
   };
 
-  const handleAccountChange = (value: string) => {
-    setSelectedAccount(value);
-    if (value) {
-      searchParams.set('accountId', value);
-    } else {
-      searchParams.delete('accountId');
-    }
-    setSearchParams(searchParams);
+  const handleEditInvoice = (invoice: InvoiceListItem) => {
+    navigate(`/invoices/${invoice.id}/edit`);
   };
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedStatus('');
-    setSelectedAccount('');
-    setSearchParams({});
+  const handleDeleteInvoice = (invoice: InvoiceListItem) => {
+    setSelectedInvoice(invoice);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedInvoice) return;
+    
+    await deleteInvoice(selectedInvoice.id);
+    setIsDeleteDialogOpen(false);
+    setSelectedInvoice(null);
   };
 
   return (
     <div className="container py-6 max-w-7xl">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold">Invoices</h1>
+      <div className="space-y-6">
+        <InvoiceFilterBar 
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
         
-        <div className="flex w-full sm:w-auto gap-2">
-          <Button onClick={() => fetchInvoices()} disabled={isLoading} variant="outline" size="icon">
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          </Button>
-          
-          <Button>
-            <ReceiptText className="mr-2 h-4 w-4" />
-            New Invoice
-          </Button>
-        </div>
+        <InvoiceTable 
+          data={invoices}
+          onEdit={handleEditInvoice}
+          onDelete={handleDeleteInvoice}
+          onCreateInvoice={() => setIsCreateDialogOpen(true)}
+        />
       </div>
-      
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative w-full">
-          <Input
-            placeholder="Search invoices..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        
-        <div className="flex gap-3">
-          <Select value={selectedStatus} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedAccount} onValueChange={handleAccountChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by customer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Customers</SelectItem>
-              {accounts.map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {(selectedStatus || selectedAccount || searchTerm) && (
-            <Button variant="ghost" onClick={clearFilters}>
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      <InvoiceList 
-        invoices={filteredInvoices} 
-        isLoading={isLoading} 
-        error={error} 
+
+      {/* Create Invoice Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Create New Invoice</DialogTitle>
+          </DialogHeader>
+          <InvoiceForm onSuccess={handleCreateSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete Invoice"
+        description={`Are you sure you want to delete invoice #${selectedInvoice?.invoiceNumber || ''}? This action cannot be undone and will remove all associated line items and payments.`}
       />
     </div>
   );
 };
 
-export default Invoices;
+export default InvoicesPage;

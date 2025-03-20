@@ -1,9 +1,9 @@
 
 import React from 'react';
-import InvoiceDetailView from '@/components/invoices/InvoiceDetailView';
+import { InvoiceDetailView } from '@/components/invoices/detail/InvoiceDetail';
 
-const InvoiceDetail: React.FC = () => {
+const InvoicePage: React.FC = () => {
   return <InvoiceDetailView />;
 };
 
-export default InvoiceDetail;
+export default InvoicePage;

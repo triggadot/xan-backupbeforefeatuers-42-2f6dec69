@@ -15,6 +15,7 @@ import NotFound from '@/pages/NotFound';
 import MappingView from '@/pages/MappingView';
 import Invoices from '@/pages/Invoices';
 import InvoiceDetail from '@/pages/InvoiceDetail';
+import EditInvoice from '@/pages/EditInvoice';
 import PurchaseOrders from '@/pages/PurchaseOrders';
 import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
 import Estimates from '@/pages/Estimates';
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <InvoiceDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="invoices/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <EditInvoice />
               </ProtectedRoute>
             } 
           />
