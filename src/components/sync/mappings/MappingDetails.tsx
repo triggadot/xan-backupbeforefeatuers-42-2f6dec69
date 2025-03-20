@@ -23,7 +23,6 @@ interface MappingDetailsProps {
 }
 
 const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
-<<<<<<< Updated upstream
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('details');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -46,13 +45,6 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   
-=======
-  const [mapping, setMapping] = useState<GlMapping | null>(null);
-  const { syncData, isLoading: isSyncing } = useGlSync();
-  const { status, isLoading, error, refetch } = useGlSyncStatus(mappingId as string);
-  const { toast } = useToast();
-
->>>>>>> Stashed changes
   useEffect(() => {
     refreshMapping();
     refreshErrors();

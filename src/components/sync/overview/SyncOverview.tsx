@@ -1,21 +1,17 @@
-
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { SyncStats } from './SyncStats';
 import { RecentSyncsCard } from './RecentSyncsCard';
 import { SyncMetricsCard } from './SyncMetricsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 
-<<<<<<< Updated upstream
 export const SyncOverview: React.FC = () => {
-  const { allStatuses, isLoading } = useGlSyncStatus();
-=======
-const SyncOverview = () => {
-  const { allStatuses: allSyncStatuses, isLoading, error } = useGlSyncStatus();
+  const { allStatuses, isLoading, error } = useGlSyncStatus();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
->>>>>>> Stashed changes
 
   // Calculate stats
   const totalMappings = allStatuses.length;
