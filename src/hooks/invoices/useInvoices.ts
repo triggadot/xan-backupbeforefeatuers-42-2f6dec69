@@ -3,11 +3,92 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { InvoicePayment, AddPaymentInput } from '@/types/invoice';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 export const useInvoices = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get a single invoice by ID
+  const getInvoice = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Get invoice details
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('gl_invoices')
+        .select(`
+          *,
+          account:rowid_accounts(*)
+        `)
+        .eq('id', id)
+        .single();
+        
+      if (invoiceError) throw invoiceError;
+      
+      // Get invoice line items
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select(`
+          *,
+          productDetails:rowid_products(*)
+        `)
+        .eq('rowid_invoices', invoice.glide_row_id);
+        
+      if (lineItemsError) throw lineItemsError;
+      
+      // Get payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
+        
+      if (paymentsError) throw paymentsError;
+      
+      // Format the result
+      return {
+        id: invoice.id,
+        number: invoice.glide_row_id || 'Unknown',
+        customerId: invoice.rowid_accounts,
+        accountId: invoice.rowid_accounts,
+        accountName: invoice.account?.account_name || 'Unknown Customer',
+        date: new Date(invoice.invoice_order_date || invoice.created_at),
+        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+        status: invoice.payment_status || 'draft',
+        total: Number(invoice.total_amount || 0),
+        subtotal: Number(invoice.total_amount || 0), // If you don't have separate subtotal
+        tax: 0, // If you don't track tax separately
+        amountPaid: Number(invoice.total_paid || 0),
+        balance: Number(invoice.balance || 0),
+        notes: invoice.notes,
+        lineItems: lineItems.map(item => ({
+          id: item.id,
+          productId: item.rowid_products || '',
+          description: item.renamed_product_name || '',
+          quantity: Number(item.qty_sold || 0),
+          unitPrice: Number(item.selling_price || 0),
+          total: Number(item.line_total || 0),
+          productDetails: item.productDetails
+        })),
+        payments: payments.map(payment => ({
+          id: payment.id,
+          date: new Date(payment.date_of_payment || payment.created_at),
+          amount: Number(payment.payment_amount || 0),
+          method: payment.type_of_payment || '',
+          notes: payment.payment_note || ''
+        }))
+      };
+    } catch (err) {
+      console.error('Error fetching invoice:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Add a payment to an invoice
   const addPayment = useMutation({
@@ -62,7 +143,7 @@ export const useInvoices = () => {
         }
       }
 
-      // Format the result
+      // Format the result (convert string dates to Date objects)
       return {
         id: payment.id,
         invoiceId: payment.rowid_invoices,
@@ -72,8 +153,8 @@ export const useInvoices = () => {
         paymentMethod: payment.type_of_payment || '',
         notes: payment.payment_note || '',
         date: new Date(payment.date_of_payment || payment.created_at),
-        createdAt: payment.created_at,
-        updatedAt: payment.updated_at
+        createdAt: new Date(payment.created_at),
+        updatedAt: new Date(payment.updated_at)
       };
     },
     onSuccess: () => {
@@ -95,6 +176,9 @@ export const useInvoices = () => {
   });
 
   return {
-    addPayment
+    addPayment,
+    getInvoice,
+    isLoading,
+    error
   };
 };

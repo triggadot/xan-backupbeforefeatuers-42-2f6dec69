@@ -1,98 +1,54 @@
-import { useState } from 'react';
+
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import * as z from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Calendar as CalendarIcon } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
-import { InvoiceWithDetails, AddPaymentInput } from '@/types/invoice';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
+import { formatCurrency } from '@/utils/format-utils';
 
 const paymentSchema = z.object({
-  amount: z.number()
-    .min(0.01, 'Amount must be greater than 0')
-    .max(1000000, 'Amount exceeds maximum allowed'),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
   paymentDate: z.date({
-    required_error: 'Please select a payment date',
+    required_error: "Payment date is required",
   }),
   paymentMethod: z.string().optional(),
   notes: z.string().optional(),
 });
 
 interface AddPaymentDialogProps {
-  invoice: InvoiceWithDetails;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit: (data: z.infer<typeof paymentSchema>) => Promise<void>;
+  invoiceBalance: number;
 }
 
-export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDialogProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addPayment } = useInvoices();
-
+export function AddPaymentDialog({ open, onOpenChange, onSubmit, invoiceBalance }: AddPaymentDialogProps) {
   const form = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      amount: invoice.balance > 0 ? invoice.balance : 0,
+      amount: invoiceBalance,
       paymentDate: new Date(),
       paymentMethod: '',
       notes: '',
     },
   });
 
-  const handleSubmit = async (values: z.infer<typeof paymentSchema>) => {
-    setIsSubmitting(true);
-    
-    try {
-      const paymentData: AddPaymentInput = {
-        invoiceId: invoice.id,
-        accountId: invoice.customerId,
-        amount: values.amount,
-        paymentDate: values.paymentDate,
-        paymentMethod: values.paymentMethod,
-        notes: values.notes,
-      };
-      
-      await addPayment.mutateAsync(paymentData);
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding payment:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const isSubmitting = form.formState.isSubmitting;
+
+  const handleSubmit = async (data: z.infer<typeof paymentSchema>) => {
+    await onSubmit(data);
+    form.reset();
   };
 
   return (
@@ -101,13 +57,11 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>
-            Record a payment for invoice #{invoice.invoiceNumber}.
+            Enter the payment details for this invoice.
           </DialogDescription>
         </DialogHeader>
-        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Amount */}
             <FormField
               control={form.control}
               name="amount"
@@ -115,32 +69,21 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                 <FormItem>
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                        className="pl-8"
-                        {...field}
-                        onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          field.onChange(isNaN(value) ? 0 : value);
-                        }}
-                        value={field.value}
-                      />
-                    </div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Balance: ${invoice.balance.toFixed(2)}
+                    Current balance: {formatCurrency(invoiceBalance)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            {/* Payment Date */}
+
             <FormField
               control={form.control}
               name="paymentDate"
@@ -151,7 +94,7 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant={"outline"}
+                          variant="outline"
                           className={cn(
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
@@ -171,9 +114,7 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date > new Date()}
                         initialFocus
-                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -181,8 +122,7 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                 </FormItem>
               )}
             />
-            
-            {/* Payment Method */}
+
             <FormField
               control={form.control}
               name="paymentMethod"
@@ -201,8 +141,8 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                     <SelectContent>
                       <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="check">Check</SelectItem>
-                      <SelectItem value="credit">Credit Card</SelectItem>
-                      <SelectItem value="bank">Bank Transfer</SelectItem>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -210,17 +150,16 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                 </FormItem>
               )}
             />
-            
-            {/* Notes */}
+
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter any additional notes..."
+                      placeholder="Additional notes about this payment"
                       className="resize-none"
                       {...field}
                     />
@@ -229,10 +168,10 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
@@ -240,8 +179,7 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Record Payment
+                {isSubmitting ? "Recording..." : "Record Payment"}
               </Button>
             </DialogFooter>
           </form>
@@ -249,4 +187,4 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
       </DialogContent>
     </Dialog>
   );
-};
+}

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, FileText, User, CreditCard, Package, ExternalLink } from 'lucide-react';
 import { useInvoices } from '@/hooks/invoices/useInvoices';
@@ -9,21 +9,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from 'react-router-dom';
+import { AddPaymentDialog } from './detail/AddPaymentDialog';
 
 const InvoiceDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getInvoice, isLoading } = useInvoices();
+  const { getInvoice, isLoading, addPayment } = useInvoices();
   const [invoice, setInvoice] = React.useState<any>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   React.useEffect(() => {
     if (id) {
@@ -58,6 +53,25 @@ const InvoiceDetailView: React.FC = () => {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const handleAddPayment = async (paymentData: any) => {
+    if (!invoice) return;
+    
+    const data = {
+      invoiceId: invoice.id,
+      accountId: invoice.customerId,
+      ...paymentData
+    };
+    
+    await addPayment.mutateAsync(data);
+    setIsPaymentDialogOpen(false);
+    
+    // Refresh invoice data
+    if (id) {
+      const updatedInvoice = await getInvoice(id);
+      setInvoice(updatedInvoice);
+    }
   };
 
   if (isLoading) {
@@ -122,7 +136,7 @@ const InvoiceDetailView: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline">Edit Invoice</Button>
-          <Button>Record Payment</Button>
+          <Button onClick={() => setIsPaymentDialogOpen(true)}>Record Payment</Button>
         </div>
       </div>
 
@@ -301,7 +315,7 @@ const InvoiceDetailView: React.FC = () => {
         </CardContent>
         {invoice.status !== 'paid' && (
           <CardFooter className="border-t">
-            <Button>Record New Payment</Button>
+            <Button onClick={() => setIsPaymentDialogOpen(true)}>Record New Payment</Button>
           </CardFooter>
         )}
       </Card>
@@ -317,6 +331,14 @@ const InvoiceDetailView: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Dialog */}
+      <AddPaymentDialog 
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        onSubmit={handleAddPayment}
+        invoiceBalance={invoice.balance}
+      />
     </div>
   );
 };

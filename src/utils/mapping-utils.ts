@@ -1,4 +1,3 @@
-
 import { 
   Invoice, 
   LineItem, 
@@ -161,8 +160,8 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export const mapAccountType = (accountType: string): "Customer" | "Vendor" | "Customer & Vendor" => {
-  switch (accountType.toLowerCase()) {
+export const mapAccountType = (type: string): "Customer" | "Vendor" | "Customer & Vendor" => {
+  switch (type?.toLowerCase()) {
     case 'customer':
       return 'Customer';
     case 'vendor':
@@ -170,7 +169,7 @@ export const mapAccountType = (accountType: string): "Customer" | "Vendor" | "Cu
     case 'both':
       return 'Customer & Vendor';
     default:
-      return 'Customer'; // Default fallback
+      return 'Customer'; // Default to Customer if unknown
   }
 };
 

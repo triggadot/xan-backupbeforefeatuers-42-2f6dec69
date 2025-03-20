@@ -1,33 +1,51 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
+
+interface PurchaseOrderDBResponse {
+  id?: string;
+  po_id?: string;
+  glide_row_id: string;
+  balance: number;
+  created_at: string;
+  docs_shortlink: string;
+  last_payment_date: string;
+  payment_count: number;
+  payment_status: string;
+  pdf_link: string;
+  po_date: string;
+  product_count: number;
+  purchase_order_uid: string;
+  total_amount: number;
+  total_paid: number;
+  updated_at: string;
+  vendor_glide_id: string;
+  vendor_id: string;
+  vendor_name: string;
+  vendor_uid: string;
+}
 
 export function usePurchaseOrders() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  // Fetch all purchase orders with optional filtering
   const fetchPurchaseOrders = async (filters?: PurchaseOrderFilters) => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Using the materialized view for purchase orders
       let query = supabase
         .from('mv_purchase_order_vendor_details')
         .select('*');
       
-      // Apply filters if provided
       if (filters?.search) {
-        // Modify this to search in appropriate columns (purchase_order_uid, vendor_name, etc.)
         query = query.or(`vendor_name.ilike.%${filters.search}%,purchase_order_uid.ilike.%${filters.search}%`);
       }
       
       if (filters?.status && filters.status.length > 0) {
-        query = query.in('payment_status', filters.status[0]); // Changed to use single status for simplicity
+        query = query.in('payment_status', filters.status[0]);
       }
       
       if (filters?.accountId) {
@@ -46,9 +64,8 @@ export function usePurchaseOrders() {
       
       if (supabaseError) throw supabaseError;
       
-      // Map the database results to the PurchaseOrder type
       const mappedPurchaseOrders: PurchaseOrder[] = (data || []).map(po => ({
-        id: po.id, // Use id property
+        id: po.id || po.po_id || po.glide_row_id,
         glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
         number: po.purchase_order_uid || `PO-${po.id.substring(0, 8)}`,
@@ -81,13 +98,11 @@ export function usePurchaseOrders() {
     }
   };
 
-  // Get a single purchase order with all details
   const getPurchaseOrder = async (id: string) => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Get the base purchase order data
       const { data: po, error: poError } = await supabase
         .from('mv_purchase_order_vendor_details')
         .select('*')
@@ -96,7 +111,6 @@ export function usePurchaseOrders() {
       
       if (poError) throw poError;
       
-      // Get products related to this purchase order
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
@@ -104,7 +118,6 @@ export function usePurchaseOrders() {
       
       if (productsError) throw productsError;
       
-      // Get payments related to this purchase order
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
@@ -112,9 +125,8 @@ export function usePurchaseOrders() {
       
       if (paymentsError) throw paymentsError;
       
-      // Map the purchase order with its details
       const purchaseOrder: PurchaseOrder = {
-        id: po.id,
+        id: po.id || po.po_id || po.glide_row_id,
         glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
         number: po.purchase_order_uid || `PO-${po.id.substring(0, 8)}`,
@@ -160,7 +172,7 @@ export function usePurchaseOrders() {
           id: payment.id,
           date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(),
           amount: Number(payment.payment_amount || 0),
-          method: '', // Vendor payments might not track payment method
+          method: '',
           notes: payment.vendor_purchase_note || ''
         }))
       };
@@ -175,16 +187,13 @@ export function usePurchaseOrders() {
     }
   };
 
-  // Create a new purchase order
   const createPurchaseOrder = async (data: Partial<PurchaseOrder>) => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Generate a unique glide_row_id for the new purchase order
       const glideRowId = `PO-${Date.now()}`;
       
-      // Create the purchase order
       const { data: newPO, error: poError } = await supabase
         .from('gl_purchase_orders')
         .insert({
@@ -219,7 +228,6 @@ export function usePurchaseOrders() {
     }
   };
 
-  // Helper function to map payment status to display status
   const mapPaymentStatusToStatus = (paymentStatus?: string): PurchaseOrder['status'] => {
     if (!paymentStatus) return 'draft';
     

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -36,6 +35,7 @@ import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { CreateInvoiceInput, UpdateInvoiceInput, InvoiceWithDetails } from '@/types/invoice';
 import { LineItemFormArray, LineItemFormValues } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
+import { Control } from 'react-hook-form';
 
 // Define schema that matches LineItemFormValues
 const invoiceFormSchema = z.object({

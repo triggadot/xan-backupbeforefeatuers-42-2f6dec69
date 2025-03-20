@@ -9,7 +9,6 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { useToast } from '@/hooks/use-toast';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { PurchaseOrder } from '@/types/purchaseOrder';
 
 const formSchema = z.object({
   number: z.string().min(3, {
@@ -30,14 +30,17 @@ const formSchema = z.object({
   vendorId: z.string().min(1, {
     message: "Vendor is required.",
   }),
-  status: z.string().min(1, {
-    message: "Status is required.",
+  status: z.enum(['draft', 'sent', 'received', 'partial', 'complete'], {
+    required_error: "Status is required.",
   }),
   notes: z.string().optional(),
 });
 
+// Define the form values type based on the schema
+type FormValues = z.infer<typeof formSchema>;
+
 interface PurchaseOrderFormProps {
-  purchaseOrder?: any; // Using 'any' temporarily to fix build errors
+  purchaseOrder?: Partial<PurchaseOrder>;
   onCancel?: () => void;
 }
 
@@ -49,45 +52,42 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       number: purchaseOrder?.number || '',
       date: purchaseOrder?.date ? new Date(purchaseOrder.date) : new Date(),
-      vendorId: purchaseOrder?.vendor_id || '',
-      status: purchaseOrder?.status || 'draft',
+      vendorId: purchaseOrder?.accountId || '',
+      status: (purchaseOrder?.status as 'draft' | 'sent' | 'received' | 'partial' | 'complete') || 'draft',
       notes: purchaseOrder?.notes || '',
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      if (purchaseOrder) {
-        // Update existing purchase order - we'll implement this later
-        toast({
-          title: "Success",
-          description: "Purchase order updated successfully.",
-        });
-      } else {
-        // Create new purchase order
-        await createPurchaseOrder({
-          ...values,
-          date: values.date,
-        });
-        toast({
-          title: "Success",
-          description: "Purchase order created successfully.",
-        });
-      }
+      // Create new purchase order
+      await createPurchaseOrder({
+        number: values.number,
+        date: values.date,
+        accountId: values.vendorId,
+        status: values.status,
+        notes: values.notes,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Purchase order created successfully.",
+      });
+      
       onCancel();
       navigate('/purchase-orders');
     } catch (error) {
-      console.error("Error creating/updating purchase order:", error);
+      console.error("Error creating purchase order:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create/update purchase order. Please try again.",
+        description: "Failed to create purchase order. Please try again.",
       });
     } finally {
       setIsSubmitting(false);

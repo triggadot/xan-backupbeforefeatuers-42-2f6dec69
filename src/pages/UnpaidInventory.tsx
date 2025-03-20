@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useUnpaidInventory } from '@/hooks/useUnpaidInventory';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,10 @@ const UnpaidInventory: React.FC = () => {
     markAsReturned
   } = useUnpaidInventory();
 
+  useEffect(() => {
+    fetchUnpaidInventory();
+  }, []); // Run once on component mount
+
   const totalSampleValue = unpaidProducts
     .filter(p => p.unpaid_type === 'Sample')
     .reduce((sum, product) => sum + product.unpaid_value, 0);
@@ -29,6 +33,15 @@ const UnpaidInventory: React.FC = () => {
 
   const handleRefresh = () => {
     fetchUnpaidInventory();
+  };
+
+  // Create wrapper functions that match expected return types
+  const handleMarkAsPaid = async (productId: string): Promise<boolean> => {
+    return await markAsPaid(productId);
+  };
+
+  const handleMarkAsReturned = async (productId: string): Promise<boolean> => {
+    return await markAsReturned(productId);
   };
 
   return (
@@ -107,8 +120,8 @@ const UnpaidInventory: React.FC = () => {
         <UnpaidInventoryList 
           products={unpaidProducts}
           isLoading={isLoading}
-          onPay={markAsPaid}
-          onReturn={markAsReturned}
+          onPay={handleMarkAsPaid}
+          onReturn={handleMarkAsReturned}
         />
       )}
     </div>
