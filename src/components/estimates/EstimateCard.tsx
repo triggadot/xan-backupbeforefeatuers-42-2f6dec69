@@ -1,99 +1,87 @@
-
 import React from 'react';
-import { CalendarIcon, CreditCard, FileText, User } from 'lucide-react';
-import { format } from 'date-fns';
+import { Estimate } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Estimate } from '@/types/estimate';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { formatCurrency } from '@/utils/format-utils';
-import { formatDate } from '@/utils/format-utils';
+import { ArrowRight, Calendar, FileText, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface EstimateCardProps {
   estimate: Estimate;
-  onView: (estimate: Estimate) => void;
 }
 
-const EstimateCard: React.FC<EstimateCardProps> = ({ estimate, onView }) => {
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
+const EstimateCard: React.FC<EstimateCardProps> = ({ estimate }) => {
+  const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" | "success" | "warning" => {
     switch (status) {
-      case 'converted':
-        return 'success';
-      case 'pending':
-        return 'warning';
       case 'draft':
-      default:
         return 'secondary';
+      case 'sent':
+        return 'default';
+      case 'accepted':
+        return 'success';
+      case 'rejected':
+        return 'destructive';
+      default:
+        return 'default';
     }
   };
 
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
-    <Card className="transition-all hover:shadow-md w-full">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-semibold tracking-tight">
-              Estimate #{estimate.glide_row_id?.substring(4)}
-            </h3>
-            <p className="text-sm text-muted-foreground flex items-center mt-1">
-              <CalendarIcon className="mr-1 h-3 w-3" /> 
-              {estimate.estimate_date 
-                ? format(new Date(estimate.estimate_date), 'MMM d, yyyy')
-                : 'No date'}
-            </p>
-          </div>
-          <Badge variant={getStatusBadge(estimate.status)}>
-            {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-start">
-            <User className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{estimate.accountName || 'No customer'}</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 mt-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Total Amount</p>
-              <p className="text-sm font-medium">{formatCurrency(estimate.total_amount)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Balance</p>
-              <p className="text-sm font-medium">{formatCurrency(estimate.balance)}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center mt-2 text-sm">
-            {estimate.total_credits > 0 && (
-              <div className="flex items-center text-muted-foreground mr-4">
-                <CreditCard className="h-3 w-3 mr-1" /> 
-                <span className="text-xs">{formatCurrency(estimate.total_credits)} credited</span>
+    <Link to={`/estimates/${estimate.id}`} className="block transition-transform hover:translate-y-[-2px]">
+      <Card className="overflow-hidden h-full hover:shadow-md transition-shadow">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg mb-1 truncate">Estimate #{estimate.number}</h3>
+              
+              <div className="flex gap-1 items-center text-sm text-muted-foreground mb-2">
+                <User size={14} />
+                <span className="truncate">{estimate.accountName}</span>
               </div>
-            )}
-            
-            {estimate.rowid_invoices && (
-              <div className="flex items-center text-muted-foreground">
-                <FileText className="h-3 w-3 mr-1" /> 
-                <span className="text-xs">Converted to invoice</span>
+              
+              <div className="flex gap-1 items-center text-sm text-muted-foreground">
+                <Calendar size={14} />
+                <span>{formatDate(estimate.date)}</span>
+                {estimate.expiryDate && (
+                  <>
+                    <ArrowRight size={14} />
+                    <span>{formatDate(estimate.expiryDate)}</span>
+                  </>
+                )}
               </div>
-            )}
+              
+              <div className="flex gap-1 items-center text-sm text-muted-foreground">
+                <FileText size={14} />
+                <span>{estimate.lineItems.length} items</span>
+              </div>
+              
+              <div className="mt-4 flex items-center justify-between">
+                <Badge 
+                  variant={getStatusVariant(estimate.status)}
+                  className="capitalize"
+                >
+                  {estimate.status}
+                </Badge>
+                
+                <div className="text-right">
+                  <div className="font-medium">
+                    {formatCurrency(estimate.total)}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        <div className="text-xs text-muted-foreground">
-          Created: {formatDate(estimate.created_at)}
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => onView(estimate)}>
-          View Details
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Edit, FileText, PlusCircle, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +22,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import EstimateLineForm from './EstimateLineForm';
 import CustomerCreditForm from './CustomerCreditForm';
 import EstimateDialog from './EstimateDialog';
+
+const formatDate = (date: string | Date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
 
 interface EstimateDetailProps {
   estimate: Estimate;

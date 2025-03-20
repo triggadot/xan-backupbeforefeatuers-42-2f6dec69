@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { CreditCard, MoreHorizontal, Trash2 } from 'lucide-react';
 import {
@@ -37,13 +36,15 @@ export const PaymentsTable = ({ payments, invoiceId }: PaymentsTableProps) => {
     if (!deletingPaymentId) return;
     
     try {
-      const success = await deletePayment(deletingPaymentId, invoiceId);
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'Payment deleted successfully.',
-        });
-      }
+      await deletePayment.mutateAsync({
+        id: deletingPaymentId,
+        invoiceId: invoiceId
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Payment deleted successfully.',
+      });
     } catch (error) {
       console.error('Error deleting payment:', error);
       toast({

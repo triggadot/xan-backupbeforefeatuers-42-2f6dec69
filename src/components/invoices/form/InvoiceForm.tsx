@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -73,7 +72,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
   const { createInvoice, updateInvoice } = useInvoices();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize form with default values or existing invoice data
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: initialData ? {
@@ -104,7 +102,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
     
     try {
       if (isEdit && initialData) {
-        // Update existing invoice
         const updateData: UpdateInvoiceInput = {
           customerId: values.customerId,
           invoiceDate: values.invoiceDate,
@@ -113,18 +110,18 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
           notes: values.notes,
         };
         
-        const success = await updateInvoice(initialData.id, updateData);
+        await updateInvoice.mutateAsync({
+          id: initialData.id,
+          data: updateData
+        });
         
-        if (success) {
-          if (onSuccess) {
-            onSuccess(initialData.id);
-          } else {
-            navigate(`/invoices/${initialData.id}`);
-          }
+        if (onSuccess) {
+          onSuccess(initialData.id);
+        } else {
+          navigate(`/invoices/${initialData.id}`);
         }
       } else {
-        // Create new invoice
-        const invoiceId = await createInvoice(values as CreateInvoiceInput);
+        const invoiceId = await createInvoice.mutateAsync(values as CreateInvoiceInput);
         
         if (invoiceId) {
           if (onSuccess) {
@@ -145,7 +142,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Customer Select */}
           <FormField
             control={form.control}
             name="customerId"
@@ -178,7 +174,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
             )}
           />
 
-          {/* Invoice Status */}
           <FormField
             control={form.control}
             name="status"
@@ -208,7 +203,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
             )}
           />
 
-          {/* Invoice Date */}
           <FormField
             control={form.control}
             name="invoiceDate"
@@ -251,7 +245,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
             )}
           />
 
-          {/* Due Date */}
           <FormField
             control={form.control}
             name="dueDate"
@@ -297,16 +290,14 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
           />
         </div>
 
-        {/* Line Items */}
         <div>
           <h3 className="text-lg font-medium mb-4">Line Items</h3>
           <LineItemFormArray 
-            control={form.control} 
+            control={form.control as Control<FormValues>} 
             disabled={isSubmitting}
           />
         </div>
 
-        {/* Notes */}
         <FormField
           control={form.control}
           name="notes"
@@ -329,7 +320,6 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
           )}
         />
 
-        {/* Form Actions */}
         <div className="flex justify-end space-x-2">
           <Button
             type="button"

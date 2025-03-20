@@ -1,4 +1,3 @@
-
 import { GlAccount, GlCustomerPayment, GlInvoice, GlInvoiceLine, ProductDetails } from './index';
 
 export interface InvoiceLineItem {
@@ -116,13 +115,8 @@ export interface AddPaymentInput {
   notes?: string;
 }
 
-// Mappers for database entities to app types
 export const mapGlInvoiceToInvoiceListItem = (
-  invoice: GlInvoice & { 
-    customerName?: string; 
-    lineItemCount?: number;
-    totalPaid?: number;
-  }
+  invoice: any
 ): InvoiceListItem => {
   return {
     id: invoice.id,
@@ -130,6 +124,7 @@ export const mapGlInvoiceToInvoiceListItem = (
     customerId: invoice.rowid_accounts || '',
     customerName: invoice.customerName || 'Unknown Customer',
     invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
+    dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
     status: (invoice.processed ? 
       invoice.payment_status as any || 'sent' : 
       'draft'),

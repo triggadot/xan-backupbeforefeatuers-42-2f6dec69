@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Package2, MoreHorizontal, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -39,13 +38,18 @@ export const LineItemsTable = ({ lineItems, invoiceId }: LineItemsTableProps) =>
     if (!deletingItemId) return;
     
     try {
-      const success = await deleteLineItem(deletingItemId, invoiceId);
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'Line item deleted successfully.',
-        });
-      }
+      await deleteLineItem.mutateAsync({
+        id: deletingItemId,
+        invoiceId: invoiceId
+      });
+      
+      setIsDeleteDialogOpen(false);
+      setDeletingItemId(null);
+      
+      toast({
+        title: 'Success',
+        description: 'Line item deleted successfully.',
+      });
     } catch (error) {
       console.error('Error deleting line item:', error);
       toast({
@@ -53,9 +57,6 @@ export const LineItemsTable = ({ lineItems, invoiceId }: LineItemsTableProps) =>
         description: 'Failed to delete line item.',
         variant: 'destructive',
       });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setDeletingItemId(null);
     }
   };
 

@@ -1,145 +1,169 @@
 
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
-  ArrowLeft, 
+  CreditCard, 
+  Download, 
   FileText, 
+  Pencil, 
+  Plus, 
+  Printer, 
+  Share2, 
+  Trash2, 
   User, 
   Calendar, 
-  CreditCard, 
-  Pencil, 
-  Trash2, 
-  CheckCircle, 
-  Plus, 
-  Receipt, 
-  Printer, 
-  Download 
+  Clock, 
+  DollarSign
 } from 'lucide-react';
+import { format } from 'date-fns';
+
 import { Button } from '@/components/ui/button';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
-import { InvoiceWithDetails } from '@/types/invoice';
+
+import { InvoiceHeader } from './InvoiceHeader';
 import { LineItemsTable } from './LineItemsTable';
 import { PaymentsTable } from './PaymentsTable';
-import { InvoiceHeader } from './InvoiceHeader';
 import { AddPaymentDialog } from './AddPaymentDialog';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
-import { formatDate } from '@/utils/format-utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { formatCurrency } from '@/utils/format-utils';
+import { StatusBadge } from '../shared/StatusBadge';
+import { InvoiceWithDetails } from '@/types/invoice';
+import { AmountDisplay } from '../shared/AmountDisplay';
 
-export const InvoiceDetailView = () => {
+export const InvoiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
+  
+  const { getInvoice, deleteInvoice } = useInvoices();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { getInvoice, deleteInvoice } = useInvoices();
-
-  // Fetch invoice data
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchData = async () => {
+  
+  React.useEffect(() => {
+    const fetchInvoice = async () => {
+      if (!id) return;
+      
       setIsLoading(true);
       try {
         const data = await getInvoice(id);
         setInvoice(data);
       } catch (error) {
         console.error('Error fetching invoice:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load invoice details.',
-          variant: 'destructive',
-        });
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchData();
-  }, [id, getInvoice, toast]);
-
-  // Handle invoice deletion
-  const handleDelete = async () => {
-    if (!invoice) return;
     
+    fetchInvoice();
+  }, [id, getInvoice]);
+  
+  const handleDeleteInvoice = async () => {
     try {
-      const success = await deleteInvoice(invoice.id);
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'Invoice deleted successfully.',
-        });
-        navigate('/invoices');
-      }
-    } catch (error) {
-      console.error('Error deleting invoice:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete invoice.',
-        variant: 'destructive',
-      });
-    } finally {
+      await deleteInvoice.mutateAsync(invoice?.id || '');
       setIsDeleteDialogOpen(false);
+      navigate('/invoices');
+      toast({
+        title: "Invoice deleted",
+        description: "The invoice has been permanently deleted.",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete invoice. Please try again.",
+        variant: "destructive"
+      });
     }
   };
-
-  // Rendering skeletons while loading
+  
+  const handleEdit = () => {
+    navigate(`/invoices/${id}/edit`);
+  };
+  
+  const handleBack = () => {
+    navigate('/invoices');
+  };
+  
+  const handleDownloadPdf = () => {
+    toast({
+      title: "Feature not implemented",
+      description: "PDF download functionality is not yet available.",
+      variant: "default"
+    });
+  };
+  
+  const handlePrint = () => {
+    window.print();
+  };
+  
+  const handleShare = () => {
+    toast({
+      title: "Feature not implemented",
+      description: "Sharing functionality is not yet available.",
+      variant: "default"
+    });
+  };
+  
+  const handleMarkAsPaid = (amount: number) => {
+    setIsAddPaymentOpen(true);
+  };
+  
   if (isLoading) {
     return (
       <div className="container max-w-6xl py-6 space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Skeleton className="h-8 w-64" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-40" />
           </div>
-          <div className="flex gap-2">
+          <div className="ml-auto flex gap-2">
             <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-36 w-full" />
-          <Skeleton className="h-36 w-full" />
-          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
         </div>
         
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-96" />
       </div>
     );
   }
-
-  // Show error if invoice not found
-  if (!invoice && !isLoading) {
+  
+  if (!invoice) {
     return (
       <div className="container max-w-6xl py-6">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="outline" size="icon" onClick={handleBack}>
+            <FileText className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">Invoice Not Found</h1>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              The requested invoice could not be found. It may have been deleted or you may not have permission to view it.
-            </p>
+            <p className="text-muted-foreground">The requested invoice could not be found. It may have been deleted or you may not have permission to view it.</p>
           </CardContent>
           <CardFooter>
             <Button onClick={() => navigate('/invoices')}>Back to Invoices</Button>
@@ -148,52 +172,82 @@ export const InvoiceDetailView = () => {
       </div>
     );
   }
-
-  if (!invoice) return null;
-
+  
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+  
+  const dueStatus = () => {
+    if (invoice.status === 'paid') return null;
+    if (!invoice.dueDate) return null;
+    
+    const now = new Date();
+    const dueDate = new Date(invoice.dueDate);
+    
+    if (dueDate < now && invoice.status !== 'paid') {
+      const days = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      return (
+        <div className="text-destructive text-sm font-medium">
+          Overdue by {days} {days === 1 ? 'day' : 'days'}
+        </div>
+      );
+    }
+    
+    if (dueDate > now) {
+      const days = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return (
+        <div className="text-muted-foreground text-sm">
+          Due in {days} {days === 1 ? 'day' : 'days'}
+        </div>
+      );
+    }
+    
+    return null;
+  };
+  
   return (
-    <div className="container max-w-6xl py-6 space-y-8">
-      {/* Header with controls */}
+    <div className="container max-w-6xl py-6 space-y-8 print:py-0 print:space-y-6">
       <InvoiceHeader 
-        invoice={invoice} 
-        onBack={() => navigate(-1)}
-        onEdit={() => navigate(`/invoices/${invoice.id}/edit`)}
+        invoice={invoice}
+        onBack={handleBack}
+        onEdit={handleEdit}
         onDelete={() => setIsDeleteDialogOpen(true)}
       />
-
-      {/* Info cards */}
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Customer Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-4 w-4" />
               Customer
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="font-medium">{invoice.customerName}</div>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="font-medium">{invoice.customerName}</h3>
               <Button 
                 variant="link" 
-                className="h-auto p-0 text-blue-600"
+                className="p-0 h-auto text-sm"
                 onClick={() => navigate(`/accounts/${invoice.customerId}`)}
               >
-                View Customer Details
+                View Customer
               </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* Dates Card */}
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Calendar className="h-4 w-4" />
               Dates
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Invoice Date:</span>
               <span>{formatDate(invoice.invoiceDate)}</span>
@@ -204,98 +258,114 @@ export const InvoiceDetailView = () => {
                 <span>{formatDate(invoice.dueDate)}</span>
               </div>
             )}
+            {dueStatus()}
           </CardContent>
         </Card>
-
-        {/* Amount Card */}
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-4 w-4" />
               Amount
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
+          <CardContent className="space-y-2">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Total:</span>
-              <span className="font-medium">${invoice.total.toFixed(2)}</span>
+              <AmountDisplay 
+                amount={invoice.total} 
+                className="text-base font-medium"
+              />
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Paid:</span>
-              <span className="font-medium text-green-600">${invoice.amountPaid.toFixed(2)}</span>
+              <AmountDisplay 
+                amount={invoice.amountPaid} 
+                variant="success" 
+                className="text-base font-medium"
+              />
             </div>
             <Separator />
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Balance:</span>
-              <span className="font-bold">${invoice.balance.toFixed(2)}</span>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Balance:</span>
+              <AmountDisplay 
+                amount={invoice.balance} 
+                variant={invoice.balance > 0 ? "warning" : "success"}
+                className="text-lg font-semibold"
+              />
             </div>
+            
+            {invoice.status !== 'paid' && invoice.balance > 0 && (
+              <Button 
+                className="w-full mt-2" 
+                onClick={() => setIsAddPaymentOpen(true)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Record Payment
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Tabs for line items and payments */}
-      <Tabs defaultValue="line-items" className="w-full">
+      
+      <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="line-items" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Line Items
-          </TabsTrigger>
-          <TabsTrigger value="payments" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="payments">
             Payments
+            {invoice.payments.length > 0 && (
+              <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                {invoice.payments.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="line-items" className="mt-6">
+        <TabsContent value="details" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Line Items</CardTitle>
+              <CardTitle>Line Items</CardTitle>
               <CardDescription>Products and services included in this invoice</CardDescription>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/invoices/${invoice.id}/add-item`)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <LineItemsTable 
                 lineItems={invoice.lineItems} 
-                invoiceId={invoice.id}
+                invoiceId={invoice.id} 
               />
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => navigate(`/invoices/${invoice.id}/add-item`)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-              <div className="flex flex-col items-end space-y-2">
-                <div className="flex justify-between gap-8">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span>${invoice.subtotal.toFixed(2)}</span>
-                </div>
-                {invoice.taxAmount && invoice.taxAmount > 0 && (
-                  <div className="flex justify-between gap-8">
-                    <span className="text-muted-foreground">Tax ({invoice.taxRate?.toFixed(2)}%):</span>
-                    <span>${invoice.taxAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between gap-8 font-bold">
-                  <span>Total:</span>
-                  <span>${invoice.total.toFixed(2)}</span>
-                </div>
-              </div>
-            </CardFooter>
+            {invoice.notes && (
+              <>
+                <Separator />
+                <CardContent className="pt-6">
+                  <h3 className="font-medium mb-2">Notes</h3>
+                  <p className="text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
+                </CardContent>
+              </>
+            )}
           </Card>
         </TabsContent>
         
         <TabsContent value="payments" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>Payment History</span>
-                {invoice.status !== 'paid' && (
-                  <Button onClick={() => setIsPaymentDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Record Payment
-                  </Button>
-                )}
-              </CardTitle>
-              <CardDescription>Payments made against this invoice</CardDescription>
+              <CardTitle>Payments</CardTitle>
+              <CardDescription>Payment history for this invoice</CardDescription>
+              <div className="flex justify-end">
+                <Button onClick={() => setIsAddPaymentOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Record Payment
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <PaymentsTable 
@@ -303,76 +373,84 @@ export const InvoiceDetailView = () => {
                 invoiceId={invoice.id}
               />
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <div className="w-full max-w-xs space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Invoice Total:</span>
-                  <span>${invoice.total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Paid:</span>
-                  <span className="text-green-600">${invoice.amountPaid.toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold">
-                  <span>Balance Due:</span>
-                  <span>${invoice.balance.toFixed(2)}</span>
-                </div>
+            <CardFooter className="bg-muted/50 flex justify-between">
+              <div>
+                <span className="text-muted-foreground">Balance Due:</span>
               </div>
+              <AmountDisplay 
+                amount={invoice.balance} 
+                variant={invoice.balance > 0 ? "warning" : "success"}
+                className="text-lg font-semibold"
+              />
             </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Notes section if present */}
-      {invoice.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap">{invoice.notes}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4 justify-end">
-        <Button variant="outline" size="sm">
-          <Printer className="h-4 w-4 mr-2" />
-          Print
-        </Button>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Download PDF
-        </Button>
-        {invoice.status !== 'paid' && (
-          <Button size="sm" onClick={() => setIsPaymentDialogOpen(true)}>
-            <CreditCard className="h-4 w-4 mr-2" />
-            Record Payment
-          </Button>
-        )}
-        {invoice.balance === 0 && invoice.status !== 'paid' && (
-          <Button variant="success" size="sm">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Mark as Paid
-          </Button>
-        )}
+      
+      <div className="print:hidden">
+        <Separator className="my-6" />
+        
+        <div className="flex flex-wrap gap-3 justify-between">
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handlePrint}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDownloadPdf}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleShare}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleEdit}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Invoice
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Invoice
+            </Button>
+          </div>
+        </div>
       </div>
-
-      {/* Dialogs */}
-      <AddPaymentDialog 
+      
+      <AddPaymentDialog
         invoice={invoice}
-        open={isPaymentDialogOpen}
-        onOpenChange={setIsPaymentDialogOpen}
+        open={isAddPaymentOpen}
+        onOpenChange={setIsAddPaymentOpen}
       />
-
+      
       <DeleteConfirmDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDelete}
+        onConfirm={handleDeleteInvoice}
         title="Delete Invoice"
-        description="Are you sure you want to delete this invoice? This action cannot be undone and will remove all associated line items and payments."
+        description={`Are you sure you want to delete invoice #${invoice.invoiceNumber}? This action cannot be undone and will remove all associated line items and payments.`}
       />
     </div>
   );

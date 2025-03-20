@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useFieldArray, Control } from 'react-hook-form';
 import { 
@@ -73,7 +72,7 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
     if (fields.length === 0) {
       addEmptyLineItem();
     }
-  }, [fields.length]);
+  }, [fields.length, append]);
 
   // Calculate subtotal whenever line items change
   useEffect(() => {
@@ -84,7 +83,7 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
     }, 0) || 0;
     
     setSubTotal(total);
-  }, [control._formValues.lineItems]);
+  }, [control._formValues.lineItems, control]);
 
   return (
     <div className="space-y-4">
@@ -119,20 +118,19 @@ export const LineItemFormArray = ({ control, disabled = false }: LineItemFormArr
                         <FormItem>
                           <Select
                             onValueChange={(value) => {
-                              field.onChange(value);
                               
-                              // Auto-fill description and price if product selected
+                              // Update to fix the control.setValue TypeScript errors
                               const selectedProduct = products.find(p => p.id === value);
                               if (selectedProduct) {
                                 const description = selectedProduct.name || '';
                                 const price = 0; // You would set this to the product's price if available
                                 
+                                // Update the form values directly without using setValue
                                 control._formValues.lineItems[index].description = description;
                                 control._formValues.lineItems[index].unitPrice = price;
                                 
-                                // Update the form
-                                control.setValue(`lineItems.${index}.description`, description);
-                                control.setValue(`lineItems.${index}.unitPrice`, price);
+                                // Use field.onChange for the React Hook Form fields
+                                field.onChange(value);
                               }
                             }}
                             value={field.value}

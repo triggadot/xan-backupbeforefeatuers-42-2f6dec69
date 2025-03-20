@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -86,12 +85,9 @@ export const AddPaymentDialog = ({ invoice, open, onOpenChange }: AddPaymentDial
         notes: values.notes,
       };
       
-      const success = await addPayment(paymentData);
-      
-      if (success) {
-        form.reset();
-        onOpenChange(false);
-      }
+      await addPayment.mutateAsync(paymentData);
+      form.reset();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error adding payment:', error);
     } finally {

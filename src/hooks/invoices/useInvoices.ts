@@ -1,758 +1,657 @@
 
-import { useState, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  InvoiceListItem, 
   InvoiceWithDetails, 
-  InvoiceFilters, 
-  CreateInvoiceInput, 
-  UpdateInvoiceInput, 
-  AddLineItemInput, 
-  UpdateLineItemInput, 
+  InvoiceListItem, 
+  InvoiceLineItem, 
+  InvoicePayment,
+  CreateInvoiceInput,
+  UpdateInvoiceInput,
+  AddLineItemInput,
   AddPaymentInput,
+  InvoiceFilters,
   mapGlInvoiceToInvoiceListItem,
   mapGlInvoiceLineToLineItem,
   mapGlCustomerPaymentToPayment
 } from '@/types/invoice';
-import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 
-export const useInvoices = (filters?: InvoiceFilters) => {
+type ProductDetails = {
+  id: string;
+  glide_row_id: string;
+  name: string;
+  display_name?: string;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  cost?: number;
+  total_qty_purchased?: number;
+  category?: string;
+  product_image1?: string;
+  purchase_notes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Fetch product details for an invoice line
+async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
+  if (!productGlideId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('gl_products')
+      .select('*')
+      .eq('glide_row_id', productGlideId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error fetching product details:', error);
+      return null;
+    }
+    
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      glide_row_id: data.glide_row_id,
+      name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+      display_name: data.display_name,
+      vendor_product_name: data.vendor_product_name,
+      new_product_name: data.new_product_name,
+      cost: data.cost,
+      total_qty_purchased: data.total_qty_purchased,
+      category: data.category,
+      product_image1: data.product_image1,
+      purchase_notes: data.purchase_notes,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (err) {
+    console.error('Error fetching product details:', err);
+    return null;
+  }
+}
+
+export function useInvoices(initialFilters?: InvoiceFilters) {
+  const [filters, setFilters] = useState<InvoiceFilters>(initialFilters || {});
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // List invoices with filtering
-  const fetchInvoices = useCallback(async (filters?: InvoiceFilters) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      let query = supabase
-        .from('mv_invoice_customer_details')
-        .select('*');
-      
-      // Apply filters
-      if (filters?.search) {
-        query = query.or(`customer_name.ilike.%${filters.search}%,glide_row_id.ilike.%${filters.search}%`);
+  // Query for invoice list
+  const {
+    data: invoices = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['invoices', filters],
+    queryFn: async () => {
+      try {
+        // Build query for invoices based on filters
+        let query = supabase
+          .from('gl_invoices')
+          .select(`
+            *,
+            accounts:gl_accounts(account_name),
+            lineItemCount:gl_invoice_lines(count)
+          `)
+          .order('created_at', { ascending: false });
+        
+        // Apply filters
+        if (filters.search) {
+          query = query.or(`glide_row_id.ilike.%${filters.search}%,rowid_accounts.ilike.%${filters.search}%`);
+        }
+        
+        if (filters.status && filters.status.length > 0) {
+          query = query.in('payment_status', filters.status);
+        }
+        
+        if (filters.customerId) {
+          // Get the account's glide_row_id
+          const { data: account } = await supabase
+            .from('gl_accounts')
+            .select('glide_row_id')
+            .eq('id', filters.customerId)
+            .single();
+            
+          if (account?.glide_row_id) {
+            query = query.eq('rowid_accounts', account.glide_row_id);
+          }
+        }
+        
+        if (filters.dateFrom) {
+          query = query.gte('invoice_order_date', filters.dateFrom.toISOString());
+        }
+        
+        if (filters.dateTo) {
+          query = query.lte('invoice_order_date', filters.dateTo.toISOString());
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        // Get payment totals for each invoice
+        const invoiceIds = data.map(inv => inv.glide_row_id);
+        
+        const { data: payments, error: paymentsError } = await supabase
+          .from('gl_customer_payments')
+          .select('rowid_invoices, payment_amount')
+          .in('rowid_invoices', invoiceIds);
+          
+        if (paymentsError) throw paymentsError;
+        
+        // Calculate payment totals per invoice
+        const paymentTotals: Record<string, number> = {};
+        (payments || []).forEach(payment => {
+          if (!paymentTotals[payment.rowid_invoices]) {
+            paymentTotals[payment.rowid_invoices] = 0;
+          }
+          paymentTotals[payment.rowid_invoices] += Number(payment.payment_amount || 0);
+        });
+        
+        // Map to InvoiceListItem array
+        return data.map((invoice: any) => {
+          // Extract account name from the nested object
+          const accountName = invoice.accounts?.account_name || 'Unknown';
+          const lineItemCount = invoice.lineItemCount?.[0]?.count || 0;
+          const totalPaid = paymentTotals[invoice.glide_row_id] || 0;
+          
+          // Add these properties to the invoice object
+          invoice.customerName = accountName;
+          invoice.lineItemCount = lineItemCount;
+          invoice.totalPaid = totalPaid;
+          
+          return mapGlInvoiceToInvoiceListItem(invoice);
+        });
+      } catch (err) {
+        console.error('Error fetching invoices:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return [];
       }
-      
-      if (filters?.status && filters.status.length > 0) {
-        query = query.in('payment_status', filters.status);
-      }
-      
-      if (filters?.customerId) {
-        query = query.eq('customer_id', filters.customerId);
-      }
-      
-      if (filters?.dateFrom) {
-        query = query.gte('invoice_order_date', filters.dateFrom.toISOString());
-      }
-      
-      if (filters?.dateTo) {
-        query = query.lte('invoice_order_date', filters.dateTo.toISOString());
-      }
-      
-      const { data, error } = await query.order('invoice_order_date', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Transform the data to our app's type
-      const invoices: InvoiceListItem[] = (data || []).map(invoice => ({
-        id: invoice.invoice_id,
-        invoiceNumber: invoice.glide_row_id || 'Unknown',
-        customerId: invoice.customer_id || '',
-        customerName: invoice.customer_name || 'Unknown Customer',
-        invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
-        status: invoice.payment_status as any || 'draft',
-        total: Number(invoice.total_amount || 0),
-        amountPaid: Number(invoice.total_paid || 0),
-        balance: Number(invoice.balance || 0),
-        lineItemCount: Number(invoice.line_count || 0),
-        createdAt: new Date(invoice.created_at),
-        updatedAt: new Date(invoice.updated_at),
-      }));
-      
-      setIsLoading(false);
-      return invoices;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices';
-      setError(errorMessage);
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return [];
     }
-  }, [toast]);
+  });
 
-  // Get a single invoice with all details
+  // Get a single invoice with full details
   const getInvoice = useCallback(async (id: string): Promise<InvoiceWithDetails | null> => {
-    setIsLoading(true);
     try {
-      // Get the invoice
-      const { data: invoiceData, error: invoiceError } = await supabase
+      // Fetch the invoice
+      const { data: invoice, error: invoiceError } = await supabase
         .from('gl_invoices')
-        .select(`
-          *,
-          gl_accounts!gl_invoices_rowid_accounts_fkey(id, account_name)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
       if (invoiceError) throw invoiceError;
-      if (!invoiceData) throw new Error('Invoice not found');
+      if (!invoice) throw new Error('Invoice not found');
       
-      // Get line items with product details
-      const { data: lineItemsData, error: lineItemsError } = await supabase
+      // Fetch the account
+      const { data: account, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('glide_row_id', invoice.rowid_accounts)
+        .maybeSingle();
+      
+      if (accountError) throw accountError;
+      
+      // Fetch line items
+      const { data: lineItems, error: lineItemsError } = await supabase
         .from('gl_invoice_lines')
-        .select(`
-          *,
-          gl_products!gl_invoice_lines_rowid_products_fkey(*)
-        `)
-        .eq('rowid_invoices', invoiceData.glide_row_id);
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
       
       if (lineItemsError) throw lineItemsError;
       
-      // Get payments
-      const { data: paymentsData, error: paymentsError } = await supabase
+      // Enhance line items with product details
+      const enhancedLineItems = await Promise.all(
+        (lineItems || []).map(async (line) => {
+          if (line.rowid_products) {
+            const productDetails = await fetchProductDetails(line.rowid_products);
+            return {
+              ...line,
+              productDetails: productDetails || undefined
+            };
+          }
+          return line;
+        })
+      );
+      
+      // Fetch payments
+      const { data: payments, error: paymentsError } = await supabase
         .from('gl_customer_payments')
         .select('*')
-        .eq('rowid_invoices', invoiceData.glide_row_id);
+        .eq('rowid_invoices', invoice.glide_row_id);
       
       if (paymentsError) throw paymentsError;
       
-      // Create the full invoice object
-      const accountData = invoiceData.gl_accounts || { id: null, account_name: 'Unknown Customer' };
-      
-      const lineItems = (lineItemsData || []).map(line => {
-        const productDetails = line.gl_products ? {
-          id: line.gl_products.id,
-          glide_row_id: line.gl_products.glide_row_id,
-          name: line.gl_products.display_name || line.gl_products.new_product_name || line.gl_products.vendor_product_name || 'Unnamed Product',
-          display_name: line.gl_products.display_name,
-          vendor_product_name: line.gl_products.vendor_product_name,
-          new_product_name: line.gl_products.new_product_name,
-          cost: line.gl_products.cost,
-          total_qty_purchased: line.gl_products.total_qty_purchased,
-          category: line.gl_products.category,
-          product_image1: line.gl_products.product_image1,
-          purchase_notes: line.gl_products.purchase_notes,
-          created_at: line.gl_products.created_at,
-          updated_at: line.gl_products.updated_at
-        } : undefined;
-        
-        return mapGlInvoiceLineToLineItem({
-          ...line,
-          productDetails
-        });
-      });
-      
-      const payments = (paymentsData || []).map(payment => 
-        mapGlCustomerPaymentToPayment(payment)
-      );
-      
-      const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-      const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-      
-      const invoice: InvoiceWithDetails = {
-        id: invoiceData.id,
-        invoiceNumber: invoiceData.glide_row_id || 'Unknown',
-        customerId: accountData.id || '',
-        customerName: accountData.account_name || 'Unknown Customer',
-        invoiceDate: invoiceData.invoice_order_date ? new Date(invoiceData.invoice_order_date) : new Date(invoiceData.created_at),
-        dueDate: invoiceData.invoice_order_date ? new Date(new Date(invoiceData.invoice_order_date).getTime() + 30 * 24 * 60 * 60 * 1000) : undefined, // 30 days from invoice date
-        status: (invoiceData.payment_status || 'draft') as any,
-        subtotal,
-        total: subtotal, // Assuming no tax for now
-        amountPaid: totalPaid,
-        balance: subtotal - totalPaid,
-        notes: invoiceData.notes,
-        lineItems,
-        payments,
-        createdAt: new Date(invoiceData.created_at),
-        updatedAt: new Date(invoiceData.updated_at),
+      // Map to domain model
+      const mappedInvoice = {
+        id: invoice.id,
+        invoiceNumber: invoice.glide_row_id || 'Unknown',
+        customerId: invoice.rowid_accounts || '',
+        customerName: account?.account_name || 'Unknown Customer',
+        invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
+        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+        status: (invoice.processed ? invoice.payment_status as any || 'sent' : 'draft'),
+        subtotal: Number(invoice.total_amount || 0),
+        taxRate: invoice.tax_rate ? Number(invoice.tax_rate) : undefined,
+        taxAmount: invoice.tax_amount ? Number(invoice.tax_amount) : undefined,
+        total: Number(invoice.total_amount || 0),
+        amountPaid: payments?.reduce((sum, p) => sum + Number(p.payment_amount || 0), 0) || 0,
+        balance: Number(invoice.balance || 0),
+        notes: invoice.notes || undefined,
+        createdAt: new Date(invoice.created_at),
+        updatedAt: new Date(invoice.updated_at),
+        lineItems: enhancedLineItems.map(mapGlInvoiceLineToLineItem),
+        payments: (payments || []).map(mapGlCustomerPaymentToPayment),
       };
-      
-      setIsLoading(false);
-      return invoice;
+
+      return mappedInvoice;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoice details';
-      console.error('Error fetching invoice:', errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoice';
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
-      setIsLoading(false);
       return null;
     }
   }, [toast]);
 
-  // Create invoice
-  const createInvoice = useCallback(async (data: CreateInvoiceInput): Promise<string | null> => {
-    setIsLoading(true);
-    try {
-      // Get customer glide_row_id from customer id
-      const { data: customerData, error: customerError } = await supabase
-        .from('gl_accounts')
-        .select('glide_row_id')
-        .eq('id', data.customerId)
-        .single();
-      
-      if (customerError) throw customerError;
-      if (!customerData?.glide_row_id) throw new Error('Customer not found');
-      
-      // Create the invoice
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .insert({
-          rowid_accounts: customerData.glide_row_id,
-          invoice_order_date: data.invoiceDate.toISOString(),
-          processed: data.status === 'sent',
-          notes: data.notes
-        })
-        .select()
-        .single();
-      
-      if (invoiceError) throw invoiceError;
-      if (!invoiceData) throw new Error('Failed to create invoice');
-      
-      // Create line items
-      if (data.lineItems && data.lineItems.length > 0) {
-        const lineItemsToInsert = await Promise.all(
-          data.lineItems.map(async (item) => {
-            // Get product glide_row_id from product id
-            const { data: productData, error: productError } = await supabase
-              .from('gl_products')
-              .select('glide_row_id, display_name')
-              .eq('id', item.productId)
-              .single();
-            
-            if (productError) throw productError;
-            if (!productData?.glide_row_id) throw new Error(`Product not found: ${item.productId}`);
-            
-            return {
-              rowid_invoices: invoiceData.glide_row_id,
-              rowid_products: productData.glide_row_id,
-              renamed_product_name: item.description || productData.display_name,
-              qty_sold: item.quantity,
-              selling_price: item.unitPrice,
-              line_total: item.quantity * item.unitPrice,
-              date_of_sale: data.invoiceDate.toISOString()
-            };
-          })
-        );
-        
-        const { error: lineItemsError } = await supabase
-          .from('gl_invoice_lines')
-          .insert(lineItemsToInsert);
-        
-        if (lineItemsError) throw lineItemsError;
-      }
-      
-      toast({
-        title: 'Success',
-        description: 'Invoice created successfully',
-      });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      
-      setIsLoading(false);
-      return invoiceData.id;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create invoice';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return null;
-    }
-  }, [toast, queryClient]);
-
-  // Update invoice
-  const updateInvoice = useCallback(async (id: string, data: UpdateInvoiceInput): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Get the existing invoice first
-      const { data: existingInvoice, error: fetchError } = await supabase
-        .from('gl_invoices')
-        .select('glide_row_id')
-        .eq('id', id)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      if (!existingInvoice) throw new Error('Invoice not found');
-      
-      // Prepare update data
-      const updateData: any = {};
-      
-      if (data.customerId) {
-        // Get customer glide_row_id from customer id
-        const { data: customerData, error: customerError } = await supabase
+  // Create a new invoice
+  const createInvoice = useMutation({
+    mutationFn: async (data: CreateInvoiceInput): Promise<string> => {
+      try {
+        // Get customer's glide_row_id
+        const { data: account, error: accountError } = await supabase
           .from('gl_accounts')
           .select('glide_row_id')
           .eq('id', data.customerId)
           .single();
+          
+        if (accountError) throw accountError;
         
-        if (customerError) throw customerError;
-        if (!customerData?.glide_row_id) throw new Error('Customer not found');
+        // Insert invoice
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('gl_invoices')
+          .insert({
+            rowid_accounts: account.glide_row_id,
+            invoice_order_date: data.invoiceDate.toISOString(),
+            due_date: data.dueDate?.toISOString(),
+            processed: data.status === 'sent',
+            notes: data.notes || ''
+          })
+          .select()
+          .single();
+          
+        if (invoiceError) throw invoiceError;
         
-        updateData.rowid_accounts = customerData.glide_row_id;
+        // Create line items
+        if (data.lineItems.length > 0) {
+          const lineItemsToInsert = data.lineItems.map(item => {
+            // Calculate line total
+            const lineTotal = item.quantity * item.unitPrice;
+            
+            return {
+              rowid_invoices: invoice.glide_row_id,
+              rowid_products: item.productId,
+              renamed_product_name: item.description,
+              qty_sold: item.quantity,
+              selling_price: item.unitPrice,
+              line_total: lineTotal,
+              date_of_sale: new Date().toISOString()
+            };
+          });
+          
+          // Insert all line items
+          const { error: lineItemError } = await supabase
+            .from('gl_invoice_lines')
+            .insert(lineItemsToInsert);
+            
+          if (lineItemError) throw lineItemError;
+        }
+        
+        return invoice.id;
+      } catch (err) {
+        console.error('Error creating invoice:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to create invoice';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        throw err;
       }
-      
-      if (data.invoiceDate) {
-        updateData.invoice_order_date = data.invoiceDate.toISOString();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({
+        title: 'Success',
+        description: 'Invoice created successfully',
+      });
+    }
+  });
+
+  // Update an existing invoice
+  const updateInvoice = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: UpdateInvoiceInput }): Promise<boolean> => {
+      try {
+        // Fetch the invoice to get its glide_row_id
+        const { data: invoice, error: fetchError } = await supabase
+          .from('gl_invoices')
+          .select('glide_row_id')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // Prepare update data
+        const updateData: any = {};
+        
+        if (data.customerId) {
+          // Get customer's glide_row_id
+          const { data: account, error: accountError } = await supabase
+            .from('gl_accounts')
+            .select('glide_row_id')
+            .eq('id', data.customerId)
+            .single();
+            
+          if (accountError) throw accountError;
+          updateData.rowid_accounts = account.glide_row_id;
+        }
+        
+        if (data.invoiceDate) {
+          updateData.invoice_order_date = data.invoiceDate.toISOString();
+        }
+        
+        if (data.dueDate) {
+          updateData.due_date = data.dueDate.toISOString();
+        }
+        
+        if (data.status) {
+          updateData.processed = data.status !== 'draft';
+          updateData.payment_status = data.status;
+        }
+        
+        if (data.notes !== undefined) {
+          updateData.notes = data.notes;
+        }
+        
+        // Update the invoice
+        const { error: updateError } = await supabase
+          .from('gl_invoices')
+          .update(updateData)
+          .eq('id', id);
+          
+        if (updateError) throw updateError;
+        
+        return true;
+      } catch (err) {
+        console.error('Error updating invoice:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update invoice';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        throw err;
       }
-      
-      if (data.status) {
-        updateData.payment_status = data.status;
-        updateData.processed = data.status !== 'draft';
-      }
-      
-      if (data.notes !== undefined) {
-        updateData.notes = data.notes;
-      }
-      
-      // Update the invoice
-      const { error: updateError } = await supabase
-        .from('gl_invoices')
-        .update(updateData)
-        .eq('id', id);
-      
-      if (updateError) throw updateError;
-      
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.id] });
       toast({
         title: 'Success',
         description: 'Invoice updated successfully',
       });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice', id] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update invoice';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
     }
-  }, [toast, queryClient]);
+  });
 
-  // Delete invoice
-  const deleteInvoice = useCallback(async (id: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Get the existing invoice first to get the glide_row_id
-      const { data: existingInvoice, error: fetchError } = await supabase
-        .from('gl_invoices')
-        .select('glide_row_id')
-        .eq('id', id)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      if (!existingInvoice) throw new Error('Invoice not found');
-      
-      // Delete line items first (foreign key constraint)
-      const { error: lineItemsError } = await supabase
-        .from('gl_invoice_lines')
-        .delete()
-        .eq('rowid_invoices', existingInvoice.glide_row_id);
-      
-      if (lineItemsError) throw lineItemsError;
-      
-      // Delete payments (foreign key constraint)
-      const { error: paymentsError } = await supabase
-        .from('gl_customer_payments')
-        .delete()
-        .eq('rowid_invoices', existingInvoice.glide_row_id);
-      
-      if (paymentsError) throw paymentsError;
-      
-      // Finally delete the invoice
-      const { error: deleteError } = await supabase
-        .from('gl_invoices')
-        .delete()
-        .eq('id', id);
-      
-      if (deleteError) throw deleteError;
-      
+  // Delete an invoice
+  const deleteInvoice = useMutation({
+    mutationFn: async (id: string): Promise<boolean> => {
+      try {
+        // Fetch the invoice to get its glide_row_id
+        const { data: invoice, error: fetchError } = await supabase
+          .from('gl_invoices')
+          .select('glide_row_id')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // Delete related payments
+        const { error: paymentsError } = await supabase
+          .from('gl_customer_payments')
+          .delete()
+          .eq('rowid_invoices', invoice.glide_row_id);
+          
+        if (paymentsError) throw paymentsError;
+        
+        // Delete related line items
+        const { error: lineItemsError } = await supabase
+          .from('gl_invoice_lines')
+          .delete()
+          .eq('rowid_invoices', invoice.glide_row_id);
+          
+        if (lineItemsError) throw lineItemsError;
+        
+        // Delete the invoice
+        const { error: deleteError } = await supabase
+          .from('gl_invoices')
+          .delete()
+          .eq('id', id);
+          
+        if (deleteError) throw deleteError;
+        
+        return true;
+      } catch (err) {
+        console.error('Error deleting invoice:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete invoice';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       toast({
         title: 'Success',
         description: 'Invoice deleted successfully',
       });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete invoice';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
     }
-  }, [toast, queryClient]);
+  });
 
   // Add a line item to an invoice
-  const addLineItem = useCallback(async (data: AddLineItemInput): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Get invoice glide_row_id
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .select('glide_row_id, invoice_order_date')
-        .eq('id', data.invoiceId)
-        .single();
-      
-      if (invoiceError) throw invoiceError;
-      if (!invoiceData) throw new Error('Invoice not found');
-      
-      // Get product glide_row_id
-      const { data: productData, error: productError } = await supabase
-        .from('gl_products')
-        .select('glide_row_id, display_name')
-        .eq('id', data.productId)
-        .single();
-      
-      if (productError) throw productError;
-      if (!productData) throw new Error('Product not found');
-      
-      // Create the line item
-      const { error: createError } = await supabase
-        .from('gl_invoice_lines')
-        .insert({
-          rowid_invoices: invoiceData.glide_row_id,
-          rowid_products: productData.glide_row_id,
-          renamed_product_name: data.description || productData.display_name,
-          qty_sold: data.quantity,
-          selling_price: data.unitPrice,
-          line_total: data.quantity * data.unitPrice,
-          date_of_sale: invoiceData.invoice_order_date
+  const addLineItem = useMutation({
+    mutationFn: async (data: AddLineItemInput): Promise<boolean> => {
+      try {
+        // Fetch the invoice to get its glide_row_id
+        const { data: invoice, error: fetchError } = await supabase
+          .from('gl_invoices')
+          .select('glide_row_id')
+          .eq('id', data.invoiceId)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // Calculate line total
+        const lineTotal = data.quantity * data.unitPrice;
+        
+        // Insert line item
+        const { error: insertError } = await supabase
+          .from('gl_invoice_lines')
+          .insert({
+            rowid_invoices: invoice.glide_row_id,
+            rowid_products: data.productId,
+            renamed_product_name: data.description,
+            qty_sold: data.quantity,
+            selling_price: data.unitPrice,
+            line_total: lineTotal,
+            date_of_sale: new Date().toISOString()
+          });
+          
+        if (insertError) throw insertError;
+        
+        return true;
+      } catch (err) {
+        console.error('Error adding line item:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to add line item';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
         });
-      
-      if (createError) throw createError;
-      
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
       toast({
         title: 'Success',
         description: 'Line item added successfully',
       });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoice', data.invoiceId] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add line item';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
     }
-  }, [toast, queryClient]);
-
-  // Update a line item
-  const updateLineItem = useCallback(async (id: string, invoiceId: string, data: UpdateLineItemInput): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const updateData: any = {};
-      
-      if (data.description !== undefined) {
-        updateData.renamed_product_name = data.description;
-      }
-      
-      if (data.quantity !== undefined) {
-        updateData.qty_sold = data.quantity;
-      }
-      
-      if (data.unitPrice !== undefined) {
-        updateData.selling_price = data.unitPrice;
-      }
-      
-      // Calculate line total if both quantity and unit price are provided or available
-      if (data.quantity !== undefined || data.unitPrice !== undefined) {
-        // Get current line item data if needed
-        const { data: currentLine, error: fetchError } = await supabase
-          .from('gl_invoice_lines')
-          .select('qty_sold, selling_price')
-          .eq('id', id)
-          .single();
-        
-        if (fetchError) throw fetchError;
-        
-        const quantity = data.quantity !== undefined ? data.quantity : currentLine.qty_sold;
-        const unitPrice = data.unitPrice !== undefined ? data.unitPrice : currentLine.selling_price;
-        
-        updateData.line_total = quantity * unitPrice;
-      }
-      
-      // Update the line item
-      const { error: updateError } = await supabase
-        .from('gl_invoice_lines')
-        .update(updateData)
-        .eq('id', id);
-      
-      if (updateError) throw updateError;
-      
-      toast({
-        title: 'Success',
-        description: 'Line item updated successfully',
-      });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update line item';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
-    }
-  }, [toast, queryClient]);
+  });
 
   // Delete a line item
-  const deleteLineItem = useCallback(async (id: string, invoiceId: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Delete the line item
-      const { error: deleteError } = await supabase
-        .from('gl_invoice_lines')
-        .delete()
-        .eq('id', id);
-      
-      if (deleteError) throw deleteError;
-      
-      toast({
-        title: 'Success',
-        description: 'Line item deleted successfully',
-      });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete line item';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
-    }
-  }, [toast, queryClient]);
-
-  // Add a payment
-  const addPayment = useCallback(async (data: AddPaymentInput): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Get invoice glide_row_id
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .select('glide_row_id')
-        .eq('id', data.invoiceId)
-        .single();
-      
-      if (invoiceError) throw invoiceError;
-      if (!invoiceData) throw new Error('Invoice not found');
-      
-      // Get account glide_row_id
-      const { data: accountData, error: accountError } = await supabase
-        .from('gl_accounts')
-        .select('glide_row_id')
-        .eq('id', data.accountId)
-        .single();
-      
-      if (accountError) throw accountError;
-      if (!accountData) throw new Error('Account not found');
-      
-      // Create the payment
-      const { error: createError } = await supabase
-        .from('gl_customer_payments')
-        .insert({
-          rowid_invoices: invoiceData.glide_row_id,
-          rowid_accounts: accountData.glide_row_id,
-          payment_amount: data.amount,
-          date_of_payment: data.paymentDate.toISOString(),
-          type_of_payment: data.paymentMethod,
-          payment_note: data.notes
+  const deleteLineItem = useMutation({
+    mutationFn: async ({ id, invoiceId }: { id: string, invoiceId: string }): Promise<boolean> => {
+      try {
+        const { error } = await supabase
+          .from('gl_invoice_lines')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        return true;
+      } catch (err) {
+        console.error('Error deleting line item:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete line item';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
         });
-      
-      if (createError) throw createError;
-      
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+    }
+  });
+
+  // Add a payment to an invoice
+  const addPayment = useMutation({
+    mutationFn: async (data: AddPaymentInput): Promise<boolean> => {
+      try {
+        // Fetch the invoice to get its glide_row_id
+        const { data: invoice, error: fetchError } = await supabase
+          .from('gl_invoices')
+          .select('glide_row_id')
+          .eq('id', data.invoiceId)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // Fetch the account to get its glide_row_id
+        const { data: account, error: accountError } = await supabase
+          .from('gl_accounts')
+          .select('glide_row_id')
+          .eq('id', data.accountId)
+          .single();
+          
+        if (accountError) throw accountError;
+        
+        // Insert payment
+        const { error: insertError } = await supabase
+          .from('gl_customer_payments')
+          .insert({
+            rowid_invoices: invoice.glide_row_id,
+            rowid_accounts: account.glide_row_id,
+            payment_amount: data.amount,
+            date_of_payment: data.paymentDate.toISOString(),
+            type_of_payment: data.paymentMethod || '',
+            payment_note: data.notes || ''
+          });
+          
+        if (insertError) throw insertError;
+        
+        return true;
+      } catch (err) {
+        console.error('Error adding payment:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to add payment';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       toast({
         title: 'Success',
-        description: 'Payment recorded successfully',
+        description: 'Payment added successfully',
       });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoice', data.invoiceId] });
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to record payment';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
     }
-  }, [toast, queryClient]);
+  });
 
   // Delete a payment
-  const deletePayment = useCallback(async (id: string, invoiceId: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Delete the payment
-      const { error: deleteError } = await supabase
-        .from('gl_customer_payments')
-        .delete()
-        .eq('id', id);
-      
-      if (deleteError) throw deleteError;
-      
-      toast({
-        title: 'Success',
-        description: 'Payment deleted successfully',
-      });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+  const deletePayment = useMutation({
+    mutationFn: async ({ id, invoiceId }: { id: string, invoiceId: string }): Promise<boolean> => {
+      try {
+        const { error } = await supabase
+          .from('gl_customer_payments')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        return true;
+      } catch (err) {
+        console.error('Error deleting payment:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete payment';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      
-      setIsLoading(false);
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete payment';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
     }
-  }, [toast, queryClient]);
-
-  // React Query hooks
-  const invoicesQuery = useQuery({
-    queryKey: ['invoices', filters],
-    queryFn: () => fetchInvoices(filters),
   });
-
-  const invoiceMutations = {
-    createInvoice: useMutation({
-      mutationFn: createInvoice,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      },
-    }),
-    updateInvoice: useMutation({
-      mutationFn: ({ id, data }: { id: string; data: UpdateInvoiceInput }) => 
-        updateInvoice(id, data),
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.id] });
-      },
-    }),
-    deleteInvoice: useMutation({
-      mutationFn: deleteInvoice,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      },
-    }),
-    addLineItem: useMutation({
-      mutationFn: addLineItem,
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
-      },
-    }),
-    updateLineItem: useMutation({
-      mutationFn: ({ id, invoiceId, data }: { id: string; invoiceId: string; data: UpdateLineItemInput }) => 
-        updateLineItem(id, invoiceId, data),
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
-      },
-    }),
-    deleteLineItem: useMutation({
-      mutationFn: ({ id, invoiceId }: { id: string; invoiceId: string }) => 
-        deleteLineItem(id, invoiceId),
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
-      },
-    }),
-    addPayment: useMutation({
-      mutationFn: addPayment,
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      },
-    }),
-    deletePayment: useMutation({
-      mutationFn: ({ id, invoiceId }: { id: string; invoiceId: string }) => 
-        deletePayment(id, invoiceId),
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      },
-    }),
-  };
 
   return {
-    invoices: invoicesQuery.data || [],
-    isLoading: isLoading || invoicesQuery.isLoading,
-    isError: invoicesQuery.isError,
-    error: error || invoicesQuery.error,
-    fetchInvoices,
+    invoices,
+    isLoading,
+    error,
+    refetch,
+    filters,
+    setFilters,
     getInvoice,
-    ...invoiceMutations,
+    createInvoice,
+    updateInvoice,
+    deleteInvoice,
+    addLineItem,
+    deleteLineItem,
+    addPayment,
+    deletePayment
   };
-};
-
-export const useInvoiceDetail = (id?: string) => {
-  const queryClient = useQueryClient();
-  
-  return useQuery({
-    queryKey: ['invoice', id],
-    queryFn: async () => {
-      if (!id) return null;
-      
-      const { getInvoice } = useInvoices();
-      return getInvoice(id);
-    },
-    enabled: !!id,
-  });
-};
+}

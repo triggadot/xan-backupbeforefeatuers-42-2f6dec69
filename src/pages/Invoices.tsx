@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -41,9 +40,18 @@ const InvoicesPage = () => {
   const confirmDelete = async () => {
     if (!selectedInvoice) return;
     
-    await deleteInvoice(selectedInvoice.id);
-    setIsDeleteDialogOpen(false);
-    setSelectedInvoice(null);
+    try {
+      await deleteInvoice.mutateAsync(selectedInvoice.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedInvoice(null);
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete invoice",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
