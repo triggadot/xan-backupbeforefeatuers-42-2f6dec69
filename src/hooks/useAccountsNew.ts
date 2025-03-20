@@ -57,18 +57,14 @@ export function useAccountsNew() {
       await createAccount(accountData);
       
       // Fetch the newly created account from the materialized view to get all the details
-      const newAccount = await getAccount(accountData.id);
-      
-      if (newAccount) {
-        setAccounts(prev => [...prev, newAccount]);
-      }
+      await fetchAccounts();
       
       toast({
         title: 'Account Created',
         description: `${accountData.name} has been added successfully.`,
       });
       
-      return newAccount;
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
       toast({
@@ -76,29 +72,23 @@ export function useAccountsNew() {
         description: errorMessage,
         variant: 'destructive',
       });
-      return null;
+      return false;
     }
-  }, [toast, getAccount]);
+  }, [toast, fetchAccounts]);
 
   const updateAccount = useCallback(async (id: string, accountData: Partial<Account>) => {
     try {
       await updateAccountService(id, accountData);
       
-      // Fetch the updated account from the materialized view
-      const updatedAccount = await getAccount(id);
-      
-      if (updatedAccount) {
-        setAccounts(prev => prev.map(account => 
-          account.id === id ? updatedAccount : account
-        ));
-      }
+      // Fetch updated accounts
+      await fetchAccounts();
       
       toast({
         title: 'Account Updated',
         description: `${accountData.name || 'Account'} has been updated successfully.`,
       });
       
-      return updatedAccount;
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update account';
       toast({
@@ -106,9 +96,9 @@ export function useAccountsNew() {
         description: errorMessage,
         variant: 'destructive',
       });
-      return null;
+      return false;
     }
-  }, [toast, getAccount]);
+  }, [toast, fetchAccounts]);
 
   const deleteAccount = useCallback(async (id: string) => {
     try {

@@ -21,16 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 
 const accountSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['Customer', 'Vendor', 'Customer & Vendor']),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  website: z.string().url('Invalid website URL').optional().or(z.literal('')),
-  notes: z.string().optional(),
   status: z.enum(['active', 'inactive']),
 });
 
@@ -52,11 +46,6 @@ const AccountForm: React.FC<AccountFormProps> = ({
     defaultValues: {
       name: defaultValues?.name || '',
       type: defaultValues?.type || 'Customer',
-      email: defaultValues?.email || '',
-      phone: defaultValues?.phone || '',
-      address: defaultValues?.address || '',
-      website: defaultValues?.website || '',
-      notes: defaultValues?.notes || '',
       status: defaultValues?.status || 'active',
     },
   });
@@ -107,48 +96,6 @@ const AccountForm: React.FC<AccountFormProps> = ({
 
           <FormField
             control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="Email address" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone</FormLabel>
-                <FormControl>
-                  <Input placeholder="Phone number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="website"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Website</FormLabel>
-                <FormControl>
-                  <Input placeholder="Website URL" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="status"
             render={({ field }) => (
               <FormItem>
@@ -172,34 +119,6 @@ const AccountForm: React.FC<AccountFormProps> = ({
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Additional notes" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>

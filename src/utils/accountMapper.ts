@@ -37,16 +37,10 @@ export const mapViewAccountToAccount = (viewAccount: AccountFromView): Account =
     id: viewAccount.account_id,
     name: viewAccount.account_name,
     type: determineAccountType(viewAccount.is_customer, viewAccount.is_vendor),
-    email: viewAccount.email_of_who_added || '',
-    phone: viewAccount.phone || '',
-    address: viewAccount.address || '',
-    website: viewAccount.website || '',
-    notes: viewAccount.notes || '',
     status: 'active', // Default status, not in view
     balance: viewAccount.balance || 0,
     glide_row_id: viewAccount.glide_row_id,
     accounts_uid: viewAccount.accounts_uid,
-    photo: viewAccount.photo,
     created_at: viewAccount.created_at,
     updated_at: viewAccount.updated_at,
     // Additional fields from materialized view

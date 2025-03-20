@@ -3,8 +3,7 @@ import React from 'react';
 import { Account } from '@/types/accountNew';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/utils/format-utils';
-import { Mail, Phone, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
@@ -59,20 +58,6 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
                 <User size={14} />
                 <span className="capitalize">{getAccountType(account)}</span>
               </div>
-              
-              {account.email && (
-                <div className="flex gap-1 items-center text-sm text-muted-foreground">
-                  <Mail size={14} />
-                  <span className="truncate">{account.email}</span>
-                </div>
-              )}
-              
-              {account.phone && (
-                <div className="flex gap-1 items-center text-sm text-muted-foreground">
-                  <Phone size={14} />
-                  <span>{account.phone}</span>
-                </div>
-              )}
               
               <div className="mt-4 flex items-center justify-between">
                 <Badge 

@@ -47,11 +47,6 @@ export const createAccount = async (accountData: Omit<Account, 'id' | 'created_a
     .insert({
       account_name: accountData.name,
       client_type: accountData.type,
-      email_of_who_added: accountData.email,
-      phone: accountData.phone,
-      address: accountData.address,
-      website: accountData.website,
-      notes: accountData.notes,
       is_customer: is_customer,
       is_vendor: is_vendor,
       glide_row_id: accountData.glide_row_id || ('A-' + Date.now()), // Generate a temporary ID for Glide sync
@@ -78,12 +73,6 @@ export const updateAccount = async (id: string, accountData: Partial<Account>) =
     updateData.is_customer = is_customer;
     updateData.is_vendor = is_vendor;
   }
-  if (accountData.email) updateData.email_of_who_added = accountData.email;
-  if (accountData.phone) updateData.phone = accountData.phone;
-  if (accountData.address) updateData.address = accountData.address;
-  if (accountData.website) updateData.website = accountData.website;
-  if (accountData.notes) updateData.notes = accountData.notes;
-  if (accountData.photo) updateData.photo = accountData.photo;
   
   const { error } = await supabase
     .from('gl_accounts')

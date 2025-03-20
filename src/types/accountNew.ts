@@ -6,12 +6,6 @@ export interface AccountFromView {
   glide_row_id: string;
   accounts_uid?: string;
   client_type?: string;
-  email_of_who_added?: string;
-  phone?: string;
-  address?: string;
-  website?: string;
-  notes?: string;
-  photo?: string;
   created_at: string;
   updated_at: string;
   invoice_count: number;
@@ -29,16 +23,10 @@ export interface Account {
   id: string;
   name: string;
   type: 'Customer' | 'Vendor' | 'Customer & Vendor';
-  email: string;
-  phone?: string;
-  address?: string;
-  website?: string;
-  notes?: string;
-  status: 'active' | 'inactive';
-  balance: number;
   glide_row_id: string;
   accounts_uid?: string;
-  photo?: string;
+  status: 'active' | 'inactive';
+  balance: number;
   created_at?: string;
   updated_at?: string;
   // Properties from materialized view

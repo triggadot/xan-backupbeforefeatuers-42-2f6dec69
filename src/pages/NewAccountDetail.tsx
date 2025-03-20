@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Building, Mail, Phone, Globe, MapPin, Edit, Trash2, Package, FileText } from 'lucide-react';
+import { ArrowLeft, Building, Edit, Trash2, Package, FileText } from 'lucide-react';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
 import { useAccount } from '@/hooks/useAccount';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import InvoiceList from '@/components/invoices/list/InvoiceList';
+import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 const NewAccountDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -155,7 +157,7 @@ const NewAccountDetail: React.FC = () => {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Account Information</CardTitle>
@@ -176,16 +178,6 @@ const NewAccountDetail: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
-                {account.email && (
-                  <div className="flex items-start">
-                    <Mail className="h-5 w-5 mr-2 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">Email</div>
-                      <div className="text-sm">{account.email}</div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
             
@@ -210,7 +202,7 @@ const NewAccountDetail: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">Balance</div>
-                      <div className={`text-2xl font-bold ${account.balance > 0 ? 'text-green-600' : account.balance < 0 ? 'text-red-600' : ''}`}>
+                      <div className={`text-2xl font-bold`}>
                         <AmountDisplay 
                           amount={account.balance || 0} 
                           variant={getBalanceVariant(account.balance)}
