@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { InvoicePayment } from '@/types/invoice';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { formatDate } from '@/utils/format-utils';
@@ -28,7 +28,7 @@ interface PaymentsTableProps {
 
 export const PaymentsTable = ({ payments, invoiceId }: PaymentsTableProps) => {
   const { toast } = useToast();
-  const { deletePayment } = useInvoices();
+  const { deletePayment } = useInvoicesNew();
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

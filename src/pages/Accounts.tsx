@@ -11,25 +11,36 @@ import {
 import { Input } from '@/components/ui/input';
 import AccountList from '@/components/accounts/AccountList';
 import AccountForm from '@/components/accounts/AccountForm';
-import { useAccounts } from '@/hooks/useAccounts';
-import { Account } from '@/types';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { Account } from '@/types/accountNew';
 
 const Accounts: React.FC = () => {
-  const { accounts, isLoading, error, fetchAccounts, addAccount } = useAccounts();
+  const { accounts, isLoading, error, fetchAccounts, addAccount } = useAccountsNew();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAccounts = accounts.filter(account => 
     account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    account.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    account.type.toLowerCase().includes(searchTerm.toLowerCase())
+    (account.email && account.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (account.type && account.type.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleAddAccount = async (data: Omit<Account, 'id' | 'createdAt' | 'updatedAt' | 'balance'>) => {
+  const handleAddAccount = async (data: any) => {
     setIsSubmitting(true);
     try {
-      await addAccount({ ...data, balance: 0 });
+      await addAccount({
+        name: data.name,
+        type: data.type,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        website: data.website,
+        notes: data.notes,
+        status: 'active',
+        balance: 0,
+        glide_row_id: '', // Will be generated in the hook
+      });
       setIsCreateDialogOpen(false);
     } finally {
       setIsSubmitting(false);

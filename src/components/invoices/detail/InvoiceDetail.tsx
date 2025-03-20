@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -37,7 +36,7 @@ import { LineItemsTable } from './LineItemsTable';
 import { PaymentsTable } from './PaymentsTable';
 import { AddPaymentDialog } from './AddPaymentDialog';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { formatCurrency } from '@/utils/format-utils';
 import { StatusBadge } from '../shared/StatusBadge';
 import { InvoiceWithDetails } from '@/types/invoice';
@@ -53,7 +52,7 @@ export const InvoiceDetail = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   
-  const { getInvoice, deleteInvoice } = useInvoices();
+  const { getInvoice, deleteInvoice } = useInvoicesNew();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   

@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { InvoiceFilterBar } from '@/components/invoices/list/InvoiceFilters';
 import { InvoiceTable } from '@/components/invoices/list/InvoiceTable';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
@@ -23,7 +23,7 @@ const InvoicesPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceListItem | null>(null);
   
-  const { invoices, isLoading, deleteInvoice } = useInvoices(filters);
+  const { invoices, isLoading, deleteInvoice } = useInvoicesNew(filters);
 
   const handleCreateSuccess = (invoiceId: string) => {
     setIsCreateDialogOpen(false);

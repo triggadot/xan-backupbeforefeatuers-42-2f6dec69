@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusMetrics } from '@/hooks/useBusinessMetrics';
+import { StatusMetrics } from '@/types/business';
 import {
   BarChart,
   ResponsiveContainer,

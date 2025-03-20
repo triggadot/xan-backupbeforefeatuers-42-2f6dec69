@@ -26,15 +26,8 @@ export interface StatusMetrics {
 }
 
 export interface BusinessOperations {
-  // Account type determination
-  determineAccountType: (isCustomer: boolean, isVendor: boolean) => 'Customer' | 'Vendor' | 'Customer & Vendor';
-  extractAccountFlags: (type: 'Customer' | 'Vendor' | 'Customer & Vendor') => { is_customer: boolean; is_vendor: boolean };
-  
-  // Metric calculations
   calculateTotalBalance: (total: number, paid: number) => number;
   calculateAmountDue: (lineItems: any[]) => number;
-  
-  // Status determinations 
   determineInvoiceStatus: (total: number, paid: number, dueDate?: Date) => 'draft' | 'sent' | 'overdue' | 'paid' | 'partial';
   determinePurchaseOrderStatus: (total: number, paid: number) => 'draft' | 'pending' | 'complete' | 'partial';
 }

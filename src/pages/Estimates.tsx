@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { PlusCircle } from 'lucide-react';
-import { useEstimates } from '@/hooks/useEstimates';
+import { useEstimatesNew } from '@/hooks/useEstimatesNew';
 import EstimateList from '@/components/estimates/EstimateList';
 import { Button } from '@/components/ui/button';
 import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
@@ -28,7 +28,7 @@ const Estimates = () => {
     updateCustomerCredit,
     deleteCustomerCredit,
     convertToInvoice
-  } = useEstimates();
+  } = useEstimatesNew();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<EstimateWithDetails | null>(null);

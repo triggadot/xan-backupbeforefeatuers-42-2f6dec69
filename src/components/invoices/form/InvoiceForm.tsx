@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -30,8 +31,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { CreateInvoiceInput, UpdateInvoiceInput, InvoiceWithDetails } from '@/types/invoice';
 import { LineItemFormArray } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,7 @@ const invoiceFormSchema = z.object({
   ).min(1, 'At least one line item is required'),
 });
 
-type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
+type FormValues = z.infer<typeof invoiceFormSchema>;
 
 interface InvoiceFormProps {
   initialData?: InvoiceWithDetails;
@@ -68,8 +69,8 @@ interface InvoiceFormProps {
 
 export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceFormProps) => {
   const navigate = useNavigate();
-  const { accounts } = useAccounts();
-  const { createInvoice, updateInvoice } = useInvoices();
+  const { accounts } = useAccountsNew();
+  const { createInvoice, updateInvoice } = useInvoicesNew();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<InvoiceFormValues>({

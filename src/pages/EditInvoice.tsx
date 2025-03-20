@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
 import { InvoiceWithDetails } from '@/types/invoice';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +12,7 @@ const EditInvoicePage = () => {
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { getInvoice } = useInvoices();
+  const { getInvoice } = useInvoicesNew();
 
   useEffect(() => {
     if (!id) return;

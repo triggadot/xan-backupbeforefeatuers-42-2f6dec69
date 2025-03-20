@@ -6,7 +6,7 @@ import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
-import PurchaseOrderFilters from '@/components/purchase-orders/PurchaseOrderFilters';
+import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
 import { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PurchaseOrderForm from '@/components/purchase-orders/PurchaseOrderForm';

@@ -19,7 +19,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { InvoiceFilters } from '@/types/invoice';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
 
 interface InvoiceFilterBarProps {
   filters: InvoiceFilters;
@@ -30,7 +30,7 @@ export const InvoiceFilterBar = ({
   filters,
   onFiltersChange,
 }: InvoiceFilterBarProps) => {
-  const { accounts } = useAccounts();
+  const { accounts } = useAccountsNew();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [debouncedSearch] = useDebounce(searchValue, 500);
 

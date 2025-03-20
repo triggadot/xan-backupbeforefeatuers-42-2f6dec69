@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { useInvoices } from '@/hooks/invoices/useInvoices';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { InvoiceLineItem } from '@/types/invoice';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
@@ -30,7 +30,7 @@ interface LineItemsTableProps {
 export const LineItemsTable = ({ lineItems, invoiceId }: LineItemsTableProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { deleteLineItem } = useInvoices();
+  const { deleteLineItem } = useInvoicesNew();
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
