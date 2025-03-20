@@ -20,14 +20,15 @@ export function useProducts() {
         .from('gl_products')
         .select(`
           *,
-          gl_accounts(account_name, accounts_uid)
+          gl_accounts:rowid_accounts(account_name, accounts_uid)
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       const mappedProducts = (data || []).map((product): Product => {
-        const vendorData = product.gl_accounts || {};
+        // Ensure vendorData is properly typed and handle potential null/undefined values
+        const vendorData = product.gl_accounts || { account_name: null, accounts_uid: null };
         
         return {
           id: product.id,
@@ -77,7 +78,7 @@ export function useProducts() {
         .from('gl_products')
         .select(`
           *,
-          gl_accounts(account_name, accounts_uid)
+          gl_accounts:rowid_accounts(account_name, accounts_uid)
         `)
         .eq('id', id)
         .single();
@@ -86,7 +87,8 @@ export function useProducts() {
       
       if (!data) throw new Error('Product not found');
       
-      const vendorData = data.gl_accounts || {};
+      // Ensure vendorData is properly typed and handle potential null/undefined values
+      const vendorData = data.gl_accounts || { account_name: null, accounts_uid: null };
       
       return {
         id: data.id,
