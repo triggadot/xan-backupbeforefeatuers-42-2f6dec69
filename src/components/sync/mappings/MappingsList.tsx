@@ -1,54 +1,62 @@
 
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { MappingListItem } from './MappingListItem';
-import { MappingListHeader } from './MappingListHeader';
+import { useState } from 'react';
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { GlMapping } from '@/types/glsync';
+import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
+import { MappingListHeader } from './MappingListHeader';
+import { MappingListItem } from './MappingListItem';
+import { MappingDeleteDialog } from './MappingDeleteDialog';
+import { EmptyMappingsList } from './EmptyMappingsList';
+import { MappingsListSkeleton } from './MappingsListSkeleton';
 
-export interface MappingsListProps {
-  mappings: GlMapping[];
-  onViewMapping: (mappingId: string) => void;
-  onToggleEnabled: (mapping: GlMapping) => Promise<void>;
-  onDeleteMapping: (id: string) => Promise<void>;
-  isLoading: boolean;
-  onMappingCreated: () => Promise<void>;
+interface MappingsListProps {
+  onEdit: (mapping: GlMapping) => void;
 }
 
-export interface MappingListItemProps {
-  mapping: GlMapping;
-  onViewMapping: (mappingId: string) => void;
-  onToggleEnabled: (mapping: GlMapping) => Promise<void>;
-  onDeleteMapping: (id: string) => Promise<void>;
-  isLoading: boolean;
-}
+export function MappingsList({ onEdit }: MappingsListProps) {
+  const { mappings, isLoading, toggleEnabled, deleteMapping } = useRealtimeMappings();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-export interface MappingListHeaderProps {
-  onMappingCreated: () => Promise<void>;
-}
+  const handleDelete = async (mappingId: string) => {
+    setDeletingId(mappingId);
+    setIsDeleting(true);
+    try {
+      await deleteMapping(mappingId);
+    } finally {
+      setDeletingId(null);
+      setIsDeleting(false);
+    }
+  };
 
-export const MappingsList: React.FC<MappingsListProps> = ({
-  mappings,
-  onViewMapping,
-  onToggleEnabled,
-  onDeleteMapping,
-  isLoading,
-  onMappingCreated
-}) => {
+  const handleMappingCreated = async () => {
+    // Refresh happens automatically via real-time subscription
+    return Promise.resolve();
+  };
+
   return (
-    <Card className="shadow-none">
-      <MappingListHeader onMappingCreated={onMappingCreated} />
-      <div className="divide-y divide-border">
-        {mappings.map((mapping) => (
-          <MappingListItem
+    <div className="space-y-4">
+      <MappingListHeader onMappingCreated={handleMappingCreated} />
+      
+      {isLoading ? (
+        <MappingsListSkeleton />
+      ) : mappings.length === 0 ? (
+        <EmptyMappingsList />
+      ) : (
+        mappings.map(mapping => (
+          <MappingListItem 
             key={mapping.id}
             mapping={mapping}
-            onViewMapping={onViewMapping}
-            onToggleEnabled={onToggleEnabled}
-            onDeleteMapping={onDeleteMapping}
-            isLoading={isLoading}
+            onEdit={onEdit}
+            onDelete={handleDelete}
+            toggleEnabled={toggleEnabled}
           />
-        ))}
-      </div>
-    </Card>
+        ))
+      )}
+      
+      <AlertDialog open={isDeleting}>
+        <MappingDeleteDialog isDeleting={isDeleting} />
+      </AlertDialog>
+    </div>
   );
-};
+}

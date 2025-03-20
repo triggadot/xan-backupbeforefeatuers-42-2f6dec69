@@ -1,56 +1,45 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-export interface SupabaseTable {
+interface SupabaseTable {
   table_name: string;
 }
 
-export const useSupabaseTables = () => {
+export function useSupabaseTables() {
   const [tables, setTables] = useState<SupabaseTable[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const fetchTables = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
+  const fetchTables = useCallback(async (forceRefresh = false) => {
+    if (tables.length > 0 && !forceRefresh) return tables;
     
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('gl_tables_view')
-        .select('*');
+        .select('table_name');
       
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      if (data) {
-        // Filter out system tables and properly type table_name as string
-        const filteredTables = data
-          .filter(table => {
-            const tableName = String(table.table_name);
-            return !tableName.startsWith('_') && 
-                   !tableName.startsWith('pg_') && 
-                   !tableName.startsWith('auth.');
-          })
-          .map(table => ({ 
-            table_name: String(table.table_name) 
-          }))
-          .sort((a, b) => a.table_name.localeCompare(b.table_name));
-        
-        setTables(filteredTables);
-      }
-    } catch (err) {
-      console.error('Error fetching tables:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      if (error) throw error;
+      setTables(data || []);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching Supabase tables:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load Supabase tables',
+        variant: 'destructive',
+      });
+      return [];
     } finally {
       setIsLoading(false);
     }
-  }, []);
-  
+  }, [tables.length, toast]);
+
   useEffect(() => {
     fetchTables();
-  }, [fetchTables]);
-  
-  return { tables, isLoading, error, fetchTables };
-};
+  }, []);
+
+  return { tables, isLoading, fetchTables };
+}

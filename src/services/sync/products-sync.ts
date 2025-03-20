@@ -1,55 +1,54 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { ProductSyncResult } from "@/types/glsync";
+import { supabase } from '@/integrations/supabase/client';
+import { ProductSyncResult } from '@/types/glsync';
+import { BaseSyncService } from './base-sync';
 
-/**
- * Syncs products from Glide to Supabase
- */
-export async function syncProducts(mappingId: string): Promise<ProductSyncResult> {
-  try {
-    console.log(`Starting product sync for mapping: ${mappingId}`);
-    
-    // Call the glsync edge function
-    const { data, error } = await supabase.functions.invoke('glsync', {
-      body: {
-        action: 'syncProducts',
-        mappingId
-      }
-    });
-    
-    if (error) {
-      console.error('Error in syncProducts function:', error);
+export class ProductsSyncService extends BaseSyncService {
+  async sync(): Promise<ProductSyncResult> {
+    try {
+      console.log(`Starting products sync for mapping ${this.mappingId}`);
+      
+      // Create sync log entry
+      const { data: logData, error: logError } = await supabase
+        .from('gl_sync_logs')
+        .insert({
+          mapping_id: this.mappingId,
+          status: 'started',
+          message: 'Starting products sync'
+        })
+        .select('id')
+        .single();
+
+      if (logError) throw new Error(`Failed to create sync log: ${logError.message}`);
+      const logId = logData.id;
+
+      // Call the simplified edge function to sync data
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'syncData',
+          connectionId: this.connectionId,
+          mappingId: this.mappingId,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      
+      console.log('Sync result:', data);
+      
       return {
-        success: false,
-        error: error.message || 'An error occurred during product sync',
-        recordsProcessed: 0,
-        failedRecords: 0
-      };
-    }
-    
-    // Check for errors in the response data
-    if (data && !data.success) {
-      console.error('Error in sync products response:', data.error);
-      return {
-        success: false,
-        error: data.error || 'An error occurred during product sync',
+        success: data.success ?? false,
         recordsProcessed: data.recordsProcessed || 0,
-        failedRecords: data.failedRecords || 0
+        failedRecords: data.failedRecords || 0,
+        errors: data.errors || [],
+      };
+    } catch (error) {
+      console.error('Error in products sync:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        recordsProcessed: 0,
+        failedRecords: 1
       };
     }
-    
-    return {
-      success: true,
-      recordsProcessed: data.recordsProcessed || 0,
-      failedRecords: data.failedRecords || 0
-    };
-  } catch (error) {
-    console.error('Exception in syncProducts:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error during product sync',
-      recordsProcessed: 0,
-      failedRecords: 0
-    };
   }
 }

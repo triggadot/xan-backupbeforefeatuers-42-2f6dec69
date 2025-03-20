@@ -1,367 +1,317 @@
-
 import React, { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
-// Define schema for form validation
-const createTableSchema = z.object({
-  tableName: z.string().min(3, 'Table name must be at least 3 characters'),
-  columns: z.array(
-    z.object({
-      name: z.string().min(1, 'Column name is required'),
-      type: z.string().min(1, 'Column type is required'),
-      required: z.boolean().optional(),
-      isPrimaryKey: z.boolean().optional(),
-      isForeignKey: z.boolean().optional(),
-      referencesTable: z.string().optional(),
-      referencesColumn: z.string().optional(),
-    })
-  ).min(1, 'At least one column is required'),
-});
+interface ColumnDefinition {
+  name: string;
+  type: string;
+  isPrimary: boolean;
+  isNullable: boolean;
+}
 
-// Define form values type
-type CreateTableFormValues = z.infer<typeof createTableSchema>;
+const DEFAULT_COLUMNS: ColumnDefinition[] = [
+  { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
+  { name: 'glide_row_id', type: 'text', isPrimary: false, isNullable: false },
+  { name: 'created_at', type: 'timestamp with time zone', isPrimary: false, isNullable: false },
+  { name: 'updated_at', type: 'timestamp with time zone', isPrimary: false, isNullable: true }
+];
 
-// Column types available in Supabase
-const columnTypes = [
-  'text',
-  'integer',
-  'bigint',
-  'numeric',
-  'boolean',
-  'timestamp with time zone',
-  'date',
-  'jsonb',
-  'uuid',
+const DATA_TYPES = [
+  { value: 'text', label: 'Text' },
+  { value: 'integer', label: 'Integer' },
+  { value: 'numeric', label: 'Numeric/Decimal' },
+  { value: 'boolean', label: 'Boolean' },
+  { value: 'timestamp with time zone', label: 'Timestamp' },
+  { value: 'date', label: 'Date' },
+  { value: 'jsonb', label: 'JSON' },
+  { value: 'uuid', label: 'UUID' }
 ];
 
 interface CreateTableFormProps {
-  onSubmit: (values: CreateTableFormValues) => Promise<boolean>;
+  onTableCreated: (tableName: string) => void;
   onCancel: () => void;
-  isSubmitting: boolean;
+  isCompact?: boolean;
 }
 
-export const CreateTableForm: React.FC<CreateTableFormProps> = ({ 
-  onSubmit, 
-  onCancel,
-  isSubmitting
-}) => {
-  const [existingTables, setExistingTables] = useState<string[]>([]);
-  
-  // Initialize form with default values
-  const form = useForm<CreateTableFormValues>({
-    resolver: zodResolver(createTableSchema),
-    defaultValues: {
-      tableName: '',
-      columns: [
-        {
-          name: 'id',
-          type: 'uuid',
-          required: true,
-          isPrimaryKey: true,
-          isForeignKey: false,
-        },
-        {
-          name: 'created_at',
-          type: 'timestamp with time zone',
-          required: false,
-          isPrimaryKey: false,
-          isForeignKey: false,
-        },
-        {
-          name: 'updated_at',
-          type: 'timestamp with time zone',
-          required: false,
-          isPrimaryKey: false,
-          isForeignKey: false,
-        },
-        {
-          name: 'glide_row_id',
-          type: 'text',
-          required: true,
-          isPrimaryKey: false,
-          isForeignKey: false,
-        }
-      ],
-    },
-  });
+export function CreateTableForm({ onTableCreated, onCancel, isCompact = false }: CreateTableFormProps) {
+  const [tableName, setTableName] = useState('gl_');
+  const [columns, setColumns] = useState<ColumnDefinition[]>([...DEFAULT_COLUMNS]);
+  const [newColumnName, setNewColumnName] = useState('');
+  const [newColumnType, setNewColumnType] = useState('text');
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
 
-  const handleAddColumn = () => {
-    const currentColumns = form.getValues().columns;
-    form.setValue('columns', [
-      ...currentColumns,
+  const addColumn = () => {
+    if (!newColumnName) {
+      toast({
+        title: 'Error',
+        description: 'Column name is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Check for duplicate column names
+    if (columns.some(col => col.name === newColumnName)) {
+      toast({
+        title: 'Error',
+        description: 'Column name already exists',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Add new column
+    setColumns([
+      ...columns,
       {
-        name: '',
-        type: 'text',
-        required: false,
-        isPrimaryKey: false,
-        isForeignKey: false,
-      },
+        name: newColumnName,
+        type: newColumnType,
+        isPrimary: false,
+        isNullable: true
+      }
     ]);
+
+    // Reset inputs
+    setNewColumnName('');
   };
 
-  const handleRemoveColumn = (index: number) => {
-    const currentColumns = form.getValues().columns;
-    // Don't allow removing the first 4 default columns
-    if (index < 4) return;
-    
-    const updatedColumns = [...currentColumns];
-    updatedColumns.splice(index, 1);
-    form.setValue('columns', updatedColumns);
+  const removeColumn = (index: number) => {
+    // Don't allow removing default columns
+    if (index < DEFAULT_COLUMNS.length) {
+      toast({
+        title: 'Information',
+        description: 'Default columns cannot be removed',
+      });
+      return;
+    }
+
+    const newColumns = [...columns];
+    newColumns.splice(index, 1);
+    setColumns(newColumns);
+  };
+
+  const createTable = async () => {
+    if (!tableName || !tableName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Table name is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!tableName.startsWith('gl_')) {
+      toast({
+        title: 'Error',
+        description: 'Table name must start with "gl_"',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      // Build the SQL statement for creating the table
+      let sql = `CREATE TABLE ${tableName} (\n`;
+      
+      // Add columns
+      const columnDefinitions = columns.map(col => {
+        let definition = `  "${col.name}" ${col.type}`;
+        if (col.isPrimary) {
+          definition += ' PRIMARY KEY';
+        }
+        if (!col.isNullable) {
+          definition += ' NOT NULL';
+        }
+        return definition;
+      });
+
+      sql += columnDefinitions.join(',\n');
+      
+      // Add timestamps trigger
+      sql += `\n);\n\n-- Enable row-level security\nALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;\n\n`;
+      sql += `-- Create updated_at trigger\nCREATE TRIGGER set_updated_at\nBEFORE UPDATE ON ${tableName}\nFOR EACH ROW\nEXECUTE FUNCTION public.set_updated_at();`;
+
+      // Execute the SQL query to create the table
+      const { error } = await supabase.rpc('gl_admin_execute_sql' as any, { sql_query: sql });
+
+      if (error) throw new Error(error.message);
+
+      toast({
+        title: 'Success',
+        description: `Table ${tableName} created successfully`
+      });
+
+      onTableCreated(tableName);
+      
+      // Reset form
+      setTableName('gl_');
+      setColumns([...DEFAULT_COLUMNS]);
+      setNewColumnName('');
+      setNewColumnType('text');
+    } catch (error) {
+      console.error('Error creating table:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create table',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="tableName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Table Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter table name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="tableName">Table Name</Label>
+        <Input
+          id="tableName"
+          value={tableName}
+          onChange={(e) => setTableName(e.target.value)}
+          placeholder="gl_customers"
         />
+      </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Columns</h3>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAddColumn}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Column
-            </Button>
+      {!isCompact && (
+        <>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Default Columns</h3>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Required</TableHead>
+                  <TableHead>Primary Key</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {DEFAULT_COLUMNS.map((column) => (
+                  <TableRow key={column.name}>
+                    <TableCell>{column.name}</TableCell>
+                    <TableCell>{column.type}</TableCell>
+                    <TableCell>{column.isNullable ? 'No' : 'Yes'}</TableCell>
+                    <TableCell>{column.isPrimary ? 'Yes' : 'No'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
           <div className="space-y-4">
-            {form.watch('columns').map((column, index) => (
-              <div key={index} className="p-4 border rounded-md">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Column #{index + 1}</h4>
-                  {index >= 4 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveColumn(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name={`columns.${index}.name`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Column Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter column name" 
-                            {...field} 
-                            disabled={index < 4}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`columns.${index}.type`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data Type</FormLabel>
-                        <Select
-                          disabled={index < 4}
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Additional Columns</h3>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Required</TableHead>
+                  <TableHead>Primary Key</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {columns.slice(DEFAULT_COLUMNS.length).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      No additional columns defined
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  columns.slice(DEFAULT_COLUMNS.length).map((column, index) => (
+                    <TableRow key={column.name}>
+                      <TableCell>{column.name}</TableCell>
+                      <TableCell>{column.type}</TableCell>
+                      <TableCell>{column.isNullable ? 'No' : 'Yes'}</TableCell>
+                      <TableCell>{column.isPrimary ? 'Yes' : 'No'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeColumn(index + DEFAULT_COLUMNS.length)}
                         >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select data type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {columnTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name={`columns.${index}.required`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={index < 4}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer">Required</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`columns.${index}.isPrimaryKey`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked);
-                              if (checked) {
-                                // If this becomes a primary key, ensure it's required
-                                form.setValue(`columns.${index}.required`, true);
-                              }
-                            }}
-                            disabled={index < 4 || index > 0}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer">Primary Key</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`columns.${index}.isForeignKey`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked);
-                            }}
-                            disabled={index < 4}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer">Foreign Key</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {form.watch(`columns.${index}.isForeignKey`) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <FormField
-                      control={form.control}
-                      name={`columns.${index}.referencesTable`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>References Table</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select table" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {existingTables.map((table) => (
-                                <SelectItem key={table} value={table}>
-                                  {table}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`columns.${index}.referencesColumn`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>References Column</FormLabel>
-                          <Input 
-                            placeholder="Usually 'id'" 
-                            {...field} 
-                            defaultValue="id"
-                          />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
+              </TableBody>
+            </Table>
+
+            <div className="grid grid-cols-12 gap-2 items-end">
+              <div className="col-span-5">
+                <Label htmlFor="newColumnName">Column Name</Label>
+                <Input
+                  id="newColumnName"
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  placeholder="customer_name"
+                />
               </div>
-            ))}
+              <div className="col-span-5">
+                <Label htmlFor="newColumnType">Data Type</Label>
+                <Select value={newColumnType} onValueChange={setNewColumnType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATA_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={addColumn}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
+        </>
+      )}
 
-        <Separator />
-
-        <div className="flex justify-end space-x-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Creating...' : 'Create Table'}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={createTable}
+          disabled={isCreating || !tableName}
+        >
+          {isCreating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Table'
+          )}
+        </Button>
+      </div>
+    </div>
   );
-};
-
-export default CreateTableForm;
+} 

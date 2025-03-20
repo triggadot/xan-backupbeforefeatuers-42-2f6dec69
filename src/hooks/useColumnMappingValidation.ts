@@ -7,16 +7,16 @@ import { useToast } from '@/hooks/use-toast';
 export function useColumnMappingValidation() {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<MappingValidationResult>({
-    isValid: true,
-    message: ''
+    is_valid: true,
+    validation_message: ''
   });
   const { toast } = useToast();
 
   const validateMapping = async (mapping: MappingToValidate): Promise<MappingValidationResult> => {
     if (!mapping.supabase_table || !mapping.column_mappings) {
       return {
-        isValid: false,
-        message: 'Invalid mapping data: missing table or column mappings'
+        is_valid: false,
+        validation_message: 'Invalid mapping data: missing table or column mappings'
       };
     }
 
@@ -34,8 +34,8 @@ export function useColumnMappingValidation() {
       }
       
       const result: MappingValidationResult = {
-        isValid: data?.[0]?.is_valid ?? false,
-        message: data?.[0]?.validation_message ?? 'Validation failed'
+        is_valid: data?.[0]?.is_valid ?? false,
+        validation_message: data?.[0]?.validation_message ?? 'Validation failed'
       };
       
       setValidationResult(result);
@@ -48,8 +48,8 @@ export function useColumnMappingValidation() {
         : 'An unexpected error occurred during validation';
         
       const result: MappingValidationResult = {
-        isValid: false,
-        message: errorMessage
+        is_valid: false,
+        validation_message: errorMessage
       };
       
       setValidationResult(result);

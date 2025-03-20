@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { convertValue } from '@/utils/glsync-transformers';
 
@@ -114,21 +113,10 @@ export class GlideAPI {
       }
 
       const data = await response.json();
-      if (data && Array.isArray(data) && data.length > 0 && data[0].columns) {
-        // Extract columns from the response
-        const columns = Object.entries(data[0].columns).map(([key, value]: [string, any]) => {
-          return { 
-            id: key, 
-            name: value.name || key, 
-            type: value.type || 'string'
-          };
-        });
-        
-        return { columns };
-      } else if (data && Array.isArray(data) && data.length > 0 && data[0].rows && data[0].rows.length > 0) {
-        // Alternative way - extract columns from the first row
+      if (data && Array.isArray(data) && data.length > 0 && data[0].rows && data[0].rows.length > 0) {
         const sampleRow = data[0].rows[0];
         
+        // Extract columns from the first row
         const columns = Object.keys(sampleRow).map(key => {
           const value = sampleRow[key];
           let type = typeof value;
@@ -200,31 +188,20 @@ export class GlideAPI {
           return mappedRecord;
         });
         
-        // Batch upsert records to avoid SQL limitations
-        const batchSize = 100;
-        for (let i = 0; i < transformedRecords.length; i += batchSize) {
-          const batch = transformedRecords.slice(i, i + batchSize);
-          
-          // Use a type assertion to ensure the table name is valid
-          const { error: upsertError } = await supabase
-            .from(supabaseTable as any)
-            .upsert(batch, {
-              onConflict: 'glide_row_id',
-              ignoreDuplicates: false
-            });
-          
-          if (upsertError) {
-            console.error('Upsert error:', upsertError);
-            errors.push(upsertError.message);
-          }
+        // Use a type assertion to ensure the table name is valid
+        const { error: upsertError } = await supabase
+          .from(supabaseTable as any)
+          .upsert(transformedRecords, {
+            onConflict: 'glide_row_id',
+            ignoreDuplicates: false
+          });
+        
+        if (upsertError) {
+          errors.push(upsertError.message);
         }
         
         processedRecords += rows.length;
         continuationToken = next;
-        
-        // Add a log for each batch processed
-        console.log(`Processed batch: ${rows.length} records. Total: ${processedRecords}`);
-        
       } while (continuationToken);
       
       return { 
@@ -306,19 +283,14 @@ export class GlideAPI {
 export const createGlideApi = (connectionId: string): Promise<GlideAPI> => {
   return new Promise(async (resolve, reject) => {
     try {
-      // Use maybeSingle() instead of single() to handle potential multiple or no results
       const { data, error } = await supabase
         .from('gl_connections')
         .select('api_key, app_id')
         .eq('id', connectionId)
-        .maybeSingle();
+        .single();
       
       if (error) {
         throw error;
-      }
-      
-      if (!data) {
-        throw new Error(`Connection not found with ID: ${connectionId}`);
       }
       
       resolve(new GlideAPI(data.api_key, data.app_id));

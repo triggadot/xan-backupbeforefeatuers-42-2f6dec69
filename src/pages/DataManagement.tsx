@@ -75,7 +75,7 @@ const TABLE_INFO: Record<string, { displayName: string; description: string }> =
 };
 
 export default function DataManagement() {
-  const { tables, isLoading, error, fetchTables } = useSupabaseTables();
+  const { tables, isLoading, fetchTables } = useSupabaseTables();
   const [activeTable, setActiveTable] = useState<string | null>(null);
 
   // Set the first table as active when tables are loaded

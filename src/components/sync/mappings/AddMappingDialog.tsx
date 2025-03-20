@@ -1,81 +1,171 @@
 
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import AddMappingForm from './AddMappingForm';
-import SchemaSetupDialog from './SchemaSetupDialog';
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import GlideTableSelector from '@/components/sync/GlideTableSelector';
 import { ConnectionSelect } from './ConnectionSelect';
-import { GlConnection } from '@/types/glsync';
-import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
+import { SupabaseTableSelect } from './SupabaseTableSelect';
+import { SyncDirectionSelect } from './SyncDirectionSelect';
+import { useConnections } from '@/hooks/useConnections';
+import { useSupabaseTables } from '@/hooks/useSupabaseTables';
+import { useGlSync } from '@/hooks/useGlSync';
+import { useAddMapping } from '@/hooks/useAddMapping';
 
 interface AddMappingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onMappingAdded?: () => void;
-  connectionId?: string;
-  onSuccess?: () => Promise<void>;
+  onSuccess: () => void;
 }
 
 const AddMappingDialog: React.FC<AddMappingDialogProps> = ({ 
   open, 
   onOpenChange,
-  onMappingAdded,
-  connectionId,
-  onSuccess
+  onSuccess 
 }) => {
-  const [activeTab, setActiveTab] = React.useState('add-mapping');
-  const [selectedConnection, setSelectedConnection] = React.useState<GlConnection | null>(null);
-
-  React.useEffect(() => {
-    // Reset tab when dialog is opened
+  // Custom hooks for data fetching
+  const { connections, isLoading: isLoadingConnections, fetchConnections } = useConnections();
+  const { tables: supabaseTables, isLoading: isLoadingSupabaseTables, fetchTables: fetchSupabaseTables } = useSupabaseTables();
+  const { fetchGlideTables, glideTables, isLoading: isLoadingGlideTables } = useGlSync();
+  const { addMapping, isSubmitting } = useAddMapping();
+  
+  // Form state
+  const [selectedConnection, setSelectedConnection] = useState('');
+  const [selectedGlideTable, setSelectedGlideTable] = useState('');
+  const [selectedGlideTableDisplayName, setSelectedGlideTableDisplayName] = useState('');
+  const [selectedSupabaseTable, setSelectedSupabaseTable] = useState('');
+  const [syncDirection, setSyncDirection] = useState<'to_supabase' | 'to_glide' | 'both'>('to_supabase');
+  
+  // Fetch data when dialog is opened
+  useEffect(() => {
     if (open) {
-      setActiveTab('add-mapping');
+      fetchConnections();
+      fetchSupabaseTables();
+    }
+  }, [open]);
+  
+  // Fetch glide tables when connection changes
+  useEffect(() => {
+    if (selectedConnection) {
+      fetchGlideTables(selectedConnection);
+    }
+  }, [selectedConnection]);
+
+  // Reset form when dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setSelectedConnection('');
+      setSelectedGlideTable('');
+      setSelectedGlideTableDisplayName('');
+      setSelectedSupabaseTable('');
+      setSyncDirection('to_supabase');
     }
   }, [open]);
 
-  const handleMappingAdded = () => {
-    // Close the dialog
-    onOpenChange(false);
+  const handleConnectionChange = (value: string) => {
+    setSelectedConnection(value);
+    setSelectedGlideTable('');
+    setSelectedGlideTableDisplayName('');
+  };
+
+  const handleGlideTableChange = (tableId: string, displayName: string) => {
+    setSelectedGlideTable(tableId);
+    setSelectedGlideTableDisplayName(displayName);
+  };
+
+  const handleSupabaseTableChange = (value: string) => {
+    setSelectedSupabaseTable(value);
+  };
+  
+  const handleSyncDirectionChange = (value: 'to_supabase' | 'to_glide' | 'both') => {
+    setSyncDirection(value);
+  };
+
+  const isFormValid = () => {
+    return Boolean(selectedConnection && selectedGlideTable && selectedSupabaseTable);
+  };
+
+  const handleSubmit = async () => {
+    const success = await addMapping(
+      selectedConnection,
+      selectedGlideTable,
+      selectedGlideTableDisplayName,
+      selectedSupabaseTable,
+      syncDirection
+    );
     
-    // Call both callbacks if they exist
-    if (onMappingAdded) {
-      onMappingAdded();
-    }
-    
-    if (onSuccess) {
+    if (success) {
       onSuccess();
+      onOpenChange(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add New Mapping</DialogTitle>
+          <DialogTitle>Add Table Mapping</DialogTitle>
         </DialogHeader>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="add-mapping">Map Tables</TabsTrigger>
-            <TabsTrigger value="create-schema">Create Schema</TabsTrigger>
-          </TabsList>
+        <div className="grid gap-4 py-4">
+          <ConnectionSelect 
+            connections={connections}
+            value={selectedConnection}
+            onValueChange={handleConnectionChange}
+            isLoading={isLoadingConnections}
+          />
           
-          <TabsContent value="add-mapping" className="py-4">
-            <AddMappingForm 
-              onMappingAdded={handleMappingAdded} 
-              onClose={() => onOpenChange(false)}
-              preselectedConnectionId={connectionId}
+          <div className="grid gap-2">
+            <GlideTableSelector
+              tables={glideTables}
+              value={selectedGlideTable}
+              onTableChange={handleGlideTableChange}
+              disabled={isLoadingGlideTables || !selectedConnection}
+              isLoading={isLoadingGlideTables}
+              placeholder="Select a Glide table"
             />
-          </TabsContent>
+            {isLoadingGlideTables && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Loading Glide tables...
+              </div>
+            )}
+          </div>
           
-          <TabsContent value="create-schema" className="py-4">
-            <SchemaSetupDialog 
-              onClose={() => onOpenChange(false)}
-              onSchemaCreated={() => setActiveTab('add-mapping')} 
-              connectionId={connectionId || ''}
-            />
-          </TabsContent>
-        </Tabs>
+          <SupabaseTableSelect 
+            tables={supabaseTables}
+            value={selectedSupabaseTable}
+            onValueChange={handleSupabaseTableChange}
+            isLoading={isLoadingSupabaseTables}
+          />
+          
+          <SyncDirectionSelect 
+            value={syncDirection}
+            onValueChange={handleSyncDirectionChange}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !isFormValid()}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Mapping'
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

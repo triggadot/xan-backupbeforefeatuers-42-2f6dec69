@@ -1,60 +1,75 @@
-
 import { GlMapping, GlColumnMapping } from '@/types/glsync';
+import { Mapping } from '@/types/syncLog';
 
-/**
- * Converts a database record to a GlMapping object
- */
-export function convertToGlMapping(record: any): GlMapping {
-  // Ensure column_mappings is an object
-  let columnMappings: Record<string, GlColumnMapping> = {};
+// Type guard to check if a data_type is valid
+export function isValidDataType(type: string): type is "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" {
+  return ["string", "number", "boolean", "date-time", "image-uri", "email-address"].includes(type);
+}
+
+// Convert generic Mapping to strongly-typed GlMapping
+export function convertToGlMapping(mapping: Mapping): GlMapping {
+  const convertedColumnMappings: Record<string, GlColumnMapping> = {};
   
-  // Handle different formats: string, object, or null
-  if (record.column_mappings) {
-    if (typeof record.column_mappings === 'string') {
-      try {
-        columnMappings = JSON.parse(record.column_mappings);
-      } catch (e) {
-        console.error('Failed to parse column_mappings:', e);
+  // Handle the case where column_mappings might be coming from a JSON field in Supabase
+  const columnMappings = mapping.column_mappings as any;
+  
+  if (columnMappings) {
+    Object.entries(columnMappings).forEach(([key, value]) => {
+      // Ensure we have a proper object with the right properties
+      const columnMapping = value as any;
+      if (!columnMapping || typeof columnMapping !== 'object') {
+        console.warn(`Invalid column mapping for key "${key}"`);
+        return;
       }
-    } else if (typeof record.column_mappings === 'object') {
-      columnMappings = record.column_mappings;
-    }
-  }
-  
-  // Ensure sync_direction is one of the valid types
-  const validDirections = ['to_supabase', 'to_glide', 'both'];
-  let syncDirection = record.sync_direction || 'to_supabase';
-  if (!validDirections.includes(syncDirection)) {
-    console.warn(`Invalid sync_direction: ${syncDirection}, defaulting to to_supabase`);
-    syncDirection = 'to_supabase';
+
+      // Ensure data_type is one of the allowed types
+      let dataType: "string" | "number" | "boolean" | "date-time" | "image-uri" | "email-address" = "string";
+      
+      if (isValidDataType(columnMapping.data_type)) {
+        dataType = columnMapping.data_type;
+      } else {
+        console.warn(`Invalid data_type "${columnMapping.data_type}" for column "${key}", defaulting to "string"`);
+      }
+      
+      convertedColumnMappings[key] = {
+        glide_column_name: columnMapping.glide_column_name || '',
+        supabase_column_name: columnMapping.supabase_column_name || '',
+        data_type: dataType
+      };
+    });
+  } else {
+    // Add default mapping for $rowID if no mappings exist
+    convertedColumnMappings['$rowID'] = {
+      glide_column_name: '$rowID',
+      supabase_column_name: 'glide_row_id',
+      data_type: 'string'
+    };
   }
   
   return {
-    id: record.id || record.mapping_id, // Support both direct ID and mapping_id from views
-    connection_id: record.connection_id,
-    glide_table: record.glide_table,
-    glide_table_display_name: record.glide_table_display_name || record.glide_table,
-    supabase_table: record.supabase_table,
-    column_mappings: columnMappings,
-    sync_direction: syncDirection as 'to_supabase' | 'to_glide' | 'both',
-    enabled: record.enabled !== false, // Default to true if not specified
-    created_at: record.created_at,
-    updated_at: record.updated_at,
-    
-    // Optional metrics fields
-    current_status: record.current_status,
-    last_sync_started_at: record.last_sync_started_at,
-    last_sync_completed_at: record.last_sync_completed_at,
-    records_processed: record.records_processed,
-    total_records: record.total_records,
-    error_count: record.error_count,
-    app_name: record.app_name
-  };
+    ...mapping,
+    // Ensure sync_direction is one of the allowed values
+    sync_direction: (mapping.sync_direction as 'to_supabase' | 'to_glide' | 'both') || 'to_supabase',
+    column_mappings: convertedColumnMappings
+  } as GlMapping;
 }
 
-/**
- * Returns default column mappings for a new mapping
- */
+// Convert GlMapping to a format suitable for database storage (plain JSON)
+export function convertToDbMapping(mapping: Partial<GlMapping>): any {
+  if (!mapping.column_mappings) {
+    return mapping;
+  }
+  
+  // Convert the column_mappings to a plain object for database storage
+  const dbMapping = {
+    ...mapping,
+    column_mappings: { ...mapping.column_mappings }
+  };
+  
+  return dbMapping;
+}
+
+// Get default column mappings
 export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
   return {
     "$rowID": {
@@ -63,74 +78,4 @@ export function getDefaultColumnMappings(): Record<string, GlColumnMapping> {
       "data_type": "string"
     }
   };
-}
-
-/**
- * Converts a mapping object to a database-ready format
- */
-export function convertToDbMapping(mapping: Partial<GlMapping>): any {
-  return {
-    ...mapping,
-    column_mappings: typeof mapping.column_mappings === 'string' 
-      ? mapping.column_mappings 
-      : JSON.stringify(mapping.column_mappings)
-  };
-}
-
-/**
- * Normalizes client type values to match database constraints
- */
-export function normalizeClientType(clientType: string | null | undefined): string | null {
-  if (!clientType) return null;
-  
-  // Normalize to match the exact values expected by the constraint
-  const normalized = String(clientType).trim().toLowerCase();
-  
-  if (/customer\s*&\s*vendor/i.test(normalized) || 
-      /customer\s+and\s+vendor/i.test(normalized) ||
-      /both/i.test(normalized)) {
-    return 'Customer & Vendor';
-  } else if (/vendor/i.test(normalized)) {
-    return 'Vendor';
-  } else if (/customer/i.test(normalized)) {
-    return 'Customer';
-  }
-  
-  // If we can't determine the type, default to Customer
-  return 'Customer';
-}
-
-/**
- * Transforms a value to the specified data type
- */
-export function transformValue(value: any, dataType: string): any {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  
-  switch (dataType) {
-    case 'string':
-    case 'email-address':
-    case 'image-uri':
-      return String(value);
-    case 'number':
-      return Number(value);
-    case 'boolean':
-      if (typeof value === 'string') {
-        return value.toLowerCase() === 'true';
-      }
-      return Boolean(value);
-    case 'date-time':
-      // If it's already a valid date string, return it
-      if (typeof value === 'string' && !isNaN(Date.parse(value))) {
-        return value;
-      }
-      // If it's a number (timestamp), convert to ISO string
-      if (typeof value === 'number') {
-        return new Date(value).toISOString();
-      }
-      return null;
-    default:
-      return String(value);
-  }
 }

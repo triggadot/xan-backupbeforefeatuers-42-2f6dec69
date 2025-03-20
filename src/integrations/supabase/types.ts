@@ -50,7 +50,7 @@ export type Database = {
           created_at: string | null
           date_added_client: string | null
           email_of_who_added: string | null
-          glide_row_id: string | null
+          glide_row_id: string
           id: string
           photo: string | null
           updated_at: string | null
@@ -62,7 +62,7 @@ export type Database = {
           created_at?: string | null
           date_added_client?: string | null
           email_of_who_added?: string | null
-          glide_row_id?: string | null
+          glide_row_id: string
           id?: string
           photo?: string | null
           updated_at?: string | null
@@ -74,7 +74,7 @@ export type Database = {
           created_at?: string | null
           date_added_client?: string | null
           email_of_who_added?: string | null
-          glide_row_id?: string | null
+          glide_row_id?: string
           id?: string
           photo?: string | null
           updated_at?: string | null
@@ -1297,9 +1297,7 @@ export type Database = {
       gl_mapping_status: {
         Row: {
           app_name: string | null
-          column_mappings: Json | null
           connection_id: string | null
-          created_at: string | null
           current_status: string | null
           enabled: boolean | null
           error_count: number | null
@@ -1312,7 +1310,6 @@ export type Database = {
           supabase_table: string | null
           sync_direction: string | null
           total_records: number | null
-          updated_at: string | null
         }
         Relationships: [
           {
@@ -1336,6 +1333,20 @@ export type Database = {
           ship_date: string | null
           total_items: number | null
           tracking_number: string | null
+        }
+        Relationships: []
+      }
+      gl_payment_history: {
+        Row: {
+          document_id: string | null
+          document_type: string | null
+          entity_name: string | null
+          entity_type: string | null
+          payment_amount: number | null
+          payment_date: string | null
+          payment_id: string | null
+          payment_note: string | null
+          payment_type: string | null
         }
         Relationships: []
       }
@@ -1368,7 +1379,6 @@ export type Database = {
           glide_table: string | null
           glide_table_display_name: string | null
           id: string | null
-          mapping_id: string | null
           message: string | null
           records_processed: number | null
           started_at: string | null
@@ -1390,7 +1400,7 @@ export type Database = {
       }
       gl_tables_view: {
         Row: {
-          table_name: unknown | null
+          table_name: string | null
         }
         Relationships: []
       }
@@ -1430,23 +1440,6 @@ export type Database = {
         Returns: {
           customer_count: number
           vendor_count: number
-        }[]
-      }
-      gl_get_business_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          total_invoices: number
-          total_estimates: number
-          total_purchase_orders: number
-          total_products: number
-          total_customers: number
-          total_vendors: number
-          total_invoice_amount: number
-          total_payments_received: number
-          total_outstanding_balance: number
-          total_purchase_amount: number
-          total_payments_made: number
-          total_purchase_balance: number
         }[]
       }
       gl_get_document_status: {
@@ -1497,28 +1490,6 @@ export type Database = {
           resolution_notes: string | null
           resolved_at: string | null
           retryable: boolean | null
-        }[]
-      }
-      gl_get_sync_status: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          app_name: string | null
-          column_mappings: Json | null
-          connection_id: string | null
-          created_at: string | null
-          current_status: string | null
-          enabled: boolean | null
-          error_count: number | null
-          glide_table: string | null
-          glide_table_display_name: string | null
-          last_sync_completed_at: string | null
-          last_sync_started_at: string | null
-          mapping_id: string | null
-          records_processed: number | null
-          supabase_table: string | null
-          sync_direction: string | null
-          total_records: number | null
-          updated_at: string | null
         }[]
       }
       gl_get_table_columns: {
@@ -1580,27 +1551,11 @@ export type Database = {
           validation_message: string
         }[]
       }
-      glsync_cleanup_duplicate_accounts: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       glsync_retry_failed_sync: {
         Args: {
           p_mapping_id: string
         }
         Returns: string
-      }
-      is_customer: {
-        Args: {
-          account_type: string
-        }
-        Returns: boolean
-      }
-      is_vendor: {
-        Args: {
-          account_type: string
-        }
-        Returns: boolean
       }
       process_webhook_event: {
         Args: {
@@ -1645,7 +1600,6 @@ export type Database = {
       }
     }
     Enums: {
-      account_type: "Customer" | "Vendor" | "Customer & Vendor"
       processing_state_type:
         | "initialized"
         | "pending"

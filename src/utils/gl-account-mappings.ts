@@ -1,59 +1,62 @@
 
-// Constants for client types
-export const CLIENT_TYPE = {
-  CUSTOMER: 'Customer',
-  VENDOR: 'Vendor',
-  BOTH: 'Customer & Vendor'
-} as const;
+import { GlColumnMapping, GlMapping } from '@/types/glsync';
 
-// Type for client type values
-export type ClientType = typeof CLIENT_TYPE[keyof typeof CLIENT_TYPE];
+// Default column mappings for the accounts table based on provided data
+export const getAccountsColumnMappings = (): Record<string, GlColumnMapping> => {
+  return {
+    // Default $rowID mapping for Glide sync
+    '$rowID': {
+      glide_column_name: '$rowID',
+      supabase_column_name: 'glide_row_id',
+      data_type: 'string'
+    },
+    // Mappings from the Glide Accounts table
+    'wwV1j': {
+      glide_column_name: 'accountsUid',
+      supabase_column_name: 'accounts_uid',
+      data_type: 'string'
+    },
+    'Title': {
+      glide_column_name: 'mainClientType',
+      supabase_column_name: 'client_type',
+      data_type: 'string'
+    },
+    'Name': {
+      glide_column_name: 'mainAccountName',
+      supabase_column_name: 'account_name',
+      data_type: 'string'
+    },
+    'Rep Assigned': {
+      glide_column_name: 'mainEmailOfWhoAdded',
+      supabase_column_name: 'email_of_who_added',
+      data_type: 'string'
+    },
+    'Photo': {
+      glide_column_name: 'mainPhoto',
+      supabase_column_name: 'photo',
+      data_type: 'image-uri'
+    },
+    'wvzr1': {
+      glide_column_name: 'mainDateAddedClient',
+      supabase_column_name: 'date_added_client',
+      data_type: 'date-time'
+    }
+  };
+};
 
-/**
- * Normalizes client type strings to match the required format
- * @param clientType The client type string to normalize
- * @returns Normalized client type matching one of the valid values
- */
-export function normalizeClientType(clientType?: string): ClientType | undefined {
-  if (!clientType) return undefined;
-  
-  // Convert to lowercase for case-insensitive matching
-  const lowerType = clientType.toLowerCase();
-  
-  if (lowerType === 'customer' || lowerType === 'customer_type') {
-    return CLIENT_TYPE.CUSTOMER;
-  }
-  
-  if (lowerType === 'vendor' || lowerType === 'vendor_type') {
-    return CLIENT_TYPE.VENDOR;
-  }
-  
-  if (
-    lowerType === 'both' || 
-    lowerType === 'customer & vendor' || 
-    lowerType === 'customer and vendor' || 
-    lowerType === 'customer_vendor'
-  ) {
-    return CLIENT_TYPE.BOTH;
-  }
-  
-  // If nothing matches, default to CUSTOMER
-  console.warn(`Unknown client type: ${clientType}, defaulting to Customer`);
-  return CLIENT_TYPE.CUSTOMER;
-}
-
-/**
- * Checks if an account type is a customer
- */
-export function isCustomer(accountType?: string): boolean {
-  const normalizedType = normalizeClientType(accountType);
-  return normalizedType === CLIENT_TYPE.CUSTOMER || normalizedType === CLIENT_TYPE.BOTH;
-}
-
-/**
- * Checks if an account type is a vendor
- */
-export function isVendor(accountType?: string): boolean {
-  const normalizedType = normalizeClientType(accountType);
-  return normalizedType === CLIENT_TYPE.VENDOR || normalizedType === CLIENT_TYPE.BOTH;
-}
+// Helper function to create a new mapping with accounts defaults
+export const createAccountsMapping = (
+  connectionId: string,
+  glideTableId: string,
+  glideTableDisplayName: string
+) => {
+  return {
+    connection_id: connectionId,
+    glide_table: glideTableId, // "native-table-f8P9wLYyZnX4DJMLC1fS" based on the API example
+    glide_table_display_name: glideTableDisplayName || 'Accounts',
+    supabase_table: 'gl_accounts',
+    column_mappings: getAccountsColumnMappings(),
+    sync_direction: 'to_supabase' as const,
+    enabled: true
+  };
+};

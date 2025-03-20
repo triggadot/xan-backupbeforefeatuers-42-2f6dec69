@@ -6,20 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { GlConnection } from '@/types/glsync';
 
 interface AddConnectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  onSubmit?: (connection: Omit<GlConnection, "id" | "created_at">) => Promise<void>;
 }
 
 const AddConnectionDialog: React.FC<AddConnectionDialogProps> = ({ 
   open, 
   onOpenChange,
-  onSuccess,
-  onSubmit 
+  onSuccess 
 }) => {
   const [appName, setAppName] = useState('');
   const [appId, setAppId] = useState('');
@@ -39,25 +36,16 @@ const AddConnectionDialog: React.FC<AddConnectionDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      if (onSubmit) {
-        await onSubmit({
+      const { error } = await supabase
+        .from('gl_connections')
+        .insert({
           app_name: appName.trim() || 'Unnamed App',
           app_id: appId.trim(),
           api_key: apiKey.trim(),
           status: 'inactive'
         });
-      } else {
-        const { error } = await supabase
-          .from('gl_connections')
-          .insert({
-            app_name: appName.trim() || 'Unnamed App',
-            app_id: appId.trim(),
-            api_key: apiKey.trim(),
-            status: 'inactive'
-          });
-        
-        if (error) throw error;
-      }
+      
+      if (error) throw error;
       
       onSuccess();
       resetForm();

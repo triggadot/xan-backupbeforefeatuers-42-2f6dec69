@@ -1,351 +1,317 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
-import { Invoice, InvoiceLine, Payment } from '@/types/invoice';
+import { useToast } from '@/hooks/use-toast';
+import { Invoice, GlInvoice, GlInvoiceLine, GlCustomerPayment, GlAccount, ProductDetails } from '@/types';
+import { mapGlInvoiceToInvoice } from '@/utils/mapping-utils';
+
+// Fetch product details for an invoice line
+async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
+  if (!productGlideId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('gl_products')
+      .select('*')
+      .eq('glide_row_id', productGlideId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error fetching product details:', error);
+      return null;
+    }
+    
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      glide_row_id: data.glide_row_id,
+      name: data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product',
+      display_name: data.display_name,
+      vendor_product_name: data.vendor_product_name,
+      new_product_name: data.new_product_name,
+      cost: data.cost,
+      total_qty_purchased: data.total_qty_purchased,
+      category: data.category,
+      product_image1: data.product_image1,
+      purchase_notes: data.purchase_notes,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (err) {
+    console.error('Error fetching product details:', err);
+    return null;
+  }
+}
 
 export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchInvoices = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError('');
-
-      const { data, error: fetchError } = await supabase
+      // Fetch invoices
+      const { data: invoicesData, error: invoicesError } = await supabase
         .from('gl_invoices')
-        .select(`
-          *,
-          gl_accounts!gl_invoices_rowid_accounts_fkey (
-            account_name
-          ),
-          gl_invoice_lines!gl_invoice_lines_rowid_invoices_fkey (
-            *,
-            gl_products!gl_invoice_lines_rowid_products_fkey (
-              *
-            )
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      const formattedInvoices: Invoice[] = data.map(invoice => {
-        const lineItems: InvoiceLine[] = (invoice.gl_invoice_lines || []).map((line: any) => ({
-          id: line.id,
-          productId: line.rowid_products,
-          description: line.renamed_product_name || (line.gl_products?.display_name || ''),
-          quantity: line.qty_sold || 0,
-          unitPrice: line.selling_price || 0,
-          total: line.line_total || 0,
-          createdAt: line.created_at,
-          updatedAt: line.updated_at,
-          productImage: line.gl_products?.product_image1 || '',
-          productDetails: line.gl_products || undefined
-        }));
-
-        return {
-          id: invoice.id,
-          number: invoice.id.slice(0, 8), // Just using a part of the ID as the invoice number
-          customerId: invoice.rowid_accounts || '',
-          accountId: invoice.rowid_accounts || '',
-          accountName: (invoice.gl_accounts && invoice.gl_accounts.account_name) || '',
-          date: new Date(invoice.invoice_order_date || invoice.created_at),
-          dueDate: invoice.due_date ? new Date(invoice.due_date) : null,
-          status: (invoice.payment_status || 'draft') as Invoice['status'],
-          total: invoice.total_amount || 0,
-          subtotal: invoice.total_amount || 0,
-          tax: 0,
-          amountPaid: invoice.total_paid || 0,
-          balance: invoice.balance || 0,
-          notes: invoice.notes || '',
-          createdAt: invoice.created_at,
-          updatedAt: invoice.updated_at,
-          lineItems: lineItems,
-          payments: []
-        };
+      
+      if (invoicesError) throw invoicesError;
+      
+      // Early return if no invoices
+      if (!invoicesData || invoicesData.length === 0) {
+        setInvoices([]);
+        setIsLoading(false);
+        return [];
+      }
+      
+      // Get all account IDs to fetch account names
+      const accountIds = [...new Set(invoicesData.map(inv => inv.rowid_accounts))];
+      
+      // Fetch accounts
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .in('glide_row_id', accountIds);
+      
+      if (accountsError) throw accountsError;
+      
+      // Create a map of account ID to name
+      const accountMap = (accountsData || []).reduce((acc, account) => {
+        acc[account.glide_row_id] = account.account_name;
+        return acc;
+      }, {} as Record<string, string>);
+      
+      // Fetch all line items for these invoices
+      const invoiceIds = invoicesData.map(inv => inv.glide_row_id);
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select('*')
+        .in('rowid_invoices', invoiceIds);
+      
+      if (lineItemsError) throw lineItemsError;
+      
+      // Fetch all payments for these invoices
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .in('rowid_invoices', invoiceIds);
+        
+      if (paymentsError) throw paymentsError;
+      
+      // Enhance line items with product details
+      const enhancedLineItems = await Promise.all(
+        (lineItemsData || []).map(async (line) => {
+          if (line.rowid_products) {
+            const productDetails = await fetchProductDetails(line.rowid_products);
+            return {
+              ...line,
+              productDetails: productDetails || undefined
+            };
+          }
+          return line;
+        })
+      );
+      
+      // Group line items and payments by invoice ID
+      const lineItemsByInvoice = enhancedLineItems.reduce((acc, item) => {
+        if (!acc[item.rowid_invoices]) {
+          acc[item.rowid_invoices] = [];
+        }
+        acc[item.rowid_invoices].push(item);
+        return acc;
+      }, {} as Record<string, GlInvoiceLine[]>);
+      
+      const paymentsByInvoice = (paymentsData || []).reduce((acc, payment) => {
+        if (!acc[payment.rowid_invoices]) {
+          acc[payment.rowid_invoices] = [];
+        }
+        acc[payment.rowid_invoices].push(payment);
+        return acc;
+      }, {} as Record<string, GlCustomerPayment[]>);
+      
+      // Map database objects to domain objects
+      const mappedInvoices = invoicesData.map((invoice: GlInvoice) => {
+        const accountName = accountMap[invoice.rowid_accounts] || 'Unknown Account';
+        const lineItems = lineItemsByInvoice[invoice.glide_row_id] || [];
+        const payments = paymentsByInvoice[invoice.glide_row_id] || [];
+        
+        return mapGlInvoiceToInvoice(invoice, accountName, lineItems, payments);
       });
-
-      setInvoices(formattedInvoices);
-    } catch (err) {
-      console.error('Error fetching invoices:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred fetching invoices');
-    } finally {
+      
+      setInvoices(mappedInvoices);
       setIsLoading(false);
+      return mappedInvoices;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return [];
     }
-  }, []);
+  }, [toast]);
 
-  const getInvoice = useCallback(async (id: string): Promise<Invoice | null> => {
+  const getInvoice = useCallback(async (id: string) => {
     try {
-      setIsLoading(true);
-      setError('');
-
-      const { data, error: fetchError } = await supabase
+      // Fetch the invoice
+      const { data: invoice, error: invoiceError } = await supabase
         .from('gl_invoices')
-        .select(`
-          *,
-          gl_accounts!gl_invoices_rowid_accounts_fkey (
-            account_name
-          ),
-          gl_invoice_lines!gl_invoice_lines_rowid_invoices_fkey (
-            *,
-            gl_products!gl_invoice_lines_rowid_products_fkey (
-              *
-            )
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
-
-      if (fetchError) throw fetchError;
-      if (!data) return null;
-
-      const lineItems: InvoiceLine[] = (data.gl_invoice_lines || []).map((line: any) => ({
-        id: line.id,
-        productId: line.rowid_products,
-        description: line.renamed_product_name || (line.gl_products?.display_name || ''),
-        quantity: line.qty_sold || 0,
-        unitPrice: line.selling_price || 0,
-        total: line.line_total || 0,
-        createdAt: line.created_at,
-        updatedAt: line.updated_at,
-        productImage: line.gl_products?.product_image1 || '',
-        productDetails: line.gl_products || undefined
-      }));
-
-      const invoice: Invoice = {
-        id: data.id,
-        number: data.id.slice(0, 8), // Just using a part of the ID as the invoice number
-        customerId: data.rowid_accounts || '',
-        accountId: data.rowid_accounts || '',
-        accountName: (data.gl_accounts && data.gl_accounts.account_name) || '',
-        date: new Date(data.invoice_order_date || data.created_at),
-        dueDate: data.due_date ? new Date(data.due_date) : null,
-        status: (data.payment_status || 'draft') as Invoice['status'],
-        total: data.total_amount || 0,
-        subtotal: data.total_amount || 0,
-        tax: 0,
-        amountPaid: data.total_paid || 0,
-        balance: data.balance || 0,
-        notes: data.notes || '',
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        lineItems: lineItems,
-        payments: []
-      };
-
-      return invoice;
-    } catch (err) {
-      console.error('Error fetching invoice:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred fetching the invoice');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const addInvoice = useCallback(async (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    try {
-      setIsLoading(true);
-      setError('');
-
-      const glideRowId = `gl-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-      const dbInvoice = {
-        rowid_accounts: newInvoice.customerId,
-        invoice_order_date: newInvoice.date.toISOString(),
-        payment_status: newInvoice.status,
-        total_amount: newInvoice.total,
-        total_paid: newInvoice.amountPaid,
-        balance: newInvoice.balance,
-        notes: newInvoice.notes,
-        glide_row_id: glideRowId,
-      };
-
-      const { data: invoiceData, error: insertError } = await supabase
-        .from('gl_invoices')
-        .insert(dbInvoice)
-        .select()
+      
+      if (invoiceError) throw invoiceError;
+      if (!invoice) throw new Error('Invoice not found');
+      
+      // Fetch the account
+      const { data: account, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('glide_row_id', invoice.rowid_accounts)
         .single();
-
-      if (insertError) throw insertError;
-
-      if (newInvoice.lineItems && newInvoice.lineItems.length > 0) {
-        const dbLineItems = newInvoice.lineItems.map(line => ({
-          rowid_invoices: invoiceData.id,
-          rowid_products: line.productId,
-          renamed_product_name: line.description,
-          qty_sold: line.quantity,
-          selling_price: line.unitPrice,
-          line_total: line.total,
-          glide_row_id: `gl-line-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-        }));
-
-        const { error: lineItemsError } = await supabase
-          .from('gl_invoice_lines')
-          .insert(dbLineItems);
-
-        if (lineItemsError) throw lineItemsError;
-      }
-
-      toast({
-        title: "Invoice Created",
-        description: "The invoice has been successfully created",
-      });
-
-      await fetchInvoices();
-    } catch (err) {
-      console.error('Error adding invoice:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred adding the invoice');
       
-      toast({
-        title: "Error Creating Invoice",
-        description: err instanceof Error ? err.message : 'An error occurred',
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchInvoices]);
-
-  const updateInvoice = useCallback(async (id: string, updates: Partial<Invoice>) => {
-    try {
-      setIsLoading(true);
-      setError('');
-
-      const dbUpdates: any = {};
+      if (accountError) throw accountError;
       
-      if (updates.accountId) dbUpdates.rowid_accounts = updates.accountId;
-      if (updates.date) dbUpdates.invoice_order_date = updates.date.toISOString();
-      if (updates.status) dbUpdates.payment_status = updates.status;
-      if (updates.total !== undefined) dbUpdates.total_amount = updates.total;
-      if (updates.amountPaid !== undefined) dbUpdates.total_paid = updates.amountPaid;
-      if (updates.balance !== undefined) dbUpdates.balance = updates.balance;
-      if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-
-      const { error: updateError } = await supabase
-        .from('gl_invoices')
-        .update(dbUpdates)
-        .eq('id', id);
-
-      if (updateError) throw updateError;
-
-      if (updates.lineItems) {
-        const { data: existingLineItems, error: fetchError } = await supabase
-          .from('gl_invoice_lines')
-          .select('id')
-          .eq('rowid_invoices', id);
-
-        if (fetchError) throw fetchError;
-
-        const existingIds = existingLineItems.map(line => line.id);
-        const updateIds = updates.lineItems.filter(line => line.id).map(line => line.id);
-        
-        const deleteIds = existingIds.filter(id => !updateIds.includes(id));
-        
-        if (deleteIds.length > 0) {
-          const { error: deleteError } = await supabase
-            .from('gl_invoice_lines')
-            .delete()
-            .in('id', deleteIds);
-            
-          if (deleteError) throw deleteError;
-        }
-        
-        const updateLines = updates.lineItems.filter(line => line.id);
-        for (const line of updateLines) {
-          const { error: lineUpdateError } = await supabase
-            .from('gl_invoice_lines')
-            .update({
-              rowid_products: line.productId,
-              renamed_product_name: line.description,
-              qty_sold: line.quantity,
-              selling_price: line.unitPrice,
-              line_total: line.total
-            })
-            .eq('id', line.id);
-            
-          if (lineUpdateError) throw lineUpdateError;
-        }
-        
-        const newLines = updates.lineItems.filter(line => !line.id);
-        if (newLines.length > 0) {
-          const dbNewLines = newLines.map(line => ({
-            rowid_invoices: id,
-            rowid_products: line.productId,
-            renamed_product_name: line.description,
-            qty_sold: line.quantity,
-            selling_price: line.unitPrice,
-            line_total: line.total,
-            glide_row_id: `gl-line-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-          }));
-          
-          const { error: insertError } = await supabase
-            .from('gl_invoice_lines')
-            .insert(dbNewLines);
-            
-          if (insertError) throw insertError;
-        }
-      }
-
-      toast({
-        title: "Invoice Updated",
-        description: "The invoice has been successfully updated",
-      });
-
-      await fetchInvoices();
-    } catch (err) {
-      console.error('Error updating invoice:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred updating the invoice');
-      
-      toast({
-        title: "Error Updating Invoice",
-        description: err instanceof Error ? err.message : 'An error occurred',
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchInvoices]);
-
-  const deleteInvoice = useCallback(async (id: string) => {
-    try {
-      setIsLoading(true);
-      setError('');
-
-      const { error: lineDeleteError } = await supabase
+      // Fetch line items
+      const { data: lineItems, error: lineItemsError } = await supabase
         .from('gl_invoice_lines')
-        .delete()
-        .eq('rowid_invoices', id);
-
-      if (lineDeleteError) throw lineDeleteError;
-
-      const { error: deleteError } = await supabase
-        .from('gl_invoices')
-        .delete()
-        .eq('id', id);
-
-      if (deleteError) throw deleteError;
-
-      toast({
-        title: "Invoice Deleted",
-        description: "The invoice has been successfully deleted",
-      });
-
-      await fetchInvoices();
-    } catch (err) {
-      console.error('Error deleting invoice:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred deleting the invoice');
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
       
+      if (lineItemsError) throw lineItemsError;
+      
+      // Enhance line items with product details
+      const enhancedLineItems = await Promise.all(
+        (lineItems || []).map(async (line) => {
+          if (line.rowid_products) {
+            const productDetails = await fetchProductDetails(line.rowid_products);
+            return {
+              ...line,
+              productDetails: productDetails || undefined
+            };
+          }
+          return line;
+        })
+      );
+      
+      // Fetch payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
+      
+      if (paymentsError) throw paymentsError;
+      
+      // Map to domain object
+      return mapGlInvoiceToInvoice(
+        invoice as GlInvoice, 
+        account?.account_name || 'Unknown Account', 
+        enhancedLineItems as GlInvoiceLine[] || [], 
+        payments as GlCustomerPayment[] || []
+      );
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoice';
       toast({
-        title: "Error Deleting Invoice",
-        description: err instanceof Error ? err.message : 'An error occurred',
-        variant: "destructive",
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      return null;
     }
+  }, [toast]);
+
+  // Fetch invoices for a specific account
+  const getInvoicesForAccount = useCallback(async (accountId: string) => {
+    try {
+      // Get the account's glide_row_id
+      const { data: account, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('id', accountId)
+        .single();
+      
+      if (accountError) throw accountError;
+      if (!account) throw new Error('Account not found');
+      
+      // Fetch invoices for this account
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('gl_invoices')
+        .select('*')
+        .eq('rowid_accounts', account.glide_row_id)
+        .order('created_at', { ascending: false });
+      
+      if (invoicesError) throw invoicesError;
+      
+      // Early return if no invoices
+      if (!invoicesData || invoicesData.length === 0) {
+        return [];
+      }
+      
+      // Get all invoice IDs to fetch line items and payments
+      const invoiceIds = invoicesData.map(inv => inv.glide_row_id);
+      
+      // Fetch all line items for these invoices
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select('*')
+        .in('rowid_invoices', invoiceIds);
+      
+      if (lineItemsError) throw lineItemsError;
+      
+      // Fetch all payments for these invoices
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .in('rowid_invoices', invoiceIds);
+        
+      if (paymentsError) throw paymentsError;
+      
+      // Group line items and payments by invoice ID
+      const lineItemsByInvoice = (lineItemsData || []).reduce((acc, item) => {
+        if (!acc[item.rowid_invoices]) {
+          acc[item.rowid_invoices] = [];
+        }
+        acc[item.rowid_invoices].push(item);
+        return acc;
+      }, {} as Record<string, GlInvoiceLine[]>);
+      
+      const paymentsByInvoice = (paymentsData || []).reduce((acc, payment) => {
+        if (!acc[payment.rowid_invoices]) {
+          acc[payment.rowid_invoices] = [];
+        }
+        acc[payment.rowid_invoices].push(payment);
+        return acc;
+      }, {} as Record<string, GlCustomerPayment[]>);
+      
+      // Map database objects to domain objects
+      return invoicesData.map((invoice: GlInvoice) => {
+        const lineItems = lineItemsByInvoice[invoice.glide_row_id] || [];
+        const payments = paymentsByInvoice[invoice.glide_row_id] || [];
+        
+        return mapGlInvoiceToInvoice(invoice, account.account_name, lineItems, payments);
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch invoices for account';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return [];
+    }
+  }, [toast]);
+
+  // Fetch invoices on component mount
+  useEffect(() => {
+    fetchInvoices();
   }, [fetchInvoices]);
 
   return {
@@ -354,11 +320,6 @@ export function useInvoices() {
     error,
     fetchInvoices,
     getInvoice,
-    addInvoice,
-    updateInvoice,
-    deleteInvoice,
-    getInvoicesForAccount: async (accountId: string) => {
-      return invoices.filter(invoice => invoice.accountId === accountId);
-    }
+    getInvoicesForAccount
   };
 }

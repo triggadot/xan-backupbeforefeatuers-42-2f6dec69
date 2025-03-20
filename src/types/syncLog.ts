@@ -1,64 +1,20 @@
 
 export interface SyncLog {
   id: string;
-  mapping_id: string;
-  status: "started" | "processing" | "completed" | "failed" | "completed_with_errors";
+  mapping_id: string | null;
+  status: string;
+  message: string | null;
+  records_processed: number | null;
   started_at: string;
-  completed_at?: string;
-  records_processed?: number;
-  message?: string;
-  app_name?: string;
-  // Additional fields needed by components
-  glide_table?: string;
-  glide_table_display_name?: string;
-  supabase_table?: string;
-  sync_direction?: string;
-}
-
-export interface SyncError {
-  id: string;
-  mapping_id: string;
-  error_type: string;
-  error_message: string;
-  record_data?: any;
-  retryable: boolean;
-  created_at: string;
-  resolved_at?: string;
-  resolution_notes?: string;
-  // Additional properties needed by components
-  type?: string;
-  message?: string;
-  record?: any;
-  timestamp?: string;
-  resolved?: boolean;
-}
-
-export interface UseSyncLogsOptions {
-  limit?: number;
-  mappingId?: string;
-  autoRefetch?: boolean;
-  includeDetails?: boolean;
-}
-
-export interface SyncLogsResult {
-  logs: SyncLog[];
-  isLoading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  data: SyncLog[]; // Make this required, not optional
-  syncLogs?: SyncLog[]; // Backward compatibility
-  refreshLogs?: () => Promise<void>; // Backward compatibility
-  filter?: SyncLogFilter;
-  filterLogs?: (filter: SyncLogFilter) => void;
-  currentFilter?: SyncLogFilter;
-}
-
-export interface SyncLogFilter {
-  mappingId?: string;
-  status?: string;
-  fromDate?: Date;
-  toDate?: Date;
-  [key: string]: any; // Allow string values for filtering by status
+  completed_at: string | null;
+  glide_table?: string | null;
+  glide_table_display_name?: string | null;
+  supabase_table?: string | null;
+  app_name?: string | null;
+  sync_direction?: string | null;
+  // Additional fields for error tracking
+  error_count?: number;
+  error_message?: string | null;
 }
 
 export interface Mapping {
@@ -67,24 +23,37 @@ export interface Mapping {
   glide_table: string;
   glide_table_display_name: string;
   supabase_table: string;
-  column_mappings: Record<string, GlColumnMapping>;
-  sync_direction: 'to_supabase' | 'to_glide' | 'both';
+  column_mappings: Record<string, {
+    glide_column_name: string;
+    supabase_column_name: string;
+    data_type: string;
+  }>;
+  sync_direction: string;
   enabled: boolean;
-  created_at?: string;
-  updated_at?: string;
-  
-  // Metrics fields 
-  current_status?: string;
-  last_sync_started_at?: string;
-  last_sync_completed_at?: string;
-  records_processed?: number;
-  total_records?: number;
-  error_count?: number;
   app_name?: string;
+  current_status?: string;
+  last_sync_completed_at?: string | null;
+  error_count?: number;
+  total_records?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
-export interface GlColumnMapping {
-  glide_column_name: string;
-  supabase_column_name: string;
-  data_type: string;
+export interface MappingToValidate {
+  supabase_table: string;
+  column_mappings: Record<string, {
+    glide_column_name: string;
+    supabase_column_name: string;
+    data_type: string;
+  }>;
 }
+
+// Added ValidationResult type for type checking validation results
+export interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  details?: Record<string, string[]>;
+}
+
+// Type for filter states
+export type SyncLogFilter = 'all' | 'completed' | 'failed';

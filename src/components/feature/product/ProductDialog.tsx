@@ -77,7 +77,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         const { data, error } = await supabase
           .from('gl_accounts')
           .select('id, glide_row_id, account_name')
-          .or('client_type.eq.Vendor,client_type.eq.Customer & Vendor');
+          .eq('client_type', 'vendor');
           
         if (error) throw error;
         setVendors(data || []);

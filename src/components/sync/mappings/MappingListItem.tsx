@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mapping } from '@/types/syncLog';
@@ -20,19 +21,17 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface MappingListItemProps {
-  mapping: GlMapping;
-  onViewMapping: (mappingId: string) => void;
-  onToggleEnabled: (mapping: GlMapping) => Promise<void>;
-  onDeleteMapping: (id: string) => Promise<void>;
-  isLoading: boolean;
+  mapping: Mapping;
+  onEdit: (mapping: GlMapping) => void;
+  onDelete: (id: string) => void;
+  toggleEnabled: (mapping: Mapping) => void;
 }
 
 export const MappingListItem: React.FC<MappingListItemProps> = ({ 
   mapping, 
-  onViewMapping, 
-  onToggleEnabled,
-  onDeleteMapping,
-  isLoading 
+  onEdit, 
+  onDelete,
+  toggleEnabled 
 }) => {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,7 +42,7 @@ export const MappingListItem: React.FC<MappingListItemProps> = ({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await onDeleteMapping(mapping.id);
+      await onDelete(mapping.id);
     } finally {
       setIsDeleting(false);
     }
@@ -65,7 +64,7 @@ export const MappingListItem: React.FC<MappingListItemProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onToggleEnabled(mapping)}
+              onClick={() => toggleEnabled(mapping)}
             >
               {mapping.enabled ? (
                 <Pause className="h-4 w-4 mr-1" />
@@ -77,7 +76,7 @@ export const MappingListItem: React.FC<MappingListItemProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onViewMapping(mapping.id)}
+              onClick={() => onEdit(glMapping)}
             >
               <Eye className="h-4 w-4 mr-1" />
               View

@@ -1,127 +1,135 @@
-
-import React, { useState, useEffect } from 'react';
-import { useSupabaseTables } from '@/hooks/useSupabaseTables';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import React, { useState } from 'react';
+import { Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Database } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { CreateTableForm } from './CreateTableForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-interface SupabaseTableSelectorProps {
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  connectionId?: string;
-  glideTable?: string;
-  glideTableDisplayName?: string;
-  onSuccess?: () => void;
+interface SupabaseTable {
+  table_name: string;
+  schema?: string;
 }
 
-export const SupabaseTableSelector: React.FC<SupabaseTableSelectorProps> = ({
+interface SupabaseTableSelectorProps {
+  tables: SupabaseTable[];
+  value: string;
+  onTableChange: (tableName: string) => void;
+  onCreateTableSuccess?: (tableName: string) => void;
+  disabled?: boolean;
+  isLoading?: boolean;
+  placeholder?: string;
+  filterPrefix?: string;
+}
+
+export function SupabaseTableSelector({
+  tables,
   value,
-  onChange,
+  onTableChange,
+  onCreateTableSuccess,
   disabled = false,
-  connectionId,
-  glideTable,
-  glideTableDisplayName,
-  onSuccess
-}) => {
-  const { tables, isLoading, error, refreshTables } = useSupabaseTables();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
+  isLoading = false,
+  placeholder = 'Select a table',
+  filterPrefix
+}: SupabaseTableSelectorProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  useEffect(() => {
-    // Update the compact view based on window size
-    const handleResize = () => {
-      setIsCompact(window.innerWidth < 768);
-    };
-
-    handleResize(); // Set initial value
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Filter tables based on search term and optional prefix
+  const filteredTables = tables
+    .filter(table => {
+      // Apply prefix filter if specified
+      if (filterPrefix && !table.table_name.startsWith(filterPrefix)) {
+        return false;
+      }
+      
+      // Apply search term filter
+      return table.table_name.toLowerCase().includes(searchTerm.toLowerCase());
+    })
+    .sort((a, b) => a.table_name.localeCompare(b.table_name));
 
   const handleCreateTable = (tableName: string) => {
-    refreshTables();
-    onChange(tableName);
-    setCreateDialogOpen(false);
-    if (onSuccess) {
-      onSuccess();
+    setShowCreateDialog(false);
+    if (onCreateTableSuccess) {
+      onCreateTableSuccess(tableName);
     }
+    onTableChange(tableName);
   };
-
-  if (error) {
-    return <div className="text-destructive text-sm">{error}</div>;
-  }
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center space-x-2">
-        {isLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
-          <div className="flex flex-1 items-center space-x-2">
-            <Select
-              value={value}
-              onValueChange={onChange}
-              disabled={disabled || isLoading}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a table" />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {tables.map((table) => (
-                    <SelectItem key={table} value={table}>
-                      {table}
+      <div className="flex flex-col gap-2">
+        <Select
+          value={value}
+          onValueChange={onTableChange}
+          disabled={disabled || isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-2">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              <>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center border rounded-md px-2">
+                    <Search className="h-4 w-4 text-muted-foreground mr-2" />
+                    <Input 
+                      className="border-0 p-1 h-8 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                      placeholder="Search tables..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                {filteredTables.length === 0 ? (
+                  <div className="p-2 text-muted-foreground text-center">
+                    {searchTerm ? 'No tables found' : 'No tables available'}
+                  </div>
+                ) : (
+                  filteredTables.map((table) => (
+                    <SelectItem key={table.table_name} value={table.table_name}>
+                      {table.table_name}
                     </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setCreateDialogOpen(true)}
-              disabled={disabled}
-              className={isCompact ? 'w-10 h-10 p-0' : ''}
-              title="Create new table"
-            >
-              <PlusCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
+                  ))
+                )}
+              </>
+            )}
+          </SelectContent>
+        </Select>
       </div>
 
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+      {onCreateTableSuccess && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCreateDialog(true)}
+          className="w-full"
+        >
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Create new table
+        </Button>
+      )}
+
+      {/* Create Table Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Create Table from Glide Schema
-            </DialogTitle>
+            <DialogTitle>Create Supabase Table</DialogTitle>
           </DialogHeader>
-          
-          <CreateTableForm 
-            onSuccess={handleCreateTable}
-            onCancel={() => setCreateDialogOpen(false)}
-            isCompact={isCompact}
-            connectionId={connectionId}
-            glideTable={glideTable}
-            glideTableDisplayName={glideTableDisplayName}
+          <CreateTableForm
+            onTableCreated={handleCreateTable}
+            onCancel={() => setShowCreateDialog(false)}
+            isCompact={true}
           />
         </DialogContent>
       </Dialog>
     </div>
   );
-};
+} 

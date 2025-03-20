@@ -45,32 +45,25 @@ export function useBusinessMetrics() {
     setError(null);
     
     try {
-      // Use PostgreSQL function directly instead of view
+      // Fetch all metrics from the gl_business_metrics view
       const { data: businessMetrics, error: metricsError } = await supabase
-        .rpc('gl_get_business_stats')
+        .from('gl_business_metrics')
+        .select('*')
         .single();
       
-      if (metricsError) {
-        console.error('Error fetching business metrics:', metricsError);
-        throw metricsError;
-      }
+      if (metricsError) throw metricsError;
       
-      // Make sure the response matches our BusinessMetrics interface
-      if (businessMetrics) {
-        setMetrics(businessMetrics as BusinessMetrics);
-      }
+      setMetrics(businessMetrics);
       
-      // Fetch document status from gl_current_status view
+      // Fetch document status from gl_current_status view with proper column selection
       const { data: docStatusData, error: statusError } = await supabase
         .from('gl_current_status')
         .select('category, total_count, paid_count, unpaid_count, draft_count, total_amount, total_paid, balance_amount');
       
-      if (statusError) {
-        console.error('Error fetching status metrics:', statusError);
-        throw statusError;
-      }
+      if (statusError) throw statusError;
       
       if (docStatusData) {
+        // Explicitly type the docStatusData as StatusMetrics[] to avoid type errors
         setStatusMetrics(docStatusData as StatusMetrics[]);
       }
       

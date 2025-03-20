@@ -13,15 +13,13 @@ interface EditConnectionDialogProps {
   onOpenChange: (open: boolean) => void;
   connection: GlConnection;
   onSuccess: () => void;
-  onSubmit?: (updates: Partial<GlConnection>) => Promise<void>;
 }
 
 const EditConnectionDialog: React.FC<EditConnectionDialogProps> = ({ 
   open, 
   onOpenChange,
   connection,
-  onSuccess,
-  onSubmit
+  onSuccess 
 }) => {
   const [appName, setAppName] = useState('');
   const [appId, setAppId] = useState('');

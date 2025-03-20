@@ -1,3 +1,4 @@
+
 // Base entity type with common fields
 export interface BaseEntity {
   id: string;
@@ -8,7 +9,7 @@ export interface BaseEntity {
 // Account type - for customers and vendors
 export interface Account extends BaseEntity {
   name: string;
-  type: 'Customer' | 'Vendor' | 'Customer & Vendor';
+  type: 'customer' | 'vendor' | 'both';
   email: string;
   phone?: string;
   address?: string;
@@ -16,8 +17,6 @@ export interface Account extends BaseEntity {
   notes?: string;
   status: 'active' | 'inactive';
   balance: number;
-  photo?: string; // Added this field for account photos
-  accounts_uid?: string; // Added this field to match database schema
 }
 
 // Database representation of gl_accounts
@@ -62,9 +61,6 @@ export interface Product extends BaseEntity {
   category?: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
-  vendorName?: string;
-  totalQtyPurchased?: number;
-  inStock?: number;
 }
 
 // Line item for orders, estimates, and invoices

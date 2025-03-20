@@ -2,7 +2,6 @@
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { GlMapping } from '@/types/glsync';
 
 interface ValidationResult {
   isValid: boolean;
@@ -12,11 +11,10 @@ interface ValidationResult {
 }
 
 interface ValidationDisplayProps {
-  validation?: ValidationResult | null;
-  mapping?: GlMapping;
+  validation: ValidationResult | null;
 }
 
-export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({ validation, mapping }) => {
+export const ValidationDisplay: React.FC<ValidationDisplayProps> = ({ validation }) => {
   if (!validation) {
     return null;
   }

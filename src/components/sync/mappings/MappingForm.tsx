@@ -1,188 +1,207 @@
-import React, { useState, useEffect } from 'react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+
+import { useState } from 'react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectGroup, 
+  SelectItem, 
+  SelectLabel, 
+  SelectTrigger, 
+  SelectValue
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { ConnectionSelect } from './ConnectionSelect';
-import { SupabaseTableSelect } from './SupabaseTableSelect';
-import { SyncDirectionSelect } from './SyncDirectionSelect';
-import { GlConnection, GlMapping } from '@/types/glsync';
-import { getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
-import { GlideTableSelector } from '@/components/sync/GlideTableSelector';
-
-// Form schema using zod for validation
-const mappingFormSchema = z.object({
-  connection_id: z.string().min(1, 'Connection is required'),
-  glide_table: z.string().min(1, 'Glide table is required'),
-  glide_table_display_name: z.string().optional(),
-  supabase_table: z.string().min(1, 'Supabase table is required'),
-  sync_direction: z.enum(['to_supabase', 'to_glide', 'both']).default('to_supabase'),
-});
-
-type MappingFormValues = z.infer<typeof mappingFormSchema>;
+import { DialogFooter } from '@/components/ui/dialog';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
+import { GlConnection, GlMapping, GlideTable } from '@/types/glsync';
+import GlideTableSelector from '../GlideTableSelector';
+import ColumnMappingEditor from '../ColumnMappingEditor';
+import { ArrowRight, ArrowLeft, ArrowRightLeft } from 'lucide-react';
 
 interface MappingFormProps {
-  initialValues?: Partial<GlMapping>;
-  onSubmit: (values: MappingFormValues) => void;
+  mapping: Partial<GlMapping>;
+  isEditing: boolean;
+  connections: GlConnection[];
+  glideTables: GlideTable[];
+  supabaseTables: string[];
+  isLoadingTables: boolean;
+  selectedConnection: string;
+  activeTab: string;
+  availableGlideColumns: Array<{ id: string; name: string; type?: string }>;
+  onConnectionChange: (connectionId: string) => void;
+  onGlideTableChange: (tableId: string, displayName: string) => void;
+  onSupabaseTableChange: (tableName: string) => void;
+  onSyncDirectionChange: (direction: 'to_supabase' | 'to_glide' | 'both') => void;
+  onEnabledChange: (enabled: boolean) => void;
+  onColumnMappingsChange: (updatedMapping: {column_mappings: Record<string, any>}) => void;
+  onAddGlideTable: (table: GlideTable) => void;
+  onTabChange: (tab: string) => void;
+  onSubmit: () => void;
   onCancel: () => void;
-  isLoading?: boolean;
 }
 
-const MappingForm: React.FC<MappingFormProps> = ({
-  initialValues,
+const MappingForm = ({
+  mapping,
+  isEditing,
+  connections,
+  glideTables,
+  supabaseTables,
+  isLoadingTables,
+  selectedConnection,
+  activeTab,
+  availableGlideColumns,
+  onConnectionChange,
+  onGlideTableChange,
+  onSupabaseTableChange,
+  onSyncDirectionChange,
+  onEnabledChange,
+  onColumnMappingsChange,
+  onAddGlideTable,
+  onTabChange,
   onSubmit,
-  onCancel,
-  isLoading = false,
-}) => {
-  const [selectedConnection, setSelectedConnection] = useState<GlConnection | null>(null);
-  const [selectedGlideTable, setSelectedGlideTable] = useState<string | null>(null);
-  const [selectedGlideTableName, setSelectedGlideTableName] = useState<string | null>(null);
-
-  // Initialize the form with default values or passed in values
-  const form = useForm<MappingFormValues>({
-    resolver: zodResolver(mappingFormSchema),
-    defaultValues: {
-      connection_id: initialValues?.connection_id || '',
-      glide_table: initialValues?.glide_table || '',
-      glide_table_display_name: initialValues?.glide_table_display_name || '',
-      supabase_table: initialValues?.supabase_table || '',
-      sync_direction: initialValues?.sync_direction || 'to_supabase',
-    },
-  });
-
-  // Update the form when initial values change
-  useEffect(() => {
-    if (initialValues) {
-      form.reset({
-        connection_id: initialValues.connection_id || '',
-        glide_table: initialValues.glide_table || '',
-        glide_table_display_name: initialValues.glide_table_display_name || '',
-        supabase_table: initialValues.supabase_table || '',
-        sync_direction: initialValues.sync_direction || 'to_supabase',
-      });
-    }
-  }, [initialValues, form]);
-
-  // Handle connection selection
-  const handleConnectionSelect = (connection: GlConnection) => {
-    setSelectedConnection(connection);
-    form.setValue('connection_id', connection.id);
-  };
-
-  // Handle Glide table selection
-  const handleGlideTableSelect = (tableId: string, displayName: string) => {
-    setSelectedGlideTable(tableId);
-    setSelectedGlideTableName(displayName);
-    form.setValue('glide_table', tableId);
-    form.setValue('glide_table_display_name', displayName);
-  };
-
-  // Handle form submission
-  const handleSubmit = (values: MappingFormValues) => {
-    // Add default column mappings if needed
-    const formData = {
-      ...values,
-      // Ensure display name is set
-      glide_table_display_name: values.glide_table_display_name || values.glide_table,
-      // Add default column mappings (will be overridden by any existing ones)
-      column_mappings: initialValues?.column_mappings || getDefaultColumnMappings(),
-    };
-    
-    onSubmit(formData);
-  };
-
+  onCancel
+}: MappingFormProps) => {
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="connection_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Connection</FormLabel>
-              <FormControl>
-                <ConnectionSelect
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  onConnectionSelect={handleConnectionSelect}
-                  selectedConnectionId={field.value}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="glide_table"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Glide Table</FormLabel>
-              <FormControl>
-                <GlideTableSelector
-                  value={field.value}
-                  onTableChange={field.onChange}
-                  connectionId={form.getValues('connection_id')}
-                  disabled={!form.getValues('connection_id')}
-                  onTableSelect={handleGlideTableSelect}
-                  selectedTableId={field.value}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="supabase_table"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Supabase Table</FormLabel>
-              <FormControl>
-                <SupabaseTableSelect
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  onTableSelect={(table) => form.setValue('supabase_table', table)}
-                  selectedTable={field.value}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="sync_direction"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sync Direction</FormLabel>
-              <FormControl>
-                <SyncDirectionSelect
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  onChange={(value) => form.setValue('sync_direction', value as 'to_supabase' | 'to_glide' | 'both')}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={onCancel} type="button">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Mapping'}
-          </Button>
-        </div>
-      </form>
-    </Form>
+    <>
+      <Tabs value={activeTab} onValueChange={onTabChange}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="general">General Settings</TabsTrigger>
+          <TabsTrigger 
+            value="column-mappings"
+            disabled={!mapping.supabase_table}
+          >
+            Column Mappings
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="general" className="py-4">
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="connection">Connection <span className="text-red-500">*</span></Label>
+              <Select
+                value={mapping.connection_id || ''}
+                onValueChange={onConnectionChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a connection" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Connections</SelectLabel>
+                    {connections.map((connection) => (
+                      <SelectItem key={connection.id} value={connection.id}>
+                        {connection.app_name || 'Unnamed App'}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="glide_table">Glide Table <span className="text-red-500">*</span></Label>
+              <GlideTableSelector
+                tables={glideTables}
+                value={mapping.glide_table || ''}
+                onTableChange={onGlideTableChange}
+                onAddTable={onAddGlideTable}
+                disabled={isLoadingTables || !selectedConnection}
+                isLoading={isLoadingTables}
+                placeholder={isLoadingTables ? 'Loading...' : 'Select a Glide table'}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="supabase_table">Supabase Table <span className="text-red-500">*</span></Label>
+              <Select
+                value={mapping.supabase_table || ''}
+                onValueChange={onSupabaseTableChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a Supabase table" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Supabase Tables</SelectLabel>
+                    {supabaseTables.map((table) => (
+                      <SelectItem key={table} value={table}>
+                        {table}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="sync_direction">Sync Direction</Label>
+              <Select
+                value={mapping.sync_direction || 'to_supabase'}
+                onValueChange={(value: 'to_supabase' | 'to_glide' | 'both') => onSyncDirectionChange(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="to_supabase">
+                    <div className="flex items-center">
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Glide to Supabase
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="to_glide">
+                    <div className="flex items-center">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Supabase to Glide
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="both">
+                    <div className="flex items-center">
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      Bidirectional
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label htmlFor="enabled">Enabled</Label>
+              <Switch
+                id="enabled"
+                checked={mapping.enabled ?? true}
+                onCheckedChange={onEnabledChange}
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="column-mappings" className="py-4">
+          <ColumnMappingEditor 
+            mapping={{ 
+              supabase_table: mapping.supabase_table || '',
+              column_mappings: mapping.column_mappings || {}
+            }}
+            onUpdate={onColumnMappingsChange}
+          />
+        </TabsContent>
+      </Tabs>
+      
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit}>
+          {isEditing ? 'Update' : 'Create'}
+        </Button>
+      </DialogFooter>
+    </>
   );
 };
 

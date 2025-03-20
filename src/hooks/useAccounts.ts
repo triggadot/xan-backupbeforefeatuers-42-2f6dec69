@@ -4,18 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Account, GlAccount } from '@/types';
 import { mapGlAccountToAccount } from '@/utils/mapping-utils';
-import { normalizeClientType } from '@/utils/gl-account-mappings';
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
 
-  const fetchAccounts = useCallback(async (forceRefresh = false) => {
-    if (accounts.length > 0 && !forceRefresh) return accounts;
-    
+  const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -43,7 +39,7 @@ export function useAccounts() {
     } finally {
       setIsLoading(false);
     }
-  }, [accounts.length, toast]);
+  }, [toast]);
 
   const getAccount = useCallback(async (id: string) => {
     try {
@@ -69,21 +65,13 @@ export function useAccounts() {
 
   const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      // Generate a unique Glide row ID with a prefix and timestamp
-      const glideRowId = `A-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      
-      // Normalize client type to ensure it matches constraint
-      const normalizedClientType = normalizeClientType(accountData.type);
-      
       const { data, error } = await supabase
         .from('gl_accounts')
         .insert({
           account_name: accountData.name,
-          client_type: normalizedClientType,
+          client_type: accountData.type,
           email_of_who_added: accountData.email,
-          photo: accountData.photo, // Add photo field
-          glide_row_id: glideRowId, // Use the generated ID for Glide sync
-          accounts_uid: accountData.accounts_uid || `ACC${Date.now().toString().slice(-6)}` // Generate a simple account UID if not provided
+          glide_row_id: 'A-' + Date.now(), // Generate a temporary ID for Glide sync
         })
         .select()
         .single();
@@ -115,13 +103,8 @@ export function useAccounts() {
       // Convert from Account format to gl_accounts format
       const updateData: Partial<GlAccount> = {};
       if (accountData.name) updateData.account_name = accountData.name;
-      if (accountData.type) {
-        // Normalize client type to ensure it matches constraint
-        updateData.client_type = normalizeClientType(accountData.type);
-      }
+      if (accountData.type) updateData.client_type = accountData.type;
       if (accountData.email) updateData.email_of_who_added = accountData.email;
-      if (accountData.accounts_uid) updateData.accounts_uid = accountData.accounts_uid;
-      if (accountData.photo) updateData.photo = accountData.photo;
       
       const { data, error } = await supabase
         .from('gl_accounts')
@@ -182,76 +165,19 @@ export function useAccounts() {
     }
   }, [toast]);
 
-  const syncAccounts = useCallback(async (mappingId: string) => {
-    setIsSyncing(true);
-    
-    try {
-      // Call the sync edge function
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'syncData',
-          mappingId,
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Refresh accounts after sync
-      await fetchAccounts(true);
-      
-      toast({
-        title: 'Sync Complete',
-        description: `Synced ${data.recordsProcessed || 0} accounts successfully.`,
-      });
-      
-      return data;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to sync accounts';
-      toast({
-        title: 'Sync Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [fetchAccounts, toast]);
-
   // Fetch accounts on component mount
   useEffect(() => {
     fetchAccounts();
-    
-    // Set up a realtime subscription for account changes
-    const channel = supabase
-      .channel('gl-accounts-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'gl_accounts' 
-        }, 
-        () => {
-          fetchAccounts(true);
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [fetchAccounts]);
 
   return {
     accounts,
     isLoading,
-    isSyncing,
     error,
     fetchAccounts,
     getAccount,
     addAccount,
     updateAccount,
-    deleteAccount,
-    syncAccounts
+    deleteAccount
   };
 }

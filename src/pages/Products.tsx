@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
+import ProductsTable from '@/components/feature/product/ProductsTable';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
@@ -170,7 +170,10 @@ const Products: React.FC = () => {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={handleRefresh}
+            onClick={() => {
+              setIsLoading(true);
+              refreshProducts().finally(() => setIsLoading(false));
+            }}
             disabled={isLoading || isLoadingProducts}
             title="Refresh products"
           >
@@ -190,7 +193,7 @@ const Products: React.FC = () => {
       {isLoadingProducts ? (
         <LoadingState />
       ) : (
-        <ProductsTableWrapper 
+        <ProductsTable 
           products={filteredProducts} 
           onEdit={handleEdit} 
           onDelete={handleDeleteProduct}

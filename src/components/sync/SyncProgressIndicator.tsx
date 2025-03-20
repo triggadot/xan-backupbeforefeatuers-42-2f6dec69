@@ -1,16 +1,69 @@
 
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { SyncProgressIndicatorProps } from '@/types/syncInterface';
+import { GlMapping, GlSyncStatus } from '@/types/glsync';
+import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 
-export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({ progress }) => {
+export interface SyncProgressIndicatorProps {
+  mapping: GlMapping;
+  status?: GlSyncStatus;
+}
+
+export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({ 
+  mapping,
+  status: initialStatus 
+}) => {
+  // Pass only the mappingId to useGlSyncStatus according to its signature
+  const { syncStatus } = useGlSyncStatus(mapping.id);
+  
+  const calculateProgress = () => {
+    if (!syncStatus) return 0;
+    
+    if (syncStatus.records_processed === null || 
+        syncStatus.total_records === null || 
+        syncStatus.total_records === 0) {
+      return 0;
+    }
+    
+    return Math.min(100, Math.round((syncStatus.records_processed / syncStatus.total_records) * 100));
+  };
+
   return (
-    <div className="w-full space-y-2">
-      <Progress value={progress} className="h-2" />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{progress}% Complete</span>
-        <span>{progress === 100 ? 'Done' : 'In progress'}</span>
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Sync Progress</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Records Processed</span>
+            <span>
+              {syncStatus?.records_processed || 0} / {syncStatus?.total_records || 0}
+            </span>
+          </div>
+          
+          <Progress value={calculateProgress()} className="h-2" />
+          
+          <div className="text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Status</span>
+              <span className="capitalize">
+                {syncStatus?.current_status || 'Not synced'}
+              </span>
+            </div>
+            
+            {syncStatus?.last_sync_completed_at && (
+              <div className="flex justify-between mt-2">
+                <span className="text-muted-foreground">Last Completed</span>
+                <span>
+                  {new Date(syncStatus.last_sync_completed_at).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

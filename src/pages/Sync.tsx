@@ -1,40 +1,61 @@
 
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useParams } from 'react-router-dom';
-import { SyncDashboard } from '@/components/sync/SyncDashboard';
-import { MappingsManager } from '@/components/sync/MappingsManager';
-import { ConnectionsManager } from '@/components/sync/ConnectionsManager';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SyncDashboard from '@/components/sync/SyncDashboard';
+import ConnectionsManager from '@/components/sync/ConnectionsManager';
+import MappingsManager from '@/components/sync/MappingsManager';
+import SyncLogs from '@/components/sync/SyncLogs';
 
-const Sync: React.FC = () => {
-  const { tab = 'dashboard' } = useParams<{ tab?: string }>();
-  const [activeTab, setActiveTab] = useState<string>(tab);
+const Sync = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const { tab } = useParams();
+
+  useEffect(() => {
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [tab]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    navigate(`/sync/${value}`);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-3xl font-bold mb-6">Sync Management</h1>
-      
-      <Tabs 
-        value={activeTab} 
-        onValueChange={setActiveTab} 
-        className="w-full"
-      >
-        <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
+    <div className="container mx-auto py-6 max-w-7xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Glide Sync</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and monitor data synchronization between Glide and Supabase
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="grid grid-cols-4 max-w-2xl">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="mappings">Mappings</TabsTrigger>
           <TabsTrigger value="connections">Connections</TabsTrigger>
+          <TabsTrigger value="mappings">Mappings</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="dashboard">
+        <TabsContent value="dashboard" className="space-y-4">
           <SyncDashboard />
         </TabsContent>
         
-        <TabsContent value="mappings">
+        <TabsContent value="connections" className="space-y-4">
+          <ConnectionsManager />
+        </TabsContent>
+        
+        <TabsContent value="mappings" className="space-y-4">
           <MappingsManager />
         </TabsContent>
         
-        <TabsContent value="connections">
-          <ConnectionsManager />
+        <TabsContent value="logs" className="space-y-4">
+          <SyncLogs />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,99 +1,67 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
-import { SyncLogTable } from '@/components/sync/ui/SyncLogTable';
+import { SyncLogTable } from './ui/SyncLogTable';
 import { RefreshCw } from 'lucide-react';
 import { SyncLogFilter } from '@/types/syncLog';
 
-export default function SyncLogs() {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { logs, isLoading, refetch, filterLogs, currentFilter } = useRealtimeSyncLogs({
-    limit: 100,
-    autoRefetch: true,
+const SyncLogs = () => {
+  const { 
+    syncLogs, 
+    isLoading, 
+    refreshLogs, 
+    filter, 
+    setFilter 
+  } = useRealtimeSyncLogs({
+    limit: 50,
+    includeDetails: true,
   });
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refetch();
-    setIsRefreshing(false);
-  };
-
-  const handleFilterChange = (status: string | null) => {
-    const newFilter: SyncLogFilter = { ...currentFilter } as SyncLogFilter;
-    
-    if (status) {
-      newFilter.status = status;
-    } else {
-      delete newFilter.status;
-    }
-    
-    filterLogs?.(newFilter);
+  const handleFilterChange = (value: string) => {
+    setFilter(value as SyncLogFilter);
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle className="text-xl">Sync Logs</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Recent synchronization activity
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Synchronization Logs</h2>
+        <div className="flex items-center gap-2">
+          <Select value={filter} onValueChange={handleFilterChange}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter logs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Logs</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={refreshLogs}>
+            <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button 
-            variant={!currentFilter?.status ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange(null)}
-          >
-            All
-          </Button>
-          <Button 
-            variant={currentFilter?.status === "completed" ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange("completed")}
-          >
-            Completed
-          </Button>
-          <Button 
-            variant={currentFilter?.status === "failed" ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange("failed")}
-          >
-            Failed
-          </Button>
-          <Button 
-            variant={currentFilter?.status === "completed_with_errors" ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange("completed_with_errors")}
-          >
-            Warnings
-          </Button>
-          <Button 
-            variant={currentFilter?.status === "processing" ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange("processing")}
-          >
-            In Progress
-          </Button>
-        </div>
-        
-        <SyncLogTable logs={logs} isLoading={isLoading} />
-      </CardContent>
-    </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Recent Sync Activities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SyncLogTable logs={syncLogs} isLoading={isLoading} showAppInfo={true} />
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};
+
+export default SyncLogs;

@@ -1,79 +1,158 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+interface GlConnection {
+  id: string;
+  app_id: string;
+  api_key: string;
+  app_name: string | null;
+}
+
+interface GlMapping {
+  id: string;
+  connection_id: string;
+  glide_table: string;
+  supabase_table: string;
+  column_mappings: Record<string, {
+    glide_column_name: string;
+    supabase_column_name: string;
+    data_type: string;
+  }>;
+  sync_direction: 'to_supabase' | 'to_glide' | 'both';
+}
+
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Create a Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Parse request body
-    const { action, connectionId, mappingId, ...rest } = await req.json();
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
-    console.log(`Processing ${action} action for connection ${connectionId}`);
-
-    // Process different actions
-    switch (action) {
-      case 'testConnection':
-        return await testConnection(supabase, connectionId);
-      
-      case 'getTableNames':
-        return await getGlideTables(supabase, connectionId);
-      
-      case 'getColumnMappings':
-        return await getGlideTableColumns(supabase, connectionId, rest.tableId);
-      
-      case 'validateMapping':
-        return await validateMapping(supabase, mappingId);
-      
-      case 'syncData':
-        return await syncData(supabase, connectionId, mappingId);
-      
-      default:
-        throw new Error(`Unknown action: ${action}`);
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase URL or service role key is not set');
     }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Parse request body
+    const requestBody = await req.json();
+    const { action, connectionId, mappingId, tableId } = requestBody;
+
+    console.log(`Processing ${action} action for connection ${connectionId}`);
+    
+    if (!action) {
+      throw new Error('Action is required');
+    }
+    
+    if (action === 'testConnection') {
+      if (!connectionId) {
+        throw new Error('Connection ID is required');
+      }
+      
+      return await testGlideConnection(supabase, connectionId);
+    } 
+    else if (action === 'getTableNames') {
+      // Return existing Glide tables from gl_mappings
+      const { data, error } = await supabase
+        .from('gl_mappings')
+        .select('glide_table, glide_table_display_name')
+        .order('glide_table_display_name', { ascending: true });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Format the response to match expected structure
+      const uniqueTables = new Map();
+      
+      // Filter unique tables to avoid duplicates
+      data.forEach(item => {
+        // Only add if not already in map
+        if (!uniqueTables.has(item.glide_table)) {
+          uniqueTables.set(item.glide_table, {
+            id: item.glide_table,
+            display_name: item.glide_table_display_name
+          });
+        }
+      });
+      
+      const tables = Array.from(uniqueTables.values());
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          tables 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+    else if (action === 'getColumnMappings') {
+      if (!connectionId || !tableId) {
+        throw new Error('Connection ID and Table ID are required');
+      }
+      
+      return await getGlideColumnMappings(supabase, connectionId, tableId);
+    }
+    else if (action === 'syncData') {
+      if (!connectionId || !mappingId) {
+        throw new Error('Connection ID and Mapping ID are required');
+      }
+      
+      return await syncData(supabase, connectionId, mappingId);
+    }
+    else {
+      throw new Error(`Unknown action: ${action}`);
+    }
+    
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error('Error:', error.message);
     
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'An unexpected error occurred',
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
       }),
-      {
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200, // Return 200 to allow frontend to handle the error
+        status: 400
       }
     );
   }
 });
 
-// Test connection to Glide
-async function testConnection(supabase, connectionId) {
+async function testGlideConnection(supabase, connectionId: string) {
+  console.log(`Testing connection with ID: ${connectionId}`);
+  
   try {
-    // Fetch connection details
+    // Get connection details
     const { data: connection, error: connectionError } = await supabase
       .from('gl_connections')
       .select('*')
       .eq('id', connectionId)
-      .maybeSingle();
+      .single();
     
-    if (connectionError) throw connectionError;
-    if (!connection) throw new Error('Connection not found');
+    if (connectionError) {
+      throw connectionError;
+    }
     
-    // Test connection by making a simple request to Glide API
+    if (!connection) {
+      throw new Error('Connection not found');
+    }
+    
+    // Test the connection by fetching app data from Glide API
     const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
       method: 'POST',
       headers: {
@@ -82,7 +161,7 @@ async function testConnection(supabase, connectionId) {
       },
       body: JSON.stringify({
         appID: connection.app_id,
-        queries: [{ limit: 1 }]
+        queries: []
       })
     });
     
@@ -91,117 +170,164 @@ async function testConnection(supabase, connectionId) {
       throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
     }
     
-    // Update connection status
+    // Update connection status to active
     await supabase
       .from('gl_connections')
-      .update({ 
-        status: 'active',
-        updated_at: new Date().toISOString()
-      })
+      .update({ status: 'active' })
       .eq('id', connectionId);
     
     return new Response(
-      JSON.stringify({ success: true, message: 'Connection successful' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true,
+        message: 'Connection successful' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
     );
   } catch (error) {
-    console.error('Error testing connection:', error);
+    console.error('Connection test failed:', error);
     
-    // Update connection status to reflect error
-    try {
-      await supabase
-        .from('gl_connections')
-        .update({ 
-          status: 'error',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connectionId);
-    } catch (updateError) {
-      console.error('Error updating connection status:', updateError);
-    }
+    // Update connection status to error
+    await supabase
+      .from('gl_connections')
+      .update({ status: 'error' })
+      .eq('id', connectionId);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to test connection'
+        error: error.message 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200  // Still return 200 so front-end can handle the error message
+      }
     );
   }
 }
 
-// Get list of Glide tables
-async function getGlideTables(supabase, connectionId) {
+async function getGlideColumnMappings(supabase, connectionId: string, tableId: string) {
+  console.log(`Getting column mappings for table: ${tableId}`);
+  
   try {
-    // Fetch connection details
+    // Get connection details
     const { data: connection, error: connectionError } = await supabase
       .from('gl_connections')
       .select('*')
       .eq('id', connectionId)
-      .maybeSingle();
+      .single();
     
-    if (connectionError) throw connectionError;
-    if (!connection) throw new Error('Connection not found');
+    if (connectionError) {
+      throw connectionError;
+    }
     
-    // Fetch tables from Glide API
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        appID: connection.app_id,
-        queries: [{ limit: 1 }]
+    if (!connection) {
+      throw new Error('Connection not found');
+    }
+    
+    const columns = await getGlideTableColumns(connection.api_key, connection.app_id, tableId);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        columns 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+  } catch (error) {
+    console.error('Error getting column mappings:', error);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200  // Still return 200 so front-end can handle the error message
+      }
+    );
+  }
+}
+
+async function syncData(supabase, connectionId: string, mappingId: string) {
+  console.log(`Starting sync for mapping: ${mappingId}`);
+  
+  // Create a sync log entry
+  const { data: logEntry, error: logError } = await supabase
+    .from('gl_sync_logs')
+    .insert({
+      mapping_id: mappingId,
+      status: 'started',
+      message: 'Sync started'
+    })
+    .select()
+    .single();
+  
+  if (logError) {
+    console.error('Error creating sync log:', logError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Failed to create sync log entry' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+  }
+  
+  const logId = logEntry.id;
+  console.log(`Created sync log with ID: ${logId}`);
+  
+  try {
+    // Get connection details
+    const { data: connection, error: connectionError } = await supabase
+      .from('gl_connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single();
+    
+    if (connectionError) {
+      throw connectionError;
+    }
+    
+    if (!connection) {
+      throw new Error('Connection not found');
+    }
+    
+    // Get mapping details
+    const { data: mapping, error: mappingError } = await supabase
+      .from('gl_mappings')
+      .select('*')
+      .eq('id', mappingId)
+      .single();
+    
+    if (mappingError) {
+      throw mappingError;
+    }
+    
+    if (!mapping) {
+      throw new Error('Mapping not found');
+    }
+    
+    // Update log to processing
+    await supabase
+      .from('gl_sync_logs')
+      .update({
+        status: 'processing',
+        message: 'Fetching data from Glide'
       })
-    });
+      .eq('id', logId);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Extract table names from response
-    const tables = data.map(table => ({
-      id: table.tableName,
-      name: table.displayName || table.tableName
-    }));
-    
-    return new Response(
-      JSON.stringify({ success: true, tables }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error fetching Glide tables:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Failed to fetch Glide tables'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Get columns for a specific Glide table
-async function getGlideTableColumns(supabase, connectionId, tableId) {
-  try {
-    if (!tableId) throw new Error('Table ID is required');
-    
-    // Fetch connection details
-    const { data: connection, error: connectionError } = await supabase
-      .from('gl_connections')
-      .select('*')
-      .eq('id', connectionId)
-      .maybeSingle();
-    
-    if (connectionError) throw connectionError;
-    if (!connection) throw new Error('Connection not found');
-    
-    // Fetch table schema from Glide API
-    const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
+    // Fetch data from Glide
+    const glideResponse = await fetch('https://api.glideapp.io/api/function/queryTables', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${connection.api_key}`,
@@ -211,513 +337,220 @@ async function getGlideTableColumns(supabase, connectionId, tableId) {
         appID: connection.app_id,
         queries: [
           { 
-            tableName: tableId,
-            limit: 1
+            tableName: mapping.glide_table,
+            limit: 1000  // Just get a batch for this demo
           }
         ]
       })
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
+    if (!glideResponse.ok) {
+      const errorText = await glideResponse.text();
+      throw new Error(`Glide API returned: ${glideResponse.status} - ${errorText}`);
     }
     
-    const data = await response.json();
+    const glideData = await glideResponse.json();
+    const tableData = glideData[0];
     
-    // Check if we have columns data
-    if (!data || !data[0] || !data[0].columns) {
-      throw new Error('No columns found in Glide table');
+    if (!tableData || !tableData.rows) {
+      throw new Error('No data returned from Glide API');
     }
     
-    // Format columns for display
-    const columns = Object.entries(data[0].columns).map(([id, info]) => ({
-      id,
-      name: info.name,
-      type: info.type || 'string'
-    }));
+    // Update log with progress
+    await supabase
+      .from('gl_sync_logs')
+      .update({
+        status: 'processing',
+        message: `Processing ${tableData.rows.length} records`,
+        records_processed: 0
+      })
+      .eq('id', logId);
     
-    return new Response(
-      JSON.stringify({ success: true, columns }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error fetching Glide table columns:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Failed to fetch Glide table columns'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Validate mapping
-async function validateMapping(supabase, mappingId) {
-  try {
-    if (!mappingId) throw new Error('Mapping ID is required');
+    // Process and transform the data for Supabase
+    const columnMappings = mapping.column_mappings;
+    const transformedRows = [];
+    const errors = [];
     
-    // Call the database function to validate the mapping
-    const { data, error } = await supabase
-      .rpc('gl_validate_column_mapping', { 
-        p_mapping_id: mappingId
-      });
-    
-    if (error) throw error;
-    
-    if (!data || !data[0]) {
-      throw new Error('No validation result returned');
-    }
-    
-    const result = data[0];
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        isValid: result.is_valid,
-        message: result.validation_message
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error validating mapping:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Failed to validate mapping'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Sync data between Glide and Supabase
-async function syncData(supabase, connectionId, mappingId) {
-  let syncLogId = null;
-  
-  try {
-    // Determine what to sync
-    let mappingsToSync = [];
-    
-    if (mappingId) {
-      // Fetch specific mapping
-      const { data, error } = await supabase
-        .from('gl_mappings')
-        .select('*, gl_connections(*)')
-        .eq('id', mappingId)
-        .eq('enabled', true)
-        .maybeSingle();
-      
-      if (error) throw error;
-      if (!data) throw new Error(`Mapping not found or disabled: ${mappingId}`);
-      
-      mappingsToSync = [data];
-    } else if (connectionId) {
-      // Fetch all enabled mappings for the connection
-      const { data, error } = await supabase
-        .from('gl_mappings')
-        .select('*, gl_connections(*)')
-        .eq('connection_id', connectionId)
-        .eq('enabled', true);
-      
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        throw new Error(`No enabled mappings found for connection: ${connectionId}`);
-      }
-      
-      mappingsToSync = data;
-    } else {
-      throw new Error('Either connectionId or mappingId is required');
-    }
-    
-    console.log(`Found ${mappingsToSync.length} mappings to sync`);
-    
-    // Process each mapping
-    let totalRecordsProcessed = 0;
-    let failedRecords = 0;
-    
-    for (const mapping of mappingsToSync) {
-      // Create sync log entry
-      const { data: logData, error: logError } = await supabase
-        .from('gl_sync_logs')
-        .insert({
-          mapping_id: mapping.id,
-          status: 'started',
-          message: `Starting sync for ${mapping.glide_table_display_name || mapping.glide_table}`,
-        })
-        .select()
-        .single();
-      
-      if (logError) throw logError;
-      syncLogId = logData.id;
-      
-      console.log(`Created sync log with ID: ${syncLogId}`);
-      
+    for (const glideRow of tableData.rows) {
       try {
-        // Get connection details
-        const connection = mapping.gl_connections;
-        if (!connection) throw new Error('Connection not found');
+        const supabaseRow = {};
         
-        // Validate data types and mapping
-        const { data: validationData, error: validationError } = await supabase
-          .rpc('gl_validate_column_mapping', { p_mapping_id: mapping.id });
+        // Always map glide_row_id
+        supabaseRow.glide_row_id = glideRow.$rowID;
         
-        if (validationError) throw validationError;
-        
-        const validationResult = validationData[0];
-        if (!validationResult.is_valid) {
-          throw new Error(`Invalid mapping: ${validationResult.validation_message}`);
+        // Map other columns according to mapping
+        for (const [glideColumnId, mappingInfo] of Object.entries(columnMappings)) {
+          if (glideColumnId === '$rowID') continue; // Already handled
+          
+          const glideValue = glideRow[glideColumnId];
+          const supabaseColumnName = mappingInfo.supabase_column_name;
+          const dataType = mappingInfo.data_type;
+          
+          supabaseRow[supabaseColumnName] = transformValue(glideValue, dataType);
         }
         
-        // Process based on sync direction
-        let recordsProcessed = 0;
-        let errors = 0;
-        const columnMappings = typeof mapping.column_mappings === 'string' 
-          ? JSON.parse(mapping.column_mappings) 
-          : mapping.column_mappings;
-        
-        // Update sync log with processing status
-        await supabase
-          .from('gl_sync_logs')
-          .update({
-            status: 'processing',
-            message: `Processing ${mapping.glide_table_display_name || mapping.glide_table}`,
-          })
-          .eq('id', syncLogId);
-        
-        if (mapping.sync_direction === 'to_supabase' || mapping.sync_direction === 'both') {
-          // Sync from Glide to Supabase
-          const glideData = await fetchGlideData(
-            connection.api_key,
-            connection.app_id,
-            mapping.glide_table
-          );
-          
-          if (glideData.rows.length > 0) {
-            const results = await syncGlideToSupabase(
-              supabase,
-              mapping.supabase_table,
-              glideData.rows,
-              columnMappings
-            );
-            
-            recordsProcessed += results.processed;
-            errors += results.errors;
-          }
-        }
-        
-        if (mapping.sync_direction === 'to_glide' || mapping.sync_direction === 'both') {
-          // Sync from Supabase to Glide
-          const { data: supabaseData, error: supabaseError } = await supabase
-            .from(mapping.supabase_table)
-            .select('*')
-            .limit(10000);
-          
-          if (supabaseError) throw supabaseError;
-          
-          if (supabaseData.length > 0) {
-            const results = await syncSupabaseToGlide(
-              connection.api_key,
-              connection.app_id,
-              mapping.glide_table,
-              supabaseData,
-              columnMappings
-            );
-            
-            recordsProcessed += results.processed;
-            errors += results.errors;
-          }
-        }
-        
-        // Update sync log with completed status
-        await supabase
-          .from('gl_sync_logs')
-          .update({
-            completed_at: new Date().toISOString(),
-            status: errors > 0 ? 'completed_with_errors' : 'completed',
-            records_processed: recordsProcessed,
-            message: `Processed ${recordsProcessed} records with ${errors} errors`,
-          })
-          .eq('id', syncLogId);
-        
-        totalRecordsProcessed += recordsProcessed;
-        failedRecords += errors;
-        
+        transformedRows.push(supabaseRow);
       } catch (error) {
-        console.error(`Error syncing mapping ${mapping.id}:`, error);
+        console.error('Error transforming row:', error);
+        errors.push({
+          type: 'TRANSFORM_ERROR',
+          message: error.message,
+          record: glideRow,
+          retryable: false
+        });
         
-        // Update sync log with error status
-        await supabase
-          .from('gl_sync_logs')
-          .update({
-            completed_at: new Date().toISOString(),
-            status: 'failed',
-            message: `Error: ${error.message}`,
-          })
-          .eq('id', syncLogId);
-        
-        // Record error
-        await supabase
-          .from('gl_sync_errors')
-          .insert({
-            mapping_id: mapping.id,
-            error_type: 'sync_error',
-            error_message: error.message,
-            retryable: true,
-          });
-        
-        // Continue with next mapping
-        failedRecords++;
+        // Log error to database
+        await supabase.rpc('gl_record_sync_error', {
+          p_mapping_id: mappingId,
+          p_error_type: 'TRANSFORM_ERROR',
+          p_error_message: error.message,
+          p_record_data: glideRow,
+          p_retryable: false
+        });
       }
     }
     
-    return new Response(
-      JSON.stringify({
-        success: true,
-        recordsProcessed: totalRecordsProcessed,
-        failedRecords: failedRecords,
-        message: `Processed ${totalRecordsProcessed} records with ${failedRecords} errors`,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`Transformed ${transformedRows.length} rows`);
     
-  } catch (error) {
-    console.error('Error in syncData:', error);
-    
-    // Update sync log with error if created
-    if (syncLogId) {
+    // Insert/update the data in Supabase (upsert)
+    if (transformedRows.length > 0) {
+      // Update log with progress
       await supabase
         .from('gl_sync_logs')
         .update({
-          completed_at: new Date().toISOString(),
-          status: 'failed',
-          message: `Error: ${error.message}`,
+          message: `Inserting ${transformedRows.length} records into Supabase`,
         })
-        .eq('id', syncLogId);
+        .eq('id', logId);
+      
+      // Use batching to avoid hitting limits
+      const batchSize = 100;
+      let recordsProcessed = 0;
+      
+      for (let i = 0; i < transformedRows.length; i += batchSize) {
+        const batch = transformedRows.slice(i, i + batchSize);
+        
+        // Perform upsert operation
+        const { error: upsertError } = await supabase
+          .from(mapping.supabase_table)
+          .upsert(batch, { 
+            onConflict: 'glide_row_id',
+            ignoreDuplicates: false
+          });
+        
+        if (upsertError) {
+          console.error('Error upserting data:', upsertError);
+          
+          // Log error to database
+          await supabase.rpc('gl_record_sync_error', {
+            p_mapping_id: mappingId,
+            p_error_type: 'DATABASE_ERROR',
+            p_error_message: upsertError.message,
+            p_record_data: { batch_index: i, batch_size: batch.length },
+            p_retryable: true
+          });
+          
+          errors.push({
+            type: 'DATABASE_ERROR',
+            message: upsertError.message,
+            batch_index: i,
+            retryable: true
+          });
+        } else {
+          recordsProcessed += batch.length;
+          
+          // Update log with progress
+          await supabase
+            .from('gl_sync_logs')
+            .update({
+              records_processed: recordsProcessed
+            })
+            .eq('id', logId);
+        }
+      }
     }
     
+    // Finalize sync log
+    await supabase
+      .from('gl_sync_logs')
+      .update({
+        status: errors.length > 0 ? 'completed_with_errors' : 'completed',
+        message: `Sync completed. Processed ${transformedRows.length} records with ${errors.length} errors.`,
+        records_processed: transformedRows.length,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', logId);
+    
+    // Update connection's last_sync timestamp
+    await supabase
+      .from('gl_connections')
+      .update({ 
+        last_sync: new Date().toISOString() 
+      })
+      .eq('id', connectionId);
+    
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to sync data',
+      JSON.stringify({ 
+        success: true,
+        recordsProcessed: transformedRows.length,
+        failedRecords: errors.length,
+        errors: errors.length > 0 ? errors : undefined
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+  } catch (error) {
+    console.error('Error during sync:', error);
+    
+    // Update sync log with error
+    await supabase
+      .from('gl_sync_logs')
+      .update({
+        status: 'failed',
+        message: `Sync failed: ${error.message}`,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', logId);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200  // Still return 200 so front-end can handle the error message
+      }
     );
   }
 }
 
-// Helper functions
-
-// Fetch data from Glide
-async function fetchGlideData(apiKey, appId, tableId) {
-  const response = await fetch('https://api.glideapp.io/api/function/queryTables', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      appID: appId,
-      queries: [
-        { 
-          tableName: tableId,
-          limit: 10000
-        }
-      ]
-    })
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
+function transformValue(value: any, dataType: string): any {
+  if (value === null || value === undefined) {
+    return null;
   }
   
-  const data = await response.json();
-  
-  if (!data || !data[0] || !data[0].rows) {
-    return { rows: [], columns: {} };
-  }
-  
-  return {
-    rows: data[0].rows,
-    columns: data[0].columns
-  };
-}
-
-// Sync data from Glide to Supabase
-async function syncGlideToSupabase(supabase, tableName, glideRows, columnMappings) {
-  let processed = 0;
-  let errors = 0;
-  
-  // Process in batches of 100 for better performance
-  const batchSize = 100;
-  const batches = [];
-  
-  for (let i = 0; i < glideRows.length; i += batchSize) {
-    batches.push(glideRows.slice(i, i + batchSize));
-  }
-  
-  console.log(`Processing ${glideRows.length} records in ${batches.length} batches`);
-  
-  for (const batch of batches) {
-    const supabaseRows = batch.map(glideRow => {
-      try {
-        const row = { glide_row_id: glideRow['$rowID'] };
-        
-        // Map Glide columns to Supabase columns
-        Object.entries(columnMappings).forEach(([glideColumnId, mapping]) => {
-          const { glide_column_name, supabase_column_name, data_type } = mapping;
-          
-          if (glideColumnId === '$rowID' && supabase_column_name === 'glide_row_id') {
-            return; // Already handled
-          }
-          
-          const value = glideRow[glide_column_name];
-          if (value !== undefined) {
-            // Convert value based on data type
-            switch (data_type) {
-              case 'string':
-              case 'image-uri':
-              case 'email-address':
-                row[supabase_column_name] = String(value);
-                break;
-              case 'number':
-                row[supabase_column_name] = Number(value);
-                break;
-              case 'boolean':
-                row[supabase_column_name] = typeof value === 'string' 
-                  ? value.toLowerCase() === 'true'
-                  : Boolean(value);
-                break;
-              case 'date-time':
-                row[supabase_column_name] = new Date(value).toISOString();
-                break;
-              default:
-                row[supabase_column_name] = value;
-            }
-          }
-        });
-        
-        return row;
-      } catch (error) {
-        console.error('Error mapping Glide row:', error);
-        errors++;
-        return null;
+  switch (dataType) {
+    case 'string':
+    case 'email-address':
+    case 'image-uri':
+      return String(value);
+    case 'number':
+      return Number(value);
+    case 'boolean':
+      return Boolean(value);
+    case 'date-time':
+      // If it's already a valid date string, return it
+      if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+        return value;
       }
-    }).filter(Boolean);
-    
-    try {
-      // Use upsert to handle both inserts and updates
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(supabaseRows, { 
-          onConflict: 'glide_row_id',
-          ignoreDuplicates: false
-        });
-      
-      if (error) throw error;
-      
-      processed += supabaseRows.length;
-    } catch (error) {
-      console.error('Error upserting batch to Supabase:', error);
-      errors += batch.length;
-    }
-  }
-  
-  return { processed, errors };
-}
-
-// Sync data from Supabase to Glide
-async function syncSupabaseToGlide(apiKey, appId, tableId, supabaseRows, columnMappings) {
-  let processed = 0;
-  let errors = 0;
-  
-  // Process in batches of 100 for better performance
-  const batchSize = 100;
-  const batches = [];
-  
-  for (let i = 0; i < supabaseRows.length; i += batchSize) {
-    batches.push(supabaseRows.slice(i, i + batchSize));
-  }
-  
-  console.log(`Processing ${supabaseRows.length} records in ${batches.length} batches`);
-  
-  for (const batch of batches) {
-    try {
-      const glideRows = batch.map(supabaseRow => {
-        try {
-          const row = { $rowID: supabaseRow.glide_row_id };
-          
-          // Map Supabase columns to Glide columns
-          Object.entries(columnMappings).forEach(([glideColumnId, mapping]) => {
-            const { glide_column_name, supabase_column_name, data_type } = mapping;
-            
-            if (glideColumnId === '$rowID' && supabase_column_name === 'glide_row_id') {
-              return; // Already handled
-            }
-            
-            const value = supabaseRow[supabase_column_name];
-            if (value !== undefined) {
-              // Convert value based on data type
-              switch (data_type) {
-                case 'string':
-                case 'image-uri':
-                case 'email-address':
-                  row[glide_column_name] = String(value);
-                  break;
-                case 'number':
-                  row[glide_column_name] = Number(value);
-                  break;
-                case 'boolean':
-                  row[glide_column_name] = Boolean(value);
-                  break;
-                case 'date-time':
-                  row[glide_column_name] = new Date(value).toISOString();
-                  break;
-                default:
-                  row[glide_column_name] = value;
-              }
-            }
-          });
-          
-          return row;
-        } catch (error) {
-          console.error('Error mapping Supabase row:', error);
-          errors++;
-          return null;
-        }
-      }).filter(Boolean);
-      
-      // Update data in Glide
-      const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          appID: appId,
-          mutations: [
-            { 
-              tableName: tableId,
-              rows: glideRows
-            }
-          ]
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Glide API returned: ${response.status} - ${errorText}`);
+      // If it's a number (timestamp), convert to ISO string
+      if (typeof value === 'number') {
+        return new Date(value).toISOString();
       }
-      
-      processed += glideRows.length;
-    } catch (error) {
-      console.error('Error updating batch in Glide:', error);
-      errors += batch.length;
-    }
+      return null;
+    default:
+      return String(value);
   }
-  
-  return { processed, errors };
 }
