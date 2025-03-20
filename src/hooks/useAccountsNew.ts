@@ -2,27 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Account } from '@/types';
-
-export interface AccountFromView {
-  account_id: string;
-  account_name: string;
-  glide_row_id: string;
-  accounts_uid?: string;
-  client_type?: string;
-  email_of_who_added?: string;
-  photo?: string;
-  created_at: string;
-  updated_at: string;
-  invoice_count: number;
-  total_invoiced: number;
-  total_paid: number;
-  balance: number;
-  last_invoice_date?: string;
-  last_payment_date?: string;
-  is_customer: boolean;
-  is_vendor: boolean;
-}
+import { Account, AccountFromView } from '@/types/accountNew';
 
 export function useAccountsNew() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -42,10 +22,10 @@ export function useAccountsNew() {
             ? 'vendor' 
             : 'customer', // Default to customer if undefined
       email: viewAccount.email_of_who_added || '',
-      phone: '', // Not in view, added for compatibility
-      address: '', // Not in view, added for compatibility
-      website: '', // Not in view, added for compatibility
-      notes: '', // Not in view, added for compatibility
+      phone: viewAccount.phone || '',
+      address: viewAccount.address || '',
+      website: viewAccount.website || '',
+      notes: viewAccount.notes || '',
       status: 'active', // Default status, not in view
       balance: viewAccount.balance || 0,
       glide_row_id: viewAccount.glide_row_id,
@@ -76,7 +56,7 @@ export function useAccountsNew() {
       
       if (error) throw error;
       
-      const mappedAccounts = (data || []).map((account: AccountFromView) => mapViewAccountToAccount(account));
+      const mappedAccounts = (data || []).map((account) => mapViewAccountToAccount(account as AccountFromView));
       setAccounts(mappedAccounts);
       
       return mappedAccounts;
@@ -117,7 +97,7 @@ export function useAccountsNew() {
   }, [toast]);
 
   // Add account still needs to use the original gl_accounts table
-  const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'is_customer' | 'is_vendor' | 'invoice_count' | 'total_invoiced' | 'total_paid' | 'last_invoice_date' | 'last_payment_date'>) => {
     try {
       // Map from Account to gl_accounts structure
       const { data, error } = await supabase

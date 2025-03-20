@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
@@ -6,10 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from "@radix-ui/react-icons"
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils"
 import { format } from 'date-fns';
-import { Account } from '@/types';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
 
 interface PurchaseOrderFiltersProps {
@@ -24,9 +24,9 @@ const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({ onFiltersCh
     dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : null,
     dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : null,
   });
-  const [date, setDate] = useState<undefined | {
-    from: Date | undefined;
-    to: Date | undefined;
+  const [date, setDate] = useState<{
+    from?: Date;
+    to?: Date;
   }>({
     from: filters.dateFrom || undefined,
     to: filters.dateTo || undefined,
@@ -64,10 +64,12 @@ const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({ onFiltersCh
     }));
   };
 
-  const handleDateChange = (date: { from?: Date | undefined; to?: Date | undefined; } | undefined) => {
-    setDate(date);
-    handleFilterChange('dateFrom', date?.from || null);
-    handleFilterChange('dateTo', date?.to || null);
+  const handleDateChange = (newDate: { from?: Date; to?: Date; } | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      handleFilterChange('dateFrom', newDate.from || null);
+      handleFilterChange('dateTo', newDate.to || null);
+    }
   }
 
   return (

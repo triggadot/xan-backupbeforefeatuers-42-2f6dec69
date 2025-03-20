@@ -3,8 +3,6 @@ export interface NavigationItem {
   title: string;
   href: string;
   icon: string;
-  children?: NavigationItem[];
-  disabled?: boolean;
 }
 
 export interface NavigationConfig {
@@ -49,11 +47,6 @@ export const navigationConfig: NavigationConfig = {
       href: "/settings",
       icon: "settings",
     },
-    {
-      title: 'New Accounts',
-      href: '/new/accounts',
-      icon: 'users',
-    },
   ],
   sidebarNav: [
     {
@@ -90,11 +83,6 @@ export const navigationConfig: NavigationConfig = {
       title: "Settings",
       href: "/settings",
       icon: "settings",
-    },
-    {
-      title: 'New Accounts',
-      href: '/new/accounts',
-      icon: 'users',
     },
   ],
 };

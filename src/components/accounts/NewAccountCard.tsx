@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Account } from '@/types';
+import { Account } from '@/types/accountNew';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
