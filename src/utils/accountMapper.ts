@@ -43,6 +43,7 @@ export const mapViewAccountToAccount = (viewAccount: AccountFromView): Account =
     accounts_uid: viewAccount.accounts_uid,
     created_at: viewAccount.created_at,
     updated_at: viewAccount.updated_at,
+    photo: viewAccount.photo,
     // Additional fields from materialized view
     is_customer: viewAccount.is_customer,
     is_vendor: viewAccount.is_vendor,

@@ -37,7 +37,7 @@ export const fetchAccountById = async (id: string) => {
 /**
  * Creates a new account
  */
-export const createAccount = async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'is_customer' | 'is_vendor' | 'invoice_count' | 'total_invoiced' | 'total_paid' | 'last_invoice_date' | 'last_payment_date'>) => {
+export const createAccount = async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'is_customer' | 'is_vendor' | 'invoice_count' | 'total_invoiced' | 'total_paid' | 'last_invoice_date' | 'last_payment_date' | 'balance'>) => {
   // Set is_customer and is_vendor based on type
   const { is_customer, is_vendor } = extractAccountFlags(accountData.type);
   
@@ -50,6 +50,13 @@ export const createAccount = async (accountData: Omit<Account, 'id' | 'created_a
       is_customer: is_customer,
       is_vendor: is_vendor,
       glide_row_id: accountData.glide_row_id || ('A-' + Date.now()), // Generate a temporary ID for Glide sync
+      email_of_who_added: accountData.email,
+      phone: accountData.phone,
+      address: accountData.address,
+      website: accountData.website,
+      notes: accountData.notes,
+      photo: accountData.photo,
+      balance: 0, // Initialize balance to 0
     })
     .select()
     .single();
@@ -73,6 +80,12 @@ export const updateAccount = async (id: string, accountData: Partial<Account>) =
     updateData.is_customer = is_customer;
     updateData.is_vendor = is_vendor;
   }
+  if (accountData.email !== undefined) updateData.email_of_who_added = accountData.email;
+  if (accountData.phone !== undefined) updateData.phone = accountData.phone;
+  if (accountData.address !== undefined) updateData.address = accountData.address;
+  if (accountData.website !== undefined) updateData.website = accountData.website;
+  if (accountData.notes !== undefined) updateData.notes = accountData.notes;
+  if (accountData.photo !== undefined) updateData.photo = accountData.photo;
   
   const { error } = await supabase
     .from('gl_accounts')

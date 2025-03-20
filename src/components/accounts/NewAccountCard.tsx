@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AccountCardProps {
   account: Account;
@@ -46,13 +47,31 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
     return 'default'; // Zero balance
   };
 
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <Link to={`/accounts/${account.id}`} className="block transition-transform hover:translate-y-[-2px]">
       <Card className="overflow-hidden h-full hover:shadow-md transition-shadow">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-1 truncate">{account.name}</h3>
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar className="h-10 w-10">
+                  {account.photo ? (
+                    <AvatarImage src={account.photo} alt={account.name} />
+                  ) : null}
+                  <AvatarFallback>{getInitials(account.name)}</AvatarFallback>
+                </Avatar>
+                <h3 className="font-semibold text-lg truncate">{account.name}</h3>
+              </div>
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground mb-2">
                 <User size={14} />

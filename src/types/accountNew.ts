@@ -16,6 +16,7 @@ export interface AccountFromView {
   last_payment_date?: string;
   is_customer: boolean;
   is_vendor: boolean;
+  photo?: string;
 }
 
 // Account type that aligns with the materialized view structure
@@ -37,6 +38,13 @@ export interface Account {
   total_paid?: number;
   last_invoice_date?: string;
   last_payment_date?: string;
+  photo?: string;
+  // These fields might not be in the view but are used in the UI
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  notes?: string;
 }
 
 // For use with the Account Details page

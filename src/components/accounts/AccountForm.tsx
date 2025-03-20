@@ -3,7 +3,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Account } from '@/types';
+import { Account } from '@/types/accountNew';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,11 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 const accountSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['Customer', 'Vendor', 'Customer & Vendor']),
   status: z.enum(['active', 'inactive']),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  website: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
 });
 
 type AccountFormValues = z.infer<typeof accountSchema>;
@@ -47,6 +53,11 @@ const AccountForm: React.FC<AccountFormProps> = ({
       name: defaultValues?.name || '',
       type: defaultValues?.type || 'Customer',
       status: defaultValues?.status || 'active',
+      email: defaultValues?.email || '',
+      phone: defaultValues?.phone || '',
+      website: defaultValues?.website || '',
+      address: defaultValues?.address || '',
+      notes: defaultValues?.notes || '',
     },
   });
 
@@ -96,6 +107,48 @@ const AccountForm: React.FC<AccountFormProps> = ({
 
           <FormField
             control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="Email address" type="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone</FormLabel>
+                <FormControl>
+                  <Input placeholder="Phone number" type="tel" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="website"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Website</FormLabel>
+                <FormControl>
+                  <Input placeholder="Website URL" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="status"
             render={({ field }) => (
               <FormItem>
@@ -114,6 +167,34 @@ const AccountForm: React.FC<AccountFormProps> = ({
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel>Address</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Physical address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Additional notes" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
