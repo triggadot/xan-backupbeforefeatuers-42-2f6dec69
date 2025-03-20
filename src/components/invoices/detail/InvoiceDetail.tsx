@@ -182,13 +182,13 @@ export const InvoiceDetail = () => {
   };
   
   const dueStatus = () => {
-    if (invoice.status === 'paid') return null;
+    if (invoice.status === 'paid' || invoice.status === 'partial') return null;
     if (!invoice.dueDate) return null;
     
     const now = new Date();
     const dueDate = new Date(invoice.dueDate);
     
-    if (dueDate < now && invoice.status !== 'paid') {
+    if (dueDate < now) {
       const days = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       return (
         <div className="text-destructive text-sm font-medium">

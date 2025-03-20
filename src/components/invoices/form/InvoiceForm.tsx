@@ -60,23 +60,6 @@ const invoiceFormSchema = z.object({
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
-type FormValues = {
-  customerId: string;
-  invoiceDate: Date;
-  dueDate?: Date;
-  status: "draft" | "sent" | "overdue" | "paid" | "partial";
-  notes?: string;
-  lineItems: Array<{
-    id?: string;
-    productId: string;
-    description: string;
-    quantity: number;
-    unitPrice: number;
-  }>;
-};
-
-type Control = any;
-
 interface InvoiceFormProps {
   initialData?: InvoiceWithDetails;
   isEdit?: boolean;
@@ -97,7 +80,7 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
       dueDate: initialData.dueDate,
       status: initialData.status === 'paid' || initialData.status === 'partial' || initialData.status === 'overdue' 
         ? 'sent' 
-        : initialData.status,
+        : initialData.status as 'draft' | 'sent',
       notes: initialData.notes || '',
       lineItems: initialData.lineItems.map(item => ({
         productId: item.productId,
@@ -310,7 +293,7 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
         <div>
           <h3 className="text-lg font-medium mb-4">Line Items</h3>
           <LineItemFormArray 
-            control={form.control as Control<FormValues>} 
+            control={form.control} 
             disabled={isSubmitting}
           />
         </div>

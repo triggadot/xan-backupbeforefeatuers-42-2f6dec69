@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -213,17 +214,22 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
       
       if (paymentsError) throw paymentsError;
       
+      // Use optional chaining for potentially missing fields
+      const dueDate = invoice.due_date ? new Date(invoice.due_date) : undefined;
+      const taxRate = invoice.tax_rate !== undefined ? Number(invoice.tax_rate) : undefined;
+      const taxAmount = invoice.tax_amount !== undefined ? Number(invoice.tax_amount) : undefined;
+      
       const mappedInvoice = {
         id: invoice.id,
         invoiceNumber: invoice.glide_row_id || 'Unknown',
         customerId: invoice.rowid_accounts || '',
         customerName: account?.account_name || 'Unknown Customer',
         invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
-        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+        dueDate: dueDate,
         status: (invoice.processed ? invoice.payment_status as any || 'sent' : 'draft'),
         subtotal: Number(invoice.total_amount || 0),
-        taxRate: invoice.tax_rate ? Number(invoice.tax_rate) : undefined,
-        taxAmount: invoice.tax_amount ? Number(invoice.tax_amount) : undefined,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
         total: Number(invoice.total_amount || 0),
         amountPaid: payments?.reduce((sum, p) => sum + Number(p.payment_amount || 0), 0) || 0,
         balance: Number(invoice.balance || 0),
@@ -257,9 +263,13 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (accountError) throw accountError;
         
+        // Create a random UUID for glide_row_id
+        const glideRowId = crypto.randomUUID();
+        
         const { data: invoice, error: invoiceError } = await supabase
           .from('gl_invoices')
           .insert({
+            glide_row_id: glideRowId,
             rowid_accounts: account.glide_row_id,
             invoice_order_date: data.invoiceDate.toISOString(),
             processed: data.status === 'sent',
@@ -267,7 +277,8 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
             total_amount: 0,
             total_paid: 0,
             balance: 0,
-            payment_status: data.status || 'draft'
+            payment_status: data.status || 'draft',
+            due_date: data.dueDate?.toISOString()
           })
           .select()
           .single();
