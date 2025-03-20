@@ -157,7 +157,14 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
         </TabsContent>
         
         <TabsContent value="sync-errors">
-          <SyncErrorsView mappingId={mapping.id} />
+          <Card>
+            <CardHeader>
+              <CardTitle>Sync Errors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SyncErrorsView mappingId={mapping.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="debug">

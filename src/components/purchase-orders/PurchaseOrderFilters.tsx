@@ -1,227 +1,145 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, CalendarIcon, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useSearchParams } from 'react-router-dom';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isValid } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from '@/components/ui/button';
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { cn } from "@/lib/utils"
+import { format } from 'date-fns';
+import { Account } from '@/types';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { useDebounce } from 'use-debounce';
-import type { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
 
 interface PurchaseOrderFiltersProps {
-  filters: FilterType;
-  onFiltersChange: (filters: FilterType) => void;
+  onFiltersChange: (filters: { search?: string; vendorId?: string; dateFrom?: Date | null; dateTo?: Date | null }) => void;
 }
 
-const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({
-  filters,
-  onFiltersChange
-}) => {
+const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({ onFiltersChange }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState<{ search?: string; vendorId?: string; dateFrom?: Date | null; dateTo?: Date | null }>({
+    search: searchParams.get('search') || '',
+    vendorId: searchParams.get('vendorId') || '',
+    dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : null,
+    dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : null,
+  });
+  const [date, setDate] = useState<undefined | {
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: filters.dateFrom || undefined,
+    to: filters.dateTo || undefined,
+  });
   const { accounts } = useAccountsNew();
-  const [searchValue, setSearchValue] = useState(filters.search || '');
-  const [debouncedSearch] = useDebounce(searchValue, 500);
 
   useEffect(() => {
-    onFiltersChange({
-      ...filters,
-      search: debouncedSearch || undefined
+    setFilters({
+      search: searchParams.get('search') || '',
+      vendorId: searchParams.get('vendorId') || '',
+      dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : null,
+      dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : null,
     });
-  }, [debouncedSearch, filters, onFiltersChange]);
+    setDate({
+      from: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : undefined,
+      to: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : undefined,
+    })
+  }, [searchParams]);
 
-  const handleStatusChange = (value: string) => {
-    if (value === 'all') {
-      onFiltersChange({
-        ...filters,
-        status: undefined
-      });
-    } else {
-      onFiltersChange({
-        ...filters,
-        status: value as any
-      });
-    }
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.vendorId) params.set('vendorId', filters.vendorId);
+    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom.toISOString());
+    if (filters.dateTo) params.set('dateTo', filters.dateTo.toISOString());
+    setSearchParams(params);
+
+    onFiltersChange(filters);
+  }, [filters, onFiltersChange, setSearchParams]);
+
+  const handleFilterChange = (key: string, value: string | Date | null) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      [key]: value,
+    }));
   };
 
-  const handleVendorChange = (value: string) => {
-    if (value === 'all') {
-      onFiltersChange({
-        ...filters,
-        accountId: undefined
-      });
-    } else {
-      onFiltersChange({
-        ...filters,
-        accountId: value
-      });
-    }
-  };
-
-  const handleDateFromChange = (date: Date | undefined) => {
-    onFiltersChange({
-      ...filters,
-      dateFrom: date
-    });
-  };
-
-  const handleDateToChange = (date: Date | undefined) => {
-    onFiltersChange({
-      ...filters,
-      dateTo: date
-    });
-  };
-
-  const activeFilterCount = [
-    filters.status,
-    filters.accountId,
-    filters.dateFrom,
-    filters.dateTo
-  ].filter(Boolean).length;
-
-  const resetFilters = () => {
-    setSearchValue('');
-    onFiltersChange({});
-  };
+  const handleDateChange = (date: { from?: Date | undefined; to?: Date | undefined; } | undefined) => {
+    setDate(date);
+    handleFilterChange('dateFrom', date?.from || null);
+    handleFilterChange('dateTo', date?.to || null);
+  }
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search purchase orders..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="pl-9"
-          />
-          {searchValue && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-              onClick={() => setSearchValue('')}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div>
+        <Label htmlFor="search">Search</Label>
+        <Input
+          type="text"
+          id="search"
+          placeholder="Search by PO number"
+          value={filters.search || ''}
+          onChange={(e) => handleFilterChange('search', e.target.value)}
+        />
+      </div>
 
-        <Select
-          value={filters.status || 'all'}
-          onValueChange={handleStatusChange}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="received">Received</SelectItem>
-            <SelectItem value="partial">Partial</SelectItem>
-            <SelectItem value="complete">Complete</SelectItem>
-          </SelectContent>
-        </Select>
+      <div>
+        <Label htmlFor="vendor">Vendor</Label>
+        
+<Select 
+  value={filters.vendorId || ''}
+  onValueChange={(value) => handleFilterChange('vendorId', value)}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="All vendors" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="">All vendors</SelectItem>
+    {accounts
+      .filter(account => account.is_vendor)
+      .map((account) => (
+        <SelectItem key={account.id} value={account.id}>
+          {account.name}
+        </SelectItem>
+      ))}
+  </SelectContent>
+</Select>
+      </div>
 
-        <Select
-          value={filters.accountId || 'all'}
-          onValueChange={handleVendorChange}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Vendor" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Vendors</SelectItem>
-            {accounts.filter(account => 
-              account.is_vendor
-            ).map(account => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
+      <div>
+        <Label>Date Range</Label>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-10">
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[300px] justify-start text-left font-normal",
+                !date?.from && "text-muted-foreground"
+              )}
+            >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {filters.dateFrom ? (
-                <>
-                  {format(filters.dateFrom, 'LLL dd, y')}
-                  {filters.dateTo && ` - ${format(filters.dateTo, 'LLL dd, y')}`}
-                </>
-              ) : "Date Range"}
+              {date?.from ? (
+                date.to ? (
+                  `${format(date.from, "MMM dd, yyyy")} - ${format(date.to, "MMM dd, yyyy")}`
+                ) : (
+                  format(date.from, "MMM dd, yyyy")
+                )
+              ) : (
+                <span>Pick a date</span>
+              )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <div className="p-4 flex flex-col space-y-4">
-              <h4 className="font-medium text-sm">Filter by date</h4>
-              <div className="grid gap-2">
-                <div className="flex flex-col space-y-1">
-                  <span className="text-xs text-muted-foreground">From</span>
-                  <Calendar
-                    mode="single"
-                    selected={filters.dateFrom}
-                    onSelect={handleDateFromChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <div className="flex flex-col space-y-1">
-                  <span className="text-xs text-muted-foreground">To</span>
-                  <Calendar
-                    mode="single"
-                    selected={filters.dateTo}
-                    onSelect={handleDateToChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    handleDateFromChange(undefined);
-                    handleDateToChange(undefined);
-                  }}
-                >
-                  Reset
-                </Button>
-                <Button size="sm">
-                  Apply
-                </Button>
-              </div>
-            </div>
+          <PopoverContent className="w-auto p-0" align="center" side="bottom">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={handleDateChange}
+              numberOfMonths={2}
+            />
           </PopoverContent>
         </Popover>
-
-        {(activeFilterCount > 0 || searchValue) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="h-10"
-          >
-            <X className="mr-2 h-4 w-4" />
-            Reset
-            {activeFilterCount > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-2"
-              >
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-        )}
       </div>
     </div>
   );

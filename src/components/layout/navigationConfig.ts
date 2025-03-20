@@ -1,9 +1,8 @@
-import { IconName } from "@/components/ui/icon";
 
 export interface NavigationItem {
   title: string;
   href: string;
-  icon: IconName;
+  icon: string;
   children?: NavigationItem[];
   disabled?: boolean;
 }

@@ -1,120 +1,267 @@
-
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { format } from 'date-fns';
 
-// Create a schema for PO creation
-const purchaseOrderSchema = z.object({
-  rowid_accounts: z.string({
-    required_error: "Vendor is required",
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { useToast } from '@/hooks/use-toast';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { PurchaseOrder } from '@/types/purchaseOrder';
+
+const formSchema = z.object({
+  number: z.string().min(3, {
+    message: "Purchase order number must be at least 3 characters.",
   }),
   date: z.date({
-    required_error: "Date is required",
+    required_error: "A date is required.",
+  }),
+  vendorId: z.string().min(1, {
+    message: "Vendor is required.",
+  }),
+  status: z.string().min(1, {
+    message: "Status is required.",
   }),
   notes: z.string().optional(),
 });
 
 interface PurchaseOrderFormProps {
-  onSubmit: (data: z.infer<typeof purchaseOrderSchema>) => void;
+  purchaseOrder?: PurchaseOrder;
+  onCancel: () => void;
 }
 
-const PurchaseOrderForm = ({ onSubmit }: PurchaseOrderFormProps) => {
-  const { accounts } = useAccountsNew();
-  const vendorAccounts = accounts.filter(account => 
-    account.is_vendor
-  );
+const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, onCancel }) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrders();
+  const { accounts, isLoading: isLoadingAccounts, error: accountsError } = useAccountsNew();
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof purchaseOrderSchema>>({
-    resolver: zodResolver(purchaseOrderSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      date: new Date(),
-      notes: '',
+      number: purchaseOrder?.number || '',
+      date: purchaseOrder?.date ? new Date(purchaseOrder.date) : new Date(),
+      vendorId: purchaseOrder?.vendorId || '',
+      status: purchaseOrder?.status || 'draft',
+      notes: purchaseOrder?.notes || '',
     },
   });
 
-  const handleSubmit = (values: z.infer<typeof purchaseOrderSchema>) => {
-    onSubmit(values);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    try {
+      if (purchaseOrder) {
+        // Update existing purchase order
+        await updatePurchaseOrder(purchaseOrder.id, {
+          ...values,
+          date: values.date.toISOString(),
+        });
+        toast({
+          title: "Success",
+          description: "Purchase order updated successfully.",
+        });
+      } else {
+        // Create new purchase order
+        await createPurchaseOrder({
+          ...values,
+          date: values.date.toISOString(),
+        });
+        toast({
+          title: "Success",
+          description: "Purchase order created successfully.",
+        });
+      }
+      onCancel();
+      navigate('/purchase-orders');
+    } catch (error) {
+      console.error("Error creating/updating purchase order:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create/update purchase order. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getFormattedDate = (date: Date | undefined) => {
+    return date ? format(date, 'yyyy-MM-dd') : '';
+  };
+
+  const [formData, setFormData] = useState({
+    number: purchaseOrder?.number || '',
+    date: getFormattedDate(purchaseOrder?.date ? new Date(purchaseOrder.date) : undefined),
+    vendorId: purchaseOrder?.vendorId || '',
+    status: purchaseOrder?.status || 'draft',
+    notes: purchaseOrder?.notes || '',
+  });
+
+  const handleChange = (key: string, value: string) => {
+    setFormData({
+      ...formData,
+      [key]: value,
+    });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="rowid_accounts"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vendor</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Purchase Order Number */}
+          <FormField
+            control={form.control}
+            name="number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase Order Number</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a vendor" />
-                  </SelectTrigger>
+                  <Input placeholder="PO-2024-001" {...field} />
                 </FormControl>
-                <SelectContent>
-                  {vendorAccounts.map(account => (
+                <FormDescription>
+                  This is the unique identifier for the purchase order.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Vendor Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="vendor">Vendor</Label>
+            <Select 
+              defaultValue={formData.vendorId}
+              onValueChange={(value) => handleChange('vendorId', value)}
+            >
+              <SelectTrigger id="vendor">
+                <SelectValue placeholder="Select a vendor" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts
+                  .filter(account => account.is_vendor)
+                  .map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.name}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </SelectContent>
+            </Select>
+          </div>
 
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Purchase Order Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
+          {/* Date Picker */}
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Order Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full pl-3 text-left font-normal",
+                        "w-[240px] pl-3 text-left font-normal",
                         !field.value && "text-muted-foreground"
                       )}
                     >
                       {field.value ? (
-                        format(field.value, "PPP")
+                        format(field.value, "yyyy-MM-dd")
                       ) : (
                         <span>Pick a date</span>
                       )}
                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date > new Date()
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>
+                  The date when the purchase order was issued.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Status Selection */}
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select {...field} defaultValue={formData.status}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
                   </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="received">Received</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="complete">Complete</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  The current status of the purchase order.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Notes */}
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Additional notes or comments about the purchase order."
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Any additional information about the purchase order.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
-        <div className="flex justify-end gap-2">
-          <Button type="submit">Create Purchase Order</Button>
+
+        <div className="flex justify-end gap-4">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit'}
+          </Button>
         </div>
       </form>
     </Form>

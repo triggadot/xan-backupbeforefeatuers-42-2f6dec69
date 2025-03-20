@@ -42,20 +42,20 @@ export function useAccountsNew() {
             ? 'vendor' 
             : 'customer', // Default to customer if undefined
       email: viewAccount.email_of_who_added || '',
-      glide_row_id: viewAccount.glide_row_id,
-      accounts_uid: viewAccount.accounts_uid,
       phone: '', // Not in view, added for compatibility
       address: '', // Not in view, added for compatibility
       website: '', // Not in view, added for compatibility
       notes: '', // Not in view, added for compatibility
       status: 'active', // Default status, not in view
       balance: viewAccount.balance || 0,
+      glide_row_id: viewAccount.glide_row_id,
+      accounts_uid: viewAccount.accounts_uid,
       photo: viewAccount.photo,
-      is_customer: viewAccount.is_customer,
-      is_vendor: viewAccount.is_vendor,
       created_at: viewAccount.created_at,
       updated_at: viewAccount.updated_at,
       // Additional fields from materialized view
+      is_customer: viewAccount.is_customer,
+      is_vendor: viewAccount.is_vendor,
       invoice_count: viewAccount.invoice_count || 0,
       total_invoiced: viewAccount.total_invoiced || 0,
       total_paid: viewAccount.total_paid || 0,

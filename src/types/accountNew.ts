@@ -16,9 +16,9 @@ export interface Account {
   photo?: string;
   created_at?: string;
   updated_at?: string;
+  // Properties from materialized view
   is_customer: boolean;
   is_vendor: boolean;
-  // Additional fields from materialized view
   invoice_count?: number;
   total_invoiced?: number;
   total_paid?: number;
