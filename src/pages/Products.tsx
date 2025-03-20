@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ProductsTable from '@/components/feature/product/ProductsTable';
+import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
 import { useTableData } from '@/hooks/useTableData';
@@ -66,6 +66,7 @@ const Products: React.FC = () => {
         description: 'Product created successfully',
       });
       setIsCreateDialogOpen(false);
+      refreshProducts();
     } catch (error) {
       console.error('Error creating product:', error);
       toast({
@@ -126,6 +127,11 @@ const Products: React.FC = () => {
     setIsDetailsDialogOpen(true);
   };
 
+  const handleAddProduct = () => {
+    setCurrentProduct(null);
+    setIsCreateDialogOpen(true);
+  };
+
   // Filter products based on search term
   const filteredProducts = searchTerm
     ? products.filter((product: Product) => {
@@ -170,10 +176,7 @@ const Products: React.FC = () => {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={() => {
-              setIsLoading(true);
-              refreshProducts().finally(() => setIsLoading(false));
-            }}
+            onClick={handleRefresh}
             disabled={isLoading || isLoadingProducts}
             title="Refresh products"
           >
@@ -181,7 +184,7 @@ const Products: React.FC = () => {
           </Button>
           
           <Button 
-            onClick={() => setIsCreateDialogOpen(true)}
+            onClick={handleAddProduct}
             className="gap-1"
           >
             <Plus size={18} />
@@ -193,11 +196,12 @@ const Products: React.FC = () => {
       {isLoadingProducts ? (
         <LoadingState />
       ) : (
-        <ProductsTable 
+        <ProductsTableWrapper 
           products={filteredProducts} 
           onEdit={handleEdit} 
           onDelete={handleDeleteProduct}
           onViewDetails={handleViewDetails}
+          onAdd={handleAddProduct}
         />
       )}
 

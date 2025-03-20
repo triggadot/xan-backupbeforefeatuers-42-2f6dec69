@@ -2,16 +2,22 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const EmptyMappingsList: React.FC = () => {
+interface EmptyMappingsListProps {
+  title?: string;
+  description?: string;
+}
+
+export const EmptyMappingsList: React.FC<EmptyMappingsListProps> = ({
+  title = "No Mappings Found",
+  description = "Create a table mapping to sync data between Glide and Supabase."
+}) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>No Mappings Found</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <CardDescription>
-          Create a table mapping to sync data between Glide and Supabase.
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardContent>
     </Card>
   );

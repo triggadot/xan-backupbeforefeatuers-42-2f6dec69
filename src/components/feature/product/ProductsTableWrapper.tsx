@@ -8,13 +8,15 @@ interface ProductsTableWrapperProps {
   onEdit: (product: any) => void;
   onDelete: (product: any) => Promise<void>;
   onViewDetails: (product: any) => void;
+  onAdd: () => void;
 }
 
 const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
   products,
   onEdit,
   onDelete,
-  onViewDetails
+  onViewDetails,
+  onAdd
 }) => {
   return (
     <ProductsTable 
@@ -22,6 +24,7 @@ const ProductsTableWrapper: React.FC<ProductsTableWrapperProps> = ({
       onEdit={onEdit} 
       onViewDetails={onViewDetails} 
       deleteProduct={onDelete}
+      onAdd={onAdd}
     />
   );
 };
