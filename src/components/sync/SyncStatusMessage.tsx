@@ -1,6 +1,6 @@
+
 import React from 'react';
-import { ErrorDisplay } from './ui/ErrorDisplay';
-import { ErrorSeverity } from './ui/ErrorDisplay';
+import { ErrorDisplay, ErrorSeverity } from './ui/ErrorDisplay';
 
 interface SyncStatusMessageProps {
   success?: boolean;
@@ -30,7 +30,7 @@ export function SyncStatusMessage({
 
   return (
     <ErrorDisplay
-      errors={formattedMessage}
+      message={formattedMessage}
       title={title}
       severity={severity}
     />
