@@ -13,10 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface MappingDetailsProps {
   mappingId: string;
-  onBack?: () => void;
 }
 
-const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
+const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId }) => {
   const { mapping, connection, isLoading, refetch } = useProductMapping(mappingId);
   const { syncData } = useGlSync();
   const { toast } = useToast();
@@ -78,11 +77,6 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
             <p className="text-muted-foreground mt-2">
               The mapping you're looking for doesn't exist or you don't have access to it.
             </p>
-            {onBack && (
-              <Button onClick={onBack} className="mt-4">
-                Go Back
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -91,12 +85,6 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   
   return (
     <div className="space-y-6">
-      {onBack && (
-        <Button variant="outline" onClick={onBack} className="mb-4">
-          Back to Mappings
-        </Button>
-      )}
-      
       <Card>
         <CardHeader>
           <CardTitle>Mapping Details</CardTitle>
@@ -169,7 +157,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
         </TabsContent>
         
         <TabsContent value="sync-errors">
-          <SyncErrorsView mapping={mapping} />
+          <SyncErrorsView mappingId={mapping.id} />
         </TabsContent>
         
         <TabsContent value="debug">

@@ -1,126 +1,164 @@
 
-export function formatTimestamp(timestamp: string | null): string {
+/**
+ * Format a date to a readable string format
+ * @param date The date to format
+ * @param options Intl.DateTimeFormatOptions
+ * @returns Formatted date string
+ */
+export const formatDateTime = (
+  date: Date | string | number | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }
+): string => {
+  if (!date) return '—';
+  
+  try {
+    return new Date(date).toLocaleString('en-US', options);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '—';
+  }
+};
+
+/**
+ * Format a date to a relative time string (e.g. "5 minutes ago")
+ * @param date The date to format
+ * @returns Relative time string
+ */
+export const formatRelativeTime = (date: Date | string | number | null | undefined): string => {
+  if (!date) return '—';
+  
+  try {
+    const now = new Date();
+    const pastDate = new Date(date);
+    const diffMs = now.getTime() - pastDate.getTime();
+    
+    // Convert to seconds, minutes, hours, days
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+    
+    if (diffSec < 60) {
+      return 'just now';
+    } else if (diffMin < 60) {
+      return `${diffMin} ${diffMin === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffHrs < 24) {
+      return `${diffHrs} ${diffHrs === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffDays < 30) {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+    } else {
+      // Fall back to formatted date for older dates
+      return formatDateTime(date, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+  } catch (error) {
+    console.error('Error formatting relative time:', error);
+    return '—';
+  }
+};
+
+/**
+ * Format a date to just the date portion
+ * @param date The date to format
+ * @returns Formatted date string (e.g. "Jan 1, 2023")
+ */
+export const formatDate = (date: Date | string | number | null | undefined): string => {
+  return formatDateTime(date, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Format a date to a brief display format, mainly for charts
+ * @param date The date to format
+ * @returns Formatted date string (e.g. "01/15")
+ */
+export const formatDateBrief = (date: Date | string | number | null | undefined): string => {
+  if (!date) return '—';
+  
+  try {
+    const dateObj = new Date(date);
+    return `${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error('Error formatting brief date:', error);
+    return '—';
+  }
+};
+
+/**
+ * Format a timestamp to a readable string
+ * @param timestamp The timestamp to format
+ * @returns Formatted timestamp string
+ */
+export const formatTimestamp = (timestamp: string | Date | null | undefined): string => {
   if (!timestamp) return 'Never';
   
   try {
-    const date = new Date(timestamp);
-    
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      return 'Invalid date';
-    }
-    
-    // Format date as localized string
-    return date.toLocaleString(undefined, {
+    return formatDateTime(timestamp, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   } catch (error) {
     console.error('Error formatting timestamp:', error);
-    return 'Error';
+    return 'Invalid date';
   }
-}
+};
 
-export function calculateDuration(startTime: string, endTime: string | null): string {
-  if (!endTime) return 'In progress';
+/**
+ * Format a time as "X ago" for recent times
+ * @param time The time to format
+ * @returns Formatted time ago string
+ */
+export const formatTimeAgo = (time: string | Date | null | undefined): string => {
+  return formatRelativeTime(time);
+};
+
+/**
+ * Calculate and format the duration between two timestamps
+ * @param startTime Start timestamp
+ * @param endTime End timestamp
+ * @returns Formatted duration string
+ */
+export const formatDuration = (
+  startTime: string | Date | null | undefined,
+  endTime: string | Date | null | undefined
+): string => {
+  if (!startTime || !endTime) return '—';
   
   try {
     const start = new Date(startTime).getTime();
     const end = new Date(endTime).getTime();
-    const durationMs = end - start;
     
-    if (isNaN(durationMs)) {
-      return 'Invalid duration';
+    if (isNaN(start) || isNaN(end) || end < start) {
+      return '—';
     }
     
-    if (durationMs < 1000) {
-      return `${durationMs}ms`;
-    } else if (durationMs < 60000) {
-      return `${Math.floor(durationMs / 1000)}s`;
+    const durationMs = end - start;
+    const seconds = Math.floor(durationMs / 1000);
+    
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
     } else {
-      const minutes = Math.floor(durationMs / 60000);
-      const seconds = Math.floor((durationMs % 60000) / 1000);
-      return `${minutes}m ${seconds}s`;
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
     }
   } catch (error) {
     console.error('Error calculating duration:', error);
-    return 'Error';
+    return '—';
   }
-}
-
-// Add new functions needed by other components
-export function formatDateTime(timestamp: string | null): string {
-  if (!timestamp) return 'Never';
-  return formatTimestamp(timestamp);
-}
-
-export function formatRelativeTime(timestamp: string | null): string {
-  if (!timestamp) return 'Never';
-  
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return 'Invalid date';
-    }
-    
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    // Convert to seconds
-    const diffSec = Math.floor(diffMs / 1000);
-    
-    if (diffSec < 60) {
-      return diffSec <= 1 ? 'just now' : `${diffSec} seconds ago`;
-    }
-    
-    // Convert to minutes
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) {
-      return diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`;
-    }
-    
-    // Convert to hours
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) {
-      return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
-    }
-    
-    // Convert to days
-    const diffDay = Math.floor(diffHour / 24);
-    if (diffDay < 30) {
-      return diffDay === 1 ? 'yesterday' : `${diffDay} days ago`;
-    }
-    
-    // For older dates, just return the formatted date
-    return formatTimestamp(timestamp);
-  } catch (error) {
-    console.error('Error formatting relative time:', error);
-    return 'Error';
-  }
-}
-
-export function formatTimeAgo(timestamp: string | null): string {
-  return formatRelativeTime(timestamp);
-}
-
-export function formatDateBrief(timestamp: string | null): string {
-  if (!timestamp) return 'Never';
-  
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return 'Invalid date';
-    }
-    
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch (error) {
-    console.error('Error formatting brief date:', error);
-    return 'Error';
-  }
-}
+};

@@ -1,61 +1,84 @@
 
 import React from 'react';
-import { AlertTriangle, Info, AlertCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 
-export type ErrorSeverity = 'error' | 'warning' | 'info';
+export type ErrorSeverity = 'error' | 'warning' | 'info' | 'success';
 
-interface ErrorDisplayProps {
-  title?: string;
+interface ValidationError {
   message: string;
-  onRetry?: () => void;
-  severity?: ErrorSeverity;
-  errors?: string | string[];
+  field?: string;
+  code?: string;
 }
 
-export function ErrorDisplay({ 
-  title = 'Error', 
-  message, 
+interface ErrorDisplayProps {
+  errors?: ValidationError[] | string[] | string | null;
+  title?: string;
+  severity?: ErrorSeverity;
+  className?: string;
+}
+
+export function ErrorDisplay({
   errors,
-  onRetry,
-  severity = 'error'
+  title,
+  severity = 'error',
+  className = ''
 }: ErrorDisplayProps) {
-  // Use errors prop if provided, otherwise use message
-  const displayMessage = errors || message;
+  if (!errors || (Array.isArray(errors) && errors.length === 0)) {
+    return null;
+  }
   
-  // Format array of errors as a list
-  const formattedMessage = Array.isArray(displayMessage) 
-    ? displayMessage.join('\n') 
-    : displayMessage;
+  // Convert string to array
+  const errorList = typeof errors === 'string' 
+    ? [{ message: errors }] 
+    : Array.isArray(errors)
+      ? errors.map(err => typeof err === 'string' ? { message: err } : err)
+      : [];
   
-  // Select variant based on severity
-  const variant = severity === 'error' ? 'destructive' : 
-                  severity === 'warning' ? 'default' : 
-                  'default';
+  // Map severity to Alert variant
+  // The key fix: Explicitly type this as an object with specific keys mapped to specific variant values
+  const variantMap: Record<ErrorSeverity, "default" | "destructive" | "success"> = {
+    'error': 'destructive',
+    'warning': 'default',
+    'info': 'default',
+    'success': 'success'
+  };
   
-  // Select icon based on severity
-  const Icon = severity === 'error' ? AlertTriangle : 
-               severity === 'warning' ? AlertCircle : 
-               Info;
+  // Determine icon based on severity
+  const SeverityIcon = severity === 'error' 
+    ? AlertCircle 
+    : severity === 'warning' 
+      ? AlertTriangle 
+      : severity === 'success'
+        ? CheckCircle
+        : Info;
+  
+  const defaultTitle = severity === 'error' 
+    ? 'Error' 
+    : severity === 'warning' 
+      ? 'Warning' 
+      : severity === 'success'
+        ? 'Success'
+        : 'Information';
   
   return (
-    <Alert variant={variant}>
-      <Icon className="h-4 w-4" />
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="mt-2">
-        <p className="mb-2 whitespace-pre-line">{formattedMessage}</p>
-        {onRetry && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onRetry}
-            className="mt-2"
-          >
-            Retry
-          </Button>
+    <Alert variant={variantMap[severity]} className={className}>
+      <SeverityIcon className="h-4 w-4" />
+      <AlertTitle>{title || defaultTitle}</AlertTitle>
+      <AlertDescription>
+        {errorList.length === 1 ? (
+          <p>{errorList[0].message}</p>
+        ) : (
+          <ul className="ml-6 list-disc mt-2 space-y-1">
+            {errorList.map((error, index) => (
+              <li key={index} className="text-sm">
+                {error.field && <span className="font-medium">{error.field}: </span>}
+                {error.message}
+              </li>
+            ))}
+          </ul>
         )}
       </AlertDescription>
     </Alert>
   );
-}
+} 

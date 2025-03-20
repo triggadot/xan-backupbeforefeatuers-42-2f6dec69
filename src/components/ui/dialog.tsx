@@ -36,7 +36,7 @@ const DialogContent = React.forwardRef<
   let hasDialogTitle = false
   
   // Make sure children is an array that can be iterated
-  const childrenArray = React.Children.toArray(children || [])
+  const childrenArray = React.Children.toArray(children)
   
   // Check direct children
   for (const child of childrenArray) {
@@ -47,7 +47,7 @@ const DialogContent = React.forwardRef<
     
     // Check DialogHeader children
     if (React.isValidElement(child) && child.type === DialogHeader) {
-      const headerChildren = React.Children.toArray(child.props.children || []);
+      const headerChildren = React.Children.toArray(child.props.children);
       for (const headerChild of headerChildren) {
         if (React.isValidElement(headerChild) && headerChild.type === DialogTitle) {
           hasDialogTitle = true

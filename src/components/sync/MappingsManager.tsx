@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
@@ -14,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SupabaseTableSelector } from './mappings/SupabaseTableSelector';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const MappingsManager = () => {
   const navigate = useNavigate();
@@ -117,9 +116,6 @@ const MappingsManager = () => {
                   <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Create Supabase Table</DialogTitle>
-                      <DialogDescription>
-                        Define a new table structure for storing Glide data
-                      </DialogDescription>
                     </DialogHeader>
                     <CreateTableForm 
                       onTableCreated={handleTableCreated}
