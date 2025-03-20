@@ -7,7 +7,7 @@ import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Layout = () => {
-  const { isMobile } = useIsMobile();
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex h-screen overflow-hidden">

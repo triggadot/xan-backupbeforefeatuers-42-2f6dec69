@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function AppSidebar() {
-  const { isMobile } = useIsMobile();
+  const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (

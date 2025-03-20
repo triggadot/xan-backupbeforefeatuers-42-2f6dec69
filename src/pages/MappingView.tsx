@@ -23,7 +23,8 @@ export default function MappingView() {
         .single();
 
       if (error) throw error;
-      return data as GlMapping;
+      // Explicit type casting to ensure it conforms to GlMapping
+      return data as unknown as GlMapping;
     },
   });
 
