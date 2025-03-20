@@ -15,10 +15,13 @@ export interface Estimate {
   glide_pdf_url?: string;
   created_at?: string;
   updated_at?: string;
+  add_note?: boolean;
+  account?: any;
 }
 
 export interface EstimateLine {
   id: string;
+  glide_row_id: string;
   rowid_estimate_lines: string;
   sale_product_name: string;
   qty_sold: number;
@@ -27,20 +30,21 @@ export interface EstimateLine {
   product_sale_note?: string;
   date_of_sale?: string;
   rowid_products?: string;
-  glide_row_id: string;
+  total_stock_after_sell?: number;
   created_at?: string;
   updated_at?: string;
+  productDetails?: any;
 }
 
 export interface CustomerCredit {
   id: string;
+  glide_row_id: string;
   rowid_estimates: string;
   rowid_accounts?: string;
   payment_amount: number;
   payment_note?: string;
   date_of_payment?: string;
   payment_type?: string;
-  glide_row_id: string;
   created_at?: string;
   updated_at?: string;
 }

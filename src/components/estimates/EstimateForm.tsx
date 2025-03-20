@@ -140,7 +140,7 @@ const EstimateForm: React.FC<EstimateFormProps> = ({
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-md">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={field.value as boolean}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
@@ -161,7 +161,7 @@ const EstimateForm: React.FC<EstimateFormProps> = ({
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 border rounded-md">
                 <FormControl>
                   <Checkbox
-                    checked={field.value}
+                    checked={field.value as boolean}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>

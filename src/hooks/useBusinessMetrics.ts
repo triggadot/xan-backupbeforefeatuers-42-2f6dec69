@@ -84,7 +84,7 @@ export function useBusinessMetrics() {
         
       if (productError) throw productError;
       
-      // Fetch account metrics with improved customer/vendor counting using mv_account_details
+      // Fetch account metrics using mv_account_details for accurate customer/vendor counts
       const { data: accountMetrics, error: accountError } = await supabase
         .from('mv_account_details')
         .select('id, is_customer, is_vendor');
@@ -101,7 +101,7 @@ export function useBusinessMetrics() {
       const totalPaymentsMade = poMetrics?.reduce((sum, po) => sum + (po.total_paid || 0), 0) || 0;
       const totalPurchaseBalance = poMetrics?.reduce((sum, po) => sum + (po.balance || 0), 0) || 0;
       
-      // Count customers and vendors using the is_customer and is_vendor flags
+      // Count customers and vendors accurately using is_customer and is_vendor flags
       const totalCustomers = accountMetrics?.filter(account => account.is_customer).length || 0;
       const totalVendors = accountMetrics?.filter(account => account.is_vendor).length || 0;
       

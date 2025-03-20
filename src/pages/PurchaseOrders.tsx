@@ -10,9 +10,11 @@ import PurchaseOrderFilters from '@/components/purchase-orders/PurchaseOrderFilt
 import { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PurchaseOrderForm from '@/components/purchase-orders/PurchaseOrderForm';
+import { useToast } from '@/hooks/use-toast';
 
 const PurchaseOrders = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [filters, setFilters] = useState<FilterType>({});
 
@@ -25,9 +27,21 @@ const PurchaseOrders = () => {
   } = usePurchaseOrders(filters);
 
   const handleCreatePurchaseOrder = async (data: any) => {
-    await createPurchaseOrder.mutateAsync(data);
-    setIsCreateDialogOpen(false);
-    fetchPurchaseOrders();
+    try {
+      await createPurchaseOrder.mutateAsync(data);
+      setIsCreateDialogOpen(false);
+      fetchPurchaseOrders();
+      toast({
+        title: "Success",
+        description: "Purchase order created successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to create purchase order",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewPurchaseOrder = (id: string) => {
@@ -60,7 +74,7 @@ const PurchaseOrders = () => {
       <PurchaseOrderList
         purchaseOrders={purchaseOrders}
         isLoading={isLoading}
-        error={error}
+        error={error as string}
         onView={handleViewPurchaseOrder}
       />
 

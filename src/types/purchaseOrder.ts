@@ -2,21 +2,23 @@
 export interface PurchaseOrder {
   id: string;
   glide_row_id: string;
-  purchase_order_uid: string;
+  purchase_order_uid?: string;
   number: string;
   rowid_accounts?: string;
   accountId?: string;
   accountName: string;
-  po_date: string;
+  po_date?: string;
   date: Date;
   payment_status: string;
   status: 'draft' | 'sent' | 'received' | 'partial' | 'complete';
   total_amount: number;
   total_paid: number;
   balance: number;
-  product_count: number;
-  created_at: string;
-  updated_at: string;
+  product_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  docs_shortlink?: string;
+  vendor_uid?: string;
   lineItems: PurchaseOrderLineItem[];
   vendorPayments: VendorPayment[];
 }

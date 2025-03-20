@@ -5,12 +5,15 @@ import { PlusCircle } from 'lucide-react';
 import { useEstimates } from '@/hooks/useEstimates';
 import EstimateList from '@/components/estimates/EstimateList';
 import { Button } from '@/components/ui/button';
-import { Estimate } from '@/types/estimate';
+import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import EstimateDetail from '@/components/estimates/EstimateDetail';
 import EstimateForm from '@/components/estimates/EstimateForm';
+import { useToast } from '@/hooks/use-toast';
 
 const Estimates = () => {
+  const { toast } = useToast();
+  
   const {
     estimates,
     isLoading,
@@ -29,23 +32,44 @@ const Estimates = () => {
   } = useEstimates();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
+  const [selectedEstimate, setSelectedEstimate] = useState<EstimateWithDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Handle create estimate
   const handleCreateEstimate = async (data: Partial<Estimate>) => {
-    await createEstimate.mutateAsync(data);
-    setIsCreateDialogOpen(false);
+    try {
+      await createEstimate.mutateAsync(data);
+      setIsCreateDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Estimate created successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to create estimate",
+        variant: "destructive",
+      });
+    }
   };
 
   // View estimate details
   const handleViewEstimate = async (estimate: Estimate) => {
     setDetailsLoading(true);
-    const fullEstimate = await getEstimate(estimate.id);
-    if (fullEstimate) {
-      setSelectedEstimate(fullEstimate);
+    try {
+      const fullEstimate = await getEstimate(estimate.id);
+      if (fullEstimate) {
+        setSelectedEstimate(fullEstimate as EstimateWithDetails);
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to load estimate details",
+        variant: "destructive",
+      });
+    } finally {
+      setDetailsLoading(false);
     }
-    setDetailsLoading(false);
   };
 
   // Back to list view
@@ -57,11 +81,61 @@ const Estimates = () => {
   const handleRefreshEstimate = async () => {
     if (selectedEstimate) {
       setDetailsLoading(true);
-      const refreshedEstimate = await getEstimate(selectedEstimate.id);
-      if (refreshedEstimate) {
-        setSelectedEstimate(refreshedEstimate);
+      try {
+        const refreshedEstimate = await getEstimate(selectedEstimate.id);
+        if (refreshedEstimate) {
+          setSelectedEstimate(refreshedEstimate as EstimateWithDetails);
+        }
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to refresh estimate",
+          variant: "destructive",
+        });
+      } finally {
+        setDetailsLoading(false);
       }
-      setDetailsLoading(false);
+    }
+  };
+
+  // Wrapper functions for type safety
+  const handleUpdateEstimate = async (id: string, data: Partial<Estimate>) => {
+    try {
+      return await updateEstimate.mutateAsync({ id, data });
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>) => {
+    try {
+      return await addEstimateLine.mutateAsync({ estimateId: estimateGlideId, lineData: data });
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>) => {
+    try {
+      return await updateEstimateLine.mutateAsync({ lineId, lineData: data });
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
+    try {
+      return await addCustomerCredit.mutateAsync({ estimateId: estimateGlideId, creditData: data });
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>) => {
+    try {
+      return await updateCustomerCredit.mutateAsync({ creditId, creditData: data });
+    } catch (err) {
+      return null;
     }
   };
 
@@ -77,13 +151,13 @@ const Estimates = () => {
           isLoading={detailsLoading}
           onBack={handleBackToList}
           onRefresh={handleRefreshEstimate}
-          onUpdate={updateEstimate.mutateAsync}
+          onUpdate={handleUpdateEstimate}
           onDelete={deleteEstimate.mutateAsync}
-          onAddLine={addEstimateLine.mutateAsync}
-          onUpdateLine={updateEstimateLine.mutateAsync}
+          onAddLine={handleAddLine}
+          onUpdateLine={handleUpdateLine}
           onDeleteLine={deleteEstimateLine.mutateAsync}
-          onAddCredit={addCustomerCredit.mutateAsync}
-          onUpdateCredit={updateCustomerCredit.mutateAsync}
+          onAddCredit={handleAddCredit}
+          onUpdateCredit={handleUpdateCredit}
           onDeleteCredit={deleteCustomerCredit.mutateAsync}
           onConvertToInvoice={convertToInvoice.mutateAsync}
         />
@@ -104,7 +178,7 @@ const Estimates = () => {
           <EstimateList
             estimates={estimates}
             isLoading={isLoading}
-            error={error}
+            error={error as string}
             onViewEstimate={handleViewEstimate}
           />
         </>
