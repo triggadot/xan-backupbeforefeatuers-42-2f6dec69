@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { UnpaidProduct } from '@/types/product';
@@ -37,7 +37,8 @@ export function useUnpaidInventory() {
         category: item.category,
         product_image1: item.product_image1,
         vendor_name: item.vendor_name,
-        rowid_accounts: item.vendor_glide_id,
+        // Remove rowid_accounts property and use vendor_glide_id
+        vendor_glide_id: item.vendor_glide_id,
         created_at: item.created_at || '',
         updated_at: item.updated_at || '',
         unpaid_type: item.payment_status as 'Sample' | 'Fronted',
@@ -65,9 +66,9 @@ export function useUnpaidInventory() {
   }, []);
 
   // Initialize data on component mount
-  useState(() => {
+  useEffect(() => {
     fetchUnpaidInventory();
-  });
+  }, [fetchUnpaidInventory]);
 
   // Function to mark a product as paid
   const markAsPaid = async (productId: string): Promise<boolean> => {

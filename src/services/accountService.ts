@@ -86,6 +86,7 @@ export const updateAccount = async (id: string, accountData: Partial<Account>) =
   if (accountData.website !== undefined) updateData.website = accountData.website;
   if (accountData.notes !== undefined) updateData.notes = accountData.notes;
   if (accountData.photo !== undefined) updateData.photo = accountData.photo;
+  // We don't allow direct setting of balance - it's calculated by the database
   
   const { error } = await supabase
     .from('gl_accounts')

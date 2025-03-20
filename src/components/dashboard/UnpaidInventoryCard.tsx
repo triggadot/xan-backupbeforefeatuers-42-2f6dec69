@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UnpaidProduct } from '@/types/product';
 import { formatCurrency } from '@/utils/format-utils';
-import { useRouter } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Changed from useRouter to useNavigate
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface UnpaidInventoryCardProps {
@@ -18,7 +18,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
   unpaidProducts,
   isLoading
 }) => {
-  const router = useRouter();
+  const navigate = useNavigate(); // Using useNavigate instead of useRouter
   
   const totalSampleValue = unpaidProducts
     .filter(p => p.unpaid_type === 'Sample')
@@ -29,7 +29,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
     .reduce((sum, product) => sum + product.unpaid_value, 0);
 
   const handleViewAll = () => {
-    router.push('/unpaid-inventory');
+    navigate('/unpaid-inventory'); // Using navigate instead of router.push
   };
 
   return (

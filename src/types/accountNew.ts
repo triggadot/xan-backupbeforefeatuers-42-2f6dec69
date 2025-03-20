@@ -51,3 +51,11 @@ export interface Account {
 export interface AccountDetails extends Account {
   // These are already in the base Account type from materialized view
 }
+
+// Interface for account balance information
+export interface AccountBalance {
+  id: string;
+  balance: number;
+  is_customer: boolean;
+  is_vendor: boolean;
+}
