@@ -1,4 +1,3 @@
-
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/layout/Layout';
@@ -22,6 +21,8 @@ import Estimates from '@/pages/Estimates';
 import DataManagement from '@/pages/DataManagement';
 import ProductSync from '@/pages/ProductSync';
 import Index from '@/pages/Index';
+import NewAccounts from '@/pages/NewAccounts';
+import NewAccountDetail from '@/pages/NewAccountDetail';
 
 function App() {
   return (
@@ -58,6 +59,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <AccountDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="new/accounts" 
+            element={
+              <ProtectedRoute>
+                <NewAccounts />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="new/accounts/:id" 
+            element={
+              <ProtectedRoute>
+                <NewAccountDetail />
               </ProtectedRoute>
             } 
           />

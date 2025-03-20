@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -29,9 +29,9 @@ interface PurchaseOrderFormProps {
 }
 
 const PurchaseOrderForm = ({ onSubmit }: PurchaseOrderFormProps) => {
-  const { accounts } = useAccounts();
+  const { accounts } = useAccountsNew();
   const vendorAccounts = accounts.filter(account => 
-    account.is_vendor || account.client_type === 'vendor' || account.client_type === 'both'
+    account.is_vendor
   );
 
   const form = useForm<z.infer<typeof purchaseOrderSchema>>({
@@ -64,7 +64,7 @@ const PurchaseOrderForm = ({ onSubmit }: PurchaseOrderFormProps) => {
                 <SelectContent>
                   {vendorAccounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.account_name}
+                      {account.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

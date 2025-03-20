@@ -1,91 +1,101 @@
-import { 
-  BarChart3, 
-  ClipboardList, 
-  Database, 
-  FileSpreadsheet,
-  FileText, 
-  Home,
-  LayoutDashboard, 
-  Package2, 
-  Receipt, 
-  ShoppingCart, 
-  Table, 
-  User,
-  Users,
-} from "lucide-react"
+import { IconName } from "@/components/ui/icon";
 
 export interface NavigationItem {
-  title: string
-  url: string
-  icon: React.ElementType
-  badge?: string
+  title: string;
+  href: string;
+  icon: IconName;
+  children?: NavigationItem[];
+  disabled?: boolean;
 }
 
-export const mainItems: NavigationItem[] = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: Home,
-  },
-  {
-    title: "Accounts",
-    url: "/accounts",
-    icon: Users,
-    badge: "New"
-  },
-  {
-    title: "Products",
-    url: "/products",
-    icon: Package2,
-  },
-]
+export interface NavigationConfig {
+  mainNav: NavigationItem[];
+  sidebarNav: NavigationItem[];
+}
 
-export const documentItems: NavigationItem[] = [
-  {
-    title: "Purchase Orders",
-    url: "/purchase-orders",
-    icon: ShoppingCart,
-  },
-  {
-    title: "Estimates",
-    url: "/estimates",
-    icon: FileSpreadsheet,
-  },
-  {
-    title: "Invoices",
-    url: "/invoices",
-    icon: Receipt,
-    badge: "3"
-  },
-]
-
-export const reportItems: NavigationItem[] = [
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart3,
-  },
-  {
-    title: "Activity",
-    url: "/activity",
-    icon: ClipboardList,
-  },
-]
-
-export const adminItems: NavigationItem[] = [
-  {
-    title: "Glide Sync",
-    url: "/sync",
-    icon: FileText,
-  },
-  {
-    title: "Database Management",
-    url: "/data-management",
-    icon: Database,
-  },
-  {
-    title: "Table Demo",
-    url: "/table-demo",
-    icon: Table,
-  },
-] 
+export const navigationConfig: NavigationConfig = {
+  mainNav: [
+    {
+      title: "Dashboard",
+      href: "/dashboard",
+      icon: "dashboard",
+    },
+    {
+      title: "Accounts",
+      href: "/accounts",
+      icon: "users",
+    },
+    {
+      title: "Invoices",
+      href: "/invoices",
+      icon: "fileText",
+    },
+    {
+      title: "Purchase Orders",
+      href: "/purchase-orders",
+      icon: "package",
+    },
+    {
+      title: "Products",
+      href: "/products",
+      icon: "shoppingBag",
+    },
+    {
+      title: "Reports",
+      href: "/reports",
+      icon: "barChart",
+    },
+    {
+      title: "Settings",
+      href: "/settings",
+      icon: "settings",
+    },
+    {
+      title: 'New Accounts',
+      href: '/new/accounts',
+      icon: 'users',
+    },
+  ],
+  sidebarNav: [
+    {
+      title: "Dashboard",
+      href: "/dashboard",
+      icon: "dashboard",
+    },
+    {
+      title: "Accounts",
+      href: "/accounts",
+      icon: "users",
+    },
+    {
+      title: "Invoices",
+      href: "/invoices",
+      icon: "fileText",
+    },
+    {
+      title: "Purchase Orders",
+      href: "/purchase-orders",
+      icon: "package",
+    },
+    {
+      title: "Products",
+      href: "/products",
+      icon: "shoppingBag",
+    },
+    {
+      title: "Reports",
+      href: "/reports",
+      icon: "barChart",
+    },
+    {
+      title: "Settings",
+      href: "/settings",
+      icon: "settings",
+    },
+    {
+      title: 'New Accounts',
+      href: '/new/accounts',
+      icon: 'users',
+    },
+  ],
+};

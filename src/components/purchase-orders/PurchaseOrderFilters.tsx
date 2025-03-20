@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Search, CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { useDebounce } from 'use-debounce';
 import type { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
 
 interface PurchaseOrderFiltersProps {
@@ -19,7 +21,7 @@ const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({
   filters,
   onFiltersChange
 }) => {
-  const { accounts } = useAccounts();
+  const { accounts } = useAccountsNew();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [debouncedSearch] = useDebounce(searchValue, 500);
 
@@ -39,7 +41,7 @@ const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({
     } else {
       onFiltersChange({
         ...filters,
-        status: value
+        status: value as any
       });
     }
   };
@@ -134,7 +136,7 @@ const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({
           <SelectContent>
             <SelectItem value="all">All Vendors</SelectItem>
             {accounts.filter(account => 
-              account.type === 'vendor' || account.type === 'both'
+              account.is_vendor
             ).map(account => (
               <SelectItem key={account.id} value={account.id}>
                 {account.name}
