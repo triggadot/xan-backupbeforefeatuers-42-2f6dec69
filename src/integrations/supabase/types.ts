@@ -1352,6 +1352,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      refresh_materialized_view: {
+        Args: {
+          view_name: string
+        }
+        Returns: undefined
+      }
       update_estimate_totals: {
         Args: {
           estimate_id: string
