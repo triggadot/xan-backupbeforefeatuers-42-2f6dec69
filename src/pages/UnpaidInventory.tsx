@@ -35,7 +35,7 @@ const UnpaidInventory: React.FC = () => {
     fetchUnpaidInventory();
   };
 
-  // Create wrapper functions that match expected return types
+  // Create wrapper functions that return booleans
   const handleMarkAsPaid = async (productId: string): Promise<boolean> => {
     return await markAsPaid(productId);
   };

@@ -26,6 +26,30 @@ interface PurchaseOrderDBResponse {
   vendor_uid: string;
 }
 
+export interface PurchaseOrderWithVendor {
+  id: string;
+  glide_row_id: string;
+  purchase_order_uid: string;
+  number: string;
+  rowid_accounts: string;
+  accountId: string;
+  accountName: string;
+  po_date: string;
+  date: Date;
+  payment_status: string;
+  status: PurchaseOrder['status'];
+  total_amount: number;
+  total_paid: number;
+  balance: number;
+  product_count: number;
+  created_at: string;
+  updated_at: string;
+  docs_shortlink: string;
+  vendor_uid: string;
+  lineItems: PurchaseOrder['lineItems'];
+  vendorPayments: PurchaseOrder['vendorPayments'];
+}
+
 export function usePurchaseOrders() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +88,7 @@ export function usePurchaseOrders() {
       
       if (supabaseError) throw supabaseError;
       
-      const mappedPurchaseOrders: PurchaseOrder[] = (data || []).map(po => ({
+      const mappedPurchaseOrders: PurchaseOrderWithVendor[] = (data || []).map(po => ({
         id: po.id || po.po_id || po.glide_row_id,
         glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
@@ -125,7 +149,7 @@ export function usePurchaseOrders() {
       
       if (paymentsError) throw paymentsError;
       
-      const purchaseOrder: PurchaseOrder = {
+      const purchaseOrder: PurchaseOrderWithVendor = {
         id: po.id || po.po_id || po.glide_row_id,
         glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,

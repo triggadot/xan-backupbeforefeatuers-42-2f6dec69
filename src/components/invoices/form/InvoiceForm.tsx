@@ -37,7 +37,6 @@ import { LineItemFormArray, LineItemFormValues } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
 import { Control } from 'react-hook-form';
 
-// Define schema that matches LineItemFormValues
 const invoiceFormSchema = z.object({
   customerId: z.string({
     required_error: 'Please select a customer',
@@ -296,7 +295,7 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
         <div>
           <h3 className="text-lg font-medium mb-4">Line Items</h3>
           <LineItemFormArray 
-            control={form.control as unknown as Control<LineItemFormValues>} 
+            control={form.control} 
             disabled={isSubmitting}
           />
         </div>

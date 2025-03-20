@@ -1,456 +1,347 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  CreditCard, 
-  Download, 
-  FileText, 
   Pencil, 
-  Plus, 
-  Printer, 
-  Share2, 
   Trash2, 
-  User, 
-  Calendar, 
-  Clock, 
-  DollarSign
+  Download, 
+  PlusCircle, 
+  FilePlus, 
+  Mail,
+  MoreHorizontal, 
+  Copy, 
+  ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
+import { InvoiceWithDetails } from '@/types/invoiceView';
 
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-
+import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
 import { InvoiceHeader } from './InvoiceHeader';
 import { LineItemsTable } from './LineItemsTable';
 import { PaymentsTable } from './PaymentsTable';
 import { AddPaymentDialog } from './AddPaymentDialog';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
-import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
-import { formatCurrency } from '@/utils/format-utils';
-import { StatusBadge } from '../shared/StatusBadge';
-import { InvoiceWithDetails } from '@/types/invoice';
-import { AmountDisplay } from '../shared/AmountDisplay';
 
-export const InvoiceDetail = () => {
+export function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
-  
-  const { getInvoice, deleteInvoice } = useInvoicesNew();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  React.useEffect(() => {
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isDeleteLineItemDialogOpen, setIsDeleteLineItemDialogOpen] = useState(false);
+  const [isDeletePaymentDialogOpen, setIsDeletePaymentDialogOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const { getInvoice, deleteInvoice, deleteLineItem, deletePayment } = useInvoicesNew();
+  const { toast } = useToast();
+
+  useEffect(() => {
     const fetchInvoice = async () => {
       if (!id) return;
-      
       setIsLoading(true);
       try {
-        const data = await getInvoice(id);
-        setInvoice(data);
+        const invoiceData = await getInvoice(id);
+        if (invoiceData) {
+          setInvoice(invoiceData);
+        }
       } catch (error) {
         console.error('Error fetching invoice:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load invoice details.',
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchInvoice();
-  }, [id, getInvoice]);
-  
-  const handleDeleteInvoice = async () => {
+  }, [id, getInvoice, toast]);
+
+  const handleBackClick = () => {
+    navigate('/invoices');
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    
     try {
-      await deleteInvoice.mutateAsync(invoice?.id || '');
-      setIsDeleteDialogOpen(false);
-      navigate('/invoices');
+      await deleteInvoice.mutateAsync(id);
       toast({
-        title: "Invoice deleted",
-        description: "The invoice has been permanently deleted.",
-        variant: "default"
+        title: 'Invoice Deleted',
+        description: 'The invoice has been successfully deleted.',
       });
+      navigate('/invoices');
     } catch (error) {
+      console.error('Error deleting invoice:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete invoice. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to delete the invoice.',
+        variant: 'destructive',
       });
     }
   };
-  
-  const handleEdit = () => {
-    navigate(`/invoices/${id}/edit`);
+
+  const handleDeleteLineItem = async () => {
+    if (!selectedItemId || !invoice?.id) return;
+    
+    try {
+      await deleteLineItem.mutateAsync({ id: selectedItemId, invoiceId: invoice.id });
+      // Refresh invoice data
+      const updatedInvoice = await getInvoice(invoice.id);
+      if (updatedInvoice) {
+        setInvoice(updatedInvoice);
+      }
+      setIsDeleteLineItemDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting line item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete the line item.',
+        variant: 'destructive',
+      });
+    }
   };
-  
-  const handleBack = () => {
-    navigate('/invoices');
+
+  const handleDeletePayment = async () => {
+    if (!selectedItemId || !invoice?.id) return;
+    
+    try {
+      await deletePayment.mutateAsync({ id: selectedItemId, invoiceId: invoice.id });
+      // Refresh invoice data
+      const updatedInvoice = await getInvoice(invoice.id);
+      if (updatedInvoice) {
+        setInvoice(updatedInvoice);
+      }
+      setIsDeletePaymentDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete the payment.',
+        variant: 'destructive',
+      });
+    }
   };
-  
-  const handleDownloadPdf = () => {
-    toast({
-      title: "Feature not implemented",
-      description: "PDF download functionality is not yet available.",
-      variant: "default"
-    });
+
+  const handleAddPaymentSuccess = async () => {
+    if (!invoice?.id) return;
+    
+    try {
+      // Refresh invoice data after adding payment
+      const updatedInvoice = await getInvoice(invoice.id);
+      if (updatedInvoice) {
+        setInvoice(updatedInvoice);
+      }
+    } catch (error) {
+      console.error('Error refreshing invoice:', error);
+    }
   };
-  
-  const handlePrint = () => {
-    window.print();
+
+  const confirmDeleteLineItem = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setIsDeleteLineItemDialogOpen(true);
   };
-  
-  const handleShare = () => {
-    toast({
-      title: "Feature not implemented",
-      description: "Sharing functionality is not yet available.",
-      variant: "default"
-    });
+
+  const confirmDeletePayment = (paymentId: string) => {
+    setSelectedItemId(paymentId);
+    setIsDeletePaymentDialogOpen(true);
   };
-  
-  const handleMarkAsPaid = (amount: number) => {
-    setIsAddPaymentOpen(true);
-  };
-  
+
   if (isLoading) {
     return (
-      <div className="container max-w-6xl py-6 space-y-8">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10" />
-          <div>
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <div className="ml-auto flex gap-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-          </div>
+      <div className="container py-6 max-w-4xl">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="outline" size="icon" disabled>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Skeleton className="h-8 w-48" />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
+        <div className="space-y-6">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-60 w-full" />
         </div>
-        
-        <Skeleton className="h-96" />
       </div>
     );
   }
-  
+
   if (!invoice) {
     return (
-      <div className="container max-w-6xl py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="icon" onClick={handleBack}>
-            <FileText className="h-4 w-4" />
+      <div className="container py-6 max-w-4xl">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="outline" size="icon" onClick={handleBackClick}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">Invoice Not Found</h1>
         </div>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">The requested invoice could not be found. It may have been deleted or you may not have permission to view it.</p>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={() => navigate('/invoices')}>Back to Invoices</Button>
-          </CardFooter>
-        </Card>
+        <div className="bg-muted/40 rounded-lg p-8 text-center">
+          <h2 className="text-xl font-medium mb-2">Invoice could not be found</h2>
+          <p className="text-muted-foreground mb-4">
+            The invoice you're looking for may have been deleted or doesn't exist.
+          </p>
+          <Button onClick={handleBackClick}>Return to Invoices</Button>
+        </div>
       </div>
     );
   }
-  
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-  
-  const dueStatus = () => {
-    if (invoice.status === 'paid' || invoice.status === 'partial') return null;
-    if (!invoice.dueDate) return null;
-    
-    const now = new Date();
-    const dueDate = new Date(invoice.dueDate);
-    
-    if (dueDate < now) {
-      const days = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      return (
-        <div className="text-destructive text-sm font-medium">
-          Overdue by {days} {days === 1 ? 'day' : 'days'}
-        </div>
-      );
-    }
-    
-    if (dueDate > now) {
-      const days = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      return (
-        <div className="text-muted-foreground text-sm">
-          Due in {days} {days === 1 ? 'day' : 'days'}
-        </div>
-      );
-    }
-    
-    return null;
-  };
-  
+
   return (
-    <div className="container max-w-6xl py-6 space-y-8 print:py-0 print:space-y-6">
-      <InvoiceHeader 
-        invoice={invoice}
-        onBack={handleBack}
-        onEdit={handleEdit}
-        onDelete={() => setIsDeleteDialogOpen(true)}
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4" />
-              Customer
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-medium">{invoice.customerName}</h3>
-              <Button 
-                variant="link" 
-                className="p-0 h-auto text-sm"
-                onClick={() => navigate(`/accounts/${invoice.customerId}`)}
-              >
-                View Customer
+    <div className="container py-6 max-w-4xl">
+      {/* Header with navigation and actions */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={handleBackClick}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">Invoice {invoice.invoiceNumber}</h1>
+          <StatusBadge status={invoice.status} />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate(`/invoices/${id}/edit`)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button variant="outline" onClick={() => setIsAddPaymentOpen(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Payment
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="h-4 w-4" />
-              Dates
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Invoice Date:</span>
-              <span>{formatDate(invoice.invoiceDate)}</span>
-            </div>
-            {invoice.dueDate && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Due Date:</span>
-                <span>{formatDate(invoice.dueDate)}</span>
-              </div>
-            )}
-            {dueStatus()}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DollarSign className="h-4 w-4" />
-              Amount
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Total:</span>
-              <AmountDisplay 
-                amount={invoice.total} 
-                className="text-base font-medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Paid:</span>
-              <AmountDisplay 
-                amount={invoice.amountPaid} 
-                variant="success" 
-                className="text-base font-medium"
-              />
-            </div>
-            <Separator />
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Balance:</span>
-              <AmountDisplay 
-                amount={invoice.balance} 
-                variant={invoice.balance > 0 ? "warning" : "success"}
-                className="text-lg font-semibold"
-              />
-            </div>
-            
-            {invoice.status !== 'paid' && invoice.balance > 0 && (
-              <Button 
-                className="w-full mt-2" 
-                onClick={() => setIsAddPaymentOpen(true)}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => toast({ title: "Coming soon", description: "Download PDF feature is coming soon." })}
               >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Record Payment
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="payments">
-            Payments
-            {invoice.payments.length > 0 && (
-              <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
-                {invoice.payments.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="details" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Line Items</CardTitle>
-              <CardDescription>Products and services included in this invoice</CardDescription>
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/invoices/${invoice.id}/add-item`)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <LineItemsTable 
-                lineItems={invoice.lineItems} 
-                invoiceId={invoice.id} 
-              />
-            </CardContent>
-            {invoice.notes && (
-              <>
-                <Separator />
-                <CardContent className="pt-6">
-                  <h3 className="font-medium mb-2">Notes</h3>
-                  <p className="text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
-                </CardContent>
-              </>
-            )}
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="payments" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payments</CardTitle>
-              <CardDescription>Payment history for this invoice</CardDescription>
-              <div className="flex justify-end">
-                <Button onClick={() => setIsAddPaymentOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Record Payment
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <PaymentsTable 
-                payments={invoice.payments} 
-                invoiceId={invoice.id}
-              />
-            </CardContent>
-            <CardFooter className="bg-muted/50 flex justify-between">
-              <div>
-                <span className="text-muted-foreground">Balance Due:</span>
-              </div>
-              <AmountDisplay 
-                amount={invoice.balance} 
-                variant={invoice.balance > 0 ? "warning" : "success"}
-                className="text-lg font-semibold"
-              />
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <div className="print:hidden">
-        <Separator className="my-6" />
-        
-        <div className="flex flex-wrap gap-3 justify-between">
-          <div className="flex flex-wrap gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handlePrint}
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleDownloadPdf}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleShare}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleEdit}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit Invoice
-            </Button>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Invoice
-            </Button>
-          </div>
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => toast({ title: "Coming soon", description: "Email invoice feature is coming soon." })}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email Invoice
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => toast({ title: "Coming soon", description: "Duplicate invoice feature is coming soon." })}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-destructive focus:text-destructive"
+                onClick={() => setIsDeleteAlertOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      
-      <AddPaymentDialog
-        invoice={invoice}
-        open={isAddPaymentOpen}
-        onOpenChange={setIsAddPaymentOpen}
-      />
-      
+
+      {/* Invoice details */}
+      <div className="grid gap-6">
+        {/* Invoice header with customer and financial info */}
+        <InvoiceHeader invoice={invoice} />
+
+        {/* Line items table */}
+        <div className="rounded-md border">
+          <LineItemsTable 
+            lineItems={invoice.lineItems} 
+            onDeleteItem={confirmDeleteLineItem}
+          />
+        </div>
+
+        {/* Payments table */}
+        <div className="rounded-md border">
+          <PaymentsTable 
+            payments={invoice.payments} 
+            onDeletePayment={confirmDeletePayment}
+          />
+        </div>
+
+        {/* Invoice notes if any */}
+        {invoice.notes && (
+          <div className="border rounded-md p-4">
+            <h3 className="font-medium mb-2">Notes</h3>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Delete Invoice Alert Dialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this invoice and all associated data. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Line Item Confirmation Dialog */}
       <DeleteConfirmDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDeleteInvoice}
-        title="Delete Invoice"
-        description={`Are you sure you want to delete invoice #${invoice.invoiceNumber}? This action cannot be undone and will remove all associated line items and payments.`}
+        title="Delete Line Item"
+        description="Are you sure you want to delete this line item? This action cannot be undone."
+        open={isDeleteLineItemDialogOpen}
+        onOpenChange={setIsDeleteLineItemDialogOpen}
+        onConfirm={handleDeleteLineItem}
       />
+
+      {/* Delete Payment Confirmation Dialog */}
+      <DeleteConfirmDialog
+        title="Delete Payment"
+        description="Are you sure you want to delete this payment record? This will update the invoice balance. This action cannot be undone."
+        open={isDeletePaymentDialogOpen}
+        onOpenChange={setIsDeletePaymentDialogOpen}
+        onConfirm={handleDeletePayment}
+      />
+
+      {/* Add Payment Dialog */}
+      {invoice && (
+        <AddPaymentDialog
+          invoiceId={invoice.id}
+          customerId={invoice.customerId}
+          open={isAddPaymentOpen}
+          onOpenChange={setIsAddPaymentOpen}
+          onSuccess={handleAddPaymentSuccess}
+        />
+      )}
     </div>
   );
-};
+}
