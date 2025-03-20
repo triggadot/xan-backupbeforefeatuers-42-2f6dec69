@@ -2,7 +2,8 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { BusinessMetrics, StatusMetrics } from '@/types/business';
+import { BusinessMetrics, StatusMetrics, BusinessOperations } from '@/types/business';
+import { determineAccountType, extractAccountFlags } from '@/utils/accountMapper';
 
 export function useBusinessOperations() {
   const [metrics, setMetrics] = useState<BusinessMetrics | null>(null);
@@ -29,8 +30,8 @@ export function useBusinessOperations() {
       
       // Fetch account metrics using mv_account_details for accurate customer/vendor counts
       const { data: accountMetrics, error: accountError } = await supabase
-        .from('mv_account_details')
-        .select('account_id, is_customer, is_vendor');
+        .from('gl_accounts')
+        .select('id, is_customer, is_vendor');
         
       if (accountError) throw accountError;
       
@@ -107,23 +108,41 @@ export function useBusinessOperations() {
     }
   }, [toast]);
 
-  // Helper function to determine account type based on is_customer and is_vendor flags
-  const determineAccountType = useCallback((isCustomer: boolean, isVendor: boolean): 'Customer' | 'Vendor' | 'Customer & Vendor' => {
-    if (isCustomer && isVendor) {
-      return 'Customer & Vendor';
-    } else if (isCustomer) {
-      return 'Customer';
-    } else {
-      return 'Vendor';
-    }
+  // Helper function to calculate total balance
+  const calculateTotalBalance = useCallback((total: number, paid: number): number => {
+    return total - paid;
   }, []);
 
-  // Helper function to extract is_customer and is_vendor from account type
-  const extractAccountFlags = useCallback((type: 'Customer' | 'Vendor' | 'Customer & Vendor') => {
-    return {
-      is_customer: type === 'Customer' || type === 'Customer & Vendor',
-      is_vendor: type === 'Vendor' || type === 'Customer & Vendor'
-    };
+  // Helper function to calculate amount due from line items
+  const calculateAmountDue = useCallback((lineItems: any[]): number => {
+    return lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  }, []);
+
+  // Helper function to determine invoice status
+  const determineInvoiceStatus = useCallback((total: number, paid: number, dueDate?: Date): 'draft' | 'sent' | 'overdue' | 'paid' | 'partial' => {
+    if (paid === 0) {
+      if (dueDate && dueDate < new Date()) {
+        return 'overdue';
+      }
+      return 'sent';
+    } else if (paid < total) {
+      return 'partial';
+    } else if (paid >= total) {
+      return 'paid';
+    }
+    return 'draft';
+  }, []);
+
+  // Helper function to determine purchase order status
+  const determinePurchaseOrderStatus = useCallback((total: number, paid: number): 'draft' | 'pending' | 'complete' | 'partial' => {
+    if (paid === 0) {
+      return 'pending';
+    } else if (paid < total) {
+      return 'partial';
+    } else if (paid >= total) {
+      return 'complete';
+    }
+    return 'draft';
   }, []);
 
   return {
@@ -133,6 +152,10 @@ export function useBusinessOperations() {
     error,
     refreshMetrics: fetchBusinessMetrics,
     determineAccountType,
-    extractAccountFlags
+    extractAccountFlags,
+    calculateTotalBalance,
+    calculateAmountDue,
+    determineInvoiceStatus,
+    determinePurchaseOrderStatus
   };
 }
