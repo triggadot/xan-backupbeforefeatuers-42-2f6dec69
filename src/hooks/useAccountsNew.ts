@@ -55,7 +55,7 @@ export function useAccountsNew() {
       if (error) throw error;
       
       const mappedAccounts = (data || []).map((account) => 
-        mapViewAccountToAccount(account as unknown as AccountFromView)
+        mapViewAccountToAccount(account as AccountFromView)
       );
       setAccounts(mappedAccounts);
       

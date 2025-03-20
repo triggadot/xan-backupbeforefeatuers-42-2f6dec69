@@ -1,110 +1,154 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import Dashboard from './pages/Dashboard.tsx'
+import Accounts from './pages/Accounts.tsx'
+import AccountDetail from './pages/AccountDetail.tsx'
+import NewAccounts from './pages/NewAccounts.tsx'
+import Invoices from './pages/Invoices.tsx'
+import InvoiceDetail from './pages/InvoiceDetail.tsx'
+import NewInvoice from './pages/NewInvoice.tsx'
+import PurchaseOrders from './pages/PurchaseOrders.tsx'
+import NewPurchaseOrder from './pages/NewPurchaseOrder.tsx'
+import Estimates from './pages/Estimates.tsx'
+import Settings from './pages/Settings.tsx'
+import Sync from './pages/Sync.tsx'
+import MappingView from './pages/MappingView.tsx'
+import Layout from './components/layout/Layout.tsx'
+import ProtectedRoute from './components/auth/ProtectedRoute.tsx'
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from './components/theme-provider';
-import { Toaster } from './components/ui/toaster';
-import ErrorBoundary from './components/ErrorBoundary';
-import App from './App';
-import './index.css';
-import { HelmetProvider } from 'react-helmet-async';
+const queryClient = new QueryClient()
 
-// Pages
-import Index from './pages/Index';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import NotFound from './pages/NotFound';
-import Accounts from './pages/Accounts';
-import AccountDetail from './pages/AccountDetail';
-import Invoices from './pages/Invoices';
-import PurchaseOrders from './pages/PurchaseOrders';
-import SyncLayout from './components/sync/SyncLayout';
-import SyncOverview from './components/sync/overview/SyncOverview';
-import ConnectionsList from './components/sync/connections/ConnectionsList';
-import { MappingsList } from './components/sync/mappings/MappingsList';
-import MappingDetails from './components/sync/mappings/MappingDetails';
-import ProductSync from './pages/ProductSync';
-import SyncLogs from './components/sync/SyncLogs';
-import DataManagement from './pages/DataManagement';
-import Products from './pages/Products';
-import TableDemoPage from './pages/TableDemo';
-import Estimates from './pages/Estimates';
-
-// Components
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import Layout from './components/layout/Layout';
-
-// Create a client for React Query
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5000,
-    },
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Dashboard />
+        </Layout>
+      </ProtectedRoute>
+    ),
   },
-});
-
-// Wrapper component for MappingsList that provides the onEdit prop
-const MappingsListWrapper = () => {
-  const navigate = useNavigate();
-  
-  const handleEditMapping = (mapping) => {
-    navigate(`/sync/mappings/${mapping.id}`);
-  };
-  
-  return <MappingsList onEdit={handleEditMapping} />;
-};
+  {
+    path: '/accounts',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <NewAccounts />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/accounts/:id',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <AccountDetail />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/invoices',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Invoices />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/invoices/:id',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <InvoiceDetail />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/invoices/new',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <NewInvoice />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/purchase-orders',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <PurchaseOrders />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/purchase-orders/new',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <NewPurchaseOrder />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/estimates',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Estimates />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Settings />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/sync',
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <Sync />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/sync/mappings/:id",
+    element: (
+      <ProtectedRoute>
+        <Layout>
+          <MappingView />
+        </Layout>
+      </ProtectedRoute>
+    ),
+  },
+])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <HelmetProvider>
-            <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-              <AuthProvider>
-                <Routes>
-                  <Route path="/" element={<App />}>
-                    <Route index element={<Index />} />
-                    <Route path="auth" element={<Auth />} />
-                    
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <Layout />
-                      </ProtectedRoute>
-                    }>
-                      <Route path="dashboard" element={<Dashboard />} />
-                      <Route path="accounts" element={<Accounts />} />
-                      <Route path="accounts/:id" element={<AccountDetail />} />
-                      <Route path="invoices" element={<Invoices />} />
-                      <Route path="estimates" element={<Estimates />} />
-                      <Route path="purchase-orders" element={<PurchaseOrders />} />
-                      <Route path="products" element={<Products />} />
-                      <Route path="data-management" element={<DataManagement />} />
-                      <Route path="table-demo" element={<TableDemoPage />} />
-                      
-                      <Route path="sync" element={<SyncLayout />}>
-                        <Route index element={<SyncOverview />} />
-                        <Route path="connections" element={<ConnectionsList />} />
-                        <Route path="mappings" element={<MappingsListWrapper />} />
-                        <Route path="mappings/:mappingId" element={<MappingDetails mappingId=":mappingId" />} />
-                        <Route path="products/:mappingId" element={<ProductSync />} />
-                        <Route path="logs" element={<SyncLogs />} />
-                      </Route>
-                    </Route>
-                  
-                    <Route path="*" element={<NotFound />} />
-                  </Route>
-                </Routes>
-                <Toaster />
-              </AuthProvider>
-            </ThemeProvider>
-          </HelmetProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </React.StrictMode>,
-);
+)

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { X, Search, Calendar, Filter } from 'lucide-react';
@@ -35,12 +34,10 @@ export const InvoiceFilterBar = ({
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [debouncedSearch] = useDebounce(searchValue, 500);
 
-  // Update the search filter when debounced value changes
   useEffect(() => {
     onFiltersChange({ ...filters, search: debouncedSearch || undefined });
   }, [debouncedSearch, filters, onFiltersChange]);
 
-  // Handle status filter change
   const handleStatusChange = (value: string) => {
     if (value === 'all') {
       onFiltersChange({ ...filters, status: undefined });
@@ -49,7 +46,6 @@ export const InvoiceFilterBar = ({
     }
   };
 
-  // Handle customer filter change
   const handleCustomerChange = (value: string) => {
     if (value === 'all') {
       onFiltersChange({ ...filters, customerId: undefined });
@@ -58,17 +54,14 @@ export const InvoiceFilterBar = ({
     }
   };
 
-  // Handle date from change
   const handleDateFromChange = (date: Date | undefined) => {
     onFiltersChange({ ...filters, dateFrom: date });
   };
 
-  // Handle date to change
   const handleDateToChange = (date: Date | undefined) => {
     onFiltersChange({ ...filters, dateTo: date });
   };
 
-  // Count active filters excluding search
   const activeFilterCount = [
     filters.status,
     filters.customerId,
@@ -76,7 +69,6 @@ export const InvoiceFilterBar = ({
     filters.dateTo
   ].filter(Boolean).length;
 
-  // Reset all filters
   const resetFilters = () => {
     setSearchValue('');
     onFiltersChange({});
@@ -85,7 +77,6 @@ export const InvoiceFilterBar = ({
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex flex-wrap gap-3">
-        {/* Search */}
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -106,7 +97,6 @@ export const InvoiceFilterBar = ({
           )}
         </div>
 
-        {/* Status Filter */}
         <Select 
           value={filters.status?.[0] || 'all'} 
           onValueChange={handleStatusChange}
@@ -124,7 +114,6 @@ export const InvoiceFilterBar = ({
           </SelectContent>
         </Select>
 
-        {/* Customer Filter */}
         <Select 
           value={filters.customerId || 'all'} 
           onValueChange={handleCustomerChange}
@@ -135,7 +124,7 @@ export const InvoiceFilterBar = ({
           <SelectContent>
             <SelectItem value="all">All Customers</SelectItem>
             {accounts
-              .filter(account => account.type === 'customer' || account.type === 'both')
+              .filter(account => account.type === 'Customer' || account.type === 'Customer & Vendor')
               .map(account => (
                 <SelectItem key={account.id} value={account.id}>
                   {account.name}
@@ -145,7 +134,6 @@ export const InvoiceFilterBar = ({
           </SelectContent>
         </Select>
 
-        {/* Date Range Filter */}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-10">
@@ -204,7 +192,6 @@ export const InvoiceFilterBar = ({
           </PopoverContent>
         </Popover>
 
-        {/* Reset Filters */}
         {(activeFilterCount > 0 || searchValue) && (
           <Button 
             variant="ghost" 

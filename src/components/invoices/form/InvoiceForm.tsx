@@ -160,7 +160,7 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
                   </FormControl>
                   <SelectContent>
                     {accounts
-                      .filter(account => account.type === 'customer' || account.type === 'both')
+                      .filter(account => account.type === 'Customer' || account.type === 'Customer & Vendor')
                       .map(account => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}
@@ -338,3 +338,5 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
     </Form>
   );
 };
+
+export { InvoiceForm };

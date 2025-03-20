@@ -159,3 +159,15 @@ export const formatCurrency = (amount: number): string => {
     minimumFractionDigits: 2
   }).format(amount);
 };
+
+export function getLegacyAccountType(type: string): 'Customer' | 'Vendor' | 'Customer & Vendor' {
+  const normalizedType = type.toLowerCase();
+  if (normalizedType.includes('customer') && normalizedType.includes('vendor')) {
+    return 'Customer & Vendor';
+  } else if (normalizedType.includes('customer')) {
+    return 'Customer';
+  } else if (normalizedType.includes('vendor')) {
+    return 'Vendor';
+  }
+  return 'Customer'; // Default case
+}

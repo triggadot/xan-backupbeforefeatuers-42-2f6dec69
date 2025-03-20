@@ -1,150 +1,167 @@
-
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from '@/components/ui/button';
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils"
+import { useEffect, useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { CalendarIcon, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
+
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from "@/lib/utils"
 import { useAccountsNew } from '@/hooks/useAccountsNew';
 
-interface PurchaseOrderFiltersProps {
-  onFiltersChange: (filters: { search?: string; vendorId?: string; dateFrom?: Date | null; dateTo?: Date | null }) => void;
+interface DateRange {
+  from?: Date;
+  to?: Date;
 }
 
-const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({ onFiltersChange }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState<{ search?: string; vendorId?: string; dateFrom?: Date | null; dateTo?: Date | null }>({
-    search: searchParams.get('search') || '',
-    vendorId: searchParams.get('vendorId') || '',
-    dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : null,
-    dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : null,
-  });
-  const [date, setDate] = useState<{
-    from?: Date;
-    to?: Date;
-  }>({
-    from: filters.dateFrom || undefined,
-    to: filters.dateTo || undefined,
-  });
-  const { accounts } = useAccountsNew();
+export function PurchaseOrderFilters() {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+  const [date, setDate] = useState<DateRange | null>(null);
+  const { accounts, isLoading: isLoadingAccounts } = useAccountsNew();
 
   useEffect(() => {
-    setFilters({
-      search: searchParams.get('search') || '',
-      vendorId: searchParams.get('vendorId') || '',
-      dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : null,
-      dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : null,
-    });
-    setDate({
-      from: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom') as string) : undefined,
-      to: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo') as string) : undefined,
-    })
-  }, [searchParams]);
+    // Apply filters here (e.g., call an API with the filter values)
+    console.log("Search:", debouncedSearch);
+    console.log("Status:", selectedStatus);
+    console.log("Vendor:", selectedVendor);
+    console.log("Date Range:", date);
+  }, [debouncedSearch, selectedStatus, selectedVendor, date]);
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.search) params.set('search', filters.search);
-    if (filters.vendorId) params.set('vendorId', filters.vendorId);
-    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom.toISOString());
-    if (filters.dateTo) params.set('dateTo', filters.dateTo.toISOString());
-    setSearchParams(params);
-
-    onFiltersChange(filters);
-  }, [filters, onFiltersChange, setSearchParams]);
-
-  const handleFilterChange = (key: string, value: string | Date | null) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      [key]: value,
-    }));
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value === "all" ? null : value);
   };
 
-  const handleDateChange = (newDate: { from?: Date; to?: Date; } | undefined) => {
-    if (newDate) {
-      setDate(newDate);
-      handleFilterChange('dateFrom', newDate.from || null);
-      handleFilterChange('dateTo', newDate.to || null);
-    }
-  }
+  const handleVendorChange = (value: string) => {
+    setSelectedVendor(value === "all" ? null : value);
+  };
+
+  const handleDateChange = (date: DateRange | null) => {
+    setDate(date);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedStatus(null);
+    setSelectedVendor(null);
+    setDate(null);
+  };
+
+  const activeFilters = [
+    search,
+    selectedStatus,
+    selectedVendor,
+    date?.from,
+    date?.to,
+  ].filter(Boolean).length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div>
-        <Label htmlFor="search">Search</Label>
+    <div className="flex flex-col space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          type="text"
-          id="search"
-          placeholder="Search by PO number"
-          value={filters.search || ''}
-          onChange={(e) => handleFilterChange('search', e.target.value)}
+          placeholder="Search purchase orders..."
+          className="pl-9"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
+        {search && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
+            onClick={() => setSearch("")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <div>
-        <Label htmlFor="vendor">Vendor</Label>
-        
-<Select 
-  value={filters.vendorId || ''}
-  onValueChange={(value) => handleFilterChange('vendorId', value)}
->
-  <SelectTrigger>
-    <SelectValue placeholder="All vendors" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="">All vendors</SelectItem>
-    {accounts
-      .filter(account => account.is_vendor)
-      .map((account) => (
-        <SelectItem key={account.id} value={account.id}>
-          {account.name}
-        </SelectItem>
-      ))}
-  </SelectContent>
-</Select>
-      </div>
+      <div className="flex flex-wrap gap-2">
+        {/* Status Filter */}
+        <Select onValueChange={handleStatusChange} defaultValue={selectedStatus || 'all'}>
+          <SelectTrigger className="min-w-[150px]">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="partial">Partial</SelectItem>
+            <SelectItem value="complete">Complete</SelectItem>
+          </SelectContent>
+        </Select>
 
-      <div>
-        <Label>Date Range</Label>
+        {/* Vendor Filter */}
+        <Select
+          value={selectedVendor || 'all'}
+          onValueChange={handleVendorChange}
+        >
+          <SelectTrigger className="min-w-[180px]">
+            <SelectValue placeholder="All Vendors" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Vendors</SelectItem>
+            {accounts
+              .filter(account => account.is_vendor)
+              .map(account => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+
+        {/* Date Filter */}
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              variant={"outline"}
+              variant="outline"
               className={cn(
-                "w-[300px] justify-start text-left font-normal",
-                !date?.from && "text-muted-foreground"
+                "justify-start text-left font-normal",
+                !date && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {date?.from ? (
                 date.to ? (
-                  `${format(date.from, "MMM dd, yyyy")} - ${format(date.to, "MMM dd, yyyy")}`
+                  <>
+                    {format(date.from, "LLL dd, y")} -{" "}
+                    {format(date.to, "LLL dd, y")}
+                  </>
                 ) : (
-                  format(date.from, "MMM dd, yyyy")
+                  format(date.from, "LLL dd, y")
                 )
               ) : (
-                <span>Pick a date</span>
+                <span>Date range</span>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center" side="bottom">
+          <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               initialFocus
               mode="range"
               defaultMonth={date?.from}
-              selected={date}
-              onSelect={handleDateChange}
+              selected={{ from: date?.from, to: date?.to }}
+              onSelect={date => setDate({ from: date?.from, to: date?.to })}
               numberOfMonths={2}
             />
           </PopoverContent>
         </Popover>
       </div>
+
+      {activeFilters > 0 && (
+        <div className="mt-2">
+          <Button variant="link" size="sm" onClick={clearFilters}>
+            Clear filters ({activeFilters})
+          </Button>
+        </div>
+      )}
     </div>
   );
-};
-
-export default PurchaseOrderFilters;
+}
