@@ -22,8 +22,14 @@ export function useSupabaseTables() {
         .select('table_name');
       
       if (error) throw error;
-      setTables(data || []);
-      return data || [];
+      
+      // Cast each table_name to string to ensure type safety
+      const typedData: SupabaseTable[] = (data || []).map(item => ({
+        table_name: String(item.table_name)
+      }));
+      
+      setTables(typedData);
+      return typedData;
     } catch (error) {
       console.error('Error fetching Supabase tables:', error);
       toast({
@@ -39,7 +45,7 @@ export function useSupabaseTables() {
 
   useEffect(() => {
     fetchTables();
-  }, []);
+  }, [fetchTables]);
 
   return { tables, isLoading, fetchTables };
 }
