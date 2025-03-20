@@ -37,7 +37,7 @@ export function useUnpaidInventory() {
         category: item.category,
         product_image1: item.product_image1,
         vendor_name: item.vendor_name,
-        rowid_accounts: item.vendor_glide_id, // Use vendor_glide_id for rowid_accounts
+        vendorId: item.vendor_glide_id, // Use vendor_glide_id for vendorId
         created_at: item.created_at || '',
         updated_at: item.updated_at || '',
         unpaid_type: item.payment_status as 'Sample' | 'Fronted',

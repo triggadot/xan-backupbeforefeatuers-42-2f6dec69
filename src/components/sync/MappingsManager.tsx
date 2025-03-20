@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MappingsList } from './mappings/MappingsList';
-import MappingDetails from './mappings/MappingDetails';
+import { MappingDetails } from './mappings/MappingDetails';
 import { GlMapping } from '@/types/glsync';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

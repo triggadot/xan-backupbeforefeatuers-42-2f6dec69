@@ -82,7 +82,7 @@ export function useProducts() {
           .from('gl_products')
           .select(`
             *,
-            gl_accounts:rowid_accounts(account_name, accounts_uid)
+            gl_accounts!inner(account_name, accounts_uid)
           `)
           .eq('id', id)
           .single();
@@ -91,8 +91,10 @@ export function useProducts() {
         
         if (!data) throw new Error('Product not found');
         
-        // Ensure vendorData is properly typed and handle potential null/undefined values
-        const vendorData = data.gl_accounts || { account_name: null, accounts_uid: null };
+        // Extract vendorData safely
+        const vendorData = data.gl_accounts || {};
+        const vendorName = (vendorData as any).account_name || '';
+        const vendorUid = (vendorData as any).accounts_uid || '';
         
         return {
           id: data.id,
@@ -105,7 +107,7 @@ export function useProducts() {
           category: data.category || '',
           status: 'active',
           imageUrl: data.product_image1 || '',
-          vendorName: vendorData.account_name || '',
+          vendorName: vendorName,
           vendorId: data.rowid_accounts || '',
           createdAt: new Date(data.created_at),
           updatedAt: new Date(data.updated_at),

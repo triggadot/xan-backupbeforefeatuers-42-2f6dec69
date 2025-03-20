@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -66,7 +67,7 @@ interface InvoiceFormProps {
   onSuccess?: (invoiceId: string) => void;
 }
 
-export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceFormProps) => {
+export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceFormProps) {
   const navigate = useNavigate();
   const { accounts } = useAccountsNew();
   const { createInvoice, updateInvoice } = useInvoicesNew();
@@ -76,11 +77,11 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: initialData ? {
       customerId: initialData.customerId,
-      invoiceDate: initialData.invoiceDate,
-      dueDate: initialData.dueDate,
+      invoiceDate: initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date(),
+      dueDate: initialData.dueDate ? new Date(initialData.dueDate) : undefined,
       status: initialData.status === 'paid' || initialData.status === 'partial' || initialData.status === 'overdue' 
         ? 'sent' 
-        : initialData.status as 'draft' | 'sent',
+        : (initialData.status as 'draft' | 'sent'),
       notes: initialData.notes || '',
       lineItems: initialData.lineItems.map(item => ({
         productId: item.productId,
@@ -337,6 +338,4 @@ export const InvoiceForm = ({ initialData, isEdit = false, onSuccess }: InvoiceF
       </form>
     </Form>
   );
-};
-
-export { InvoiceForm };
+}

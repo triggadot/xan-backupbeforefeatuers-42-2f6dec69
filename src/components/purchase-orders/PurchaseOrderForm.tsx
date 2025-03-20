@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -69,7 +68,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
           id: purchaseOrder.id,
           data: {
             ...values,
-            date: values.date.toISOString(),
+            date: values.date,
           }
         });
         toast({
@@ -80,7 +79,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
         // Create new purchase order
         await createPurchaseOrder.mutateAsync({
           ...values,
-          date: values.date.toISOString(),
+          date: values.date,
         });
         toast({
           title: "Success",

@@ -160,6 +160,19 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+export function mapAccountType(type: string): "Customer" | "Vendor" | "Customer & Vendor" {
+  switch (type.toLowerCase()) {
+    case 'customer':
+      return 'Customer';
+    case 'vendor':
+      return 'Vendor';
+    case 'both':
+      return 'Customer & Vendor';
+    default:
+      return 'Customer';
+  }
+}
+
 export function getLegacyAccountType(type: string): 'Customer' | 'Vendor' | 'Customer & Vendor' {
   const normalizedType = type.toLowerCase();
   if (normalizedType.includes('customer') && normalizedType.includes('vendor')) {

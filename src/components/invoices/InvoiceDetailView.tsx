@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, FileText, User, CreditCard, Package, ExternalLink } from 'lucide-react';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useInvoices } from '@/hooks/invoices/useInvoices';
 import { formatCurrency } from '@/utils/format-utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';

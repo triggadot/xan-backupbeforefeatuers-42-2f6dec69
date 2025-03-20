@@ -36,10 +36,10 @@ export function useInvoices() {
           .from('gl_customer_payments')
           .insert({
             rowid_invoices: paymentData.invoiceId,
-            main_payment_amount: paymentData.amount,
+            payment_amount: paymentData.amount,
             date_of_payment: new Date(paymentData.paymentDate).toISOString(),
-            payment_method: paymentData.paymentMethod,
-            notes: paymentData.notes,
+            type_of_payment: paymentData.paymentMethod,
+            payment_note: paymentData.notes,
           })
           .select()
           .single();
@@ -47,17 +47,17 @@ export function useInvoices() {
         if (error) throw error;
 
         toast({
-          title: 'Payment Added',
-          description: 'Payment has been recorded successfully.',
+          title: "Payment Added",
+          description: "Payment has been recorded successfully.",
         });
 
         return data;
       } catch (err) {
         console.error('Error adding payment:', err);
         toast({
-          title: 'Error',
+          title: "Error",
           description: err instanceof Error ? err.message : 'Failed to record payment',
-          variant: 'destructive',
+          variant: "destructive",
         });
         throw err;
       }
@@ -75,17 +75,17 @@ export function useInvoices() {
         if (error) throw error;
 
         toast({
-          title: 'Payment Deleted',
-          description: 'Payment has been deleted successfully.',
+          title: "Payment Deleted",
+          description: "Payment has been deleted successfully.",
         });
 
         return true;
       } catch (err) {
         console.error('Error deleting payment:', err);
         toast({
-          title: 'Error',
+          title: "Error",
           description: err instanceof Error ? err.message : 'Failed to delete payment',
-          variant: 'destructive',
+          variant: "destructive",
         });
         throw err;
       }
@@ -103,30 +103,29 @@ export function useInvoices() {
         if (error) throw error;
 
         toast({
-          title: 'Line Item Deleted',
-          description: 'Line item has been deleted successfully.',
+          title: "Line Item Deleted",
+          description: "Line item has been deleted successfully.",
         });
 
         return true;
       } catch (err) {
         console.error('Error deleting line item:', err);
         toast({
-          title: 'Error',
+          title: "Error",
           description: err instanceof Error ? err.message : 'Failed to delete line item',
-          variant: 'destructive',
+          variant: "destructive",
         });
         throw err;
       }
     }
   };
 
-  // Additional function to get a single invoice with details
+  // Get a single invoice with all details
   const getInvoice = async (id: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Implement your getInvoice logic here
-      // This is a placeholder - you'll need to replace with actual implementation
+      // Get invoice details
       const { data: invoice, error: invoiceError } = await supabase
         .from('gl_invoices')
         .select('*')
