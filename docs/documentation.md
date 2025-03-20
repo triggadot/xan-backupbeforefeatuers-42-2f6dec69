@@ -10,6 +10,8 @@
   - Invoices → Accounts (customer relationship via `rowid_accounts`)
   - Purchase Orders → Accounts (vendor relationship via `rowid_accounts`)
   - Estimates → Accounts (customer relationship via `rowid_accounts`)
+  - Shipping Records → Up to 3 Accounts (multi-customer shipping)
+- Functions `is_customer()` and `is_vendor()` validate account types
 
 ### Account Balance Logic:
 - **Customer Balance**: Sum of unpaid invoice amounts
@@ -65,6 +67,8 @@ $$ LANGUAGE plpgsql;
 ### Current Implementation:
 - Products track original purchase quantity via `total_qty_purchased`
 - Products are linked to Purchase Orders via `rowid_purchase_orders`
+- Products are displayed via materialized view `mv_product_vendor_details`
+- Display name is set via `handle_po_product_changes()` function and trigger
 - No direct tracking of current inventory levels in main product table
 
 ### Required Logic:
@@ -118,8 +122,13 @@ $$ LANGUAGE plpgsql;
 
 ### Current Implementation:
 - Invoice totals are calculated from invoice lines via `update_invoice_totals()` function
+- Line totals are calculated via `handle_invoice_line_changes()` function
+- Customer payments are linked to invoices via `rowid_invoices`
+- Payment handling uses `handle_customer_payment_changes()` function
 - Invoice balance = total_amount - total_paid
 - Invoice status is determined by payment status
+- Materialized view `mv_invoice_customer_details` reflects customer details
+- UID generation via `generate_invoice_uid_trigger()` function
 
 ### Payment Status Logic:
 - Draft: total_amount = 0
@@ -128,22 +137,38 @@ $$ LANGUAGE plpgsql;
 - Overdue: balance > 0 AND due date past
 - Unpaid: Otherwise
 
+### Existing Triggers:
+- `handle_invoice_line_changes` - Calculates line totals and updates invoice totals
+- `invoice_lines_total_update` - Updates invoice timestamps when lines change
+- `handle_customer_payment_changes` - Updates invoice totals when payments change
+- `generate_invoice_uid` - Generates unique invoice ID
+
 ### What Works:
 - The trigger functions for invoice line changes and payment changes
 - The automatic calculation of invoice totals and balances
 - Correct status determination
+- Materialized view refresh on changes
 
 ## 4. Estimate and Credit Processing
 
 ### Current Implementation:
 - Estimate totals are calculated from estimate lines via `update_estimate_totals()` function
+- Estimate line totals via `handle_estimate_line_changes()` function
+- Customer credits linked via `rowid_estimates`
+- Credit handling via `handle_customer_credit_changes()` function
 - Estimate balance = total_amount - total_credits
+- Materialized view `mv_estimate_customer_details` reflects customer details
 - Estimate status logic is based on conversion status and amounts
 
 ### Status Logic:
 - Converted: valid_final_create_invoice_clicked = true
 - Draft: total_amount = 0
 - Pending: Otherwise
+
+### Existing Triggers:
+- `handle_estimate_line_changes` - Calculates line totals and updates estimate totals
+- `estimate_lines_total_update` - Updates estimate timestamps when lines change
+- `handle_customer_credit_changes` - Updates estimate totals when credits change
 
 ### Required Enhancements:
 - Update estimate lines to properly reference products using `rowid_products`
@@ -216,9 +241,14 @@ $$ LANGUAGE plpgsql;
 ## 5. Purchase Order Processing
 
 ### Current Implementation:
-- Purchase Order totals are calculated from linked products
+- Purchase Order totals are calculated from linked products via `update_po_totals()` function
+- Products are linked to POs via `rowid_purchase_orders`
+- Vendor payments linked via `rowid_purchase_orders`
+- Payment handling via `handle_vendor_payment_changes()` function
 - PO balance = total_amount - total_paid
 - Status is determined based on payment status
+- Materialized view `mv_purchase_order_vendor_details` reflects vendor details
+- PO UID generation via `generate_po_uid_trigger()` function
 
 ### Status Logic:
 - Draft: total_amount = 0
@@ -226,9 +256,15 @@ $$ LANGUAGE plpgsql;
 - Partial: balance > 0 AND total_paid > 0
 - Received: Otherwise
 
+### Existing Triggers:
+- `handle_po_product_changes` - Updates product display name and PO totals
+- `handle_vendor_payment_changes` - Updates PO totals when payments change
+- `generate_po_uid` - Generates unique PO ID
+
 ### Required Enhancements:
 - Add functionality to properly track inventory received from purchase orders
 - Update product integration with purchase orders
+- Add cascading updates when purchase order status changes
 
 ## 6. Materialized Views and Data Relationships
 
@@ -239,6 +275,13 @@ The following materialized views exist:
 - `mv_purchase_order_vendor_details` - Purchase orders with vendor details
 - `mv_invoice_customer_details` - Invoices with customer information
 - `mv_estimate_customer_details` - Estimates with customer information
+
+### Refresh Triggers:
+- `refresh_account_views_trigger` - Refreshes account views on changes
+- `refresh_product_views_trigger` - Refreshes product views on changes
+- `refresh_po_views_trigger` - Refreshes PO views on changes
+- `refresh_invoice_views_trigger` - Refreshes invoice views on changes
+- `refresh_estimate_views_trigger` - Refreshes estimate views on changes
 
 ### Required Enhancements:
 - Ensure all views are refreshed when related data changes
@@ -287,42 +330,102 @@ LEFT JOIN
 ## 7. Business Operations and Metrics
 
 ### Current Implementation:
-- Metrics are calculated using database functions
-- Functions include:
+- Metrics are calculated using database functions:
   - `gl_get_business_stats()` - Overall business metrics
   - `gl_get_invoice_metrics()` - Invoice-specific metrics
   - `gl_get_purchase_order_metrics()` - Purchase order metrics
   - `gl_get_account_stats()` - Account-related stats
   - `gl_get_document_status()` - Document status breakdown
+- Data is gathered in `gl_business_metrics` and `gl_current_status` tables
 
 ### Required Enhancements:
 - Include sample product logic in metrics calculations
 - Update metrics to reflect accurate inventory levels
+- Add functionality to track product sales trends
+- Implement profit calculation on invoice items
 
-## 8. Implementation Plan
+## 8. Index Management
+
+### Current Implementation:
+For optimal query performance, indexes should be created on frequently queried columns, especially `rowid_` foreign key columns and `glide_row_id`.
+
+### Required Indexes:
+- `gl_products`: `rowid_accounts`, `rowid_purchase_orders`
+- `gl_invoice_lines`: `rowid_invoices`, `rowid_products`
+- `gl_estimate_lines`: `rowid_estimate_lines`, `rowid_products`
+- `gl_customer_payments`: `rowid_invoices`, `rowid_accounts`
+- `gl_customer_credits`: `rowid_estimates`, `rowid_accounts`
+- `gl_vendor_payments`: `rowid_purchase_orders`, `rowid_accounts`
+- All tables: `glide_row_id` (already exists as primary key or unique constraint in most cases)
+
+```sql
+-- Create indexes for foreign key relationships
+CREATE INDEX IF NOT EXISTS idx_products_rowid_accounts ON gl_products(rowid_accounts);
+CREATE INDEX IF NOT EXISTS idx_products_rowid_purchase_orders ON gl_products(rowid_purchase_orders);
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_rowid_invoices ON gl_invoice_lines(rowid_invoices);
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_rowid_products ON gl_invoice_lines(rowid_products);
+CREATE INDEX IF NOT EXISTS idx_estimate_lines_rowid_estimate_lines ON gl_estimate_lines(rowid_estimate_lines);
+CREATE INDEX IF NOT EXISTS idx_estimate_lines_rowid_products ON gl_estimate_lines(rowid_products);
+CREATE INDEX IF NOT EXISTS idx_customer_payments_rowid_invoices ON gl_customer_payments(rowid_invoices);
+CREATE INDEX IF NOT EXISTS idx_customer_credits_rowid_estimates ON gl_customer_credits(rowid_estimates);
+CREATE INDEX IF NOT EXISTS idx_vendor_payments_rowid_purchase_orders ON gl_vendor_payments(rowid_purchase_orders);
+```
+
+## 9. Implementation Plan
 
 ### Phase 1: Database Schema and Function Updates
 1. Update account balance calculation to include sample products
 2. Create product inventory calculation function
 3. Enhance materialized views with calculated fields
+4. Create required indexes for foreign key relationships
 
 ### Phase 2: Business Logic Implementation
 1. Implement conversion of estimates to invoices
 2. Update product inventory tracking logic
 3. Enhance account balance calculations in the frontend
+4. Create shipping record integration with invoices
 
 ### Phase 3: Frontend Integration
 1. Update dashboard to show new metrics
 2. Add inventory indicators to product listing
 3. Show account balances with appropriate positive/negative indicators
+4. Create interface for estimate to invoice conversion
 
 ### Phase 4: Testing and Validation
 1. Test inventory deduction on invoice creation
 2. Validate sample product impact on vendor balances
 3. Ensure account balance calculations are accurate
+4. Test data consistency across materialized views
 
-## 9. Conclusion and Next Steps
+## 10. Conclusion and Next Steps
 
 The current implementation handles basic calculations for invoices, estimates, and purchase orders well. The main gaps are in inventory tracking, especially for sample products, and in account balance calculations that incorporate all factors.
 
 By implementing the proposed database functions and materialized view updates, we can achieve a comprehensive tracking system that reflects the business logic accurately. The next critical step is to implement the inventory calculation logic and update the account balance calculations to reflect the sample product impact.
+
+## 11. Database Triggers Checklist
+
+### Invoice Processing
+- [x] `handle_invoice_line_changes` - Calculates line totals and updates invoice totals
+- [x] `invoice_lines_total_update` - Updates invoice timestamps on line changes
+- [x] `handle_customer_payment_changes` - Updates invoice totals on payment changes
+- [x] `generate_invoice_uid` - Generates unique invoice identifiers
+
+### Estimate Processing
+- [x] `handle_estimate_line_changes` - Calculates line totals and updates estimate totals
+- [x] `estimate_lines_total_update` - Updates estimate timestamps on line changes
+- [x] `handle_customer_credit_changes` - Updates estimate totals on credit changes
+- [ ] `convert_estimate_to_invoice` - Creates invoice from estimate (to be implemented)
+
+### Purchase Order Processing
+- [x] `handle_po_product_changes` - Updates product display name and PO totals
+- [x] `handle_vendor_payment_changes` - Updates PO totals on payment changes
+- [x] `generate_po_uid` - Generates unique PO identifiers
+- [ ] `calculate_product_inventory` - Tracks current inventory levels (to be implemented)
+
+### Materialized View Refresh
+- [x] `refresh_account_views_trigger` - Refreshes account views on changes
+- [x] `refresh_product_views_trigger` - Refreshes product views on changes
+- [x] `refresh_po_views_trigger` - Refreshes PO views on changes
+- [x] `refresh_invoice_views_trigger` - Refreshes invoice views on changes
+- [x] `refresh_estimate_views_trigger` - Refreshes estimate views on changes
