@@ -38,6 +38,11 @@ export const navigationConfig: NavigationConfig = {
       icon: "shoppingBag",
     },
     {
+      title: "Unpaid Inventory",
+      href: "/unpaid-inventory",
+      icon: "alertCircle",
+    },
+    {
       title: "Reports",
       href: "/reports",
       icon: "barChart",
@@ -73,6 +78,11 @@ export const navigationConfig: NavigationConfig = {
       title: "Products",
       href: "/products",
       icon: "shoppingBag",
+    },
+    {
+      title: "Unpaid Inventory",
+      href: "/unpaid-inventory",
+      icon: "alertCircle", 
     },
     {
       title: "Reports",

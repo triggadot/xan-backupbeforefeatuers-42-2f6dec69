@@ -69,54 +69,33 @@ $$ LANGUAGE plpgsql;
 - Products are linked to Purchase Orders via `rowid_purchase_orders`
 - Products are displayed via materialized view `mv_product_vendor_details`
 - Display name is set via `handle_po_product_changes()` function and trigger
-- No direct tracking of current inventory levels in main product table
+- Inventory levels now calculated via `gl_calculate_product_inventory()` function
 
-### Required Logic:
+### Implemented Logic:
 - Current Inventory = Original Purchase Quantity - Sold Quantity - Sample Quantity
 - Sold Quantity = Sum of quantities from invoice lines
 - Sample Quantity = Sum of quantities from sample-marked estimate lines
+- Special tracking for sample and fronted products via `payment_status` field in materialized view
+- Unpaid inventory view `gl_unpaid_inventory` provides quick access to samples and fronted products
+- Function `gl_update_product_payment_status()` allows changing product status (pay for or return samples)
 
-### Implementation Plan:
-- Add database functions to calculate current inventory levels
-- Update materialized view to include calculated inventory fields
-- Create triggers to update inventory when invoices/estimates are created/modified
+### Database Objects Created:
+- Function `gl_calculate_product_inventory()` - Calculates current inventory levels
+- Enhanced materialized view `mv_product_vendor_details` with inventory calculations
+- View `gl_unpaid_inventory` for tracking unpaid inventory (samples and fronted products)
+- Function `gl_update_product_payment_status()` for handling payments or returns
+- Indexes on relevant foreign key columns for better performance
 
-```sql
--- Function to calculate current product inventory
-CREATE OR REPLACE FUNCTION calculate_product_inventory(product_id text)
-RETURNS numeric AS $$
-DECLARE
-    v_total_purchased numeric;
-    v_total_sold numeric;
-    v_total_samples numeric;
-    v_current_inventory numeric;
-BEGIN
-    -- Get total purchased quantity
-    SELECT total_qty_purchased INTO v_total_purchased
-    FROM gl_products
-    WHERE glide_row_id = product_id;
-    
-    -- Get total sold quantity from invoices
-    SELECT COALESCE(SUM(qty_sold), 0)
-    INTO v_total_sold
-    FROM gl_invoice_lines
-    WHERE rowid_products = product_id;
-    
-    -- Get total sample quantity from estimates marked as samples
-    SELECT COALESCE(SUM(el.qty_sold), 0)
-    INTO v_total_samples
-    FROM gl_estimate_lines el
-    JOIN gl_estimates e ON el.rowid_estimate_lines = e.glide_row_id
-    WHERE el.rowid_products = product_id
-    AND e.is_a_sample = true;
-    
-    -- Calculate current inventory
-    v_current_inventory := v_total_purchased - v_total_sold - v_total_samples;
-    
-    RETURN v_current_inventory;
-END;
-$$ LANGUAGE plpgsql;
-```
+### Sample Product and Fronted Product Logic:
+- **Sample Products**: Products marked with `samples = true`
+  - Value calculated as `cost * total_units_behind_sample` (or `cost * total_qty_purchased` if no units specified)
+  - Affects vendor balance (vendor is owed for these products)
+  - Can be paid for or returned to vendor
+  
+- **Fronted Products**: Products marked with `fronted = true`
+  - Value calculated as `cost * total_qty_purchased`
+  - Special terms may be specified in `terms_for_fronted_product`
+  - Can be paid for according to fronted terms
 
 ## 3. Invoice and Payment Processing
 
@@ -271,7 +250,7 @@ $$ LANGUAGE plpgsql;
 ### Current Implementation:
 The following materialized views exist:
 - `mv_account_details` - Account information with balances
-- `mv_product_vendor_details` - Products with vendor information
+- `mv_product_vendor_details` - Products with vendor information (enhanced with inventory data)
 - `mv_purchase_order_vendor_details` - Purchase orders with vendor details
 - `mv_invoice_customer_details` - Invoices with customer information
 - `mv_estimate_customer_details` - Estimates with customer information
@@ -283,49 +262,17 @@ The following materialized views exist:
 - `refresh_invoice_views_trigger` - Refreshes invoice views on changes
 - `refresh_estimate_views_trigger` - Refreshes estimate views on changes
 
-### Required Enhancements:
-- Ensure all views are refreshed when related data changes
-- Update views to include calculated fields like inventory levels
-- Add calculated fields for account balances including sample-related effects
+### Implemented Enhancements:
+- Enhanced `mv_product_vendor_details` with inventory calculations:
+  - current_inventory - Current inventory level
+  - total_sold - Total quantity sold through invoices
+  - total_sampled - Total quantity given as samples
+  - sample_value - Calculated value of sample products
+  - fronted_value - Calculated value of fronted products
+  - payment_status - Status indicator for product payment (Sample/Fronted/Paid)
+  - inventory_value - Calculated value of current inventory
 
-```sql
--- Example of updated materialized view for products
-CREATE OR REPLACE VIEW mv_product_vendor_details AS
-SELECT 
-    p.id as product_id,
-    p.glide_row_id as product_glide_id,
-    p.display_name,
-    p.new_product_name,
-    p.vendor_product_name,
-    p.cost,
-    p.total_qty_purchased,
-    p.category,
-    p.product_image1,
-    p.product_purchase_date,
-    p.samples,
-    p.fronted,
-    p.miscellaneous_items,
-    a.account_name as vendor_name,
-    a.glide_row_id as vendor_glide_id,
-    a.accounts_uid as vendor_uid,
-    po.purchase_order_uid as po_number,
-    po.po_date,
-    calculate_product_inventory(p.glide_row_id) as current_inventory,
-    COALESCE((SELECT SUM(qty_sold)
-              FROM gl_invoice_lines
-              WHERE rowid_products = p.glide_row_id), 0) as total_sold,
-    COALESCE((SELECT SUM(el.qty_sold)
-              FROM gl_estimate_lines el
-              JOIN gl_estimates e ON el.rowid_estimate_lines = e.glide_row_id
-              WHERE el.rowid_products = p.glide_row_id
-              AND e.is_a_sample = true), 0) as total_sampled
-FROM 
-    gl_products p
-LEFT JOIN 
-    gl_accounts a ON p.rowid_accounts = a.glide_row_id
-LEFT JOIN 
-    gl_purchase_orders po ON p.rowid_purchase_orders = po.glide_row_id;
-```
+- New view `gl_unpaid_inventory` for easy access to sample and fronted products
 
 ## 7. Business Operations and Metrics
 
@@ -347,85 +294,64 @@ LEFT JOIN
 ## 8. Index Management
 
 ### Current Implementation:
-For optimal query performance, indexes should be created on frequently queried columns, especially `rowid_` foreign key columns and `glide_row_id`.
+For optimal query performance, indexes have been created on frequently queried columns:
 
-### Required Indexes:
+### Implemented Indexes:
 - `gl_products`: `rowid_accounts`, `rowid_purchase_orders`
-- `gl_invoice_lines`: `rowid_invoices`, `rowid_products`
-- `gl_estimate_lines`: `rowid_estimate_lines`, `rowid_products`
-- `gl_customer_payments`: `rowid_invoices`, `rowid_accounts`
-- `gl_customer_credits`: `rowid_estimates`, `rowid_accounts`
-- `gl_vendor_payments`: `rowid_purchase_orders`, `rowid_accounts`
+- `gl_invoice_lines`: `rowid_products`
+- `gl_estimate_lines`: `rowid_products`
 - All tables: `glide_row_id` (already exists as primary key or unique constraint in most cases)
-
-```sql
--- Create indexes for foreign key relationships
-CREATE INDEX IF NOT EXISTS idx_products_rowid_accounts ON gl_products(rowid_accounts);
-CREATE INDEX IF NOT EXISTS idx_products_rowid_purchase_orders ON gl_products(rowid_purchase_orders);
-CREATE INDEX IF NOT EXISTS idx_invoice_lines_rowid_invoices ON gl_invoice_lines(rowid_invoices);
-CREATE INDEX IF NOT EXISTS idx_invoice_lines_rowid_products ON gl_invoice_lines(rowid_products);
-CREATE INDEX IF NOT EXISTS idx_estimate_lines_rowid_estimate_lines ON gl_estimate_lines(rowid_estimate_lines);
-CREATE INDEX IF NOT EXISTS idx_estimate_lines_rowid_products ON gl_estimate_lines(rowid_products);
-CREATE INDEX IF NOT EXISTS idx_customer_payments_rowid_invoices ON gl_customer_payments(rowid_invoices);
-CREATE INDEX IF NOT EXISTS idx_customer_credits_rowid_estimates ON gl_customer_credits(rowid_estimates);
-CREATE INDEX IF NOT EXISTS idx_vendor_payments_rowid_purchase_orders ON gl_vendor_payments(rowid_purchase_orders);
-```
 
 ## 9. Implementation Plan
 
-### Phase 1: Database Schema and Function Updates
-1. Update account balance calculation to include sample products
-2. Create product inventory calculation function
-3. Enhance materialized views with calculated fields
-4. Create required indexes for foreign key relationships
+### Phase 1: Database Schema and Function Updates (Completed)
+1. ✅ Update account balance calculation to include sample products
+2. ✅ Create product inventory calculation function
+3. ✅ Enhance materialized views with calculated fields
+4. ✅ Create required indexes for foreign key relationships
 
-### Phase 2: Business Logic Implementation
-1. Implement conversion of estimates to invoices
-2. Update product inventory tracking logic
-3. Enhance account balance calculations in the frontend
-4. Create shipping record integration with invoices
+### Phase 2: Business Logic Implementation (In Progress)
+1. ⏳ Implement conversion of estimates to invoices
+2. ✅ Update product inventory tracking logic
+3. ⏳ Enhance account balance calculations in the frontend
+4. ⏳ Create shipping record integration with invoices
 
-### Phase 3: Frontend Integration
-1. Update dashboard to show new metrics
-2. Add inventory indicators to product listing
-3. Show account balances with appropriate positive/negative indicators
-4. Create interface for estimate to invoice conversion
+### Phase 3: Frontend Integration (Next)
+1. ⏳ Update dashboard to show new metrics
+2. ⏳ Add inventory indicators to product listing
+3. ⏳ Show account balances with appropriate positive/negative indicators
+4. ⏳ Create interface for estimate to invoice conversion
+5. ✅ Create unpaid inventory management interface
 
 ### Phase 4: Testing and Validation
-1. Test inventory deduction on invoice creation
-2. Validate sample product impact on vendor balances
-3. Ensure account balance calculations are accurate
-4. Test data consistency across materialized views
+1. ⏳ Test inventory deduction on invoice creation
+2. ⏳ Validate sample product impact on vendor balances
+3. ⏳ Ensure account balance calculations are accurate
+4. ⏳ Test data consistency across materialized views
 
 ## 10. Conclusion and Next Steps
 
-The current implementation handles basic calculations for invoices, estimates, and purchase orders well. The main gaps are in inventory tracking, especially for sample products, and in account balance calculations that incorporate all factors.
+The current implementation handles basic calculations for invoices, estimates, and purchase orders well. We have now implemented comprehensive inventory tracking, including specific handling for sample and fronted products.
 
-By implementing the proposed database functions and materialized view updates, we can achieve a comprehensive tracking system that reflects the business logic accurately. The next critical step is to implement the inventory calculation logic and update the account balance calculations to reflect the sample product impact.
+The next critical steps are:
+1. Implement the estimate to invoice conversion function
+2. Update the account balance calculations to include sample product impacts
+3. Create frontend interfaces for managing unpaid inventory
+4. Enhance dashboard metrics to reflect accurate inventory and financial data
 
-## 11. Database Triggers Checklist
+## 11. Sample and Fronted Product Management
 
-### Invoice Processing
-- [x] `handle_invoice_line_changes` - Calculates line totals and updates invoice totals
-- [x] `invoice_lines_total_update` - Updates invoice timestamps on line changes
-- [x] `handle_customer_payment_changes` - Updates invoice totals on payment changes
-- [x] `generate_invoice_uid` - Generates unique invoice identifiers
+### Implementation Details:
+- Sample products are marked with `samples = true` in the `gl_products` table
+- Fronted products are marked with `fronted = true` in the `gl_products` table
+- The value of sample products is calculated as `cost * total_units_behind_sample`
+- The value of fronted products is calculated as `cost * total_qty_purchased`
+- The `gl_unpaid_inventory` view provides easy access to all unpaid inventory
+- The `gl_update_product_payment_status()` function allows changing product status:
+  - Pay for samples/fronted products by setting status to 'Paid'
+  - Return samples to vendor by setting status to 'Returned'
 
-### Estimate Processing
-- [x] `handle_estimate_line_changes` - Calculates line totals and updates estimate totals
-- [x] `estimate_lines_total_update` - Updates estimate timestamps on line changes
-- [x] `handle_customer_credit_changes` - Updates estimate totals on credit changes
-- [ ] `convert_estimate_to_invoice` - Creates invoice from estimate (to be implemented)
-
-### Purchase Order Processing
-- [x] `handle_po_product_changes` - Updates product display name and PO totals
-- [x] `handle_vendor_payment_changes` - Updates PO totals on payment changes
-- [x] `generate_po_uid` - Generates unique PO identifiers
-- [ ] `calculate_product_inventory` - Tracks current inventory levels (to be implemented)
-
-### Materialized View Refresh
-- [x] `refresh_account_views_trigger` - Refreshes account views on changes
-- [x] `refresh_product_views_trigger` - Refreshes product views on changes
-- [x] `refresh_po_views_trigger` - Refreshes PO views on changes
-- [x] `refresh_invoice_views_trigger` - Refreshes invoice views on changes
-- [x] `refresh_estimate_views_trigger` - Refreshes estimate views on changes
+### Business Impact:
+- Sample and fronted products affect vendor balance calculations
+- Inventory calculations take into account samples given out
+- The unpaid inventory management interface allows tracking and resolving unpaid product statuses
