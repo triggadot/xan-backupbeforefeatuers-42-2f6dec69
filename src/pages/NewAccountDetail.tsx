@@ -5,37 +5,68 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Building, Mail, Phone, Globe, MapPin, Edit, Trash2, Package, FileText } from 'lucide-react';
-import { useAccount } from '@/hooks/useAccount';
-import { InvoiceListItem } from '@/types/invoice';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { InvoiceListItem } from '@/types/invoiceView';
+import { PurchaseOrder } from '@/types/purchaseOrderView';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
 import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
+import InvoiceList from '@/components/invoices/list/InvoiceList';
 
 const NewAccountDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { account, isLoading, error } = useAccount(id || '');
+  const { getAccount } = useAccountsNew();
+  const [account, setAccount] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [accountInvoices, setAccountInvoices] = useState<InvoiceListItem[]>([]);
-  const [accountPurchaseOrders, setAccountPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [accountInvoices, setAccountInvoices] = useState<any[]>([]);
+  const [accountPurchaseOrders, setAccountPurchaseOrders] = useState<any[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
   const invoicesHook = useInvoicesNew();
   const purchaseOrdersHook = usePurchaseOrders();
 
   useEffect(() => {
+    const fetchAccount = async () => {
+      setIsLoading(true);
+      try {
+        if (id) {
+          const accountData = await getAccount(id);
+          if (accountData) {
+            setAccount(accountData);
+          } else {
+            setError('Account not found');
+          }
+        } else {
+          setError('Invalid account ID');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAccount();
+  }, [id, getAccount]);
+
+  useEffect(() => {
     if (account) {
-      // Fetch invoices from this customer
+      // Fetch invoices for this customer
       const fetchInvoices = async () => {
         setInvoicesLoading(true);
         try {
-          const invoices = await invoicesHook.getInvoicesByCustomerId(account.id);
-          setAccountInvoices(invoices || []);
+          // Mock until we have the correct hook method
+          const { data: allInvoices } = await invoicesHook.fetchInvoices();
+          const customerInvoices = allInvoices?.filter(
+            inv => inv.customerId === account.id
+          ) || [];
+          setAccountInvoices(customerInvoices);
         } catch (err) {
           console.error("Error fetching invoices:", err);
         } finally {
@@ -43,11 +74,10 @@ const NewAccountDetail: React.FC = () => {
         }
       };
 
-      // Fetch purchase orders from this vendor
+      // Fetch purchase orders for this vendor
       const fetchPurchaseOrders = async () => {
         setPurchaseOrdersLoading(true);
         try {
-          // Simulate getting POs for account since the hook doesn't expose this method
           const { data } = await purchaseOrdersHook.fetchPurchaseOrders();
           const filtered = data?.filter(po => po.accountId === account.id) || [];
           setAccountPurchaseOrders(filtered);
@@ -230,7 +260,7 @@ const NewAccountDetail: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">Total Ordered</div>
-                      <div className="text-2xl font-bold">{formatCurrency(accountPurchaseOrders.reduce((sum, po) => sum + po.total, 0))}</div>
+                      <div className="text-2xl font-bold">{formatCurrency(accountPurchaseOrders.reduce((sum, po) => sum + (po.total || 0), 0))}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -262,11 +292,19 @@ const NewAccountDetail: React.FC = () => {
                 </Button>
               </CardHeader>
               <CardContent>
-                {/* We'll need to create a new InvoiceList component for the materialized view data */}
-                <div className="text-center p-4">
-                  <p>Invoice list will be displayed here.</p>
-                  <p>Total invoices: {accountInvoices.length}</p>
-                </div>
+                <InvoiceList 
+                  invoices={accountInvoices.map(inv => ({
+                    id: inv.id,
+                    invoiceNumber: inv.invoiceNumber,
+                    customerName: account.name,
+                    date: new Date(inv.date),
+                    total: inv.total,
+                    status: inv.status
+                  }))}
+                  isLoading={invoicesLoading}
+                  error={null}
+                  onView={handleViewInvoice}
+                />
               </CardContent>
             </Card>
           </TabsContent>

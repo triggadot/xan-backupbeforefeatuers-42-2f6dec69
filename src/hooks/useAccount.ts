@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Account } from '@/types';
 import { useAccountsNew } from './useAccountsNew';
+import { Account } from '@/types/accountNew';
 
 export function useAccount(id: string) {
   const [account, setAccount] = useState<Account | null>(null);
@@ -9,29 +9,33 @@ export function useAccount(id: string) {
   const [error, setError] = useState<string | null>(null);
   const { getAccount } = useAccountsNew();
 
-  const fetchAccount = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const fetchedAccount = await getAccount(id);
-      if (!fetchedAccount) {
-        throw new Error('Account not found');
-      }
-      setAccount(fetchedAccount);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchAccount = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const accountData = await getAccount(id);
+        if (accountData) {
+          setAccount(accountData);
+        } else {
+          setError('Account not found');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (id) {
       fetchAccount();
+    } else {
+      setError('Invalid account ID');
+      setIsLoading(false);
     }
-  }, [id]);
+  }, [id, getAccount]);
 
-  return { account, isLoading, error, fetchAccount };
+  return { account, isLoading, error };
 }

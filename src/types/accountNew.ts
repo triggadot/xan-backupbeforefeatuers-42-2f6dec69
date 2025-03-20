@@ -1,4 +1,29 @@
 
+// Base interface representing a row from the materialized view mv_account_details
+export interface AccountFromView {
+  account_id: string;
+  account_name: string;
+  glide_row_id: string;
+  accounts_uid?: string;
+  client_type?: string;
+  email_of_who_added?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  notes?: string;
+  photo?: string;
+  created_at: string;
+  updated_at: string;
+  invoice_count: number;
+  total_invoiced: number;
+  total_paid: number;
+  balance: number;
+  last_invoice_date?: string;
+  last_payment_date?: string;
+  is_customer: boolean;
+  is_vendor: boolean;
+}
+
 // Account type that aligns with the materialized view structure
 export interface Account {
   id: string;
@@ -29,29 +54,4 @@ export interface Account {
 // For use with the Account Details page
 export interface AccountDetails extends Account {
   // These are already in the base Account type from materialized view
-}
-
-// Interface for mapping from the materialized view
-export interface AccountFromView {
-  account_id: string;
-  account_name: string;
-  glide_row_id: string;
-  accounts_uid?: string;
-  client_type?: string;
-  email_of_who_added?: string;
-  phone?: string;
-  address?: string;
-  website?: string;
-  notes?: string;
-  photo?: string;
-  created_at: string;
-  updated_at: string;
-  invoice_count: number;
-  total_invoiced: number;
-  total_paid: number;
-  balance: number;
-  last_invoice_date?: string;
-  last_payment_date?: string;
-  is_customer: boolean;
-  is_vendor: boolean;
 }

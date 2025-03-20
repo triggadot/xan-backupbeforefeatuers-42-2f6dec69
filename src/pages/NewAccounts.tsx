@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import NewAccountList from '@/components/accounts/NewAccountList';
 import AccountForm from '@/components/accounts/AccountForm';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { Account } from '@/types';
+import { Account } from '@/types/accountNew';
 
 const NewAccounts: React.FC = () => {
   const { accounts, isLoading, error, fetchAccounts, addAccount } = useAccountsNew();
@@ -26,10 +26,21 @@ const NewAccounts: React.FC = () => {
     account.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddAccount = async (data: Omit<Account, 'id' | 'createdAt' | 'updatedAt' | 'balance'>) => {
+  const handleAddAccount = async (data: any) => {
     setIsSubmitting(true);
     try {
-      await addAccount({ ...data, balance: 0 });
+      await addAccount({
+        name: data.name,
+        type: data.type,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        website: data.website,
+        notes: data.notes,
+        status: 'active',
+        balance: 0,
+        glide_row_id: '', // Will be generated in the hook
+      });
       setIsCreateDialogOpen(false);
     } finally {
       setIsSubmitting(false);

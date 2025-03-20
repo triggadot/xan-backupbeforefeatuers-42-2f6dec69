@@ -56,7 +56,9 @@ export function useAccountsNew() {
       
       if (error) throw error;
       
-      const mappedAccounts = (data || []).map((account) => mapViewAccountToAccount(account as AccountFromView));
+      const mappedAccounts = (data || []).map((account) => 
+        mapViewAccountToAccount(account as unknown as AccountFromView)
+      );
       setAccounts(mappedAccounts);
       
       return mappedAccounts;
@@ -84,7 +86,7 @@ export function useAccountsNew() {
       
       if (error) throw error;
       
-      return mapViewAccountToAccount(data as AccountFromView);
+      return mapViewAccountToAccount(data as unknown as AccountFromView);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
       toast({
@@ -106,7 +108,11 @@ export function useAccountsNew() {
           account_name: accountData.name,
           client_type: accountData.type,
           email_of_who_added: accountData.email,
-          glide_row_id: 'A-' + Date.now(), // Generate a temporary ID for Glide sync
+          phone: accountData.phone,
+          address: accountData.address,
+          website: accountData.website,
+          notes: accountData.notes,
+          glide_row_id: accountData.glide_row_id || ('A-' + Date.now()), // Generate a temporary ID for Glide sync
         })
         .select()
         .single();
@@ -140,10 +146,15 @@ export function useAccountsNew() {
   const updateAccount = useCallback(async (id: string, accountData: Partial<Account>) => {
     try {
       // Convert from Account format to gl_accounts format
-      const updateData: Partial<any> = {};
+      const updateData: Record<string, any> = {};
       if (accountData.name) updateData.account_name = accountData.name;
       if (accountData.type) updateData.client_type = accountData.type;
       if (accountData.email) updateData.email_of_who_added = accountData.email;
+      if (accountData.phone) updateData.phone = accountData.phone;
+      if (accountData.address) updateData.address = accountData.address;
+      if (accountData.website) updateData.website = accountData.website;
+      if (accountData.notes) updateData.notes = accountData.notes;
+      if (accountData.photo) updateData.photo = accountData.photo;
       
       const { error } = await supabase
         .from('gl_accounts')
