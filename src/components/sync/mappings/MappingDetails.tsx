@@ -7,16 +7,16 @@ import { useGlSyncValidation } from '@/hooks/useGlSyncValidation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { ColumnMappingsView } from './ColumnMappingsView';
-import { MappingDetailsCard } from '@/components/sync/MappingDetailsCard';
-import { SyncDetailsPanel } from './SyncDetailsPanel';
-import { SyncErrorsView } from '@/components/sync/mappings/SyncErrorsView';
+import ColumnMappingsView from './ColumnMappingsView';
+import MappingDetailsCard from '@/components/sync/MappingDetailsCard';
+import SyncDetailsPanel from './SyncDetailsPanel';
+import SyncErrorsView from '@/components/sync/mappings/SyncErrorsView';
 import { SyncLogsView } from './SyncLogsView';
 import { ValidationDisplay } from '@/components/sync/ValidationDisplay';
 import { SyncStatusMessage } from '@/components/sync/SyncStatusMessage';
-import { EditTableDialog } from './EditTableDialog';
-import { SyncControlPanel } from '@/components/sync/SyncControlPanel';
-import { MappingDeleteDialog } from './MappingDeleteDialog';
+import EditTableDialog from './EditTableDialog';
+import SyncControlPanel from '@/components/sync/SyncControlPanel';
+import MappingDeleteDialog from './MappingDeleteDialog';
 
 interface MappingDetailsProps {
   mappingId: string;
@@ -29,6 +29,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
+  // Use the correct hooks
   const { 
     mapping, 
     isLoading, 
@@ -40,8 +41,8 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
     updateMapping
   } = useGlSync(mappingId);
   
-  const { errors, isLoading: isErrorsLoading, refreshErrors } = useGlSyncErrors(mappingId);
-  const { validation, isLoading: isValidationLoading, validateMapping } = useGlSyncValidation(mappingId);
+  const { syncErrors: errors, isLoading: isErrorsLoading, refreshErrors } = useGlSyncErrors(mappingId);
+  const { validation, validating: isValidationLoading, validateMappingConfig: validateMapping } = useGlSyncValidation(mappingId);
   
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -49,7 +50,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
   useEffect(() => {
     refreshMapping();
     refreshErrors();
-    validateMapping();
+    validateMapping(mappingId);
   }, [mappingId, refreshMapping, refreshErrors, validateMapping]);
   
   const handleSync = async () => {
@@ -96,7 +97,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
       await updateMapping(updates);
       setIsEditDialogOpen(false);
       refreshMapping();
-      validateMapping();
+      validateMapping(mappingId);
       return true;
     } catch (error) {
       console.error('Error updating mapping:', error);
@@ -138,7 +139,7 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
             onClick={() => {
               refreshMapping();
               refreshErrors();
-              validateMapping();
+              validateMapping(mappingId);
             }}
             disabled={isLoading}
           >
@@ -152,7 +153,6 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
         mapping={mapping} 
         onEdit={handleEdit} 
         onDelete={handleDelete}
-        isEnabled={mapping.enabled}
         onToggleEnabled={() => toggleEnabled(mapping)}
       />
       
@@ -168,8 +168,6 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
       )}
       
       <SyncControlPanel 
-        onSync={handleSync} 
-        disabled={syncRunning || isLoading || !mapping.enabled} 
         isRunning={syncRunning}
         isValid={validation?.isValid || false}
       />
@@ -207,14 +205,13 @@ const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) =>
       </Tabs>
       
       <EditTableDialog 
-        open={isEditDialogOpen}
+        isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        mapping={mapping}
         onSubmit={handleEditSubmit}
       />
       
       <MappingDeleteDialog 
-        open={isDeleteDialogOpen}
+        isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
         mappingName={mapping.glide_table_display_name || mapping.glide_table}

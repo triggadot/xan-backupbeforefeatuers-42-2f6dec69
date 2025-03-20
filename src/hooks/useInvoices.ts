@@ -1,8 +1,7 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { Invoice, InvoiceLine } from '@/types/index';
+import { Invoice, InvoiceLine, Payment } from '@/types/invoice';
 
 export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -32,35 +31,39 @@ export function useInvoices() {
 
       if (fetchError) throw fetchError;
 
-      // Map the database data to our Invoice type
       const formattedInvoices: Invoice[] = data.map(invoice => {
-        const invoiceLines: InvoiceLine[] = invoice.gl_invoice_lines?.map((line: any) => ({
+        const lineItems: InvoiceLine[] = (invoice.gl_invoice_lines || []).map((line: any) => ({
           id: line.id,
           productId: line.rowid_products,
-          description: line.renamed_product_name || line.gl_products?.display_name || '',
+          description: line.renamed_product_name || (line.gl_products?.display_name || ''),
           quantity: line.qty_sold || 0,
           unitPrice: line.selling_price || 0,
           total: line.line_total || 0,
           createdAt: line.created_at,
           updatedAt: line.updated_at,
           productImage: line.gl_products?.product_image1 || '',
-        })) || [];
+          productDetails: line.gl_products || undefined
+        }));
 
         return {
           id: invoice.id,
           number: invoice.id.slice(0, 8), // Just using a part of the ID as the invoice number
           customerId: invoice.rowid_accounts || '',
-          accountName: invoice.gl_accounts?.account_name || '',
+          accountId: invoice.rowid_accounts || '',
+          accountName: (invoice.gl_accounts && invoice.gl_accounts.account_name) || '',
           date: new Date(invoice.invoice_order_date || invoice.created_at),
           dueDate: invoice.due_date ? new Date(invoice.due_date) : null,
-          status: invoice.payment_status || 'draft',
+          status: (invoice.payment_status || 'draft') as Invoice['status'],
           total: invoice.total_amount || 0,
+          subtotal: invoice.total_amount || 0,
+          tax: 0,
           amountPaid: invoice.total_paid || 0,
           balance: invoice.balance || 0,
           notes: invoice.notes || '',
           createdAt: invoice.created_at,
           updatedAt: invoice.updated_at,
-          lineItems: invoiceLines,
+          lineItems: lineItems,
+          payments: []
         };
       });
 
@@ -98,34 +101,38 @@ export function useInvoices() {
       if (fetchError) throw fetchError;
       if (!data) return null;
 
-      // Map the database data to our Invoice type
-      const invoiceLines: InvoiceLine[] = data.gl_invoice_lines?.map((line: any) => ({
+      const lineItems: InvoiceLine[] = (data.gl_invoice_lines || []).map((line: any) => ({
         id: line.id,
         productId: line.rowid_products,
-        description: line.renamed_product_name || line.gl_products?.display_name || '',
+        description: line.renamed_product_name || (line.gl_products?.display_name || ''),
         quantity: line.qty_sold || 0,
         unitPrice: line.selling_price || 0,
         total: line.line_total || 0,
         createdAt: line.created_at,
         updatedAt: line.updated_at,
         productImage: line.gl_products?.product_image1 || '',
-      })) || [];
+        productDetails: line.gl_products || undefined
+      }));
 
       const invoice: Invoice = {
         id: data.id,
         number: data.id.slice(0, 8), // Just using a part of the ID as the invoice number
         customerId: data.rowid_accounts || '',
-        accountName: data.gl_accounts?.account_name || '',
+        accountId: data.rowid_accounts || '',
+        accountName: (data.gl_accounts && data.gl_accounts.account_name) || '',
         date: new Date(data.invoice_order_date || data.created_at),
         dueDate: data.due_date ? new Date(data.due_date) : null,
-        status: data.payment_status || 'draft',
+        status: (data.payment_status || 'draft') as Invoice['status'],
         total: data.total_amount || 0,
+        subtotal: data.total_amount || 0,
+        tax: 0,
         amountPaid: data.total_paid || 0,
         balance: data.balance || 0,
         notes: data.notes || '',
         createdAt: data.created_at,
         updatedAt: data.updated_at,
-        lineItems: invoiceLines,
+        lineItems: lineItems,
+        payments: []
       };
 
       return invoice;
@@ -143,10 +150,8 @@ export function useInvoices() {
       setIsLoading(true);
       setError('');
 
-      // Create a random glide_row_id for new records
       const glideRowId = `gl-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      // Map the Invoice object to match database schema
       const dbInvoice = {
         rowid_accounts: newInvoice.customerId,
         invoice_order_date: newInvoice.date.toISOString(),
@@ -166,7 +171,6 @@ export function useInvoices() {
 
       if (insertError) throw insertError;
 
-      // Add line items
       if (newInvoice.lineItems && newInvoice.lineItems.length > 0) {
         const dbLineItems = newInvoice.lineItems.map(line => ({
           rowid_invoices: invoiceData.id,
@@ -210,10 +214,9 @@ export function useInvoices() {
       setIsLoading(true);
       setError('');
 
-      // Map the Invoice updates to match database schema
       const dbUpdates: any = {};
       
-      if (updates.customerId) dbUpdates.rowid_accounts = updates.customerId;
+      if (updates.accountId) dbUpdates.rowid_accounts = updates.accountId;
       if (updates.date) dbUpdates.invoice_order_date = updates.date.toISOString();
       if (updates.status) dbUpdates.payment_status = updates.status;
       if (updates.total !== undefined) dbUpdates.total_amount = updates.total;
@@ -228,23 +231,19 @@ export function useInvoices() {
 
       if (updateError) throw updateError;
 
-      // Update line items if provided
       if (updates.lineItems) {
-        // First get existing line items
-        const { data: existingLines, error: fetchError } = await supabase
+        const { data: existingLineItems, error: fetchError } = await supabase
           .from('gl_invoice_lines')
           .select('id')
           .eq('rowid_invoices', id);
 
         if (fetchError) throw fetchError;
 
-        const existingIds = existingLines.map(line => line.id);
+        const existingIds = existingLineItems.map(line => line.id);
         const updateIds = updates.lineItems.filter(line => line.id).map(line => line.id);
         
-        // IDs to delete
         const deleteIds = existingIds.filter(id => !updateIds.includes(id));
         
-        // Delete removed line items
         if (deleteIds.length > 0) {
           const { error: deleteError } = await supabase
             .from('gl_invoice_lines')
@@ -254,9 +253,8 @@ export function useInvoices() {
           if (deleteError) throw deleteError;
         }
         
-        // Update existing line items
-        const existingLines = updates.lineItems.filter(line => line.id);
-        for (const line of existingLines) {
+        const updateLines = updates.lineItems.filter(line => line.id);
+        for (const line of updateLines) {
           const { error: lineUpdateError } = await supabase
             .from('gl_invoice_lines')
             .update({
@@ -271,7 +269,6 @@ export function useInvoices() {
           if (lineUpdateError) throw lineUpdateError;
         }
         
-        // Insert new line items
         const newLines = updates.lineItems.filter(line => !line.id);
         if (newLines.length > 0) {
           const dbNewLines = newLines.map(line => ({
@@ -317,7 +314,6 @@ export function useInvoices() {
       setIsLoading(true);
       setError('');
 
-      // First delete line items to maintain referential integrity
       const { error: lineDeleteError } = await supabase
         .from('gl_invoice_lines')
         .delete()
@@ -325,7 +321,6 @@ export function useInvoices() {
 
       if (lineDeleteError) throw lineDeleteError;
 
-      // Then delete the invoice
       const { error: deleteError } = await supabase
         .from('gl_invoices')
         .delete()
@@ -361,6 +356,9 @@ export function useInvoices() {
     getInvoice,
     addInvoice,
     updateInvoice,
-    deleteInvoice
+    deleteInvoice,
+    getInvoicesForAccount: async (accountId: string) => {
+      return invoices.filter(invoice => invoice.accountId === accountId);
+    }
   };
 }

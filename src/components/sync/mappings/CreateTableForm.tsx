@@ -3,159 +3,137 @@ import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
 } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Trash2 } from 'lucide-react';
 
-const formSchema = z.object({
-  tableName: z.string().min(3, {
-    message: 'Table name must be at least 3 characters.',
-  }),
-  includeGlideId: z.boolean().default(true),
-  createIndexes: z.boolean().default(true),
+// Define schema for form validation
+const createTableSchema = z.object({
+  tableName: z.string().min(3, 'Table name must be at least 3 characters'),
+  columns: z.array(
+    z.object({
+      name: z.string().min(1, 'Column name is required'),
+      type: z.string().min(1, 'Column type is required'),
+      required: z.boolean().optional(),
+      isPrimaryKey: z.boolean().optional(),
+      isForeignKey: z.boolean().optional(),
+      referencesTable: z.string().optional(),
+      referencesColumn: z.string().optional(),
+    })
+  ).min(1, 'At least one column is required'),
 });
 
-interface ColumnDefinition {
-  name: string;
-  type: string;
-  isPrimary: boolean;
-  isNullable: boolean;
-}
+// Define form values type
+type CreateTableFormValues = z.infer<typeof createTableSchema>;
 
-const DEFAULT_COLUMNS: ColumnDefinition[] = [
-  { name: 'id', type: 'uuid', isPrimary: true, isNullable: false },
-  { name: 'glide_row_id', type: 'text', isPrimary: false, isNullable: false },
-  { name: 'created_at', type: 'timestamp with time zone', isPrimary: false, isNullable: false },
-  { name: 'updated_at', type: 'timestamp with time zone', isPrimary: false, isNullable: true }
-];
-
-const DATA_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'integer', label: 'Integer' },
-  { value: 'numeric', label: 'Numeric/Decimal' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'timestamp with time zone', label: 'Timestamp' },
-  { value: 'date', label: 'Date' },
-  { value: 'jsonb', label: 'JSON' },
-  { value: 'uuid', label: 'UUID' }
+// Column types available in Supabase
+const columnTypes = [
+  'text',
+  'integer',
+  'bigint',
+  'numeric',
+  'boolean',
+  'timestamp with time zone',
+  'date',
+  'jsonb',
+  'uuid',
 ];
 
 interface CreateTableFormProps {
-  connectionId?: string;
-  glideTable?: string;
-  glideTableDisplayName?: string;
+  onSubmit: (values: CreateTableFormValues) => Promise<boolean>;
   onCancel: () => void;
-  onSuccess: () => void;
-  isCompact?: boolean;
-  onTableCreated?: (tableName: string) => void;
+  isSubmitting: boolean;
 }
 
-export const CreateTableForm: React.FC<CreateTableFormProps> = ({
-  connectionId,
-  glideTable,
-  glideTableDisplayName,
+export const CreateTableForm: React.FC<CreateTableFormProps> = ({ 
+  onSubmit, 
   onCancel,
-  onSuccess,
-  isCompact = false,
-  onTableCreated
+  isSubmitting
 }) => {
-  const [tableName, setTableName] = useState('gl_');
-  const [columns, setColumns] = useState<ColumnDefinition[]>([...DEFAULT_COLUMNS]);
-  const [newColumnName, setNewColumnName] = useState('');
-  const [newColumnType, setNewColumnType] = useState('text');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const [existingTables, setExistingTables] = useState<string[]>([]);
+  
+  // Initialize form with default values
+  const form = useForm<CreateTableFormValues>({
+    resolver: zodResolver(createTableSchema),
     defaultValues: {
-      tableName: `gl_${glideTable?.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'table'}`,
-      includeGlideId: true,
-      createIndexes: true,
+      tableName: '',
+      columns: [
+        {
+          name: 'id',
+          type: 'uuid',
+          required: true,
+          isPrimaryKey: true,
+          isForeignKey: false,
+        },
+        {
+          name: 'created_at',
+          type: 'timestamp with time zone',
+          required: false,
+          isPrimaryKey: false,
+          isForeignKey: false,
+        },
+        {
+          name: 'updated_at',
+          type: 'timestamp with time zone',
+          required: false,
+          isPrimaryKey: false,
+          isForeignKey: false,
+        },
+        {
+          name: 'glide_row_id',
+          type: 'text',
+          required: true,
+          isPrimaryKey: false,
+          isForeignKey: false,
+        }
+      ],
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!connectionId || !glideTable) {
-      setError('Connection or Glide table information is missing');
-      return;
-    }
+  const handleAddColumn = () => {
+    const currentColumns = form.getValues().columns;
+    form.setValue('columns', [
+      ...currentColumns,
+      {
+        name: '',
+        type: 'text',
+        required: false,
+        isPrimaryKey: false,
+        isForeignKey: false,
+      },
+    ]);
+  };
 
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      // Call Supabase function to create table
-      const { data, error: funcError } = await supabase.functions.invoke('create_table_from_glide', {
-        body: {
-          tableName: values.tableName,
-          glideTable: glideTable,
-          connectionId: connectionId,
-          includeGlideId: values.includeGlideId,
-          createIndexes: values.createIndexes,
-          glideTableDisplayName: glideTableDisplayName || glideTable,
-        },
-      });
-
-      if (funcError) {
-        throw new Error(funcError.message);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      toast({
-        title: 'Success',
-        description: `Table ${values.tableName} created successfully`
-      });
-
-      onSuccess();
-      
-      // Reset form
-      setTableName('gl_');
-      setColumns([...DEFAULT_COLUMNS]);
-      setNewColumnName('');
-      setNewColumnType('text');
-
-      if (onTableCreated) {
-        onTableCreated(values.tableName);
-      }
-    } catch (error) {
-      console.error('Error creating table:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred creating the table');
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create table',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleRemoveColumn = (index: number) => {
+    const currentColumns = form.getValues().columns;
+    // Don't allow removing the first 4 default columns
+    if (index < 4) return;
+    
+    const updatedColumns = [...currentColumns];
+    updatedColumns.splice(index, 1);
+    form.setValue('columns', updatedColumns);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {error && (
-          <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-            {error}
-          </div>
-        )}
-
         <FormField
           control={form.control}
           name="tableName"
@@ -163,78 +141,227 @@ export const CreateTableForm: React.FC<CreateTableFormProps> = ({
             <FormItem>
               <FormLabel>Table Name</FormLabel>
               <FormControl>
-                <Input {...field} disabled={isSubmitting} />
+                <Input placeholder="Enter table name" {...field} />
               </FormControl>
-              <FormDescription>
-                This will be the name of your table in Supabase.
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="includeGlideId"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={isSubmitting}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Include Glide ID</FormLabel>
-                  <FormDescription>
-                    Add a glide_row_id column for record tracking
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Columns</h3>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAddColumn}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Column
+            </Button>
+          </div>
 
-          <FormField
-            control={form.control}
-            name="createIndexes"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={isSubmitting}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Create Indexes</FormLabel>
-                  <FormDescription>
-                    Add indexes for better query performance
-                  </FormDescription>
+          <div className="space-y-4">
+            {form.watch('columns').map((column, index) => (
+              <div key={index} className="p-4 border rounded-md">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium">Column #{index + 1}</h4>
+                  {index >= 4 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveColumn(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
-              </FormItem>
-            )}
-          />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name={`columns.${index}.name`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Column Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter column name" 
+                            {...field} 
+                            disabled={index < 4}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name={`columns.${index}.type`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data Type</FormLabel>
+                        <Select
+                          disabled={index < 4}
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select data type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {columnTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <FormField
+                    control={form.control}
+                    name={`columns.${index}.required`}
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={index < 4}
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Required</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name={`columns.${index}.isPrimaryKey`}
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                // If this becomes a primary key, ensure it's required
+                                form.setValue(`columns.${index}.required`, true);
+                              }
+                            }}
+                            disabled={index < 4 || index > 0}
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Primary Key</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name={`columns.${index}.isForeignKey`}
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                            }}
+                            disabled={index < 4}
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Foreign Key</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {form.watch(`columns.${index}.isForeignKey`) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name={`columns.${index}.referencesTable`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>References Table</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select table" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {existingTables.map((table) => (
+                                <SelectItem key={table} value={table}>
+                                  {table}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`columns.${index}.referencesColumn`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>References Column</FormLabel>
+                          <Input 
+                            placeholder="Usually 'id'" 
+                            {...field} 
+                            defaultValue="id"
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Separator />
+
+        <div className="flex justify-end space-x-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Table'
-            )}
+          <Button 
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Table'}
           </Button>
         </div>
       </form>
     </Form>
   );
 };
+
+export default CreateTableForm;

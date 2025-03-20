@@ -1,10 +1,7 @@
 
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
-
-interface SyncProgressIndicatorProps {
-  progress: number;
-}
+import { SyncProgressIndicatorProps } from '@/types/syncInterface';
 
 export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({ progress }) => {
   return (

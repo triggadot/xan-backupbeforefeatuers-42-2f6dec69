@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { SyncStats } from './SyncStats';
-import { RecentSyncsCard } from './RecentSyncsCard';
-import { SyncMetricsCard } from './SyncMetricsCard';
+import RecentSyncsCard from './RecentSyncsCard';
+import SyncMetricsCard from './SyncMetricsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -30,7 +30,7 @@ export const SyncOverview: React.FC = () => {
     return new Date(current.last_sync_completed_at) > new Date(latest.last_sync_completed_at)
       ? current
       : latest;
-  }, allStatuses[0]);
+  }, allStatuses[0] || { last_sync_completed_at: null });
 
   // Calculate total records synced
   const totalRecordsSynced = allStatuses.reduce((sum, status) => 
