@@ -13,9 +13,11 @@ import { InvoiceTable } from '@/components/invoices/list/InvoiceTable';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
 import { DeleteConfirmDialog } from '@/components/invoices/detail/DeleteConfirmDialog';
 import { InvoiceListItem, InvoiceFilters } from '@/types/invoice';
+import { useToast } from '@/hooks/use-toast';
 
 const InvoicesPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [filters, setFilters] = useState<InvoiceFilters>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

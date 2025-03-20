@@ -1,55 +1,70 @@
-
 import React from 'react';
 import { PurchaseOrder } from '@/types/purchaseOrder';
-import PurchaseOrderCard from './PurchaseOrderCard';
-import { Spinner } from '@/components/ui/spinner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
   isLoading: boolean;
-  error: string | null;
+  error: Error | string | null;
   onView: (id: string) => void;
 }
 
-const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({ 
-  purchaseOrders, 
-  isLoading, 
-  error, 
-  onView 
+const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
+  purchaseOrders,
+  isLoading,
+  error,
+  onView
 }) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <Spinner size="lg" />
+      <div className="grid grid-cols-1 gap-4">
+        {[...Array(5)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <CardTitle><Skeleton className="h-4 w-[200px]" /></CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-[250px]" />
+              <Skeleton className="h-4 w-[200px]" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-destructive/10 p-4 rounded-md text-destructive">
-        <p>{error}</p>
+      <div className="text-center py-6 text-destructive">
+        {(error as Error).message || String(error)}
       </div>
     );
   }
 
   if (purchaseOrders.length === 0) {
     return (
-      <div className="bg-muted p-8 rounded-md text-center">
-        <h3 className="font-medium text-lg mb-2">No purchase orders found</h3>
-        <p className="text-muted-foreground">Create your first purchase order to get started.</p>
+      <div className="text-center py-6 text-muted-foreground">
+        No purchase orders found.
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-4">
       {purchaseOrders.map((purchaseOrder) => (
-        <PurchaseOrderCard 
-          key={purchaseOrder.id} 
-          purchaseOrder={purchaseOrder} 
+        <Card
+          key={purchaseOrder.id}
+          className="cursor-pointer hover:bg-secondary transition-colors"
           onClick={() => onView(purchaseOrder.id)}
-        />
+        >
+          <CardHeader>
+            <CardTitle>{purchaseOrder.number}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Vendor: {purchaseOrder.accountName}
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

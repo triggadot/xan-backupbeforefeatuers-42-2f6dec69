@@ -31,7 +31,7 @@ interface PurchaseOrderFormProps {
 const PurchaseOrderForm = ({ onSubmit }: PurchaseOrderFormProps) => {
   const { accounts } = useAccounts();
   const vendorAccounts = accounts.filter(account => 
-    account.type === 'vendor' || account.type === 'both'
+    account.is_vendor || account.client_type === 'vendor' || account.client_type === 'both'
   );
 
   const form = useForm<z.infer<typeof purchaseOrderSchema>>({
@@ -63,8 +63,8 @@ const PurchaseOrderForm = ({ onSubmit }: PurchaseOrderFormProps) => {
                 </FormControl>
                 <SelectContent>
                   {vendorAccounts.map(account => (
-                    <SelectItem key={account.id} value={account.glide_row_id || ''}>
-                      {account.name}
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.account_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import InvoiceDetail from '@/components/invoices/detail/InvoiceDetail';
+import { InvoiceDetail } from '@/components/invoices/detail/InvoiceDetail';
 
 const InvoicePage: React.FC = () => {
   return <InvoiceDetail />;

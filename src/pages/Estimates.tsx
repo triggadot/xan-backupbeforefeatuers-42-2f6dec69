@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { PlusCircle } from 'lucide-react';
@@ -101,7 +100,8 @@ const Estimates = () => {
   // Wrapper functions for type safety
   const handleUpdateEstimate = async (id: string, data: Partial<Estimate>) => {
     try {
-      return await updateEstimate.mutateAsync({ id, data });
+      const result = await updateEstimate.mutateAsync({ id, data });
+      return result as unknown as Estimate;
     } catch (err) {
       return null;
     }
@@ -182,6 +182,12 @@ const Estimates = () => {
             onViewEstimate={handleViewEstimate}
           />
         </>
+      )}
+
+      {error && (
+        <div className="text-center py-6 text-destructive">
+          {(error as Error).message || String(error)}
+        </div>
       )}
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

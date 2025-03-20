@@ -24,19 +24,16 @@ const MappingsManager = () => {
   const { toast } = useToast();
   const { tables: supabaseTables, fetchTables, isLoading: isLoadingTables } = useSupabaseTables();
   
-  // Extract the mapping ID from the URL if present
   const urlParams = new URLSearchParams(window.location.search);
   const mappingIdFromUrl = urlParams.get('id');
 
   const handleViewMapping = (mapping: GlMapping) => {
     setSelectedMapping(mapping);
-    // Update the URL to include the mapping ID
     navigate(`/sync/mappings?id=${mapping.id}`);
   };
 
   const handleBackToList = () => {
     setSelectedMapping(null);
-    // Remove the mapping ID from the URL
     navigate('/sync/mappings');
   };
 
@@ -57,7 +54,6 @@ const MappingsManager = () => {
     });
   };
 
-  // If there's a mapping ID in the URL but no selected mapping yet, we'll render the mapping details
   if (selectedMapping || mappingIdFromUrl) {
     return (
       <MappingDetails 
@@ -95,7 +91,6 @@ const MappingsManager = () => {
         
         <TabsContent value="table-management" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Create Table Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Create Table</CardTitle>
@@ -126,7 +121,6 @@ const MappingsManager = () => {
               </CardContent>
             </Card>
             
-            {/* View Existing Tables Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Existing Tables</CardTitle>
@@ -140,7 +134,6 @@ const MappingsManager = () => {
                     tables={supabaseTables}
                     value=""
                     onTableChange={(tableName) => {
-                      // Navigate to table details or show editing UI
                       console.log(`Selected table: ${tableName}`);
                     }}
                     filterPrefix="gl_"

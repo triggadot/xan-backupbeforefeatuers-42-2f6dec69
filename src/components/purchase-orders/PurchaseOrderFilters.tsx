@@ -1,28 +1,28 @@
-
-import { useState, useEffect } from 'react';
-import { useDebounce } from 'use-debounce';
-import { X, Search, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import React, { useState } from 'react';
+import { Search, CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
+import { format, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAccounts } from '@/hooks/useAccounts';
-import { PurchaseOrderFilters } from '@/types/purchaseOrder';
+import type { PurchaseOrderFilters as FilterType } from '@/types/purchaseOrder';
 
 interface PurchaseOrderFiltersProps {
-  filters: PurchaseOrderFilters;
-  onFiltersChange: (filters: PurchaseOrderFilters) => void;
+  filters: FilterType;
+  onFiltersChange: (filters: FilterType) => void;
 }
 
-const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFiltersProps) => {
+const PurchaseOrderFilters: React.FC<PurchaseOrderFiltersProps> = ({
+  filters,
+  onFiltersChange
+}) => {
   const { accounts } = useAccounts();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [debouncedSearch] = useDebounce(searchValue, 500);
 
-  // Update the search filter when debounced value changes
   useEffect(() => {
     onFiltersChange({
       ...filters,
@@ -30,7 +30,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     });
   }, [debouncedSearch, filters, onFiltersChange]);
 
-  // Handle status filter change
   const handleStatusChange = (value: string) => {
     if (value === 'all') {
       onFiltersChange({
@@ -45,7 +44,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     }
   };
 
-  // Handle vendor filter change
   const handleVendorChange = (value: string) => {
     if (value === 'all') {
       onFiltersChange({
@@ -60,7 +58,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     }
   };
 
-  // Handle date from change
   const handleDateFromChange = (date: Date | undefined) => {
     onFiltersChange({
       ...filters,
@@ -68,7 +65,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     });
   };
 
-  // Handle date to change
   const handleDateToChange = (date: Date | undefined) => {
     onFiltersChange({
       ...filters,
@@ -76,7 +72,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     });
   };
 
-  // Count active filters excluding search
   const activeFilterCount = [
     filters.status,
     filters.accountId,
@@ -84,7 +79,6 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
     filters.dateTo
   ].filter(Boolean).length;
 
-  // Reset all filters
   const resetFilters = () => {
     setSearchValue('');
     onFiltersChange({});
@@ -152,7 +146,7 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-10">
-              <Calendar className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-4 w-4" />
               {filters.dateFrom ? (
                 <>
                   {format(filters.dateFrom, 'LLL dd, y')}
@@ -167,7 +161,7 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
               <div className="grid gap-2">
                 <div className="flex flex-col space-y-1">
                   <span className="text-xs text-muted-foreground">From</span>
-                  <CalendarComponent
+                  <Calendar
                     mode="single"
                     selected={filters.dateFrom}
                     onSelect={handleDateFromChange}
@@ -179,7 +173,7 @@ const PurchaseOrderFilters = ({ filters, onFiltersChange }: PurchaseOrderFilters
               <div className="grid gap-2">
                 <div className="flex flex-col space-y-1">
                   <span className="text-xs text-muted-foreground">To</span>
-                  <CalendarComponent
+                  <Calendar
                     mode="single"
                     selected={filters.dateTo}
                     onSelect={handleDateToChange}

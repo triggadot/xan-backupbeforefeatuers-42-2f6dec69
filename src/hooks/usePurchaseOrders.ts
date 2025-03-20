@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,16 +53,30 @@ export function usePurchaseOrders(filters?: PurchaseOrderFilters) {
       
       if (error) throw error;
       
-      return data.map(po => ({
-        ...po,
-        number: po.purchase_order_uid || `PO-${po.id.slice(0, 8)}`,
-        date: new Date(po.po_date || po.created_at),
-        status: po.payment_status || 'draft',
-        accountName: po.account_name || 'Unknown Vendor',
-        accountId: po.rowid_accounts,
-        lineItems: [],
-        vendorPayments: []
-      })) as PurchaseOrder[];
+      return data.map((po: any) => {
+        return {
+          id: po.id,
+          glide_row_id: po.glide_row_id,
+          number: po.glide_row_id?.substring(4) || 'New',
+          date: po.po_date ? new Date(po.po_date) : new Date(),
+          status: po.payment_status as 'draft' | 'sent' | 'received' | 'partial' | 'complete',
+          accountName: po.vendor_name || po.account_name || 'Unknown Vendor',
+          accountId: po.vendor_id,
+          lineItems: [], // These would be populated separately
+          vendorPayments: [], // These would be populated separately
+          balance: Number(po.balance || 0),
+          total_amount: Number(po.total_amount || 0),
+          total_paid: Number(po.total_paid || 0),
+          created_at: po.created_at,
+          updated_at: po.updated_at,
+          docs_shortlink: po.docs_shortlink,
+          vendor_uid: po.vendor_uid,
+          purchase_order_uid: po.purchase_order_uid,
+          product_count: Number(po.product_count || 0),
+          po_date: po.po_date,
+          payment_status: po.payment_status
+        } as PurchaseOrder;
+      });
     }
   });
 

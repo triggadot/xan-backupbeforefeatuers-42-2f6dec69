@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
 import { GlAccount, ProductDetails } from '@/types';
@@ -368,3 +367,45 @@ export async function convertEstimateToInvoice(estimateId: string) {
   
   return invoice;
 }
+
+// Update EstimateWithDetails to include estimateLines and credits properties
+export interface ExtendedEstimate extends Estimate {
+  estimateLines: EstimateLine[];
+  credits: CustomerCredit[];
+}
+
+// Fix the getEstimateWithDetails function
+export const getEstimateWithDetails = async (estimateId: string): Promise<ExtendedEstimate | null> => {
+  try {
+    // Get the main estimate data
+    const { data: estimate, error: estimateError } = await supabase
+      .from('gl_estimates')
+      .select('*')
+      .eq('id', estimateId)
+      .single();
+    
+    if (estimateError) throw estimateError;
+    
+    // Get account data
+    const account = await fetchEstimateAccount(estimate.rowid_accounts);
+    
+    // Get estimate lines with product details and credits
+    const estimateLines = await fetchEstimateLines(estimate.glide_row_id);
+    const credits = await fetchEstimateCredits(estimate.glide_row_id);
+    
+    // Cast status to the expected enum type
+    const status = estimate.status as 'draft' | 'pending' | 'converted';
+    
+    // Map to domain model
+    const estimateWithDetails: ExtendedEstimate = {
+      ...estimate,
+      estimateLines: estimateLines || [],
+      credits: credits || []
+    };
+
+    return estimateWithDetails;
+  } catch (error) {
+    console.error('Error fetching estimate with details:', error);
+    return null;
+  }
+};

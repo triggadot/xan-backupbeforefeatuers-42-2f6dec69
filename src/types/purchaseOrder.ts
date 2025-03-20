@@ -59,7 +59,7 @@ export interface VendorPayment {
 
 export interface PurchaseOrderFilters {
   search?: string;
-  status?: string;
+  status?: string[];
   accountId?: string;
   dateFrom?: Date;
   dateTo?: Date;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,6 @@ type ProductDetails = {
   updated_at: string;
 };
 
-// Fetch product details for an invoice line
 async function fetchProductDetails(productGlideId: string | null | undefined): Promise<ProductDetails | null> {
   if (!productGlideId) return null;
   
@@ -78,7 +76,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Query for invoice list
   const {
     data: invoices = [],
     isLoading,
@@ -88,7 +85,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     queryKey: ['invoices', filters],
     queryFn: async () => {
       try {
-        // Build query for invoices based on filters
         let query = supabase
           .from('gl_invoices')
           .select(`
@@ -98,7 +94,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           `)
           .order('created_at', { ascending: false });
         
-        // Apply filters
         if (filters.search) {
           query = query.or(`glide_row_id.ilike.%${filters.search}%,rowid_accounts.ilike.%${filters.search}%`);
         }
@@ -108,7 +103,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
         }
         
         if (filters.customerId) {
-          // Get the account's glide_row_id
           const { data: account } = await supabase
             .from('gl_accounts')
             .select('glide_row_id')
@@ -132,7 +126,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
         
         if (error) throw error;
         
-        // Get payment totals for each invoice
         const invoiceIds = data.map(inv => inv.glide_row_id);
         
         const { data: payments, error: paymentsError } = await supabase
@@ -142,7 +135,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (paymentsError) throw paymentsError;
         
-        // Calculate payment totals per invoice
         const paymentTotals: Record<string, number> = {};
         (payments || []).forEach(payment => {
           if (!paymentTotals[payment.rowid_invoices]) {
@@ -151,14 +143,11 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           paymentTotals[payment.rowid_invoices] += Number(payment.payment_amount || 0);
         });
         
-        // Map to InvoiceListItem array
         return data.map((invoice: any) => {
-          // Extract account name from the nested object
           const accountName = invoice.accounts?.account_name || 'Unknown';
           const lineItemCount = invoice.lineItemCount?.[0]?.count || 0;
           const totalPaid = paymentTotals[invoice.glide_row_id] || 0;
           
-          // Add these properties to the invoice object
           invoice.customerName = accountName;
           invoice.lineItemCount = lineItemCount;
           invoice.totalPaid = totalPaid;
@@ -178,10 +167,8 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Get a single invoice with full details
   const getInvoice = useCallback(async (id: string): Promise<InvoiceWithDetails | null> => {
     try {
-      // Fetch the invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('gl_invoices')
         .select('*')
@@ -191,7 +178,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
       if (invoiceError) throw invoiceError;
       if (!invoice) throw new Error('Invoice not found');
       
-      // Fetch the account
       const { data: account, error: accountError } = await supabase
         .from('gl_accounts')
         .select('*')
@@ -200,7 +186,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
       
       if (accountError) throw accountError;
       
-      // Fetch line items
       const { data: lineItems, error: lineItemsError } = await supabase
         .from('gl_invoice_lines')
         .select('*')
@@ -208,7 +193,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
       
       if (lineItemsError) throw lineItemsError;
       
-      // Enhance line items with product details
       const enhancedLineItems = await Promise.all(
         (lineItems || []).map(async (line) => {
           if (line.rowid_products) {
@@ -222,7 +206,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
         })
       );
       
-      // Fetch payments
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_customer_payments')
         .select('*')
@@ -230,7 +213,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
       
       if (paymentsError) throw paymentsError;
       
-      // Map to domain model
       const mappedInvoice = {
         id: invoice.id,
         invoiceNumber: invoice.glide_row_id || 'Unknown',
@@ -264,11 +246,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   }, [toast]);
 
-  // Create a new invoice
   const createInvoice = useMutation({
     mutationFn: async (data: CreateInvoiceInput): Promise<string> => {
       try {
-        // Get customer's glide_row_id
         const { data: account, error: accountError } = await supabase
           .from('gl_accounts')
           .select('glide_row_id')
@@ -277,45 +257,43 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (accountError) throw accountError;
         
-        // Insert invoice
         const { data: invoice, error: invoiceError } = await supabase
           .from('gl_invoices')
           .insert({
             rowid_accounts: account.glide_row_id,
             invoice_order_date: data.invoiceDate.toISOString(),
-            due_date: data.dueDate?.toISOString(),
             processed: data.status === 'sent',
-            notes: data.notes || ''
+            notes: data.notes || '',
+            total_amount: 0,
+            total_paid: 0,
+            balance: 0,
+            payment_status: data.status || 'draft'
           })
           .select()
           .single();
           
         if (invoiceError) throw invoiceError;
         
-        // Create line items
-        if (data.lineItems.length > 0) {
-          const lineItemsToInsert = data.lineItems.map(item => {
-            // Calculate line total
-            const lineTotal = item.quantity * item.unitPrice;
-            
-            return {
-              rowid_invoices: invoice.glide_row_id,
-              rowid_products: item.productId,
-              renamed_product_name: item.description,
-              qty_sold: item.quantity,
-              selling_price: item.unitPrice,
-              line_total: lineTotal,
-              date_of_sale: new Date().toISOString()
-            };
-          });
+        const lineItemsToInsert = data.lineItems.map(item => {
+          const lineTotal = item.quantity * item.unitPrice;
           
-          // Insert all line items
-          const { error: lineItemError } = await supabase
-            .from('gl_invoice_lines')
-            .insert(lineItemsToInsert);
-            
-          if (lineItemError) throw lineItemError;
-        }
+          return {
+            glide_row_id: crypto.randomUUID(),
+            rowid_invoices: invoice.glide_row_id,
+            rowid_products: item.productId,
+            renamed_product_name: item.description,
+            qty_sold: item.quantity,
+            selling_price: item.unitPrice,
+            line_total: lineTotal,
+            date_of_sale: new Date().toISOString()
+          };
+        });
+        
+        const { error: lineItemError } = await supabase
+          .from('gl_invoice_lines')
+          .insert(lineItemsToInsert);
+          
+        if (lineItemError) throw lineItemError;
         
         return invoice.id;
       } catch (err) {
@@ -338,11 +316,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Update an existing invoice
   const updateInvoice = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: UpdateInvoiceInput }): Promise<boolean> => {
       try {
-        // Fetch the invoice to get its glide_row_id
         const { data: invoice, error: fetchError } = await supabase
           .from('gl_invoices')
           .select('glide_row_id')
@@ -351,11 +327,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (fetchError) throw fetchError;
         
-        // Prepare update data
         const updateData: any = {};
         
         if (data.customerId) {
-          // Get customer's glide_row_id
           const { data: account, error: accountError } = await supabase
             .from('gl_accounts')
             .select('glide_row_id')
@@ -383,7 +357,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           updateData.notes = data.notes;
         }
         
-        // Update the invoice
         const { error: updateError } = await supabase
           .from('gl_invoices')
           .update(updateData)
@@ -413,11 +386,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Delete an invoice
   const deleteInvoice = useMutation({
     mutationFn: async (id: string): Promise<boolean> => {
       try {
-        // Fetch the invoice to get its glide_row_id
         const { data: invoice, error: fetchError } = await supabase
           .from('gl_invoices')
           .select('glide_row_id')
@@ -426,7 +397,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (fetchError) throw fetchError;
         
-        // Delete related payments
         const { error: paymentsError } = await supabase
           .from('gl_customer_payments')
           .delete()
@@ -434,7 +404,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (paymentsError) throw paymentsError;
         
-        // Delete related line items
         const { error: lineItemsError } = await supabase
           .from('gl_invoice_lines')
           .delete()
@@ -442,7 +411,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (lineItemsError) throw lineItemsError;
         
-        // Delete the invoice
         const { error: deleteError } = await supabase
           .from('gl_invoices')
           .delete()
@@ -471,11 +439,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Add a line item to an invoice
   const addLineItem = useMutation({
     mutationFn: async (data: AddLineItemInput): Promise<boolean> => {
       try {
-        // Fetch the invoice to get its glide_row_id
         const { data: invoice, error: fetchError } = await supabase
           .from('gl_invoices')
           .select('glide_row_id')
@@ -484,13 +450,12 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (fetchError) throw fetchError;
         
-        // Calculate line total
         const lineTotal = data.quantity * data.unitPrice;
         
-        // Insert line item
         const { error: insertError } = await supabase
           .from('gl_invoice_lines')
           .insert({
+            glide_row_id: crypto.randomUUID(),
             rowid_invoices: invoice.glide_row_id,
             rowid_products: data.productId,
             renamed_product_name: data.description,
@@ -523,7 +488,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Delete a line item
   const deleteLineItem = useMutation({
     mutationFn: async ({ id, invoiceId }: { id: string, invoiceId: string }): Promise<boolean> => {
       try {
@@ -551,11 +515,9 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Add a payment to an invoice
   const addPayment = useMutation({
     mutationFn: async (data: AddPaymentInput): Promise<boolean> => {
       try {
-        // Fetch the invoice to get its glide_row_id
         const { data: invoice, error: fetchError } = await supabase
           .from('gl_invoices')
           .select('glide_row_id')
@@ -564,7 +526,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (fetchError) throw fetchError;
         
-        // Fetch the account to get its glide_row_id
         const { data: account, error: accountError } = await supabase
           .from('gl_accounts')
           .select('glide_row_id')
@@ -573,10 +534,10 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
           
         if (accountError) throw accountError;
         
-        // Insert payment
         const { error: insertError } = await supabase
           .from('gl_customer_payments')
           .insert({
+            glide_row_id: crypto.randomUUID(),
             rowid_invoices: invoice.glide_row_id,
             rowid_accounts: account.glide_row_id,
             payment_amount: data.amount,
@@ -609,7 +570,6 @@ export function useInvoices(initialFilters?: InvoiceFilters) {
     }
   });
 
-  // Delete a payment
   const deletePayment = useMutation({
     mutationFn: async ({ id, invoiceId }: { id: string, invoiceId: string }): Promise<boolean> => {
       try {

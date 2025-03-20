@@ -17,6 +17,8 @@ export interface Estimate {
   updated_at?: string;
   add_note?: boolean;
   account?: any;
+  estimateLines?: EstimateLine[];
+  credits?: CustomerCredit[];
 }
 
 export interface EstimateLine {

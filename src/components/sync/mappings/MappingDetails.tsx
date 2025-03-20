@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useProductMapping } from '@/hooks/useProductMapping';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface MappingDetailsProps {
   mappingId: string;
+  onBack: () => void;
 }
 
-const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId }) => {
+const MappingDetails: React.FC<MappingDetailsProps> = ({ mappingId, onBack }) => {
   const { mapping, connection, isLoading, refetch } = useProductMapping(mappingId);
   const { syncData } = useGlSync();
   const { toast } = useToast();

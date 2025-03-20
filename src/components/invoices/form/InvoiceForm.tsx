@@ -60,6 +60,23 @@ const invoiceFormSchema = z.object({
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
+type FormValues = {
+  customerId: string;
+  invoiceDate: Date;
+  dueDate?: Date;
+  status: "draft" | "sent" | "overdue" | "paid" | "partial";
+  notes?: string;
+  lineItems: Array<{
+    id?: string;
+    productId: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+};
+
+type Control = any;
+
 interface InvoiceFormProps {
   initialData?: InvoiceWithDetails;
   isEdit?: boolean;
