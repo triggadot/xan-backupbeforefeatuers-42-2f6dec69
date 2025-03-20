@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { ProductSyncResult, GlideTable } from '@/types/glsync';
+import { ProductSyncResult } from '@/types/glsync';
 import { glSyncApi } from '@/services/glsync';
 
 export function useGlSync() {
@@ -8,7 +9,7 @@ export function useGlSync() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
+  const [glideTables, setGlideTables] = useState<any[]>([]);
   const { toast } = useToast();
 
   /**
@@ -68,8 +69,8 @@ export function useGlSync() {
       }
 
       toast({
-        title: 'Sync Initiated',
-        description: 'Sync operation has started and is processing data.',
+        title: 'Sync Completed',
+        description: `Processed ${result.recordsProcessed} records with ${result.failedRecords} errors.`,
       });
 
       return {
@@ -121,8 +122,8 @@ export function useGlSync() {
       }
 
       toast({
-        title: 'Retry Initiated',
-        description: 'Retry operation has been started.',
+        title: 'Retry Successful',
+        description: `Successfully processed ${syncResult.recordsProcessed} records.`,
       });
 
       return true;

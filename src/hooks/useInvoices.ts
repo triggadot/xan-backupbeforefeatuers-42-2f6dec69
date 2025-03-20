@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -254,8 +255,8 @@ export function useInvoices() {
         }
         
         // Update existing line items
-        const existingLineItems = updates.lineItems.filter(line => line.id);
-        for (const line of existingLineItems) {
+        const existingLines = updates.lineItems.filter(line => line.id);
+        for (const line of existingLines) {
           const { error: lineUpdateError } = await supabase
             .from('gl_invoice_lines')
             .update({

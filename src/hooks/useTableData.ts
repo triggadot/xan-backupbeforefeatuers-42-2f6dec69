@@ -30,13 +30,8 @@ type TableName =
   | 'gl_tables_view'; // view
 
 /**
- * Generic hook for performing CRUD operations on Supabase tables.
- * This hook provides a consistent interface for working with any
- * table in the database, with proper error handling and toast notifications.
- * 
- * @template T The data type for records in the table
- * @param {TableName} tableName - The name of the Supabase table to operate on
- * @returns {Object} Object containing data and CRUD functions
+ * Hook for interacting with Supabase tables with CRUD operations
+ * @param tableName The Supabase table to operate on
  */
 export function useTableData<T extends Record<string, unknown>>(tableName: TableName) {
   const [data, setData] = useState<T[]>([]);
@@ -44,9 +39,6 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  /**
-   * Fetch all records from the specified table
-   */
   const fetchData = useCallback(async () => {
     if (!tableName) return;
     
@@ -55,8 +47,9 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     
     try {
       // Need to use type assertion since Supabase types are strictly typed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
-        .from(tableName as string)
+        .from(tableName as any)
         .select('*');
       
       if (error) throw error;
@@ -78,16 +71,15 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     }
   }, [tableName, toast]);
 
-  /**
-   * Create a new record in the specified table
-   */
   const createRecord = useCallback(async (record: Omit<T, 'id'>) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Need to use type assertion since Supabase types are strictly typed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
-        .from(tableName as string)
+        .from(tableName as any)
         .insert(record)
         .select();
       
@@ -114,16 +106,15 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     }
   }, [tableName, toast]);
 
-  /**
-   * Update an existing record in the specified table
-   */
   const updateRecord = useCallback(async (id: string, record: Partial<T>) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Need to use type assertion since Supabase types are strictly typed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase
-        .from(tableName as string)
+        .from(tableName as any)
         .update(record)
         .eq('id', id)
         .select();
@@ -158,16 +149,15 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     }
   }, [tableName, toast]);
 
-  /**
-   * Delete a record from the specified table
-   */
   const deleteRecord = useCallback(async (id: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Need to use type assertion since Supabase types are strictly typed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await supabase
-        .from(tableName as string)
+        .from(tableName as any)
         .delete()
         .eq('id', id);
       

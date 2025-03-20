@@ -1,23 +1,24 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlRecentLog, GlSyncStats, GlSyncStatus, GlColumnMapping } from '@/types/glsync';
+import { GlSyncStatus } from '@/types/glsync';
 
-export function useGlSyncStatus(mappingId?: string) {
+export function useGlSyncStatus() {
   const [status, setStatus] = useState<GlSyncStatus | null>(null);
   const [allStatuses, setAllStatuses] = useState<GlSyncStatus[]>([]);
-  const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
-  const [syncStats, setSyncStats] = useState<GlSyncStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
 
   const fetchSyncStatus = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    setHasError(false);
-    
     try {
+<<<<<<< Updated upstream
+      setIsLoading(true);
+      setError('');
+
+      // Fetch the most recent active mapping status
+      const { data: statusData, error: statusError } = await supabase
+        .from('gl_mapping_status')
+=======
       // If mappingId is provided, fetch specific status
       if (mappingId) {
         const { data, error } = await supabase
@@ -28,7 +29,7 @@ export function useGlSyncStatus(mappingId?: string) {
         
         if (error) throw error;
         
-        // Convert database record to GlSyncStatus with proper type casting
+        // Convert database record to GlSyncStatus
         const syncStatus: GlSyncStatus = {
           id: data.mapping_id,
           status: data.current_status || 'pending',
@@ -54,7 +55,6 @@ export function useGlSyncStatus(mappingId?: string) {
       } 
       // Otherwise fetch all statuses
       else {
-        // Fetch all mappings for the dashboard
         const { data, error } = await supabase
           .from('gl_mapping_status')
           .select('*')
@@ -84,102 +84,89 @@ export function useGlSyncStatus(mappingId?: string) {
           updated_at: item.updated_at
         }));
         
-        setAllStatuses(statuses);
+        setAllSyncStatuses(statuses);
       }
       
       // Fetch recent logs
       const { data: logsData, error: logsError } = await supabase
         .from('gl_recent_logs')
+>>>>>>> Stashed changes
         .select('*')
-        .order('started_at', { ascending: false })
-        .limit(10);
-      
-      if (logsError) throw logsError;
-      
-      setRecentLogs(logsData || []);
-      
-      // Fetch sync stats
-      const today = new Date().toISOString().split('T')[0];
-      const { data: statsData, error: statsError } = await supabase
-        .from('gl_sync_logs')
-        .select(`
-          status,
-          records_processed
-        `);
-      
-      if (statsError) throw statsError;
-      
-      if (statsData) {
-        const totalSyncs = statsData.length;
-        const successfulSyncs = statsData.filter(log => log.status === 'completed').length;
-        const failedSyncs = statsData.filter(log => log.status === 'error').length;
-        const totalRecordsProcessed = statsData.reduce((sum, log) => sum + (log.records_processed || 0), 0);
-        
-        setSyncStats({
-          syncs: totalSyncs,
-          successful_syncs: successfulSyncs,
-          failed_syncs: failedSyncs,
-          total_records_processed: totalRecordsProcessed,
-          sync_date: today
-        });
+        .order('last_sync_started_at', { ascending: false })
+        .limit(1);
+
+      if (statusError) throw statusError;
+
+      // Fetch all mappings for the dashboard
+      const { data: allStatusesData, error: allStatusesError } = await supabase
+        .from('gl_mapping_status')
+        .select('*')
+        .order('enabled', { ascending: false });
+
+      if (allStatusesError) throw allStatusesError;
+
+      // Convert data to GlSyncStatus format
+      if (statusData && statusData.length > 0) {
+        // Cast the database result to GlSyncStatus
+        const typedStatus = statusData[0] as unknown as GlSyncStatus;
+        setStatus(typedStatus);
+      } else {
+        setStatus(null);
+      }
+
+      if (allStatusesData) {
+        // Cast each item in the array to GlSyncStatus
+        const typedStatuses = allStatusesData.map(status => status as unknown as GlSyncStatus);
+        setAllStatuses(typedStatuses);
+      } else {
+        setAllStatuses([]);
       }
     } catch (err) {
       console.error('Error fetching sync status:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setHasError(true);
-      setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'An error occurred fetching sync status');
     } finally {
       setIsLoading(false);
     }
-  }, [mappingId]);
-  
+  }, []);
+
   const setupRealtimeSubscription = useCallback(() => {
-    // Channel name for subscription
-    const channelName = mappingId 
-      ? `gl_mapping_status_${mappingId}`
-      : 'gl_mapping_status_changes';
-    
     const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
+      .channel('gl_mapping_status_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'gl_mapping_status',
-          ...(mappingId ? { filter: `mapping_id=eq.${mappingId}` } : {})
-        }, 
+        },
         () => {
           fetchSyncStatus();
         }
       )
       .subscribe();
-    
-    // Set up realtime subscription for logs
-    const logsChannel = supabase
-      .channel('gl_logs_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'gl_sync_logs' },
-        () => {
-          fetchSyncStatus();
-        }
-      )
-      .subscribe();
-    
+
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(logsChannel);
     };
-  }, [mappingId, fetchSyncStatus]);
+  }, [fetchSyncStatus]);
 
+<<<<<<< Updated upstream
   useEffect(() => {
     fetchSyncStatus();
     const cleanup = setupRealtimeSubscription();
     return cleanup;
   }, [fetchSyncStatus, setupRealtimeSubscription]);
 
+  const refetch = useCallback(async () => {
+    await fetchSyncStatus();
+  }, [fetchSyncStatus]);
+
+  return { status, allStatuses, isLoading, error, refetch };
+}
+=======
   return {
     status,
-    allStatuses,
+    allStatuses: allSyncStatuses,
     recentLogs,
     syncStats,
     isLoading,
@@ -187,6 +174,7 @@ export function useGlSyncStatus(mappingId?: string) {
     hasError,
     errorMessage,
     refetch: fetchSyncStatus,
-    refreshData: fetchSyncStatus
+    refreshData
   };
-}
+};
+>>>>>>> Stashed changes
