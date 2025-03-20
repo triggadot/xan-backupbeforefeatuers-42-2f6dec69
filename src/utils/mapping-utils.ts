@@ -160,8 +160,8 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export function mapAccountType(type: string): "Customer" | "Vendor" | "Customer & Vendor" {
-  switch (type.toLowerCase()) {
+export const mapAccountType = (accountType: string): "Customer" | "Vendor" | "Customer & Vendor" => {
+  switch (accountType.toLowerCase()) {
     case 'customer':
       return 'Customer';
     case 'vendor':
@@ -169,9 +169,9 @@ export function mapAccountType(type: string): "Customer" | "Vendor" | "Customer 
     case 'both':
       return 'Customer & Vendor';
     default:
-      return 'Customer';
+      return 'Customer'; // Default fallback
   }
-}
+};
 
 export function getLegacyAccountType(type: string): 'Customer' | 'Vendor' | 'Customer & Vendor' {
   const normalizedType = type.toLowerCase();

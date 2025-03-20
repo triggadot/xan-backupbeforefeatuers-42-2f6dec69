@@ -13,10 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/utils/format-utils';
-import { AccountNew } from '@/types/accountNew';
+import { Account } from '@/types/accountNew';
 
 interface AccountListProps {
-  accounts: AccountNew[];
+  accounts: Account[];
   isLoading: boolean;
   error: string | null;
 }

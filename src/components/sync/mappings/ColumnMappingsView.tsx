@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,13 +7,14 @@ import { Pencil, Save, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlColumnMapping, GlMapping } from '@/types/glsync';
+import { Card, CardContent } from '@/components/ui/card';
 
 export interface ColumnMappingsViewProps {
   mapping: GlMapping;
-  glideTable?: string;
-  supabaseTable?: string;
   columnMappings: Record<string, GlColumnMapping>;
   onMappingUpdate: () => Promise<void>;
+  glideTable?: string;
+  supabaseTable?: string;
 }
 
 export const ColumnMappingsView: React.FC<ColumnMappingsViewProps> = ({

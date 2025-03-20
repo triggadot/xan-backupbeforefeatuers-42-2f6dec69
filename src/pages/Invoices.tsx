@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
-import { InvoiceList } from '@/components/invoices/list/InvoiceList';
+import InvoiceList from '@/components/invoices/list/InvoiceList';
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from 'lucide-react';
 
@@ -22,6 +22,10 @@ const Invoices = () => {
     loadInvoices();
   }, [fetchInvoices]);
 
+  const handleViewInvoice = (id: string) => {
+    navigate(`/invoices/${id}`);
+  };
+
   return (
     <div className="container py-6 max-w-7xl">
       <div className="flex justify-between items-center mb-6">
@@ -36,6 +40,7 @@ const Invoices = () => {
         invoices={data}
         isLoading={isLoading}
         error={error}
+        onView={handleViewInvoice}
       />
     </div>
   );

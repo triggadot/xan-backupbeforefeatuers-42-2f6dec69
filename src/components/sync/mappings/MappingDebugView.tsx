@@ -36,7 +36,11 @@ export function MappingDebugView({ mapping, onTestSync }: MappingDebugViewProps)
               This view shows how columns are mapped between Glide and Supabase.
             </div>
             
-            <ColumnMappingsView mapping={mapping} />
+            <ColumnMappingsView 
+              mapping={mapping} 
+              columnMappings={mapping.column_mappings}
+              onMappingUpdate={async () => onTestSync && await onTestSync()}
+            />
             
             {onTestSync && (
               <Button 

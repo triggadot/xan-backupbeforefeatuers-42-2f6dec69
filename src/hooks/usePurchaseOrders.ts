@@ -1,278 +1,239 @@
-import { useState, useCallback } from 'react';
+
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
 
 export function usePurchaseOrders() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
-  const fetchPurchaseOrders = useCallback(async (filters: PurchaseOrderFilters = {}) => {
+  // Fetch all purchase orders with optional filtering
+  const fetchPurchaseOrders = async (filters?: PurchaseOrderFilters) => {
     setIsLoading(true);
-    setError(null);
+    setError('');
+    
     try {
-      // Start with the base query from the materialized view
+      // Using the materialized view for purchase orders
       let query = supabase
         .from('mv_purchase_order_vendor_details')
-        .select('*')
-        .order('po_date', { ascending: false });
-
-      // Apply filters
-      if (filters.search) {
-        query = query.or(`purchase_order_uid.ilike.%${filters.search}%,vendor_name.ilike.%${filters.search}%`);
+        .select('*');
+      
+      // Apply filters if provided
+      if (filters?.search) {
+        // Modify this to search in appropriate columns (purchase_order_uid, vendor_name, etc.)
+        query = query.or(`vendor_name.ilike.%${filters.search}%,purchase_order_uid.ilike.%${filters.search}%`);
       }
-
-      if (filters.status && filters.status.length > 0) {
-        query = query.in('status', filters.status);
+      
+      if (filters?.status && filters.status.length > 0) {
+        query = query.in('payment_status', filters.status);
       }
-
-      if (filters.accountId) {
+      
+      if (filters?.accountId) {
         query = query.eq('vendor_id', filters.accountId);
       }
-
-      if (filters.dateFrom) {
-        query = query.gte('po_date', filters.dateFrom.toISOString().split('T')[0]);
+      
+      if (filters?.dateFrom) {
+        query = query.gte('po_date', filters.dateFrom.toISOString());
       }
-
-      if (filters.dateTo) {
-        query = query.lte('po_date', filters.dateTo.toISOString().split('T')[0]);
+      
+      if (filters?.dateTo) {
+        query = query.lte('po_date', filters.dateTo.toISOString());
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Map the data to our PurchaseOrder type
-      const purchaseOrders = (data || []).map((po): PurchaseOrder => ({
-        id: po.po_id,
-        glide_row_id: po.po_glide_id,
+      
+      const { data, error: supabaseError } = await query.order('created_at', { ascending: false });
+      
+      if (supabaseError) throw supabaseError;
+      
+      // Map the database results to the PurchaseOrder type
+      const mappedPurchaseOrders: PurchaseOrder[] = (data || []).map(po => ({
+        id: po.po_id || po.id,
+        glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
-        number: po.po_number || po.purchase_order_uid || `PO-${po.po_id.slice(0, 8)}`,
+        number: po.purchase_order_uid || `PO-${po.id.substring(0, 8)}`,
+        rowid_accounts: po.vendor_id,
         accountId: po.vendor_id,
         accountName: po.vendor_name || 'Unknown Vendor',
-        date: new Date(po.po_date),
-        status: po.status as PurchaseOrder['status'],
-        payment_status: po.payment_status,
-        total_amount: po.total_amount || 0,
-        total_paid: po.total_paid || 0,
-        balance: po.balance || 0,
-        product_count: po.product_count || 0,
+        po_date: po.po_date,
+        date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+        payment_status: po.payment_status || 'draft',
+        status: mapPaymentStatusToStatus(po.payment_status),
+        total_amount: Number(po.total_amount || 0),
+        total_paid: Number(po.total_paid || 0),
+        balance: Number(po.balance || 0),
+        product_count: Number(po.product_count || 0),
         created_at: po.created_at,
         updated_at: po.updated_at,
+        docs_shortlink: po.docs_shortlink,
+        vendor_uid: po.vendor_uid,
         lineItems: [],
         vendorPayments: []
       }));
-
-      return { data: purchaseOrders, error: null };
+      
+      return { data: mappedPurchaseOrders, error: null };
     } catch (err) {
       console.error('Error fetching purchase orders:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
       return { data: [], error: err };
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const getPurchaseOrder = useCallback(async (id: string) => {
+  // Get a single purchase order with all details
+  const getPurchaseOrder = async (id: string) => {
     setIsLoading(true);
-    setError(null);
+    setError('');
+    
     try {
-      // Get the PO from the materialized view
+      // Get the base purchase order data
       const { data: po, error: poError } = await supabase
         .from('mv_purchase_order_vendor_details')
         .select('*')
-        .eq('po_id', id)
+        .eq('id', id)
         .single();
-
+      
       if (poError) throw poError;
-
-      if (!po) throw new Error('Purchase order not found');
-
-      // Fetch the vendor details
-      const { data: vendorData, error: vendorError } = await supabase
-        .from('gl_accounts')
-        .select('account_name, accounts_uid')
-        .eq('id', po.vendor_id)
-        .single();
-
-      // Get products for this PO
+      
+      // Get products related to this purchase order
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
-        .eq('rowid_purchase_orders', po.po_glide_id);
-
+        .eq('rowid_purchase_orders', po.glide_row_id);
+      
       if (productsError) throw productsError;
-
-      // Get vendor payments for this PO
+      
+      // Get payments related to this purchase order
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
-        .eq('rowid_purchase_orders', po.po_glide_id);
-
+        .eq('rowid_purchase_orders', po.glide_row_id);
+      
       if (paymentsError) throw paymentsError;
-
-      // Format the purchase order data
+      
+      // Map the purchase order with its details
       const purchaseOrder: PurchaseOrder = {
-        id: po.po_id,
-        glide_row_id: po.po_glide_id,
+        id: po.id,
+        glide_row_id: po.glide_row_id,
         purchase_order_uid: po.purchase_order_uid,
-        number: po.po_number || po.purchase_order_uid || `PO-${po.po_id.slice(0, 8)}`,
+        number: po.purchase_order_uid || `PO-${po.id.substring(0, 8)}`,
+        rowid_accounts: po.vendor_id,
         accountId: po.vendor_id,
-        accountName: po.vendor_name || (vendorData ? vendorData.account_name : 'Unknown Vendor'),
-        date: new Date(po.po_date),
-        status: po.status as PurchaseOrder['status'],
-        payment_status: po.payment_status,
-        total_amount: po.total_amount || 0,
-        total_paid: po.total_paid || 0,
-        balance: po.balance || 0,
-        product_count: po.product_count || 0,
+        accountName: po.vendor_name || 'Unknown Vendor',
+        po_date: po.po_date,
+        date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+        payment_status: po.payment_status || 'draft',
+        status: mapPaymentStatusToStatus(po.payment_status),
+        total_amount: Number(po.total_amount || 0),
+        total_paid: Number(po.total_paid || 0),
+        balance: Number(po.balance || 0),
+        product_count: Number(po.product_count || 0),
         created_at: po.created_at,
         updated_at: po.updated_at,
-        // Format line items from products
+        docs_shortlink: po.docs_shortlink,
+        vendor_uid: po.vendor_uid,
         lineItems: (products || []).map(product => ({
           id: product.id,
           rowid_products: product.glide_row_id,
           product_name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-          quantity: product.total_qty_purchased || 0,
-          unit_price: product.cost || 0,
-          total: (product.total_qty_purchased || 0) * (product.cost || 0),
+          quantity: Number(product.total_qty_purchased || 0),
+          unit_price: Number(product.cost || 0),
+          total: Number(product.total_qty_purchased || 0) * Number(product.cost || 0),
           productDetails: {
             id: product.id,
             glide_row_id: product.glide_row_id,
             name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+            display_name: product.display_name,
+            vendor_product_name: product.vendor_product_name,
+            new_product_name: product.new_product_name,
             cost: product.cost,
             total_qty_purchased: product.total_qty_purchased,
             category: product.category,
             product_image1: product.product_image1,
-            purchase_notes: product.purchase_notes
+            purchase_notes: product.purchase_notes,
+            created_at: product.created_at,
+            updated_at: product.updated_at
           }
         })),
-        // Format vendor payments
         vendorPayments: (payments || []).map(payment => ({
           id: payment.id,
           date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
-          amount: payment.payment_amount || 0,
-          method: payment.type_of_payment,
-          notes: payment.payment_note
+          amount: Number(payment.payment_amount || 0),
+          method: '', // Vendor payments might not track payment method
+          notes: payment.vendor_purchase_note || ''
         }))
       };
-
+      
       return purchaseOrder;
     } catch (err) {
       console.error('Error fetching purchase order details:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const createPurchaseOrder = {
-    mutateAsync: async (data: any) => {
-      setIsLoading(true);
-      try {
-        const { data: newPO, error } = await supabase
-          .from('gl_purchase_orders')
-          .insert({
-            purchase_order_uid: data.number,
-            po_number: data.number,
-            rowid_accounts: data.vendorId,
-            po_date: data.date instanceof Date ? data.date.toISOString() : data.date,
-            status: data.status,
-            notes: data.notes
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Purchase order created successfully",
-        });
-
-        return newPO.id;
-      } catch (err) {
-        console.error('Error creating purchase order:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to create purchase order',
-          variant: "destructive",
-        });
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
+  // Create a new purchase order
+  const createPurchaseOrder = async (data: Partial<PurchaseOrder>) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // Generate a unique glide_row_id for the new purchase order
+      const glideRowId = `PO-${Date.now()}`;
+      
+      // Create the purchase order
+      const { data: newPO, error: poError } = await supabase
+        .from('gl_purchase_orders')
+        .insert({
+          glide_row_id: glideRowId,
+          rowid_accounts: data.accountId,
+          purchase_order_uid: data.purchase_order_uid || `PO#${Date.now()}`,
+          po_date: data.date?.toISOString() || new Date().toISOString(),
+          docs_shortlink: data.docs_shortlink
+        })
+        .select()
+        .single();
+      
+      if (poError) throw poError;
+      
+      toast({
+        title: "Purchase Order Created",
+        description: "The purchase order has been created successfully.",
+      });
+      
+      return newPO;
+    } catch (err) {
+      console.error('Error creating purchase order:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to create purchase order',
+        variant: "destructive",
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updatePurchaseOrder = {
-    mutateAsync: async ({ id, data }: { id: string, data: any }) => {
-      setIsLoading(true);
-      try {
-        const { error } = await supabase
-          .from('gl_purchase_orders')
-          .update({
-            purchase_order_uid: data.number,
-            po_number: data.number,
-            rowid_accounts: data.vendorId,
-            po_date: data.date instanceof Date ? data.date.toISOString() : data.date,
-            status: data.status,
-            notes: data.notes
-          })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Purchase order updated successfully",
-        });
-
-        return true;
-      } catch (err) {
-        console.error('Error updating purchase order:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to update purchase order',
-          variant: "destructive",
-        });
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const deletePurchaseOrder = {
-    mutateAsync: async (id: string) => {
-      setIsLoading(true);
-      try {
-        const { error } = await supabase
-          .from('gl_purchase_orders')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Purchase order deleted successfully",
-        });
-
-        return true;
-      } catch (err) {
-        console.error('Error deleting purchase order:', err);
-        toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : 'Failed to delete purchase order',
-          variant: "destructive",
-        });
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
+  // Helper function to map payment status to display status
+  const mapPaymentStatusToStatus = (paymentStatus?: string): PurchaseOrder['status'] => {
+    if (!paymentStatus) return 'draft';
+    
+    switch (paymentStatus.toLowerCase()) {
+      case 'paid':
+        return 'complete';
+      case 'partial':
+        return 'partial';
+      case 'unpaid':
+        return 'sent';
+      case 'received':
+        return 'received';
+      default:
+        return 'draft';
     }
   };
 
@@ -280,8 +241,6 @@ export function usePurchaseOrders() {
     fetchPurchaseOrders,
     getPurchaseOrder,
     createPurchaseOrder,
-    updatePurchaseOrder,
-    deletePurchaseOrder,
     isLoading,
     error
   };

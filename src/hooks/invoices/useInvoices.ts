@@ -32,10 +32,15 @@ export function useInvoices() {
   const addPayment = {
     mutateAsync: async (paymentData: AddPaymentInput) => {
       try {
+        // Generate a unique glide_row_id
+        const glideRowId = `PAY-${Date.now()}`;
+        
         const { data, error } = await supabase
           .from('gl_customer_payments')
           .insert({
+            glide_row_id: glideRowId,
             rowid_invoices: paymentData.invoiceId,
+            rowid_accounts: paymentData.accountId || null,
             payment_amount: paymentData.amount,
             date_of_payment: new Date(paymentData.paymentDate).toISOString(),
             type_of_payment: paymentData.paymentMethod,

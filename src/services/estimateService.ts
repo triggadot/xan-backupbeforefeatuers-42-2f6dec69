@@ -394,11 +394,12 @@ export const getEstimateWithDetails = async (estimateId: string): Promise<Extend
     const credits = await fetchEstimateCredits(estimate.glide_row_id);
     
     // Cast status to the expected enum type
-    const status = estimate.status as 'draft' | 'pending' | 'converted';
+    const status = estimate.status as "draft" | "pending" | "converted";
     
     // Map to domain model
     const estimateWithDetails: ExtendedEstimate = {
       ...estimate,
+      status,
       estimateLines: estimateLines || [],
       credits: credits || []
     };

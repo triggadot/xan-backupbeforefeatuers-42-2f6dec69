@@ -37,6 +37,16 @@ import { CreateInvoiceInput, UpdateInvoiceInput, InvoiceWithDetails } from '@/ty
 import { LineItemFormArray } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
 
+// Define a schema that matches what LineItemFormArray expects
+const lineItemSchema = z.object({
+  productId: z.string({
+    required_error: 'Please select a product',
+  }),
+  description: z.string().min(1, 'Description is required'),
+  quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
+  unitPrice: z.number().min(0, 'Price must be 0 or greater'),
+});
+
 const invoiceFormSchema = z.object({
   customerId: z.string({
     required_error: 'Please select a customer',
@@ -47,16 +57,7 @@ const invoiceFormSchema = z.object({
   dueDate: z.date().optional(),
   status: z.enum(['draft', 'sent']),
   notes: z.string().optional(),
-  lineItems: z.array(
-    z.object({
-      productId: z.string({
-        required_error: 'Please select a product',
-      }),
-      description: z.string().min(1, 'Description is required'),
-      quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
-      unitPrice: z.number().min(0, 'Price must be 0 or greater'),
-    })
-  ).min(1, 'At least one line item is required'),
+  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
@@ -161,7 +162,7 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
                   </FormControl>
                   <SelectContent>
                     {accounts
-                      .filter(account => account.type === 'Customer' || account.type === 'Customer & Vendor')
+                      .filter(account => account.is_customer)
                       .map(account => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}
