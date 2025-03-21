@@ -1,23 +1,31 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function Index() {
   const navigate = useNavigate();
   const { user, isLoading, error } = useAuth();
 
+  console.log('Index page loaded', { user, isLoading, error });
+
   useEffect(() => {
     if (!isLoading) {
+      console.log('Auth state resolved', { user, error });
+      
       // If there's an authentication error, stay on the index page
       if (error) {
         console.error("Authentication error:", error);
         // We don't redirect, user stays on this page
       } else if (user) {
         // User is authenticated, redirect to dashboard
+        console.log('Navigating to dashboard');
         navigate('/dashboard');
       } else {
         // No user, redirect to auth
+        console.log('Navigating to auth');
         navigate('/auth');
       }
     }
@@ -44,8 +52,8 @@ export default function Index() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="mt-4 text-muted-foreground">Loading...</p>
+        <Spinner size="xl" />
+        <p className="mt-4 text-muted-foreground">Loading authentication...</p>
       </div>
     );
   }
@@ -53,7 +61,8 @@ export default function Index() {
   // Default view while determining where to navigate
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <h1 className="text-4xl font-bold text-primary mb-4">Welcome</h1>
+      <Spinner size="lg" />
+      <h1 className="text-4xl font-bold text-primary mt-6 mb-4">Welcome</h1>
       <p className="text-lg text-muted-foreground">Redirecting you to the right place...</p>
     </div>
   );

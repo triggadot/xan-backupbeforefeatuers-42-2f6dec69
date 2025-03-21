@@ -5,6 +5,8 @@ import { AppSidebar } from "./AppSidebar";
 import Navbar from "./Navbar";
 import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Suspense } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -15,7 +17,13 @@ const Layout = () => {
       <div className="flex-1 overflow-auto">
         {isMobile ? <MobileHeader /> : <Navbar />}
         <main className="container py-4 md:py-6 lg:py-8">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex justify-center items-center h-64">
+              <Spinner size="lg" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <Toaster />

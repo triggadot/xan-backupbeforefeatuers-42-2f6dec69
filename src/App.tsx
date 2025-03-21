@@ -1,3 +1,4 @@
+
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/layout/Layout';
@@ -23,10 +24,11 @@ import ProductSync from '@/pages/ProductSync';
 import Index from '@/pages/Index';
 import NewAccounts from '@/pages/NewAccounts';
 import NewAccountDetail from '@/pages/NewAccountDetail';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Index />} />
@@ -165,7 +167,7 @@ function App() {
         </Route>
       </Routes>
       <Toaster />
-    </>
+    </ErrorBoundary>
   );
 }
 
