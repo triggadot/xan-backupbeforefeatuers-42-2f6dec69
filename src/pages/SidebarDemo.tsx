@@ -1,9 +1,10 @@
-import { SidebarDemo } from "@/components/blocks"
+
+import { Demo } from "@/components/blocks"
 
 export default function SidebarDemoPage() {
   return (
     <div className="h-screen">
-      <SidebarDemo />
+      <Demo />
     </div>
   )
 } 

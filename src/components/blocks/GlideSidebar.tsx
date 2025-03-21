@@ -1,5 +1,6 @@
 
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Users, 
@@ -11,12 +12,9 @@ import {
   Settings,
   ChevronLeft, 
   ChevronRight,
-  Menu 
+  Menu
 } from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { navigationConfig } from './navigationConfig';
 import {
   Sidebar,
   SidebarContent,
@@ -25,32 +23,83 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarProvider,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function AppSidebar() {
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+type NavItem = {
+  title: string;
+  href: string;
+  icon: React.ElementType;
+};
+
+type NavSection = {
+  title?: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    title: "Main",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Accounts",
+        href: "/accounts",
+        icon: Users,
+      },
+      {
+        title: "Invoices",
+        href: "/invoices",
+        icon: FileText,
+      },
+      {
+        title: "Purchase Orders",
+        href: "/purchase-orders",
+        icon: Package,
+      },
+      {
+        title: "Products",
+        href: "/products",
+        icon: ShoppingBag,
+      },
+      {
+        title: "Unpaid Inventory",
+        href: "/unpaid-inventory",
+        icon: AlertCircle,
+      },
+    ],
+  },
+  {
+    title: "Management",
+    items: [
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: BarChart,
+      },
+      {
+        title: "Settings",
+        href: "/settings",
+        icon: Settings,
+      },
+    ],
+  },
+];
+
+export function GlideSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const location = useLocation();
   const isMobile = useIsMobile();
   const isExpanded = state === "expanded";
-
-  // Function to render a Lucide icon by name
-  const LucideIcon = (iconName: string) => {
-    const iconMap: Record<string, React.ElementType> = {
-      dashboard: LayoutDashboard,
-      users: Users,
-      fileText: FileText,
-      package: Package,
-      shoppingBag: ShoppingBag,
-      alertCircle: AlertCircle,
-      barChart: BarChart,
-      settings: Settings,
-    };
-    
-    const IconComponent = iconMap[iconName] || AlertCircle;
-    return <IconComponent className="h-4 w-4" />;
-  };
 
   return (
     <Sidebar
@@ -82,8 +131,8 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="py-2">
-        {navigationConfig.sidebarNav.map((section, sectionIndex) => (
+      <SidebarContent>
+        {navSections.map((section, sectionIndex) => (
           <div key={sectionIndex} className="px-3 py-2">
             {isExpanded && section.title && (
               <h3 className="mb-2 px-2 text-xs font-medium text-muted-foreground">
@@ -96,14 +145,14 @@ export function AppSidebar() {
                   (item.href !== '/' && location.pathname.startsWith(item.href));
                 
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton 
                       asChild 
                       isActive={isActive}
                       tooltip={item.title}
                     >
                       <Link to={item.href} className="flex items-center gap-2">
-                        {LucideIcon(item.icon)}
+                        <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
