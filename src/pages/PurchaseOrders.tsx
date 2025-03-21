@@ -1,39 +1,43 @@
-
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
-import { PurchaseOrderCard } from '@/components/purchase-orders/PurchaseOrderCard';
-import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+import { PurchaseOrderFilters, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import PurchaseOrderCard from '@/components/purchase-orders/PurchaseOrderCard';
+import { PurchaseOrderFilters as POFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
   const { fetchPurchaseOrders, isLoading } = usePurchaseOrders();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderWithVendor[]>([]);
   const [activeTab, setActiveTab] = useState('all');
-  
+  const { toast } = useToast();
+
   useEffect(() => {
     loadPurchaseOrders();
   }, []);
-  
+
   const loadPurchaseOrders = async () => {
     const result = await fetchPurchaseOrders();
     if (!result.error) {
       setPurchaseOrders(result.data);
     }
   };
-  
+
   const handleCreatePurchaseOrder = () => {
     navigate('/purchase-orders/new');
   };
-  
+
   const handleViewPurchaseOrder = (id: string) => {
     navigate(`/purchase-orders/${id}`);
   };
-  
+
+  const handlePurchaseOrderClick = (purchaseOrder: PurchaseOrderWithVendor) => {
+    navigate(`/purchase-orders/${purchaseOrder.id}`);
+  };
+
   const filteredPurchaseOrders = purchaseOrders.filter(po => {
     if (activeTab === 'all') return true;
     if (activeTab === 'draft') return po.status === 'draft';
@@ -54,16 +58,16 @@ export default function PurchaseOrders() {
       </div>
     );
   }
-  
+
   return (
     <div className="container py-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
         <Button onClick={handleCreatePurchaseOrder}>
-          <Plus className="mr-2 h-4 w-4" /> New Purchase Order
+          <PlusCircle className="mr-2 h-4 w-4" /> New Purchase Order
         </Button>
       </div>
-      
+
       <Tabs 
         defaultValue="all" 
         className="w-full"
@@ -89,7 +93,7 @@ export default function PurchaseOrders() {
                 <PurchaseOrderCard 
                   key={po.id} 
                   purchaseOrder={po} 
-                  onClick={() => handleViewPurchaseOrder(po.id)}
+                  onClick={() => handlePurchaseOrderClick(po)}
                 />
               ))}
             </div>

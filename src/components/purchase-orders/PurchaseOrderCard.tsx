@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PurchaseOrder, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';

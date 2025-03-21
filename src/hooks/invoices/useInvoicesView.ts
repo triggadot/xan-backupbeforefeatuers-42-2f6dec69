@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +39,7 @@ export function useInvoicesView() {
         total: Number(invoice.total_amount),
         balance: Number(invoice.balance),
         status: invoice.payment_status || 'draft',
-        lineItemsCount: Number(invoice.line_items_count || 0),
+        lineItemsCount: invoice.line_items_count ? Number(invoice.line_items_count) : 0,
         notes: invoice.notes,
       }));
       
@@ -96,22 +95,23 @@ export function useInvoicesView() {
       // Map line items
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
         let productDetails: ProductDetails | null = null;
+        const itemProduct = item.product || null;
         
         // Check if product data is valid and not an error
-        if (item.product && 
-            typeof item.product === 'object' && 
-            item.product !== null && 
-            !('error' in item.product)) {
+        if (itemProduct && 
+            typeof itemProduct === 'object' && 
+            itemProduct !== null && 
+            !('error' in itemProduct)) {
           productDetails = {
-            id: item.product?.id || '',
-            glide_row_id: item.product?.glide_row_id || '',
-            name: item.product?.display_name || item.product?.vendor_product_name || 'Unknown Product',
-            display_name: item.product?.display_name,
-            vendor_product_name: item.product?.vendor_product_name,
-            new_product_name: item.product?.new_product_name,
-            cost: item.product?.cost,
-            category: item.product?.category,
-            product_image1: item.product?.product_image1
+            id: itemProduct.id || '',
+            glide_row_id: itemProduct.glide_row_id || '',
+            name: itemProduct.display_name || itemProduct.vendor_product_name || 'Unknown Product',
+            display_name: itemProduct.display_name,
+            vendor_product_name: itemProduct.vendor_product_name,
+            new_product_name: itemProduct.new_product_name,
+            cost: itemProduct.cost,
+            category: itemProduct.category,
+            product_image1: itemProduct.product_image1
           };
         }
         

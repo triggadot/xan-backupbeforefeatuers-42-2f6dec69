@@ -1,4 +1,3 @@
-
 export interface PurchaseOrder {
   id: string;
   glide_row_id: string;
@@ -88,6 +87,6 @@ export interface PurchaseOrderWithVendor {
   lastPaymentDate?: Date;
   createdAt: Date;
   updatedAt: Date;
-  productCount?: number;  // Added to match property used in PurchaseOrderCard
-  totalPaid?: number;     // Added to match property used in PurchaseOrderCard
+  productCount: number;
+  totalPaid: number;
 }
