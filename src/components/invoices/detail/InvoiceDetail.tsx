@@ -12,7 +12,6 @@ import {
   Copy, 
   ArrowLeft
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
 import { InvoiceWithDetails } from '@/types/invoiceView';
 
@@ -62,7 +61,15 @@ export function InvoiceDetail() {
       try {
         const invoiceData = await getInvoice(id);
         if (invoiceData) {
-          setInvoice(invoiceData);
+          // Make sure we convert to the correct type with all required fields
+          const fullInvoiceData: InvoiceWithDetails = {
+            ...invoiceData,
+            invoiceDate: invoiceData.date, // Ensure we have invoiceDate
+            subtotal: invoiceData.total, // Use total as subtotal if not provided
+            amountPaid: invoiceData.totalPaid, // Use totalPaid as amountPaid
+            status: (invoiceData.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
+          };
+          setInvoice(fullInvoiceData);
         }
       } catch (error) {
         console.error('Error fetching invoice:', error);
@@ -111,7 +118,14 @@ export function InvoiceDetail() {
       // Refresh invoice data
       const updatedInvoice = await getInvoice(invoice.id);
       if (updatedInvoice) {
-        setInvoice(updatedInvoice);
+        const fullInvoiceData: InvoiceWithDetails = {
+          ...updatedInvoice,
+          invoiceDate: updatedInvoice.date,
+          subtotal: updatedInvoice.total,
+          amountPaid: updatedInvoice.totalPaid,
+          status: (updatedInvoice.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
+        };
+        setInvoice(fullInvoiceData);
       }
       setIsDeleteLineItemDialogOpen(false);
     } catch (error) {
@@ -132,7 +146,14 @@ export function InvoiceDetail() {
       // Refresh invoice data
       const updatedInvoice = await getInvoice(invoice.id);
       if (updatedInvoice) {
-        setInvoice(updatedInvoice);
+        const fullInvoiceData: InvoiceWithDetails = {
+          ...updatedInvoice,
+          invoiceDate: updatedInvoice.date,
+          subtotal: updatedInvoice.total,
+          amountPaid: updatedInvoice.totalPaid,
+          status: (updatedInvoice.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
+        };
+        setInvoice(fullInvoiceData);
       }
       setIsDeletePaymentDialogOpen(false);
     } catch (error) {
@@ -152,7 +173,14 @@ export function InvoiceDetail() {
       // Refresh invoice data after adding payment
       const updatedInvoice = await getInvoice(invoice.id);
       if (updatedInvoice) {
-        setInvoice(updatedInvoice);
+        const fullInvoiceData: InvoiceWithDetails = {
+          ...updatedInvoice,
+          invoiceDate: updatedInvoice.date,
+          subtotal: updatedInvoice.total,
+          amountPaid: updatedInvoice.totalPaid,
+          status: (updatedInvoice.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
+        };
+        setInvoice(fullInvoiceData);
       }
     } catch (error) {
       console.error('Error refreshing invoice:', error);
@@ -215,8 +243,8 @@ export function InvoiceDetail() {
           <Button variant="outline" size="icon" onClick={handleBackClick}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">Invoice {invoice.invoiceNumber}</h1>
-          <StatusBadge status={invoice.status} />
+          <h1 className="text-2xl font-bold">Invoice {invoice?.invoiceNumber}</h1>
+          <StatusBadge status={invoice?.status || "draft"} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -266,34 +294,36 @@ export function InvoiceDetail() {
       </div>
 
       {/* Invoice details */}
-      <div className="grid gap-6">
-        {/* Invoice header with customer and financial info */}
-        <InvoiceHeader invoice={invoice} />
+      {invoice && (
+        <div className="grid gap-6">
+          {/* Invoice header with customer and financial info */}
+          <InvoiceHeader invoice={invoice} />
 
-        {/* Line items table */}
-        <div className="rounded-md border">
-          <LineItemsTable 
-            lineItems={invoice.lineItems} 
-            onDeleteItem={confirmDeleteLineItem}
-          />
-        </div>
-
-        {/* Payments table */}
-        <div className="rounded-md border">
-          <PaymentsTable 
-            payments={invoice.payments} 
-            onDeletePayment={confirmDeletePayment}
-          />
-        </div>
-
-        {/* Invoice notes if any */}
-        {invoice.notes && (
-          <div className="border rounded-md p-4">
-            <h3 className="font-medium mb-2">Notes</h3>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
+          {/* Line items table */}
+          <div className="rounded-md border">
+            <LineItemsTable 
+              lineItems={invoice.lineItems} 
+              onDeleteItem={confirmDeleteLineItem}
+            />
           </div>
-        )}
-      </div>
+
+          {/* Payments table */}
+          <div className="rounded-md border">
+            <PaymentsTable 
+              payments={invoice.payments} 
+              onDeletePayment={confirmDeletePayment}
+            />
+          </div>
+
+          {/* Invoice notes if any */}
+          {invoice.notes && (
+            <div className="border rounded-md p-4">
+              <h3 className="font-medium mb-2">Notes</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Delete Invoice Alert Dialog */}
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

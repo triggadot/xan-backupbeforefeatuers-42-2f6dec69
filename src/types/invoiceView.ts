@@ -70,22 +70,6 @@ export interface InvoiceListItem {
   notes?: string;
 }
 
-// Invoice line item for frontend use
-export interface InvoiceLineItem {
-  id: string;
-  invoiceId: string;
-  productId?: string;
-  description: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-  productDetails?: ProductDetails;
-}
-
 // Product details for line items
 export interface ProductDetails {
   id: string;
@@ -99,11 +83,27 @@ export interface ProductDetails {
   product_image1?: string;
 }
 
+// Invoice line item for frontend use
+export interface InvoiceLineItem {
+  id: string;
+  invoiceId: string;
+  productId: string;  // Changed from optional to required
+  description: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  productDetails?: ProductDetails;
+}
+
 // Invoice payment for frontend use
 export interface InvoicePayment {
   id: string;
   invoiceId: string;
-  accountId?: string;
+  accountId: string;  // Changed from optional to required
   date: Date;
   amount: number;
   method: string;
@@ -122,10 +122,13 @@ export interface InvoiceWithDetails {
   customerName: string;
   date: Date;
   dueDate?: Date;
+  invoiceDate: Date; // Added missing property
+  subtotal: number;  // Added missing property
   total: number;
   totalPaid: number;
   balance: number;
-  status: string;
+  amountPaid: number; // Added missing property
+  status: "draft" | "paid" | "partial" | "sent" | "overdue"; // Fixed type to be more specific
   notes?: string;
   createdAt: string;
   updatedAt: string;

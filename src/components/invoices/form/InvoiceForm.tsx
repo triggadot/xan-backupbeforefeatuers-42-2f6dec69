@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
@@ -31,11 +31,19 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
+import { useInvoicesMutation } from '@/hooks/invoices/useInvoicesMutation';
 import { CreateInvoiceInput, UpdateInvoiceInput, InvoiceWithDetails } from '@/types/invoice';
-import { LineItemFormArray, LineItemFormValues } from './LineItemFormArray';
+import { LineItemFormArray } from './LineItemFormArray';
 import { cn } from '@/lib/utils';
-import { Control } from 'react-hook-form';
+
+export interface LineItemFormValues {
+  lineItems: {
+    productId: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
+}
 
 const invoiceFormSchema = z.object({
   customerId: z.string({
@@ -66,7 +74,7 @@ interface InvoiceFormProps {
 export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceFormProps) {
   const navigate = useNavigate();
   const { accounts } = useAccountsNew();
-  const { createInvoice, updateInvoice } = useInvoicesNew();
+  const { createInvoice, updateInvoice } = useInvoicesMutation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<InvoiceFormValues>({
@@ -295,7 +303,7 @@ export function InvoiceForm({ initialData, isEdit = false, onSuccess }: InvoiceF
         <div>
           <h3 className="text-lg font-medium mb-4">Line Items</h3>
           <LineItemFormArray 
-            control={form.control} 
+            control={form.control as unknown as Control<LineItemFormValues>} 
             disabled={isSubmitting}
           />
         </div>

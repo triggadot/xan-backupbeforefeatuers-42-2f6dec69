@@ -1,95 +1,119 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { PlusIcon, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
-import { PurchaseOrderFilters } from '@/types/purchaseOrder';
-import PurchaseOrderForm from '@/components/purchase-orders/PurchaseOrderForm';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { PurchaseOrderForm } from '@/components/purchase-orders/PurchaseOrderForm';
 import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
+import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
 
-// Update the import for PurchaseOrderFilters component
-// import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
-
-const PurchaseOrders = () => {
-  const navigate = useNavigate();
-  const { fetchPurchaseOrders, createPurchaseOrder, isLoading, error } = usePurchaseOrders();
-  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+const PurchaseOrders: React.FC = () => {
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+  const { fetchPurchaseOrders, isLoading, error } = usePurchaseOrders();
+  const [purchaseOrders, setPurchaseOrders] = React.useState<any[]>([]);
   const [filters, setFilters] = useState<PurchaseOrderFilters>({});
 
-  useEffect(() => {
-    loadPurchaseOrders();
-  }, [filters]);
+  React.useEffect(() => {
+    const getPurchaseOrders = async () => {
+      const { data } = await fetchPurchaseOrders(filters);
+      setPurchaseOrders(data || []);
+    };
 
-  const loadPurchaseOrders = async () => {
-    const result = await fetchPurchaseOrders(); // No need to pass filters here
-    if (result?.data) {
-      setPurchaseOrders(result.data);
-    }
+    getPurchaseOrders();
+  }, [fetchPurchaseOrders, filters]);
+
+  const handleOpenSheet = () => {
+    setIsEditMode(false);
+    setSelectedPurchaseOrder(null);
+    setIsSheetOpen(true);
   };
 
-  const handleCreatePurchaseOrder = async (data: any) => {
-    try {
-      await createPurchaseOrder(data);
-      setIsCreateDialogOpen(false);
-      loadPurchaseOrders();
-    } catch (err) {
-      console.error('Error creating purchase order:', err);
-    }
+  const handleCloseSheet = () => {
+    setIsSheetOpen(false);
   };
 
-  const handleViewPurchaseOrder = (id: string) => {
-    navigate(`/purchase-orders/${id}`);
+  const handleEditPurchaseOrder = (purchaseOrder: any) => {
+    setIsEditMode(true);
+    setSelectedPurchaseOrder(purchaseOrder);
+    setIsSheetOpen(true);
   };
 
   return (
-    <div className="container py-6 max-w-7xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Purchase Orders</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={loadPurchaseOrders}
-            disabled={isLoading}
-          >
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            New Purchase Order
-          </Button>
-        </div>
+    <div className="container max-w-6xl py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Purchase Orders</h1>
+        <Button onClick={handleOpenSheet}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Purchase Order
+        </Button>
       </div>
 
-      {/* Temporarily comment out filters until we fix the component
-      <PurchaseOrderFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-      />
-      */}
-
-      <div className="mt-6">
-        <PurchaseOrderList
-          purchaseOrders={purchaseOrders}
-          isLoading={isLoading}
-          error={error ? String(error) : null}
-          onView={handleViewPurchaseOrder}
-        />
-      </div>
-
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Purchase Order</DialogTitle>
-          </DialogHeader>
-          <PurchaseOrderForm 
-            onCancel={() => setIsCreateDialogOpen(false)}
+      <Tabs defaultValue="all" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="draft">Draft</TabsTrigger>
+          <TabsTrigger value="sent">Sent</TabsTrigger>
+          <TabsTrigger value="partial">Partial</TabsTrigger>
+          <TabsTrigger value="complete">Complete</TabsTrigger>
+        </TabsList>
+        <TabsContent value="all">
+          <PurchaseOrderFilters onChange={setFilters} />
+          <PurchaseOrderList
+            purchaseOrders={purchaseOrders}
+            isLoading={isLoading}
+            error={error}
+            onEdit={handleEditPurchaseOrder}
           />
-        </DialogContent>
-      </Dialog>
+        </TabsContent>
+        <TabsContent value="draft">
+          <PurchaseOrderList
+            purchaseOrders={purchaseOrders.filter(po => po.status === 'draft')}
+            isLoading={isLoading}
+            error={error}
+            onEdit={handleEditPurchaseOrder}
+          />
+        </TabsContent>
+        <TabsContent value="sent">
+          <PurchaseOrderList
+            purchaseOrders={purchaseOrders.filter(po => po.status === 'sent')}
+            isLoading={isLoading}
+            error={error}
+            onEdit={handleEditPurchaseOrder}
+          />
+        </TabsContent>
+        <TabsContent value="partial">
+          <PurchaseOrderList
+            purchaseOrders={purchaseOrders.filter(po => po.status === 'partial')}
+            isLoading={isLoading}
+            error={error}
+            onEdit={handleEditPurchaseOrder}
+          />
+        </TabsContent>
+        <TabsContent value="complete">
+          <PurchaseOrderList
+            purchaseOrders={purchaseOrders.filter(po => po.status === 'complete')}
+            isLoading={isLoading}
+            error={error}
+            onEdit={handleEditPurchaseOrder}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</SheetTitle>
+          </SheetHeader>
+          <PurchaseOrderForm
+            initialData={selectedPurchaseOrder}
+            isEdit={isEditMode}
+            onClose={handleCloseSheet}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

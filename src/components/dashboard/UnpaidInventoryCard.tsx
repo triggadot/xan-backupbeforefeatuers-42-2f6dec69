@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UnpaidProduct } from '@/types/product';
 import { formatCurrency } from '@/utils/format-utils';
-import { useNavigate } from 'react-router-dom'; // Changed from useRouter to useNavigate
+import { useNavigate } from 'react-router-dom';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface UnpaidInventoryCardProps {
@@ -18,7 +18,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
   unpaidProducts,
   isLoading
 }) => {
-  const navigate = useNavigate(); // Using useNavigate instead of useRouter
+  const navigate = useNavigate();
   
   const totalSampleValue = unpaidProducts
     .filter(p => p.unpaid_type === 'Sample')
@@ -29,7 +29,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
     .reduce((sum, product) => sum + product.unpaid_value, 0);
 
   const handleViewAll = () => {
-    navigate('/unpaid-inventory'); // Using navigate instead of router.push
+    navigate('/unpaid-inventory');
   };
 
   return (
@@ -86,8 +86,8 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                 <div key={product.id} className="flex justify-between items-center border-b pb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm truncate max-w-[200px]" title={product.name}>
-                        {product.name}
+                      <h4 className="font-medium text-sm truncate max-w-[200px]" title={product.product_name}>
+                        {product.product_name}
                       </h4>
                       <Badge variant={product.unpaid_type === 'Sample' ? 'secondary' : 'outline'}>
                         {product.unpaid_type}

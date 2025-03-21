@@ -1,36 +1,58 @@
-import { useEffect, useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
-import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
-import { InvoiceWithDetails } from '@/types/invoice';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
+import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
+import { useToast } from '@/hooks/use-toast';
+import { InvoiceWithDetails } from '@/types/invoiceView';
 
-const EditInvoicePage = () => {
+const EditInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getInvoice } = useInvoicesNew();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { getInvoice } = useInvoicesNew();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!id) return;
-
-    const fetchData = async () => {
+    const fetchInvoice = async () => {
+      if (!id) return;
+      
       setIsLoading(true);
       try {
-        const data = await getInvoice(id);
-        setInvoice(data);
+        const invoiceData = await getInvoice(id);
+        if (invoiceData) {
+          // Ensure we have all required fields for InvoiceWithDetails
+          const fullInvoice: InvoiceWithDetails = {
+            ...invoiceData,
+            invoiceDate: invoiceData.date,
+            subtotal: invoiceData.total,
+            amountPaid: invoiceData.totalPaid,
+            status: (invoiceData.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
+          };
+          setInvoice(fullInvoice);
+        }
       } catch (error) {
         console.error('Error fetching invoice:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load invoice details.',
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
-  }, [id, getInvoice]);
+    fetchInvoice();
+  }, [id, getInvoice, toast]);
+
+  const handleBackClick = () => {
+    navigate(`/invoices/${id}`);
+  };
 
   const handleSuccess = (invoiceId: string) => {
     navigate(`/invoices/${invoiceId}`);
@@ -38,12 +60,12 @@ const EditInvoicePage = () => {
 
   if (isLoading) {
     return (
-      <div className="container max-w-4xl py-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon">
+      <div className="container py-6 max-w-4xl">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="outline" size="icon" disabled>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-8 w-48" />
         </div>
         <Skeleton className="h-[600px] w-full" />
       </div>
@@ -52,39 +74,36 @@ const EditInvoicePage = () => {
 
   if (!invoice) {
     return (
-      <div className="container max-w-4xl py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
+      <div className="container py-6 max-w-4xl">
+        <div className="flex items-center gap-2 mb-6">
+          <Button variant="outline" size="icon" onClick={handleBackClick}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">Invoice Not Found</h1>
         </div>
-        <p className="text-muted-foreground">
-          The requested invoice could not be found. It may have been deleted or you may not have permission to edit it.
-        </p>
-        <Button className="mt-4" onClick={() => navigate('/invoices')}>
-          Back to Invoices
-        </Button>
+        <div className="bg-muted/40 rounded-lg p-8 text-center">
+          <p className="text-muted-foreground mb-4">The invoice you're trying to edit could not be found.</p>
+          <Button onClick={() => navigate('/invoices')}>Return to Invoices</Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container max-w-4xl py-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
+    <div className="container py-6 max-w-4xl">
+      <div className="flex items-center gap-2 mb-6">
+        <Button variant="outline" size="icon" onClick={handleBackClick}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">Edit Invoice #{invoice.invoiceNumber}</h1>
+        <h1 className="text-2xl font-bold">Edit Invoice {invoice.invoiceNumber}</h1>
       </div>
-      
       <InvoiceForm 
         initialData={invoice} 
-        isEdit 
-        onSuccess={handleSuccess} 
+        isEdit={true}
+        onSuccess={handleSuccess}
       />
     </div>
   );
 };
 
-export default EditInvoicePage;
+export default EditInvoice;

@@ -73,7 +73,7 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
         <TableBody>
           {products.map((product) => (
             <TableRow key={product.id}>
-              <TableCell className="font-medium">{product.name}</TableCell>
+              <TableCell className="font-medium">{product.product_name}</TableCell>
               <TableCell>{product.vendor_name}</TableCell>
               <TableCell>
                 <Badge
