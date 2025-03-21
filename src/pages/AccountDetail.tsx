@@ -1,51 +1,35 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Edit, 
-  Trash, 
-  MoreHorizontal, 
-  AlertCircle 
-} from 'lucide-react';
+import { Edit, Trash, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAccount } from '@/hooks/useAccount';
-
 const AccountDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
   const navigate = useNavigate();
-  const { account, isLoading, error } = useAccount(id || '');
+  const {
+    account,
+    isLoading,
+    error
+  } = useAccount(id || '');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
   const handleDeleteAccount = async () => {
     // replace with your actual delete functionality
     console.log("Deleting account:", id);
     // navigate back after delete
     navigate('/accounts');
   };
-
   if (isLoading) {
-    return (
-      <div className="container py-8 max-w-5xl">
+    return <div className="container py-8 max-w-5xl">
         <div className="flex justify-between mb-8">
           <div>
             <Skeleton className="h-8 w-64 mb-2" />
@@ -63,13 +47,10 @@ const AccountDetail: React.FC = () => {
             <Skeleton className="h-[300px] w-full" />
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (error || !account) {
-    return (
-      <div className="container py-8 max-w-5xl">
+    return <div className="container py-8 max-w-5xl">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -77,12 +58,9 @@ const AccountDetail: React.FC = () => {
             {error || "Failed to load account details"}
           </AlertDescription>
         </Alert>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container py-8 max-w-5xl">
+  return <div className="container py-8 max-w-5xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">{account.name}</h1>
@@ -99,17 +77,12 @@ const AccountDetail: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => navigate(`/accounts/${account.id}/edit`)}
-            >
+            <DropdownMenuItem onClick={() => navigate(`/accounts/${account.id}/edit`)}>
               <Edit className="h-4 w-4 mr-2" />
               Edit Account
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => setShowDeleteDialog(true)}
-            >
+            <DropdownMenuItem className="text-destructive" onClick={() => setShowDeleteDialog(true)}>
               <Trash className="h-4 w-4 mr-2" />
               Delete Account
             </DropdownMenuItem>
@@ -137,49 +110,35 @@ const AccountDetail: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Email</h3>
-                  <p>{account.email || "—"}</p>
+                  
+                  
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Phone</h3>
-                  <p>{account.phone || "—"}</p>
+                  
+                  
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Website</h3>
-                  <p>
-                    {account.website ? (
-                      <a 
-                        href={account.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {account.website}
-                      </a>
-                    ) : "—"}
-                  </p>
+                  
+                  
                 </div>
                 
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
-                  <Badge 
-                    variant={account.status === 'active' ? "default" : "outline"}
-                    className="capitalize"
-                  >
+                  <Badge variant={account.status === 'active' ? "default" : "outline"} className="capitalize bg-emerald-500">
                     {account.status}
                   </Badge>
                 </div>
                 
                 <div className="col-span-full">
-                  <h3 className="text-sm font-medium text-muted-foreground">Address</h3>
-                  <p className="whitespace-pre-line">{account.address || "—"}</p>
+                  
+                  
                 </div>
                 
                 <div className="col-span-full">
-                  <h3 className="text-sm font-medium text-muted-foreground">Notes</h3>
-                  <p className="whitespace-pre-line">{account.notes || "—"}</p>
+                  
+                  
                 </div>
               </div>
             </CardContent>
@@ -224,11 +183,11 @@ const AccountDetail: React.FC = () => {
                 </div>
                 
                 <div className="pt-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => navigate('/invoices/new', { state: { customerId: account.id } })}
-                  >
+                  <Button variant="outline" className="w-full" onClick={() => navigate('/invoices/new', {
+                  state: {
+                    customerId: account.id
+                  }
+                })}>
                     Create Invoice
                   </Button>
                 </div>
@@ -260,17 +219,12 @@ const AccountDetail: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteAccount}
-            >
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDeleteAccount}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>;
 };
-
 export default AccountDetail;
