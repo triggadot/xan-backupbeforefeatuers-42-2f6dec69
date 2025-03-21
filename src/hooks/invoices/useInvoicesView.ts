@@ -98,10 +98,13 @@ export function useInvoicesView() {
         let productDetails: ProductDetails | null = null;
         
         // Check if product data is valid and not an error
-        if (item.product && typeof item.product === 'object' && !('error' in item.product)) {
+        if (item.product && 
+            typeof item.product === 'object' && 
+            item.product !== null && 
+            !('error' in item.product)) {
           productDetails = {
-            id: item.product?.id,
-            glide_row_id: item.product?.glide_row_id,
+            id: item.product?.id || '',
+            glide_row_id: item.product?.glide_row_id || '',
             name: item.product?.display_name || item.product?.vendor_product_name || 'Unknown Product',
             display_name: item.product?.display_name,
             vendor_product_name: item.product?.vendor_product_name,

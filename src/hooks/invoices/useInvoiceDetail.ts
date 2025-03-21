@@ -47,12 +47,14 @@ export function useInvoiceDetail() {
       // Format the result as InvoiceWithDetails
       const accountName = invoice.account && 
                          typeof invoice.account === 'object' && 
+                         invoice.account !== null &&
                          'account_name' in invoice.account ? 
                          invoice.account.account_name : 'Unknown Customer';
 
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
         const productName = item.productDetails && 
                            typeof item.productDetails === 'object' && 
+                           item.productDetails !== null &&
                            'display_name' in item.productDetails ? 
                            item.productDetails.display_name : 'Unknown Product';
                            
@@ -90,7 +92,8 @@ export function useInvoiceDetail() {
         invoiceNumber: invoice.glide_row_id || 'Unknown',
         customerId: invoice.rowid_accounts,
         customerName: accountName,
-        date: new Date(invoice.invoice_order_date || invoice.created_at),
+        invoiceDate: new Date(invoice.invoice_order_date || invoice.created_at),
+        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
         status: (invoice.payment_status as "draft" | "sent" | "overdue" | "paid" | "partial") || "draft",
         total: Number(invoice.total_amount || 0),
         totalPaid: Number(invoice.total_paid || 0),
@@ -99,7 +102,9 @@ export function useInvoiceDetail() {
         createdAt: new Date(invoice.created_at),
         updatedAt: new Date(invoice.updated_at),
         lineItems: mappedLineItems,
-        payments: mappedPayments
+        payments: mappedPayments,
+        subtotal: Number(invoice.total_amount || 0),
+        amountPaid: Number(invoice.total_paid || 0)
       };
     } catch (err) {
       console.error('Error fetching invoice:', err);

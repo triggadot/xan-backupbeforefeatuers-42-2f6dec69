@@ -1,129 +1,122 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment } from '@/types/purchaseOrder';
+import { PurchaseOrder, VendorPayment } from '@/types/purchaseOrder';
 
 export function usePurchaseOrderDetail() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-  // Get a single purchase order by ID
-  const getPurchaseOrder = async (id: string) => {
+  // Get a single purchase order with all related details
+  const getPurchaseOrder = async (id: string): Promise<PurchaseOrder | null> => {
     setIsLoading(true);
-    setError('');
-
+    setError(null);
+    
     try {
-      // Get the purchase order with the vendor details
+      // Get PO details
       const { data: po, error: poError } = await supabase
         .from('gl_purchase_orders')
         .select(`
           *,
           vendor:rowid_accounts(*)
         `)
-        .eq('glide_row_id', id)
+        .eq('id', id)
         .single();
-
+        
       if (poError) throw poError;
-
-      // Get the line items (products associated with this PO)
+      
+      // Get related products
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
         .eq('rowid_purchase_orders', po.glide_row_id);
-
+        
       if (productsError) throw productsError;
-
+      
       // Get vendor payments
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
         .eq('rowid_purchase_orders', po.glide_row_id);
-
+        
       if (paymentsError) throw paymentsError;
-
-      // Calculate totals
-      const subtotal = products.reduce((sum, product) => {
-        return sum + (parseFloat(product.cost || '0') * parseFloat(product.total_qty_purchased || '0'));
-      }, 0);
-
-      const totalPaid = payments.reduce((sum, payment) => {
-        return sum + parseFloat(payment.payment_amount || '0');
-      }, 0);
-
-      // Map line items
-      const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
+      
+      // Map products to line items
+      const lineItems = products.map(product => ({
         id: product.id,
         rowid_products: product.glide_row_id,
-        productId: product.id,
-        product_name: product.vendor_product_name || product.new_product_name || '',
+        product_name: product.display_name || product.vendor_product_name || 'Unnamed Product',
         description: product.purchase_notes || '',
-        quantity: parseFloat(product.total_qty_purchased || '0'),
-        unit_price: parseFloat(product.cost || '0'),
-        unitPrice: parseFloat(product.cost || '0'),
-        total: parseFloat(product.total_qty_purchased || '0') * parseFloat(product.cost || '0'),
+        quantity: Number(product.total_qty_purchased) || 0,
+        unit_price: Number(product.cost) || 0,
+        total: (Number(product.cost) || 0) * (Number(product.total_qty_purchased) || 0),
+        productId: product.id,
+        productDetails: {
+          id: product.id,
+          glide_row_id: product.glide_row_id,
+          name: product.display_name || product.vendor_product_name || 'Unnamed Product',
+          vendor_product_name: product.vendor_product_name,
+          new_product_name: product.new_product_name,
+          cost: Number(product.cost) || 0,
+          total_qty_purchased: Number(product.total_qty_purchased) || 0,
+          category: product.category,
+          product_image1: product.product_image1,
+          purchase_notes: product.purchase_notes,
+          created_at: product.created_at,
+          updated_at: product.updated_at
+        }
       }));
-
-      // Map payments
+      
+      // Map vendor payments
       const vendorPayments: VendorPayment[] = payments.map(payment => ({
         id: payment.id,
         date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
-        amount: parseFloat(payment.payment_amount || '0'),
-        method: payment.vendor_purchase_note || '',
-        notes: payment.vendor_purchase_note || '',
+        amount: Number(payment.payment_amount) || 0,
+        method: 'bank transfer', // Default since not in DB schema
+        notes: payment.vendor_purchase_note || ''
       }));
-
-      // Get vendor name from vendor object or fallback
-      const vendorName = po.vendor && typeof po.vendor === 'object' && 
+      
+      // Get vendor name from the joined vendor data
+      const vendorName = po.vendor && 
+                        typeof po.vendor === 'object' && 
+                        po.vendor !== null &&
                         'account_name' in po.vendor ? 
                         po.vendor.account_name : 'Unknown Vendor';
-
-      // Map to PurchaseOrder type
-      const purchaseOrder: PurchaseOrder = {
-        id: po.glide_row_id,
+      
+      // Create the full PurchaseOrder object
+      const formattedPO: PurchaseOrder = {
+        id: po.id,
         glide_row_id: po.glide_row_id,
-        number: po.purchase_order_uid || po.glide_row_id,
-        date: new Date(po.po_date || po.created_at),
-        dueDate: po.date_payment_date_mddyyyy ? new Date(po.date_payment_date_mddyyyy) : undefined,
-        status: mapPoStatus(po.payment_status),
-        vendorId: po.rowid_accounts,
+        purchase_order_uid: po.purchase_order_uid,
+        number: po.glide_row_id || 'Unknown',
         rowid_accounts: po.rowid_accounts,
+        vendorId: po.rowid_accounts,
         vendorName: vendorName,
-        total_amount: subtotal,
-        total: subtotal,
-        total_paid: totalPaid,
-        balance: subtotal - totalPaid,
-        notes: po.notes || '',
-        lineItems,
-        vendorPayments,
-        payments: vendorPayments,
+        po_date: po.po_date,
+        date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+        payment_status: po.payment_status,
+        status: po.payment_status as PurchaseOrder['status'] || 'draft',
+        total_amount: Number(po.total_amount) || 0,
+        total_paid: Number(po.total_paid) || 0,
+        total: Number(po.total_amount) || 0,
+        balance: Number(po.balance) || 0,
+        product_count: Number(po.product_count) || 0,
         created_at: po.created_at,
         updated_at: po.updated_at,
+        docs_shortlink: po.docs_shortlink,
+        notes: po.notes || '',
+        lineItems: lineItems,
+        vendorPayments: vendorPayments,
+        payments: vendorPayments
       };
-
-      return purchaseOrder;
+      
+      return formattedPO;
     } catch (err) {
       console.error('Error fetching purchase order:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       return null;
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Helper function to map status strings
-  const mapPoStatus = (status?: string): PurchaseOrder['status'] => {
-    if (!status) return 'draft';
-    
-    switch (status.toLowerCase()) {
-      case 'paid':
-      case 'complete':
-        return 'complete';
-      case 'partial':
-        return 'partial';
-      case 'sent':
-        return 'sent';
-      default:
-        return 'draft';
     }
   };
 

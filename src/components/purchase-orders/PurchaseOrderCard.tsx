@@ -58,7 +58,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground">
                 <FileText size={14} />
-                <span>{purchaseOrder.product_count || 0} items</span>
+                <span>{purchaseOrder.productCount || 0} items</span>
               </div>
               
               <div className="mt-4 flex items-center justify-between">
@@ -73,9 +73,9 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
                   <div className="font-medium">
                     {formatCurrency(purchaseOrder.total)}
                   </div>
-                  {purchaseOrder.total_paid > 0 && (
+                  {purchaseOrder.totalPaid > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      {formatCurrency(purchaseOrder.total_paid)} paid
+                      {formatCurrency(purchaseOrder.totalPaid)} paid
                     </div>
                   )}
                 </div>
