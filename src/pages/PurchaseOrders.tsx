@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -6,7 +7,8 @@ import { PurchaseOrderFilters, PurchaseOrderWithVendor } from '@/types/purchaseO
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import PurchaseOrderCard from '@/components/purchase-orders/PurchaseOrderCard';
-import { PurchaseOrderFilters as POFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();

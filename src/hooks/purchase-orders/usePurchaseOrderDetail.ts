@@ -1,5 +1,7 @@
 
-// Import statements and hook definition stay the same
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment, ProductDetails } from '@/types/purchaseOrder';
 
 export function usePurchaseOrderDetail() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,19 +42,19 @@ export function usePurchaseOrderDetail() {
       if (paymentsError) throw paymentsError;
       
       // Map products to line items
-      const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
-        id: product.id,
-        rowid_products: product.glide_row_id,
+      const lineItems: PurchaseOrderLineItem[] = (products || []).map(product => ({
+        id: product.id || '',
+        rowid_products: product.glide_row_id || '',
         product_name: product.display_name || product.vendor_product_name || 'Unknown Product',
         description: product.purchase_notes || '',
         quantity: Number(product.total_qty_purchased || 0),
         unit_price: Number(product.cost || 0),
         unitPrice: Number(product.cost || 0),
         total: Number(product.cost || 0) * Number(product.total_qty_purchased || 0),
-        productId: product.glide_row_id,
+        productId: product.glide_row_id || '',
         productDetails: {
-          id: product.id,
-          glide_row_id: product.glide_row_id,
+          id: product.id || '',
+          glide_row_id: product.glide_row_id || '',
           name: product.display_name || product.vendor_product_name || 'Unknown Product',
           display_name: product.display_name,
           vendor_product_name: product.vendor_product_name,
@@ -68,8 +70,8 @@ export function usePurchaseOrderDetail() {
       }));
       
       // Map payments
-      const vendorPayments: VendorPayment[] = payments.map(payment => ({
-        id: payment.id,
+      const vendorPayments: VendorPayment[] = (payments || []).map(payment => ({
+        id: payment.id || '',
         date: payment.date_of_payment ? new Date(payment.date_of_payment) : null,
         amount: Number(payment.payment_amount || 0),
         method: 'payment',
@@ -85,10 +87,10 @@ export function usePurchaseOrderDetail() {
       
       // Construct the full PurchaseOrder object
       const purchaseOrder: PurchaseOrder = {
-        id: po.id,
-        glide_row_id: po.glide_row_id,
+        id: po.id || '',
+        glide_row_id: po.glide_row_id || '',
         purchase_order_uid: po.purchase_order_uid,
-        number: po.purchase_order_uid || po.glide_row_id,
+        number: po.purchase_order_uid || po.glide_row_id || '',
         rowid_accounts: po.rowid_accounts,
         vendorId: po.rowid_accounts,
         vendorName: vendorName,
