@@ -72,6 +72,11 @@ export function usePurchaseOrderDetail() {
         notes: payment.vendor_purchase_note || '',
       }));
 
+      // Get vendor name from vendor object or fallback
+      const vendorName = po.vendor && typeof po.vendor === 'object' && 
+                        'account_name' in po.vendor ? 
+                        po.vendor.account_name : 'Unknown Vendor';
+
       // Map to PurchaseOrder type
       const purchaseOrder: PurchaseOrder = {
         id: po.glide_row_id,
@@ -82,7 +87,7 @@ export function usePurchaseOrderDetail() {
         status: mapPoStatus(po.payment_status),
         vendorId: po.rowid_accounts,
         rowid_accounts: po.rowid_accounts,
-        vendorName: po.vendor?.account_name || 'Unknown Vendor',
+        vendorName: vendorName,
         total_amount: subtotal,
         total: subtotal,
         total_paid: totalPaid,

@@ -88,7 +88,6 @@ export function useInvoiceDetail() {
       return {
         id: invoice.id,
         invoiceNumber: invoice.glide_row_id || 'Unknown',
-        glideRowId: invoice.glide_row_id,
         customerId: invoice.rowid_accounts,
         customerName: accountName,
         date: new Date(invoice.invoice_order_date || invoice.created_at),

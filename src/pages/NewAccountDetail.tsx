@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -32,7 +31,7 @@ const NewAccountDetail: React.FC = () => {
     if (balance > 0) {
       return 'success';
     } else if (balance < 0) {
-      return 'danger';
+      return 'destructive';
     }
     return 'default';
   };

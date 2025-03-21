@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
 import { ArrowRight, Calendar, FileText, User } from 'lucide-react';
 
 interface PurchaseOrderCardProps {
-  purchaseOrder: PurchaseOrder;
+  purchaseOrder: PurchaseOrderWithVendor;
   onClick: () => void;
 }
 
@@ -48,7 +48,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground mb-2">
                 <User size={14} />
-                <span className="truncate">{purchaseOrder.accountName}</span>
+                <span className="truncate">{purchaseOrder.vendorName}</span>
               </div>
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground">
@@ -71,7 +71,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
                 
                 <div className="text-right">
                   <div className="font-medium">
-                    {formatCurrency(purchaseOrder.total_amount)}
+                    {formatCurrency(purchaseOrder.total)}
                   </div>
                   {purchaseOrder.total_paid > 0 && (
                     <div className="text-xs text-muted-foreground">

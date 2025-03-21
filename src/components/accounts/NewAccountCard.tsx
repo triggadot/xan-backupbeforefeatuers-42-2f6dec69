@@ -42,7 +42,7 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
     if (balance > 0) {
       return 'success'; // Positive: They owe us money (good for our business)
     } else if (balance < 0) {
-      return 'danger'; // Negative: We owe them money
+      return 'destructive'; // Negative: We owe them money
     }
     return 'default'; // Zero balance
   };

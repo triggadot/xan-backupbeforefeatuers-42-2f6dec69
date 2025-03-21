@@ -131,7 +131,7 @@ const PurchaseOrderDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="font-medium">
-              {purchaseOrder.accountName}
+              {purchaseOrder.vendorName}
             </div>
           </CardContent>
         </Card>

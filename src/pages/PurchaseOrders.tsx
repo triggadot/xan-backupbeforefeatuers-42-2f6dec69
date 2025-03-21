@@ -10,13 +10,6 @@ import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
 import { PurchaseOrderFilters as PurchaseOrderFiltersType, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 
-interface PurchaseOrderListProps {
-  purchaseOrders: PurchaseOrderWithVendor[];
-  isLoading: boolean;
-  error: string;
-  onEdit?: (purchaseOrder: PurchaseOrderWithVendor) => void;
-}
-
 const PurchaseOrders: React.FC = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -78,7 +71,7 @@ const PurchaseOrders: React.FC = () => {
             purchaseOrders={purchaseOrders}
             isLoading={isLoading}
             error={error}
-            onEdit={handleEditPurchaseOrder}
+            onView={handleEditPurchaseOrder}
           />
         </TabsContent>
         <TabsContent value="draft">
@@ -86,7 +79,7 @@ const PurchaseOrders: React.FC = () => {
             purchaseOrders={purchaseOrders.filter(po => po.status === 'draft')}
             isLoading={isLoading}
             error={error}
-            onEdit={handleEditPurchaseOrder}
+            onView={handleEditPurchaseOrder}
           />
         </TabsContent>
         <TabsContent value="sent">
@@ -94,7 +87,7 @@ const PurchaseOrders: React.FC = () => {
             purchaseOrders={purchaseOrders.filter(po => po.status === 'sent')}
             isLoading={isLoading}
             error={error}
-            onEdit={handleEditPurchaseOrder}
+            onView={handleEditPurchaseOrder}
           />
         </TabsContent>
         <TabsContent value="partial">
@@ -102,7 +95,7 @@ const PurchaseOrders: React.FC = () => {
             purchaseOrders={purchaseOrders.filter(po => po.status === 'partial')}
             isLoading={isLoading}
             error={error}
-            onEdit={handleEditPurchaseOrder}
+            onView={handleEditPurchaseOrder}
           />
         </TabsContent>
         <TabsContent value="complete">
@@ -110,7 +103,7 @@ const PurchaseOrders: React.FC = () => {
             purchaseOrders={purchaseOrders.filter(po => po.status === 'complete')}
             isLoading={isLoading}
             error={error}
-            onEdit={handleEditPurchaseOrder}
+            onView={handleEditPurchaseOrder}
           />
         </TabsContent>
       </Tabs>
@@ -121,7 +114,7 @@ const PurchaseOrders: React.FC = () => {
             <SheetTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</SheetTitle>
           </SheetHeader>
           <PurchaseOrderForm
-            initialData={selectedPurchaseOrder as PurchaseOrder}
+            initialData={selectedPurchaseOrder}
             isEdit={isEditMode}
             onClose={handleCloseSheet}
           />

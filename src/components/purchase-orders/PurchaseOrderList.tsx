@@ -1,10 +1,11 @@
+
 import React from 'react';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PurchaseOrderListProps {
-  purchaseOrders: PurchaseOrder[];
+  purchaseOrders: PurchaseOrderWithVendor[];
   isLoading: boolean;
   error: Error | string | null;
   onView: (id: string) => void;
@@ -62,7 +63,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
             <CardTitle>{purchaseOrder.number}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Vendor: {purchaseOrder.accountName}
+            Vendor: {purchaseOrder.vendorName}
           </CardContent>
         </Card>
       ))}
