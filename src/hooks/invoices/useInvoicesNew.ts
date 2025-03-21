@@ -21,12 +21,19 @@ export function useInvoicesNew(filters?: InvoiceFilters) {
   // Wrapper to apply filters (for future implementation)
   const fetchInvoices = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       // Here we could apply filters in the future
       const result = await baseFetchInvoices();
+      if (result.error) {
+        throw result.error;
+      }
       return result.data || [];
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching invoices');
+      const errorMessage = err instanceof Error ? err.message : 'Error fetching invoices';
+      setError(errorMessage);
+      console.error('Error in useInvoicesNew.fetchInvoices:', err);
       return [];
     } finally {
       setIsLoading(false);

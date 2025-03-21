@@ -49,7 +49,8 @@ export const PaymentsTable = ({ payments, invoiceId, onDeletePayment }: Payments
         {payments.map((payment) => (
           <TableRow key={payment.id}>
             <TableCell>
-              {formatDate(payment.paymentDate)}
+              {formatDate(typeof payment.paymentDate === 'string' ? 
+                new Date(payment.paymentDate) : payment.paymentDate)}
             </TableCell>
             <TableCell>
               {payment.paymentMethod || '-'}

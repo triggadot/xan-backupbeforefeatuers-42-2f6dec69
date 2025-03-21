@@ -9,6 +9,8 @@ export function useFetchInvoices() {
   // Fetch invoices from the materialized view
   const fetchInvoices = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from('mv_invoice_customer_details')
@@ -18,7 +20,9 @@ export function useFetchInvoices() {
       
       return { data, error: null };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching invoices');
+      const errorMessage = err instanceof Error ? err.message : 'Error fetching invoices';
+      setError(errorMessage);
+      console.error('Error fetching invoices:', err);
       return { data: null, error: err };
     } finally {
       setIsLoading(false);

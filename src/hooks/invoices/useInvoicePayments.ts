@@ -70,7 +70,6 @@ export function useInvoicePayments() {
         paymentDate: new Date(payment.date_of_payment || payment.created_at),
         paymentMethod: payment.type_of_payment || '',
         notes: payment.payment_note || '',
-        date: new Date(payment.date_of_payment || payment.created_at),
         createdAt: new Date(payment.created_at),
         updatedAt: new Date(payment.updated_at)
       };

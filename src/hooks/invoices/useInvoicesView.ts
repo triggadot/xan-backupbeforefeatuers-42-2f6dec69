@@ -40,7 +40,7 @@ export function useInvoicesView() {
         total: Number(invoice.total_amount),
         balance: Number(invoice.balance),
         status: invoice.payment_status || 'draft',
-        lineItemsCount: invoice.line_items_count || 0,
+        lineItemsCount: Number(invoice.line_items_count || 0),
         notes: invoice.notes,
       }));
       
@@ -100,15 +100,15 @@ export function useInvoicesView() {
         // Check if product data is valid and not an error
         if (item.product && typeof item.product === 'object' && !('error' in item.product)) {
           productDetails = {
-            id: item.product.id,
-            glide_row_id: item.product.glide_row_id,
-            name: item.product.display_name || item.product.vendor_product_name || 'Unknown Product',
-            display_name: item.product.display_name,
-            vendor_product_name: item.product.vendor_product_name,
-            new_product_name: item.product.new_product_name,
-            cost: item.product.cost,
-            category: item.product.category,
-            product_image1: item.product.product_image1
+            id: item.product?.id,
+            glide_row_id: item.product?.glide_row_id,
+            name: item.product?.display_name || item.product?.vendor_product_name || 'Unknown Product',
+            display_name: item.product?.display_name,
+            vendor_product_name: item.product?.vendor_product_name,
+            new_product_name: item.product?.new_product_name,
+            cost: item.product?.cost,
+            category: item.product?.category,
+            product_image1: item.product?.product_image1
           };
         }
         
@@ -150,7 +150,7 @@ export function useInvoicesView() {
         customerId: invoice.customer_id,
         customerName: invoice.customer_name,
         date: new Date(invoice.invoice_order_date || invoice.created_at),
-        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+        dueDate: undefined, // Due date is not in the database schema
         invoiceDate: new Date(invoice.invoice_order_date || invoice.created_at),
         subtotal: Number(invoice.total_amount || 0),
         total: Number(invoice.total_amount || 0),

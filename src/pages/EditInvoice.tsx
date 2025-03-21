@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { useToast } from '@/hooks/use-toast';
-import { InvoiceWithDetails } from '@/types/invoiceView';
+import { InvoiceWithDetails as InvoiceViewDetails } from '@/types/invoiceView';
+import { InvoiceWithDetails } from '@/types/invoice';
 
 const EditInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +26,24 @@ const EditInvoice: React.FC = () => {
       try {
         const invoiceData = await getInvoice(id);
         if (invoiceData) {
-          setInvoice(invoiceData);
+          // Convert from invoiceView type to invoice type (fixing date formats)
+          const convertedInvoice: InvoiceWithDetails = {
+            ...invoiceData,
+            createdAt: new Date(invoiceData.createdAt),
+            updatedAt: new Date(invoiceData.updatedAt),
+            lineItems: invoiceData.lineItems.map(item => ({
+              ...item,
+              createdAt: new Date(item.createdAt),
+              updatedAt: new Date(item.updatedAt)
+            })),
+            payments: invoiceData.payments.map(payment => ({
+              ...payment,
+              paymentDate: new Date(payment.paymentDate),
+              createdAt: new Date(payment.createdAt),
+              updatedAt: new Date(payment.updatedAt)
+            }))
+          };
+          setInvoice(convertedInvoice);
         }
       } catch (error) {
         console.error('Error fetching invoice:', error);
