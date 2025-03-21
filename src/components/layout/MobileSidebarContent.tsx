@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navigationConfig } from './navigationConfig';
+import { icons } from 'lucide-react';
 
 interface MobileSidebarContentProps {
   onClose?: () => void;
@@ -10,6 +11,12 @@ interface MobileSidebarContentProps {
 
 const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) => {
   const location = useLocation();
+  
+  // Function to render a Lucide icon by name
+  const LucideIcon = (iconName: string) => {
+    const IconComponent = (icons as any)[iconName] || (icons as any)["Circle"];
+    return <IconComponent className="h-4 w-4 mr-2" />;
+  };
   
   const isActive = (href: string) => {
     return location.pathname === href || location.pathname.startsWith(`${href}/`);
@@ -21,10 +28,13 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
     }
   };
   
+  // Flatten navigation items for mobile view
+  const navItems = navigationConfig.sidebarNav.flatMap(section => section.items);
+  
   return (
     <div className="px-3 py-2">
       <div className="space-y-1">
-        {navigationConfig.sidebarNav.map((item) => (
+        {navItems.map((item) => (
           <Link
             key={item.href}
             to={item.href}
@@ -36,6 +46,7 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
                 : "text-muted-foreground hover:bg-muted"
             )}
           >
+            {LucideIcon(item.icon)}
             <span className="truncate">{item.title}</span>
           </Link>
         ))}

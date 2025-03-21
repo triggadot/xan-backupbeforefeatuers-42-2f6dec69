@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileSidebarContent from './MobileSidebarContent';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { icons } from 'lucide-react';
 
 export function AppSidebar() {
   const isMobile = useIsMobile();
@@ -35,6 +36,12 @@ interface DesktopSidebarProps {
 
 function DesktopSidebar({ isCollapsed, setIsCollapsed }: DesktopSidebarProps) {
   const location = useLocation();
+  
+  // Dynamic icon mapping
+  const LucideIcon = (iconName: string) => {
+    const IconComponent = (icons as any)[iconName] || (icons as any)["Circle"];
+    return <IconComponent className="h-4 w-4" />;
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -58,9 +65,9 @@ function DesktopSidebar({ isCollapsed, setIsCollapsed }: DesktopSidebarProps) {
       </div>
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid gap-1 px-2">
-          {Object.entries(navigationConfig).map(([key, section]) => (
-            <div key={key} className="mb-4">
-              {!isCollapsed && (
+          {navigationConfig.sidebarNav.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="mb-4">
+              {!isCollapsed && section.title && (
                 <h3 className="mb-1 px-4 text-xs font-medium text-muted-foreground">
                   {section.title}
                 </h3>
@@ -81,7 +88,7 @@ function DesktopSidebar({ isCollapsed, setIsCollapsed }: DesktopSidebarProps) {
                           : "hover:bg-accent hover:text-accent-foreground"
                       )}
                     >
-                      {item.icon && <item.icon className="h-4 w-4" />}
+                      {LucideIcon(item.icon)}
                       {!isCollapsed && <span>{item.title}</span>}
                     </Link>
                   );
