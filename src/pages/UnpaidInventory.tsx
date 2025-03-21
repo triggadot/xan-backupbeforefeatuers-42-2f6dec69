@@ -71,7 +71,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              <AmountDisplay amount={totalSampleValue} variant="danger" />
+              <AmountDisplay amount={totalSampleValue} variant="destructive" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
@@ -87,7 +87,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              <AmountDisplay amount={totalFrontedValue} variant="danger" />
+              <AmountDisplay amount={totalFrontedValue} variant="destructive" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
@@ -103,7 +103,7 @@ const UnpaidInventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              <AmountDisplay amount={totalUnpaidValue} variant="danger" />
+              <AmountDisplay amount={totalUnpaidValue} variant="destructive" />
             </div>
             <p className="text-xs text-muted-foreground">
               {unpaidProducts.length} products total

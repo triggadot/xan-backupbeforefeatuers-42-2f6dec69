@@ -13,77 +13,38 @@ export function useUnpaidInventory() {
   const fetchUnpaidInventory = async () => {
     setIsLoading(true);
     setError(null);
-    const samples: UnpaidProduct[] = [];
-    const frontedProducts: UnpaidProduct[] = [];
 
     try {
-      // Fetch samples from a view or table directly rather than using an RPC
-      const { data: sampleData, error: sampleError } = await supabase
-        .from('mv_unpaid_samples')
+      // Fetch from the gl_unpaid_inventory view which already has all the data we need
+      const { data, error: fetchError } = await supabase
+        .from('gl_unpaid_inventory')
         .select('*');
 
-      if (sampleError) {
-        throw new Error(`Error fetching sample data: ${sampleError.message}`);
+      if (fetchError) throw new Error(`Error fetching unpaid inventory: ${fetchError.message}`);
+
+      if (data && Array.isArray(data)) {
+        // Transform the data to match our UnpaidProduct type
+        const transformedProducts: UnpaidProduct[] = data.map(item => ({
+          id: item.id || '',
+          product_id: item.id || '',
+          product_name: item.display_name || item.new_product_name || item.vendor_product_name || '',
+          name: item.display_name || item.new_product_name || item.vendor_product_name || '', // For component compatibility
+          quantity: Number(item.total_qty_purchased) || 0,
+          unpaid_value: Number(item.unpaid_value) || 0,
+          unpaid_type: item.unpaid_type || 'Sample',
+          date_created: item.created_at || '',
+          customer_name: item.vendor_name || '',
+          customer_id: item.rowid_accounts || '',
+          vendor_name: item.vendor_name || '',
+          cost: Number(item.cost) || 0,
+          terms_for_fronted_product: item.terms_for_fronted_product || '',
+          glide_row_id: item.glide_row_id || item.id || '',
+          inventory_value: Number(item.total_qty_purchased) * Number(item.cost) || 0,
+          payment_status: 'unpaid'
+        }));
+
+        setUnpaidProducts(transformedProducts);
       }
-
-      // Fetch fronted products from a view or table
-      const { data: frontedData, error: frontedError } = await supabase
-        .from('mv_unpaid_fronted')
-        .select('*');
-
-      if (frontedError) {
-        throw new Error(`Error fetching fronted data: ${frontedError.message}`);
-      }
-
-      // Process sample data
-      if (sampleData && Array.isArray(sampleData)) {
-        sampleData.forEach(item => {
-          samples.push({
-            id: item.id || '',
-            product_id: item.product_id || '',
-            product_name: item.product_name || '',
-            name: item.product_name || '', // Map for component compatibility
-            quantity: Number(item.quantity) || 0,
-            unpaid_value: Number(item.unpaid_value) || 0,
-            unpaid_type: 'Sample',
-            date_created: item.date_created || item.created_at || '',
-            customer_name: item.customer_name || '',
-            customer_id: item.customer_id || '',
-            vendor_name: item.vendor_name || '',
-            cost: Number(item.cost) || 0,
-            glide_row_id: item.glide_row_id || item.id || '',
-            inventory_value: Number(item.inventory_value) || 0,
-            payment_status: item.payment_status || 'unpaid'
-          });
-        });
-      }
-
-      // Process fronted products data
-      if (frontedData && Array.isArray(frontedData)) {
-        frontedData.forEach(item => {
-          frontedProducts.push({
-            id: item.id || '',
-            product_id: item.product_id || '',
-            product_name: item.product_name || '',
-            name: item.product_name || '', // Map for component compatibility
-            quantity: Number(item.quantity) || 0,
-            unpaid_value: Number(item.unpaid_value) || 0,
-            unpaid_type: 'Fronted',
-            date_created: item.date_created || item.created_at || '',
-            customer_name: item.customer_name || '',
-            customer_id: item.customer_id || '',
-            vendor_name: item.vendor_name || '',
-            cost: Number(item.cost) || 0,
-            terms_for_fronted_product: item.terms_for_fronted_product || '',
-            glide_row_id: item.glide_row_id || item.id || '',
-            inventory_value: Number(item.inventory_value) || 0,
-            payment_status: item.payment_status || 'unpaid'
-          });
-        });
-      }
-
-      // Combine both types of products
-      setUnpaidProducts([...samples, ...frontedProducts]);
     } catch (err) {
       console.error('Error fetching unpaid inventory:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch unpaid inventory');
@@ -107,20 +68,14 @@ export function useUnpaidInventory() {
       }
       
       // Update the appropriate table based on product type
-      let result;
-      if (product.unpaid_type === 'Sample') {
-        result = await supabase
-          .from('gl_samples')
-          .update({ paid: true })
-          .eq('glide_row_id', productId);
-      } else {
-        result = await supabase
-          .from('gl_fronted_products')
-          .update({ paid: true })
-          .eq('glide_row_id', productId);
-      }
+      const tableName = product.unpaid_type === 'Sample' ? 'gl_samples' : 'gl_fronted_products';
       
-      if (result.error) throw result.error;
+      const { error: updateError } = await supabase.rpc('gl_update_product_payment_status', {
+        product_id: productId,
+        new_status: 'Paid'
+      });
+      
+      if (updateError) throw updateError;
       
       // Refresh product list
       await fetchUnpaidInventory();
@@ -151,21 +106,13 @@ export function useUnpaidInventory() {
         throw new Error('Product not found');
       }
       
-      // Update the appropriate table based on product type
-      let result;
-      if (product.unpaid_type === 'Sample') {
-        result = await supabase
-          .from('gl_samples')
-          .update({ returned: true })
-          .eq('glide_row_id', productId);
-      } else {
-        result = await supabase
-          .from('gl_fronted_products')
-          .update({ returned: true })
-          .eq('glide_row_id', productId);
-      }
+      // Use the database function to mark as returned
+      const { error: updateError } = await supabase.rpc('gl_update_product_payment_status', {
+        product_id: productId,
+        new_status: 'Returned'
+      });
       
-      if (result.error) throw result.error;
+      if (updateError) throw updateError;
       
       // Refresh product list
       await fetchUnpaidInventory();

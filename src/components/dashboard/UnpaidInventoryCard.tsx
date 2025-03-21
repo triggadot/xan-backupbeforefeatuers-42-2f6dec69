@@ -60,7 +60,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                 <p className="text-lg font-bold">
                   <AmountDisplay 
                     amount={totalSampleValue} 
-                    variant="danger"
+                    variant="destructive"
                   />
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -72,7 +72,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                 <p className="text-lg font-bold">
                   <AmountDisplay 
                     amount={totalFrontedValue} 
-                    variant="danger"
+                    variant="destructive"
                   />
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -98,7 +98,7 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                   <div className="text-right">
                     <AmountDisplay 
                       amount={product.unpaid_value} 
-                      variant="danger"
+                      variant="destructive"
                     />
                   </div>
                 </div>
