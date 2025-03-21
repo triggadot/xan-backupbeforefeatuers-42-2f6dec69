@@ -5,14 +5,14 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
-import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
+import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { useToast } from '@/hooks/use-toast';
 import { InvoiceWithDetails } from '@/types/invoiceView';
 
 const EditInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getInvoice } = useInvoicesNew();
+  const { getInvoice } = useInvoicesView();
   const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -25,15 +25,7 @@ const EditInvoice: React.FC = () => {
       try {
         const invoiceData = await getInvoice(id);
         if (invoiceData) {
-          // Ensure we have all required fields for InvoiceWithDetails
-          const fullInvoice: InvoiceWithDetails = {
-            ...invoiceData,
-            invoiceDate: invoiceData.date,
-            subtotal: invoiceData.total,
-            amountPaid: invoiceData.totalPaid,
-            status: (invoiceData.status as "draft" | "paid" | "partial" | "sent" | "overdue") || "draft"
-          };
-          setInvoice(fullInvoice);
+          setInvoice(invoiceData);
         }
       } catch (error) {
         console.error('Error fetching invoice:', error);

@@ -28,13 +28,13 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
     }
   };
   
-  // Flatten navigation items for mobile view
-  const navItems = navigationConfig.sidebarNav.flatMap(section => section.items);
+  // Create a flat list of navigation items from all sections
+  const allNavItems = navigationConfig.sidebarNav.flatMap(section => section.items);
   
   return (
     <div className="px-3 py-2">
       <div className="space-y-1">
-        {navItems.map((item) => (
+        {allNavItems.map((item) => (
           <Link
             key={item.href}
             to={item.href}

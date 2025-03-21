@@ -15,8 +15,6 @@ export const glInvoicesSchema = {
   total_amount: "number",
   total_paid: "number",
   updated_at: "string",
-  user_email: "string",
-  due_date: "string",
-  tax_rate: "number",
-  tax_amount: "number"
+  user_email: "string"
+  // Removed due_date, tax_rate, and tax_amount which don't exist in the database
 };

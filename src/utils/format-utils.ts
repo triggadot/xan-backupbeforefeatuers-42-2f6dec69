@@ -81,3 +81,29 @@ export const formatDateForInput = (date: Date | string | undefined): string => {
   
   return `${year}-${month}-${day}`;
 };
+
+/**
+ * Format payment status with appropriate styling class
+ */
+export const formatPaymentStatus = (status: string | undefined | null): { label: string; variant: "default" | "destructive" | "success" | "warning" } => {
+  if (!status) return { label: 'Unknown', variant: 'default' };
+  
+  const normalizedStatus = status.toLowerCase();
+  
+  switch (normalizedStatus) {
+    case 'paid':
+      return { label: 'Paid', variant: 'success' };
+    case 'partial':
+      return { label: 'Partial', variant: 'warning' };
+    case 'overdue':
+      return { label: 'Overdue', variant: 'destructive' };
+    case 'unpaid':
+      return { label: 'Unpaid', variant: 'destructive' };
+    case 'draft':
+      return { label: 'Draft', variant: 'default' };
+    case 'sent':
+      return { label: 'Sent', variant: 'default' };
+    default:
+      return { label: status, variant: 'default' };
+  }
+};

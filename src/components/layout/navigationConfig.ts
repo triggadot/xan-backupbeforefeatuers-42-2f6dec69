@@ -60,6 +60,7 @@ export const navigationConfig: NavigationConfig = {
   ],
   sidebarNav: [
     {
+      title: "Main",
       items: [
         {
           title: "Dashboard",
@@ -90,7 +91,12 @@ export const navigationConfig: NavigationConfig = {
           title: "Unpaid Inventory",
           href: "/unpaid-inventory",
           icon: "alertCircle", 
-        },
+        }
+      ]
+    },
+    {
+      title: "Management",
+      items: [
         {
           title: "Reports",
           href: "/reports",
@@ -100,7 +106,7 @@ export const navigationConfig: NavigationConfig = {
           title: "Settings",
           href: "/settings",
           icon: "settings",
-        },
+        }
       ]
     }
   ],
