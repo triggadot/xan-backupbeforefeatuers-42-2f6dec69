@@ -1,58 +1,31 @@
 
 /**
- * Format a number as currency
+ * Format date string to localized date string
  */
-export const formatCurrency = (amount: number | null | undefined): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount || 0);
-};
-
-/**
- * Format a date into a readable string
- */
-export const formatDate = (date: Date | string | null | undefined): string => {
-  if (!date) return 'N/A';
+export const formatDate = (dateString: string | Date): string => {
+  if (!dateString) return '-';
   
-  return new Date(date).toLocaleDateString('en-US', {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) return '-';
+  
+  return date.toLocaleDateString(undefined, {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric'
   });
 };
 
 /**
- * Format a date to include time
+ * Format currency amount
  */
-export const formatDateTime = (date: Date | string | null | undefined): string => {
-  if (!date) return 'N/A';
+export const formatCurrency = (amount: number): string => {
+  if (amount === null || amount === undefined) return '$0.00';
   
-  return new Date(date).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  });
-};
-
-/**
- * Format a phone number
- */
-export const formatPhoneNumber = (phoneNumber: string | null | undefined): string => {
-  if (!phoneNumber) return '';
-  
-  // Remove all non-digit characters
-  const digits = phoneNumber.replace(/\D/g, '');
-  
-  // Format as (XXX) XXX-XXXX
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  
-  // Return as-is if not a 10-digit number
-  return phoneNumber;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2
+  }).format(amount);
 };

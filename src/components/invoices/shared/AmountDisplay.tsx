@@ -1,45 +1,28 @@
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/utils/format-utils";
 
 interface AmountDisplayProps {
   amount: number;
+  variant?: "default" | "success" | "warning" | "destructive";
   className?: string;
-  variant?: 'default' | 'success' | 'warning' | 'danger';
-  showPositiveSign?: boolean;
 }
 
-export const AmountDisplay = ({ 
+export function AmountDisplay({ 
   amount, 
-  className, 
-  variant = 'default', 
-  showPositiveSign = false 
-}: AmountDisplayProps) => {
-  // Format amount as currency
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-
-  // Add plus sign for positive amounts if requested
-  const displayValue = amount > 0 && showPositiveSign ? `+${formattedAmount}` : formattedAmount;
-
-  // Define variant classes
+  variant = "default",
+  className 
+}: AmountDisplayProps) {
   const variantClasses = {
-    default: '',
-    success: 'text-green-600 dark:text-green-500',
-    warning: 'text-amber-600 dark:text-amber-500',
-    danger: 'text-red-600 dark:text-red-500',
+    default: "",
+    success: "text-green-600",
+    warning: "text-amber-600",
+    destructive: "text-red-600"
   };
 
   return (
-    <span className={cn(
-      'font-medium tabular-nums',
-      variantClasses[variant],
-      className
-    )}>
-      {displayValue}
+    <span className={cn(variantClasses[variant], className)}>
+      {formatCurrency(amount)}
     </span>
   );
-};
+}

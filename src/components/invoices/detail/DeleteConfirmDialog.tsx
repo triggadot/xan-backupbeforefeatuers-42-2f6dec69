@@ -1,30 +1,21 @@
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface DeleteConfirmDialogProps {
+  title: string;
+  description: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  title: string;
-  description: string;
 }
 
-export const DeleteConfirmDialog = ({
+export function DeleteConfirmDialog({
+  title,
+  description,
   open,
   onOpenChange,
   onConfirm,
-  title,
-  description,
-}: DeleteConfirmDialogProps) => {
+}: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -37,10 +28,7 @@ export const DeleteConfirmDialog = ({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={(e) => {
-              e.preventDefault();
-              onConfirm();
-            }}
+            onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Delete
@@ -49,4 +37,4 @@ export const DeleteConfirmDialog = ({
       </AlertDialogContent>
     </AlertDialog>
   );
-};
+}

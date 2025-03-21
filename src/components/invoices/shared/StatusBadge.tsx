@@ -1,36 +1,52 @@
 
-import { Invoice } from '@/types';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
-  status: 'draft' | 'sent' | 'overdue' | 'paid' | 'partial';
-  className?: string;
+  status: "draft" | "sent" | "paid" | "partial" | "overdue";
+  size?: "default" | "sm";
 }
 
-export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
-  const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" | "success" | "warning" => {
+export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
+  const getVariant = () => {
     switch (status) {
-      case 'draft':
-        return 'secondary';
-      case 'sent':
-        return 'default';
-      case 'overdue':
-        return 'destructive';
-      case 'paid':
-        return 'success';
-      case 'partial':
-        return 'warning';
+      case "draft":
+        return "outline";
+      case "sent":
+        return "secondary";
+      case "paid":
+        return "success";
+      case "partial":
+        return "warning";
+      case "overdue":
+        return "destructive";
       default:
-        return 'default';
+        return "outline";
+    }
+  };
+
+  const getLabel = () => {
+    switch (status) {
+      case "draft":
+        return "Draft";
+      case "sent":
+        return "Sent";
+      case "paid":
+        return "Paid";
+      case "partial":
+        return "Partially Paid";
+      case "overdue":
+        return "Overdue";
+      default:
+        return status;
     }
   };
 
   return (
     <Badge 
-      variant={getStatusVariant(status)}
-      className={`capitalize ${className || ''}`}
+      variant={getVariant() as any} 
+      className={size === "sm" ? "text-xs px-2 py-0" : ""}
     >
-      {status}
+      {getLabel()}
     </Badge>
   );
-};
+}

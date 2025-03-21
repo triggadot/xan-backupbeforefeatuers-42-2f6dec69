@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react';
+import { ChevronDown, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/table';
 import { StatusBadge } from '../shared/StatusBadge';
 import { AmountDisplay } from '../shared/AmountDisplay';
-import { InvoiceListItem } from '@/types/invoice';
+import { InvoiceListItem } from '@/types/invoiceView';
 import { formatDate } from '@/utils/format-utils';
 
 interface InvoiceTableProps {
@@ -52,7 +52,7 @@ export const InvoiceTable = ({
 }: InvoiceTableProps) => {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'invoiceDate', desc: true },
+    { id: 'date', desc: true },
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -67,9 +67,9 @@ export const InvoiceTable = ({
       ),
     },
     {
-      accessorKey: 'invoiceDate',
+      accessorKey: 'date',
       header: 'Date',
-      cell: ({ row }) => formatDate(row.getValue('invoiceDate')),
+      cell: ({ row }) => formatDate(row.getValue('date')),
     },
     {
       accessorKey: 'customerName',
@@ -79,25 +79,15 @@ export const InvoiceTable = ({
       ),
     },
     {
-      accessorKey: 'lineItemCount',
+      accessorKey: 'lineItemsCount',
       header: 'Items',
-      cell: ({ row }) => row.getValue('lineItemCount'),
+      cell: ({ row }) => row.getValue('lineItemsCount'),
     },
     {
       accessorKey: 'total',
       header: 'Total',
       cell: ({ row }) => (
         <AmountDisplay amount={row.getValue('total')} className="font-medium" />
-      ),
-    },
-    {
-      accessorKey: 'amountPaid',
-      header: 'Paid',
-      cell: ({ row }) => (
-        <AmountDisplay 
-          amount={row.getValue('amountPaid')} 
-          variant="success"
-        />
       ),
     },
     {
@@ -180,39 +170,33 @@ export const InvoiceTable = ({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 justify-between">
-        <h2 className="text-xl font-semibold">Invoices</h2>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button onClick={onCreateInvoice}>
-            <Plus className="mr-2 h-4 w-4" /> New Invoice
-          </Button>
-        </div>
+      <div className="flex items-center py-4 justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="rounded-md border">
         <Table>

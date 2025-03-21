@@ -1,15 +1,22 @@
 
 import { useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useInvoicesNew } from '@/hooks/invoices/useInvoicesNew';
-import { InvoiceWithDetails } from '@/types/invoiceView';
-
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Dialog,
   DialogContent,
@@ -19,40 +26,35 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { cn } from '@/lib/utils';
 
-const formSchema = z.object({
-  amount: z.coerce.number().positive({ message: 'Amount must be greater than 0' }),
-  paymentDate: z.date(),
+const paymentSchema = z.object({
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  paymentDate: z.date({
+    required_error: 'Please select a payment date',
+  }),
   paymentMethod: z.string().optional(),
   notes: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-export interface AddPaymentDialogProps {
+interface AddPaymentDialogProps {
   invoiceId: string;
+  invoiceGlideRowId: string;
   customerId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -61,45 +63,48 @@ export interface AddPaymentDialogProps {
 
 export function AddPaymentDialog({
   invoiceId,
+  invoiceGlideRowId,
   customerId,
   open,
   onOpenChange,
   onSuccess,
 }: AddPaymentDialogProps) {
+  const { addPayment } = useInvoicesView();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addPayment } = useInvoicesNew();
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentSchema),
     defaultValues: {
       amount: 0,
       paymentDate: new Date(),
-      paymentMethod: '',
+      paymentMethod: 'credit_card',
       notes: '',
     },
   });
 
-  async function onSubmit(values: FormValues) {
+  const handleSubmit = async (data: PaymentFormValues) => {
     setIsSubmitting(true);
+
     try {
       await addPayment.mutateAsync({
         invoiceId,
+        glideRowId: invoiceGlideRowId,
         accountId: customerId,
-        amount: values.amount,
-        paymentDate: values.paymentDate,
-        paymentMethod: values.paymentMethod,
-        notes: values.notes,
+        amount: data.amount,
+        paymentDate: data.paymentDate,
+        paymentMethod: data.paymentMethod,
+        notes: data.notes,
       });
-      
+
       form.reset();
       onOpenChange(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error('Error adding payment:', error);
+      console.error('Failed to add payment:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,8 +115,9 @@ export function AddPaymentDialog({
             Record a payment for this invoice.
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2">
             <FormField
               control={form.control}
               name="amount"
@@ -119,12 +125,23 @@ export function AddPaymentDialog({
                 <FormItem>
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      min={0}
+                      step={0.01}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Enter the payment amount
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="paymentDate"
@@ -142,7 +159,7 @@ export function AddPaymentDialog({
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "MMM d, yyyy")
+                            format(field.value, "PPP")
                           ) : (
                             <span>Pick a date</span>
                           )}
@@ -163,6 +180,7 @@ export function AddPaymentDialog({
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="paymentMethod"
@@ -179,18 +197,20 @@ export function AddPaymentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Check">Check</SelectItem>
-                      <SelectItem value="Credit Card">Credit Card</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="PayPal">PayPal</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="check">Check</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                      <SelectItem value="venmo">Venmo</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="notes"
@@ -198,22 +218,29 @@ export function AddPaymentDialog({
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Payment notes (optional)" {...field} />
+                    <Textarea
+                      placeholder="Optional notes about this payment"
+                      className="resize-none"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Processing...' : 'Add Payment'}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Payment
               </Button>
             </DialogFooter>
           </form>
