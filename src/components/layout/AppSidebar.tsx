@@ -10,8 +10,7 @@ import {
   BarChart, 
   Settings,
   ChevronLeft, 
-  ChevronRight,
-  Menu 
+  ChevronRight
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ export function AppSidebar() {
   const isExpanded = state === "expanded";
 
   // Function to render a Lucide icon by name
-  const LucideIcon = (iconName: string) => {
+  const renderIcon = (iconName: string) => {
     const iconMap: Record<string, React.ElementType> = {
       dashboard: LayoutDashboard,
       users: Users,
@@ -103,7 +102,7 @@ export function AppSidebar() {
                       tooltip={item.title}
                     >
                       <Link to={item.href} className="flex items-center gap-2">
-                        {LucideIcon(item.icon)}
+                        {renderIcon(item.icon)}
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>

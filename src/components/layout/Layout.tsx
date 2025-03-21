@@ -16,7 +16,7 @@ const Layout = () => {
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <SidebarContent className="flex-1 overflow-auto">
+        <SidebarContent className="flex-1 overflow-auto bg-background">
           {isMobile ? <MobileHeader /> : <Navbar />}
           <main className="container py-4 md:py-6 lg:py-8">
             <Suspense fallback={

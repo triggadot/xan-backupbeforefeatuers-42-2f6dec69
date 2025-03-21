@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Users, 
@@ -12,12 +12,13 @@ import {
   Settings,
   ChevronLeft, 
   ChevronRight,
-  Menu
 } from "lucide-react";
 
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
-  SidebarContent,
+  SidebarContent as SidebarContentComponent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
@@ -27,9 +28,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-
-import { Button } from "@/components/ui/button";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 type NavItem = {
   title: string;
@@ -95,9 +93,8 @@ const navSections: NavSection[] = [
   },
 ];
 
-export function GlideSidebar() {
+function DemoSidebar() {
   const { state, toggleSidebar } = useSidebar();
-  const location = useLocation();
   const isMobile = useIsMobile();
   const isExpanded = state === "expanded";
 
@@ -110,7 +107,7 @@ export function GlideSidebar() {
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            {isExpanded && <span className="text-xl">Glide Sync</span>}
+            {isExpanded && <span className="text-xl">Sidebar Demo</span>}
           </Link>
           <div className="flex-1" />
           {!isMobile && (
@@ -131,7 +128,7 @@ export function GlideSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContentComponent className="py-2">
         {navSections.map((section, sectionIndex) => (
           <div key={sectionIndex} className="px-3 py-2">
             {isExpanded && section.title && (
@@ -140,37 +137,47 @@ export function GlideSidebar() {
               </h3>
             )}
             <SidebarMenu>
-              {section.items.map((item) => {
-                const isActive = location.pathname === item.href || 
-                  (item.href !== '/' && location.pathname.startsWith(item.href));
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive}
-                      tooltip={item.title}
-                    >
-                      <Link to={item.href} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {section.items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    tooltip={item.title}
+                  >
+                    <Link to={item.href} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </div>
         ))}
-      </SidebarContent>
+      </SidebarContentComponent>
 
       <SidebarFooter className="border-t p-3">
         <div className="text-xs text-muted-foreground">
           {isExpanded && (
-            <p className="px-2">© 2023 Glide Sync. All rights reserved.</p>
+            <p className="px-2">© 2023 Demo. All rights reserved.</p>
           )}
         </div>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
+export function Demo() {
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen">
+        <DemoSidebar />
+        <SidebarContentComponent className="flex-1 p-6 bg-muted/50">
+          <div className="rounded-lg border bg-card p-8 shadow">
+            <h2 className="text-xl font-semibold">Welcome to the Dashboard</h2>
+            <p className="text-muted-foreground">This is the main content area. Use the sidebar to navigate.</p>
+          </div>
+        </SidebarContentComponent>
+      </div>
+    </SidebarProvider>
+  );
+} 

@@ -1,1 +1,2 @@
-export { Demo as SidebarDemo } from "./sidebar-demo" 
+
+export { Demo as SidebarDemo } from "@/components/demos/SidebarDemo";

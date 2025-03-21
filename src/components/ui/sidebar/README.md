@@ -1,6 +1,7 @@
+
 # Sidebar Component
 
-This directory contains a comprehensive sidebar component for React applications. It replaces the older sidebar implementation in `src/components/blocks/sidebar`.
+This directory contains a comprehensive sidebar component for React applications.
 
 ## Features
 
@@ -9,40 +10,8 @@ This directory contains a comprehensive sidebar component for React applications
 - Collapsible to icon-only mode
 - Keyboard shortcut support (Ctrl/Cmd+B)
 - Persistent state via cookies
-- Various sidebar components for building complex navigation
-
-## Hover Behavior
-
-The sidebar now includes an enhanced hover behavior in collapsed mode:
-
-1. When collapsed, hovering over the sidebar will temporarily expand it to show all labels
-2. Moving the mouse away will collapse it back to icon-only mode
-3. This provides a better user experience by showing context when needed while maintaining a compact UI
-
-Example with hover effect:
-
-```tsx
-function AppSidebar() {
-  const [isHovering, setIsHovering] = useState(false)
-  const { state } = useSidebar()
-  const isExpanded = state === "expanded"
-  
-  // Show labels on hover or when expanded
-  const showLabels = isExpanded || isHovering
-  
-  return (
-    <div 
-      className={`transition-width duration-300 ${isExpanded || isHovering ? "w-64" : "w-12"}`}
-      onMouseEnter={() => !isExpanded && setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-    >
-      <Sidebar>
-        {/* sidebar content */}
-      </Sidebar>
-    </div>
-  )
-}
-```
+- Tooltips for collapsed state
+- Active link indication
 
 ## Usage
 
@@ -81,6 +50,19 @@ function Layout() {
 }
 ```
 
+### Mobile Support
+
+The sidebar automatically switches to a mobile-friendly floating version on small screens:
+
+```tsx
+<Sidebar
+  variant={isMobile ? "floating" : "sidebar"}
+  collapsible="icon"
+>
+  {/* Sidebar content */}
+</Sidebar>
+```
+
 ### Available Components
 
 - `Sidebar`: The main container component
@@ -89,24 +71,31 @@ function Layout() {
 - `SidebarFooter`: Footer section of the sidebar
 - `SidebarMenu`: Container for menu items
 - `SidebarMenuItem`: Individual menu item
+- `SidebarMenuButton`: Button component for menu items
 - `SidebarSeparator`: Horizontal separator for dividing sections
-- `SidebarInput`: Search input component for sidebars
-- `SidebarGroup`: Group container with collapsible functionality
+- `SidebarProvider`: Context provider for sidebar state
 - `SidebarTrigger`: Button to toggle sidebar state
+- `useSidebar`: Hook to access and control sidebar state
 
-## Migration from old sidebar
+### Using Icons
 
-If you're migrating from the old sidebar components in `src/components/blocks/sidebar`, use the following mapping:
+```tsx
+import { Home } from "lucide-react"
 
-| Old Component | New Component |
-|---------------|---------------|
-| `SidebarComponent` | `Sidebar` |
-| `SidebarContent` | `SidebarContent` |
-| `SidebarGroup` | Use `SidebarHeader`, `SidebarContent`, or just `div` with appropriate styles |
-| `SidebarGroupLabel` | Use a heading with styling |
-| `SidebarMenuButton` | Use a `Link` or `button` with appropriate styling |
-| `SidebarProvider` | `SidebarProvider` |
-| `useSidebar().isOpen` | `useSidebar().state === "expanded"` |
-| `useSidebar().toggleSidebar()` | `useSidebar().toggleSidebar()` |
+<SidebarMenuButton>
+  <Home className="h-4 w-4" />
+  <span>Home</span>
+</SidebarMenuButton>
+```
 
-The new implementation provides more flexibility and better separation of concerns. 
+### Active State
+
+```tsx
+<SidebarMenuButton 
+  isActive={pathname === "/home"}
+  tooltip="Home"
+>
+  <Home className="h-4 w-4" />
+  <span>Home</span>
+</SidebarMenuButton>
+```
