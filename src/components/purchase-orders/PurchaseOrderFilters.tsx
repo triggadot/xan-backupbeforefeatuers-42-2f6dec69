@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { CalendarIcon, Search, X } from 'lucide-react';
@@ -10,13 +11,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from "@/lib/utils"
 import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { PurchaseOrderFilters as FilterTypes } from '@/types/purchaseOrder';
 
 interface DateRange {
   from?: Date;
   to?: Date;
 }
 
-export function PurchaseOrderFilters() {
+interface PurchaseOrderFiltersProps {
+  onChange: (filters: FilterTypes) => void;
+}
+
+export function PurchaseOrderFilters({ onChange }: PurchaseOrderFiltersProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -25,12 +31,31 @@ export function PurchaseOrderFilters() {
   const { accounts, isLoading: isLoadingAccounts } = useAccountsNew();
 
   useEffect(() => {
-    // Apply filters here (e.g., call an API with the filter values)
-    console.log("Search:", debouncedSearch);
-    console.log("Status:", selectedStatus);
-    console.log("Vendor:", selectedVendor);
-    console.log("Date Range:", date);
-  }, [debouncedSearch, selectedStatus, selectedVendor, date]);
+    // Apply filters
+    const filters: FilterTypes = {};
+    
+    if (debouncedSearch) {
+      filters.search = debouncedSearch;
+    }
+    
+    if (selectedStatus && selectedStatus !== 'all') {
+      filters.status = selectedStatus;
+    }
+    
+    if (selectedVendor && selectedVendor !== 'all') {
+      filters.vendorId = selectedVendor;
+    }
+    
+    if (date?.from) {
+      filters.fromDate = date.from;
+    }
+    
+    if (date?.to) {
+      filters.toDate = date.to;
+    }
+    
+    onChange(filters);
+  }, [debouncedSearch, selectedStatus, selectedVendor, date, onChange]);
 
   const handleStatusChange = (value: string) => {
     setSelectedStatus(value === "all" ? null : value);
@@ -40,15 +65,12 @@ export function PurchaseOrderFilters() {
     setSelectedVendor(value === "all" ? null : value);
   };
 
-  const handleDateChange = (date: DateRange | null) => {
-    setDate(date);
-  };
-
   const clearFilters = () => {
     setSearch("");
     setSelectedStatus(null);
     setSelectedVendor(null);
     setDate(null);
+    onChange({});
   };
 
   const activeFilters = [

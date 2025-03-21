@@ -5,31 +5,38 @@ export interface PurchaseOrder {
   purchase_order_uid?: string;
   number: string;
   rowid_accounts?: string;
-  accountId?: string;
-  accountName: string;
+  vendorId?: string;
+  vendorName: string;
   po_date?: string;
   date: Date;
-  payment_status: string;
+  dueDate?: Date;
+  payment_status?: string;
   status: 'draft' | 'sent' | 'received' | 'partial' | 'complete';
   total_amount: number;
   total_paid: number;
+  total?: number;
   balance: number;
   product_count?: number;
   created_at?: string;
   updated_at?: string;
   docs_shortlink?: string;
   vendor_uid?: string;
+  notes?: string;
   lineItems: PurchaseOrderLineItem[];
   vendorPayments: VendorPayment[];
+  payments?: VendorPayment[];
 }
 
 export interface PurchaseOrderLineItem {
   id: string;
   rowid_products: string;
   product_name: string;
+  description?: string;
   quantity: number;
   unit_price: number;
+  unitPrice?: number;
   total: number;
+  productId?: string;
   productDetails?: ProductDetails;
 }
 
@@ -59,8 +66,26 @@ export interface VendorPayment {
 
 export interface PurchaseOrderFilters {
   search?: string;
-  status?: string[];
+  status?: string;
   accountId?: string;
+  vendorId?: string;
   dateFrom?: Date;
   dateTo?: Date;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+export interface PurchaseOrderWithVendor {
+  id: string;
+  number: string;
+  date: Date;
+  status: PurchaseOrder['status'];
+  vendorId: string;
+  vendorName: string;
+  total: number;
+  balance: number;
+  paymentCount?: number;
+  lastPaymentDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

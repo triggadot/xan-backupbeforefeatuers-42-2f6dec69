@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -7,7 +8,7 @@ import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAccountsNew } from '@/hooks/useAccountsNew'; // Updated import
+import { useAccountsNew } from '@/hooks/useAccountsNew';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 
@@ -27,23 +28,24 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any) {
+type FormValues = z.infer<typeof formSchema>;
+
+interface PurchaseOrderFormProps {
+  initialData?: PurchaseOrder;
+  isEdit?: boolean;
+  onClose?: () => void;
+}
+
+export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: PurchaseOrderFormProps) {
   const navigate = useNavigate();
   const { accounts } = useAccountsNew();
-  const { createPurchaseOrder } = usePurchaseOrders();
+  const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrders();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Instead of using updatePurchaseOrder which doesn't exist
-  const handleUpdate = async (id: string, data: any) => {
-    // This function would need to be implemented in usePurchaseOrders
-    console.error('Update functionality not implemented');
-    return false;
-  };
-
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
-      vendorId: initialData.vendorId,
+      vendorId: initialData.vendorId || initialData.rowid_accounts || '',
       date: new Date(initialData.date),
       number: initialData.number || '',
       status: initialData.status as PurchaseOrderStatusType || 'draft',
@@ -57,26 +59,24 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
     },
   });
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     
     try {
       if (isEdit && initialData) {
-        const updateData = {
+        await updatePurchaseOrder(initialData.id, {
           vendorId: values.vendorId,
           date: values.date,
           number: values.number,
           status: values.status,
           notes: values.notes,
-        };
-        
-        await handleUpdate(initialData.id, updateData);
+        });
         
         if (onClose) {
           onClose();
         }
       } else {
-        const poId = await createPurchaseOrder({
+        await createPurchaseOrder({
           vendorId: values.vendorId,
           date: values.date,
           number: values.number,
@@ -121,7 +121,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
               ))}
           </select>
           {form.formState.errors.vendorId && (
-            <p className="text-sm text-red-500">{form.formState.errors.vendorId.message}</p>
+            <p className="text-sm text-red-500">{form.formState.errors.vendorId.message as React.ReactNode}</p>
           )}
         </div>
 
@@ -137,13 +137,13 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
               type="date"
               id="date"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              {...form.register('date')}
+              {...form.register('date', { valueAsDate: true })}
               disabled={isSubmitting}
             />
             <CalendarIcon className="absolute right-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
           {form.formState.errors.date && (
-            <p className="text-sm text-red-500">{form.formState.errors.date.message}</p>
+            <p className="text-sm text-red-500">{form.formState.errors.date.message as React.ReactNode}</p>
           )}
         </div>
 
@@ -162,7 +162,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
             disabled={isSubmitting}
           />
           {form.formState.errors.number && (
-            <p className="text-sm text-red-500">{form.formState.errors.number.message}</p>
+            <p className="text-sm text-red-500">{form.formState.errors.number.message as React.ReactNode}</p>
           )}
         </div>
 
@@ -185,7 +185,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
             <option value="complete">Complete</option>
           </select>
           {form.formState.errors.status && (
-            <p className="text-sm text-red-500">{form.formState.errors.status.message}</p>
+            <p className="text-sm text-red-500">{form.formState.errors.status.message as React.ReactNode}</p>
           )}
         </div>
       </div>
@@ -205,7 +205,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: any)
           disabled={isSubmitting}
         />
         {form.formState.errors.notes && (
-          <p className="text-sm text-red-500">{form.formState.errors.notes.message}</p>
+          <p className="text-sm text-red-500">{form.formState.errors.notes.message as React.ReactNode}</p>
         )}
       </div>
 

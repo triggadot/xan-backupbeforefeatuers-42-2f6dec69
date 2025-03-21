@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -7,14 +8,22 @@ import { Plus } from 'lucide-react';
 import { PurchaseOrderForm } from '@/components/purchase-orders/PurchaseOrderForm';
 import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
+import { PurchaseOrderFilters as PurchaseOrderFiltersType, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+
+interface PurchaseOrderListProps {
+  purchaseOrders: PurchaseOrderWithVendor[];
+  isLoading: boolean;
+  error: string;
+  onEdit?: (purchaseOrder: PurchaseOrderWithVendor) => void;
+}
 
 const PurchaseOrders: React.FC = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrderWithVendor | null>(null);
   const { fetchPurchaseOrders, isLoading, error } = usePurchaseOrders();
-  const [purchaseOrders, setPurchaseOrders] = React.useState<any[]>([]);
-  const [filters, setFilters] = useState<PurchaseOrderFilters>({});
+  const [purchaseOrders, setPurchaseOrders] = React.useState<PurchaseOrderWithVendor[]>([]);
+  const [filters, setFilters] = useState<PurchaseOrderFiltersType>({});
 
   React.useEffect(() => {
     const getPurchaseOrders = async () => {
@@ -35,10 +44,14 @@ const PurchaseOrders: React.FC = () => {
     setIsSheetOpen(false);
   };
 
-  const handleEditPurchaseOrder = (purchaseOrder: any) => {
+  const handleEditPurchaseOrder = (purchaseOrder: PurchaseOrderWithVendor) => {
     setIsEditMode(true);
     setSelectedPurchaseOrder(purchaseOrder);
     setIsSheetOpen(true);
+  };
+
+  const handleFiltersChange = (newFilters: PurchaseOrderFiltersType) => {
+    setFilters(newFilters);
   };
 
   return (
@@ -60,7 +73,7 @@ const PurchaseOrders: React.FC = () => {
           <TabsTrigger value="complete">Complete</TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <PurchaseOrderFilters onChange={setFilters} />
+          <PurchaseOrderFilters onChange={handleFiltersChange} />
           <PurchaseOrderList
             purchaseOrders={purchaseOrders}
             isLoading={isLoading}
@@ -108,7 +121,7 @@ const PurchaseOrders: React.FC = () => {
             <SheetTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</SheetTitle>
           </SheetHeader>
           <PurchaseOrderForm
-            initialData={selectedPurchaseOrder}
+            initialData={selectedPurchaseOrder as PurchaseOrder}
             isEdit={isEditMode}
             onClose={handleCloseSheet}
           />
