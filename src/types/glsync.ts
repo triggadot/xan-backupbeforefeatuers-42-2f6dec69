@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -21,6 +20,7 @@ export interface GlMapping {
   enabled: boolean;
   created_at: string | null;
   updated_at: string | null;
+  app_name?: string;
 }
 
 export interface GlColumnMapping {

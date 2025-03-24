@@ -1,10 +1,11 @@
+
 import { useEffect } from 'react';
 import { useNavigate, useParams, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import SyncLayout from '@/components/sync/SyncLayout';
 import SyncDashboard from '@/components/sync/SyncDashboard';
 import ConnectionsManager from '@/components/sync/ConnectionsManager';
 import MappingsManager from '@/components/sync/MappingsManager';
-import MappingDetails from './MappingDetails';
+import MappingDetails from '@/pages/MappingDetails';
 import SyncLogs from '@/components/sync/SyncLogs';
 
 // Valid tab values for sync

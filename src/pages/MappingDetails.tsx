@@ -40,13 +40,15 @@ export default function MappingDetails() {
       
       return {
         ...data,
-        app_name: data.gl_connections?.app_name,
+        connection_id: data.connection_id,
         column_mappings: data.column_mappings as unknown as Record<string, { 
           glide_column_name: string;
           supabase_column_name: string;
           data_type: 'string' | 'number' | 'boolean' | 'date-time' | 'image-uri' | 'email-address';
-        }>
-      } as GlMapping;
+        }>,
+        // Add the app_name property from the joined connection
+        app_name: data.gl_connections?.app_name
+      } as GlMapping & { app_name?: string };
     },
     enabled: !!id,
     meta: {
@@ -167,7 +169,7 @@ export default function MappingDetails() {
         
         <MappingDetailsCard
           mapping={mapping}
-          connectionName={mapping.app_name || 'Unknown'}
+          connectionName={(mapping as any).app_name || 'Unknown'}
           status={syncStatus}
           onEdit={() => handleEdit(mapping)}
           onDelete={() => setShowDeleteDialog(true)}
