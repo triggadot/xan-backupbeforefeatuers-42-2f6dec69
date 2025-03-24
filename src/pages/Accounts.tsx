@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, RefreshCw, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import {
   DialogTitle 
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import AccountList from '@/components/accounts/AccountList';
+import AccountCardList from '@/components/accounts/AccountCardList';
 import AccountForm from '@/components/accounts/AccountForm';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
 import { Account } from '@/types/accountNew';
@@ -78,7 +77,7 @@ const Accounts: React.FC = () => {
         </div>
       </div>
       
-      <AccountList 
+      <AccountCardList 
         accounts={filteredAccounts} 
         isLoading={isLoading} 
         error={error} 

@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Account } from '@/types/accountNew';
-import NewAccountCard from './NewAccountCard';
+import AccountCard from './AccountCard';
 import { Spinner } from '@/components/ui/spinner';
 
 interface AccountListProps {
@@ -10,7 +9,7 @@ interface AccountListProps {
   error: string | null;
 }
 
-const NewAccountList: React.FC<AccountListProps> = ({ accounts, isLoading, error }) => {
+const AccountCardList: React.FC<AccountListProps> = ({ accounts, isLoading, error }) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[200px]">
@@ -39,10 +38,10 @@ const NewAccountList: React.FC<AccountListProps> = ({ accounts, isLoading, error
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {accounts.map((account) => (
-        <NewAccountCard key={account.id} account={account} />
+        <AccountCard key={account.id} account={account} />
       ))}
     </div>
   );
 };
 
-export default NewAccountList;
+export default AccountCardList;

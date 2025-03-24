@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Account } from '@/types/accountNew';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +11,7 @@ interface AccountCardProps {
   account: Account;
 }
 
-const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
+const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const getTypeColor = (account: Account) => {
     if (account.is_customer && account.is_vendor) {
       return 'bg-green-100 text-green-800';
@@ -99,4 +98,4 @@ const NewAccountCard: React.FC<AccountCardProps> = ({ account }) => {
   );
 };
 
-export default NewAccountCard;
+export default AccountCard;

@@ -20,8 +20,6 @@ import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
 import Estimates from '@/pages/Estimates';
 import DataManagement from '@/pages/DataManagement';
 import Index from '@/pages/Index';
-import NewAccounts from '@/pages/NewAccounts';
-import NewAccountDetail from '@/pages/NewAccountDetail';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 function App() {
@@ -59,22 +57,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <AccountDetail />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="new/accounts" 
-            element={
-              <ProtectedRoute>
-                <NewAccounts />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="new/accounts/:id" 
-            element={
-              <ProtectedRoute>
-                <NewAccountDetail />
               </ProtectedRoute>
             } 
           />
