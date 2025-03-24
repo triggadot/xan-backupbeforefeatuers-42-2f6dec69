@@ -1430,6 +1430,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      refresh_materialized_view_secure: {
+        Args: {
+          view_name: string
+        }
+        Returns: undefined
+      }
       update_estimate_totals: {
         Args: {
           estimate_id: string

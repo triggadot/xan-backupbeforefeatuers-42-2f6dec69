@@ -2,10 +2,12 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrderFilters, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+import { useToast } from '@/hooks/use-toast';
 
 export function useFetchPurchaseOrders() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch all purchase orders with optional filters
   const fetchPurchaseOrders = async (filters?: PurchaseOrderFilters) => {
@@ -13,6 +15,16 @@ export function useFetchPurchaseOrders() {
     setError(null);
     
     try {
+      // First, ensure the materialized view is refreshed
+      const { error: refreshError } = await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_purchase_order_vendor_details'
+      });
+      
+      if (refreshError) {
+        console.warn('Could not refresh materialized view:', refreshError.message);
+        // Continue anyway as the view might still have recent enough data
+      }
+      
       // Build the base query
       let query = supabase
         .from('mv_purchase_order_vendor_details')
@@ -66,7 +78,15 @@ export function useFetchPurchaseOrders() {
       return { data: formattedData, error: null };
     } catch (err) {
       console.error('Error fetching purchase orders:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      
+      toast({
+        title: "Error fetching purchase orders",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      
       return { data: [], error: err };
     } finally {
       setIsLoading(false);
