@@ -10,6 +10,14 @@ import {
 } from '@/types/invoiceView';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+// Type guard to check if product details are valid
+const isValidProductDetails = (productDetails: any): productDetails is ProductDetails => {
+  return productDetails && 
+         typeof productDetails === 'object' && 
+         productDetails !== null &&
+         !('error' in productDetails);
+};
+
 export function useInvoicesView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -22,6 +30,16 @@ export function useInvoicesView() {
     setError(null);
     
     try {
+      // First, ensure the materialized view is refreshed
+      const { error: refreshError } = await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_invoice_customer_details'
+      });
+      
+      if (refreshError) {
+        console.warn('Could not refresh materialized view:', refreshError.message);
+        // Continue anyway as the view might still have recent enough data
+      }
+      
       const { data, error } = await supabase
         .from('mv_invoice_customer_details')
         .select('*')
@@ -40,7 +58,7 @@ export function useInvoicesView() {
         total: Number(invoice.total_amount),
         balance: Number(invoice.balance),
         status: invoice.payment_status || 'draft',
-        lineItemsCount: 0, // Default value if line_items_count is missing
+        lineItemsCount: Number(invoice.line_items_count || 0),
         notes: invoice.notes,
       }));
       
@@ -65,6 +83,16 @@ export function useInvoicesView() {
     setError(null);
     
     try {
+      // First, ensure the materialized view is refreshed
+      const { error: refreshError } = await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_invoice_customer_details'
+      });
+      
+      if (refreshError) {
+        console.warn('Could not refresh materialized view:', refreshError.message);
+        // Continue anyway as the view might still have recent enough data
+      }
+      
       // Get invoice details
       const { data: invoice, error: invoiceError } = await supabase
         .from('mv_invoice_customer_details')
@@ -93,26 +121,22 @@ export function useInvoicesView() {
         
       if (paymentsError) throw paymentsError;
       
-      // Map line items
+      // Map line items using type guard
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
         let productDetails: ProductDetails | null = null;
-        const itemProduct = item.product || null;
         
-        // Check if product data is valid and not an error
-        if (itemProduct && 
-            typeof itemProduct === 'object' && 
-            itemProduct !== null && 
-            !('error' in itemProduct)) {
+        // Use type guard to validate product details
+        if (isValidProductDetails(item.product)) {
           productDetails = {
-            id: itemProduct.id || '',
-            glide_row_id: itemProduct.glide_row_id || '',
-            name: itemProduct.display_name || itemProduct.vendor_product_name || 'Unknown Product',
-            display_name: itemProduct.display_name,
-            vendor_product_name: itemProduct.vendor_product_name,
-            new_product_name: itemProduct.new_product_name,
-            cost: itemProduct.cost,
-            category: itemProduct.category,
-            product_image1: itemProduct.product_image1
+            id: item.product.id || '',
+            glide_row_id: item.product.glide_row_id || '',
+            name: item.product.display_name || item.product.vendor_product_name || 'Unknown Product',
+            display_name: item.product.display_name,
+            vendor_product_name: item.product.vendor_product_name,
+            new_product_name: item.product.new_product_name,
+            cost: item.product.cost,
+            category: item.product.category,
+            product_image1: item.product.product_image1
           };
         }
         

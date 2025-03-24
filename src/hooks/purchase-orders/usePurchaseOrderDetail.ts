@@ -3,6 +3,14 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment, ProductDetails } from '@/types/purchaseOrder';
 
+// Type guard to check if vendor object is valid
+const isValidVendor = (vendor: any): vendor is { account_name?: string, accounts_uid?: string } => {
+  return vendor && 
+    typeof vendor === 'object' && 
+    vendor !== null &&
+    !('error' in vendor);
+};
+
 export function usePurchaseOrderDetail() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,21 +86,15 @@ export function usePurchaseOrderDetail() {
         notes: payment.vendor_purchase_note || ''
       }));
       
-      // Format vendor name from related account
-      // Handle potential null vendor data safely
-      const vendorName = po.vendor && 
-                        typeof po.vendor === 'object' && 
-                        po.vendor !== null &&
-                        'account_name' in po.vendor ? 
-                        po.vendor.account_name : 'Unknown Vendor';
-      
-      // Safely extract vendor_uid
-      const vendorUid = po.vendor && 
-                      typeof po.vendor === 'object' && 
-                      po.vendor !== null &&
-                      'accounts_uid' in po.vendor ? 
-                      po.vendor.accounts_uid : undefined;
+      // Use type guard to check vendor data
+      let vendorName = 'Unknown Vendor';
+      let vendorUid: string | undefined = undefined;
 
+      if (isValidVendor(po.vendor)) {
+        vendorName = po.vendor.account_name || 'Unknown Vendor';
+        vendorUid = po.vendor.accounts_uid;
+      }
+      
       // Handle notes field which may not be present in older records
       const notes = 'notes' in po ? po.notes : '';
       

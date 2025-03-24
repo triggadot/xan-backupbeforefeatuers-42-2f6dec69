@@ -3,6 +3,23 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceWithDetails, InvoiceLineItem, InvoicePayment } from '@/types/invoice';
 
+// Type guard to check if account object is valid
+const isValidAccount = (account: any): account is { account_name: string } => {
+  return account && 
+         typeof account === 'object' && 
+         account !== null &&
+         'account_name' in account;
+};
+
+// Type guard to check if product details are valid
+const isValidProductDetails = (productDetails: any): productDetails is { display_name: string } => {
+  return productDetails && 
+         typeof productDetails === 'object' && 
+         productDetails !== null &&
+         'display_name' in productDetails &&
+         !('error' in productDetails);
+};
+
 export function useInvoiceDetail() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,20 +61,19 @@ export function useInvoiceDetail() {
         
       if (paymentsError) throw paymentsError;
       
-      // Format the result as InvoiceWithDetails
-      const accountName = invoice.account && 
-                         typeof invoice.account === 'object' && 
-                         invoice.account !== null &&
-                         'account_name' in invoice.account ? 
-                         invoice.account.account_name : 'Unknown Customer';
+      // Get customer name using type guard
+      let accountName = 'Unknown Customer';
+      if (isValidAccount(invoice.account)) {
+        accountName = invoice.account.account_name;
+      }
 
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
-        const itemProductDetails = item.productDetails || null;
-        const productName = itemProductDetails && 
-                           typeof itemProductDetails === 'object' && 
-                           itemProductDetails !== null &&
-                           'display_name' in itemProductDetails ? 
-                           itemProductDetails.display_name : 'Unknown Product';
+        let productName = 'Unknown Product';
+        
+        // Use type guard to validate product details
+        if (isValidProductDetails(item.productDetails)) {
+          productName = item.productDetails.display_name;
+        }
                            
         return {
           id: item.id,
@@ -71,7 +87,7 @@ export function useInvoiceDetail() {
           notes: item.product_sale_note,
           createdAt: new Date(item.created_at),
           updatedAt: new Date(item.updated_at),
-          productDetails: typeof item.productDetails === 'object' ? item.productDetails : null
+          productDetails: isValidProductDetails(item.productDetails) ? item.productDetails : null
         };
       });
 
