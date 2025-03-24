@@ -5,14 +5,13 @@ import {
   Pencil, 
   Trash2, 
   Download, 
-  PlusCircle, 
   Mail,
   MoreHorizontal, 
   Copy, 
   ArrowLeft
 } from 'lucide-react';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
-import { InvoiceWithDetails } from '@/types/invoiceView';
+import { InvoiceWithDetails } from '@/types/invoice';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
 import { LineItemsTable } from './LineItemsTable';
@@ -208,6 +208,8 @@ export function InvoiceDetail() {
     );
   }
 
+  const isEditable = invoice.status !== 'paid';
+
   return (
     <div className="container py-6 max-w-4xl">
       {/* Header with navigation and actions */}
@@ -221,12 +223,18 @@ export function InvoiceDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate(`/invoices/${id}/edit`)}>
+          {isEditable && (
+            <Button variant="outline" onClick={() => navigate(`/invoices/${id}/edit`)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => setIsAddPaymentOpen(true)}
+            disabled={!isEditable}
+          >
             <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" onClick={() => setIsAddPaymentOpen(true)}>
-            <PlusCircle className="h-4 w-4 mr-2" />
             Add Payment
           </Button>
           <DropdownMenu>
@@ -254,13 +262,15 @@ export function InvoiceDetail() {
                 <Copy className="h-4 w-4 mr-2" />
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="text-destructive focus:text-destructive"
-                onClick={() => setIsDeleteAlertOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
+              {isEditable && (
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setIsDeleteAlertOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -269,63 +279,74 @@ export function InvoiceDetail() {
       {/* Invoice details */}
       {invoice && (
         <div className="grid gap-6">
-          <div className="bg-white rounded-lg border shadow-sm p-6">
-            <div className="flex flex-col md:flex-row justify-between gap-6">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Customer</h3>
-                <p className="font-medium">{invoice.customerName}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row justify-between gap-6">
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Invoice Date</h3>
-                  <p>{invoice.invoiceDate.toLocaleDateString()}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Customer</h3>
+                  <p className="font-medium">{invoice.customerName}</p>
                 </div>
                 
-                {invoice.dueDate && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Due Date</h3>
-                    <p>{invoice.dueDate.toLocaleDateString()}</p>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Invoice Date</h3>
+                    <p>{invoice.invoiceDate.toLocaleDateString()}</p>
                   </div>
-                )}
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
-                  <p className="font-medium">${invoice.total.toFixed(2)}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Balance</h3>
-                  <p className="font-medium">${invoice.balance.toFixed(2)}</p>
+                  
+                  {invoice.dueDate && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Due Date</h3>
+                      <p>{invoice.dueDate.toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
+                    <p className="font-medium">${invoice.total.toFixed(2)}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Balance</h3>
+                    <p className="font-medium">${invoice.balance.toFixed(2)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Line items table */}
-          <div className="rounded-md border">
+          <Card className="overflow-hidden">
             <LineItemsTable 
               lineItems={invoice.lineItems} 
               invoiceId={invoice.id}
+              invoiceGlideRowId={invoice.invoiceNumber}
+              status={invoice.status}
               onDeleteItem={confirmDeleteLineItem}
             />
-          </div>
+          </Card>
 
           {/* Payments table */}
-          <div className="rounded-md border">
+          <Card className="overflow-hidden">
             <PaymentsTable 
               payments={invoice.payments} 
               invoiceId={invoice.id}
+              invoiceGlideRowId={invoice.invoiceNumber}
+              customerId={invoice.customerId}
+              invoiceTotal={invoice.total}
+              invoiceBalance={invoice.balance}
+              status={invoice.status}
               onDeletePayment={confirmDeletePayment}
             />
-          </div>
+          </Card>
 
           {/* Invoice notes if any */}
           {invoice.notes && (
-            <div className="border rounded-md p-4">
-              <h3 className="font-medium mb-2">Notes</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
-            </div>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-medium mb-2">Notes</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
@@ -371,8 +392,10 @@ export function InvoiceDetail() {
       {invoice && (
         <AddPaymentDialog
           invoiceId={invoice.id}
-          invoiceGlideRowId={invoice.glideRowId}
+          invoiceGlideRowId={invoice.invoiceNumber}
           customerId={invoice.customerId}
+          invoiceTotal={invoice.total}
+          invoiceBalance={invoice.balance}
           open={isAddPaymentOpen}
           onOpenChange={setIsAddPaymentOpen}
           onSuccess={handleAddPaymentSuccess}

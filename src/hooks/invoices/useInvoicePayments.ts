@@ -1,132 +1,222 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { InvoicePayment, AddPaymentInput } from '@/types/invoice';
+import { InvoicePayment } from '@/types/invoice';
+import { useToast } from '@/hooks/use-toast';
 
 export function useInvoicePayments() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Add a payment to an invoice
-  const addPayment = useMutation({
-    mutationFn: async (paymentData: AddPaymentInput): Promise<InvoicePayment> => {
-      // Create a new payment record
-      const { data: payment, error } = await supabase
-        .from('gl_customer_payments')
-        .insert({
-          glide_row_id: `payment-${Date.now()}`, // Generate a unique ID
-          rowid_invoices: paymentData.invoiceId,
-          rowid_accounts: paymentData.accountId,
-          payment_amount: paymentData.amount,
-          date_of_payment: paymentData.paymentDate.toISOString(),
-          type_of_payment: paymentData.paymentMethod || '',
-          payment_note: paymentData.notes || ''
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding payment:', error);
-        throw new Error(`Failed to add payment: ${error.message}`);
-      }
-
-      // Update the invoice status based on the remaining balance
-      // This would typically be handled by a trigger, but we'll do it manually for now
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('gl_invoices')
-        .select('total_amount, balance')
-        .eq('id', paymentData.invoiceId)
-        .single();
-
-      if (invoiceError) {
-        console.error('Error getting invoice data:', invoiceError);
-      } else {
-        // Calculate the new balance
-        const currentBalance = Number(invoice.balance || 0);
-        const newBalance = Math.max(0, currentBalance - paymentData.amount);
-        const newStatus = newBalance <= 0 ? 'paid' : newBalance < Number(invoice.total_amount) ? 'partial' : 'unpaid';
-
-        // Update the invoice status and balance
-        const { error: updateError } = await supabase
-          .from('gl_invoices')
-          .update({
-            balance: newBalance,
-            payment_status: newStatus
-          })
-          .eq('id', paymentData.invoiceId);
-
-        if (updateError) {
-          console.error('Error updating invoice status:', updateError);
-        }
-      }
-
-      // Format the result (convert string dates to Date objects)
-      return {
-        id: payment.id,
-        invoiceId: payment.rowid_invoices,
-        accountId: payment.rowid_accounts,
-        amount: Number(payment.payment_amount),
-        paymentDate: new Date(payment.date_of_payment || payment.created_at),
-        paymentMethod: payment.type_of_payment || '',
-        notes: payment.payment_note || '',
-        createdAt: new Date(payment.created_at),
-        updatedAt: new Date(payment.updated_at)
-      };
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Payment Added',
-        description: 'The payment has been recorded successfully.',
-      });
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice'] });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to add payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  // Delete a payment record
-  const deletePayment = useMutation({
-    mutationFn: async ({ id, invoiceId }: { id: string, invoiceId: string }) => {
+  const addPayment = {
+    mutateAsync: async ({ invoiceGlideId, data }: { invoiceGlideId: string, data: Partial<InvoicePayment> }): Promise<InvoicePayment | null> => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        const { error } = await supabase
+        const paymentData = {
+          rowid_invoices: invoiceGlideId,
+          rowid_accounts: data.accountId,
+          payment_amount: data.amount,
+          date_of_payment: data.paymentDate,
+          type_of_payment: data.paymentMethod,
+          payment_note: data.notes
+        };
+        
+        const { data: newPayment, error: createError } = await supabase
+          .from('gl_customer_payments')
+          .insert([paymentData])
+          .select()
+          .single();
+          
+        if (createError) throw createError;
+        
+        // Update the invoice total
+        await updateInvoiceTotal(invoiceGlideId);
+        
+        toast({
+          title: 'Success',
+          description: 'Payment added successfully.',
+        });
+        
+        return newPayment as unknown as InvoicePayment;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error adding payment';
+        setError(errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const updatePayment = {
+    mutateAsync: async ({ id, data }: { id: string, data: Partial<InvoicePayment> }): Promise<InvoicePayment | null> => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get the current payment to access the invoice ID
+        const { data: currentPayment, error: fetchError } = await supabase
+          .from('gl_customer_payments')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        const paymentData = {
+          rowid_accounts: data.accountId,
+          payment_amount: data.amount,
+          date_of_payment: data.paymentDate,
+          type_of_payment: data.paymentMethod,
+          payment_note: data.notes
+        };
+        
+        // Update the payment
+        const { data: updatedPayment, error: updateError } = await supabase
+          .from('gl_customer_payments')
+          .update(paymentData)
+          .eq('id', id)
+          .select()
+          .single();
+          
+        if (updateError) throw updateError;
+        
+        // Update the invoice total
+        await updateInvoiceTotal(currentPayment.rowid_invoices);
+        
+        toast({
+          title: 'Success',
+          description: 'Payment updated successfully.',
+        });
+        
+        return updatedPayment as unknown as InvoicePayment;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error updating payment';
+        setError(errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const deletePayment = {
+    mutateAsync: async ({ id }: { id: string }): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get the current payment to access the invoice ID
+        const { data: payment, error: fetchError } = await supabase
+          .from('gl_customer_payments')
+          .select('rowid_invoices')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) throw fetchError;
+        
+        // Delete the payment
+        const { error: deleteError } = await supabase
           .from('gl_customer_payments')
           .delete()
           .eq('id', id);
-
-        if (error) throw error;
-
+          
+        if (deleteError) throw deleteError;
+        
+        // Update the invoice total
+        await updateInvoiceTotal(payment.rowid_invoices);
+        
         toast({
-          title: 'Payment Deleted',
-          description: 'Payment has been deleted successfully.',
+          title: 'Success',
+          description: 'Payment deleted successfully.',
         });
-
+        
         return true;
       } catch (err) {
-        console.error('Error deleting payment:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Error deleting payment';
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: err instanceof Error ? err.message : 'Failed to delete payment',
+          description: errorMessage,
           variant: 'destructive',
         });
-        throw err;
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice'] });
     }
-  });
+  };
+
+  // Helper function to update invoice totals
+  const updateInvoiceTotal = async (invoiceGlideId: string) => {
+    try {
+      // Calculate total from line items
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select('line_total')
+        .eq('rowid_invoices', invoiceGlideId);
+        
+      if (lineItemsError) throw lineItemsError;
+      
+      const total = lineItems.reduce((sum, item) => sum + (parseFloat(item.line_total) || 0), 0);
+      
+      // Get total payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('payment_amount')
+        .eq('rowid_invoices', invoiceGlideId);
+        
+      if (paymentsError) throw paymentsError;
+      
+      const totalPaid = payments.reduce((sum, payment) => sum + (parseFloat(payment.payment_amount) || 0), 0);
+      
+      // Calculate payment status
+      let paymentStatus = 'draft';
+      if (totalPaid === 0) {
+        paymentStatus = 'sent';
+      } else if (totalPaid >= total) {
+        paymentStatus = 'paid';
+      } else if (totalPaid > 0 && totalPaid < total) {
+        paymentStatus = 'partial';
+      }
+      
+      // Update invoice with new totals
+      const { error: updateError } = await supabase
+        .from('gl_invoices')
+        .update({
+          total_amount: total,
+          total_paid: totalPaid,
+          balance: total - totalPaid,
+          payment_status: paymentStatus,
+          processed: true // Set invoice as processed if we're recording payments
+        })
+        .eq('glide_row_id', invoiceGlideId);
+        
+      if (updateError) throw updateError;
+      
+    } catch (err) {
+      console.error('Error updating invoice total:', err);
+    }
+  };
 
   return {
     addPayment,
-    deletePayment
+    updatePayment,
+    deletePayment,
+    isLoading,
+    error
   };
 }

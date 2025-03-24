@@ -1,3 +1,4 @@
+
 import { GlAccount, GlCustomerPayment, GlInvoice, GlInvoiceLine, ProductDetails } from './index';
 
 export interface InvoiceLineItem {
@@ -8,9 +9,11 @@ export interface InvoiceLineItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
   productDetails?: ProductDetails;
+  productName?: string;
 }
 
 export interface InvoicePayment {
@@ -19,6 +22,7 @@ export interface InvoicePayment {
   accountId: string;
   amount: number;
   paymentDate: Date;
+  date?: Date; // For compatibility
   paymentMethod?: string;
   notes?: string;
   createdAt: Date;
@@ -27,7 +31,8 @@ export interface InvoicePayment {
 
 export interface InvoiceWithDetails {
   id: string;
-  invoiceNumber: string;
+  invoiceNumber: string; // This is the glide_row_id
+  glideRowId?: string;   // For compatibility
   customerId: string;
   customerName: string;
   invoiceDate: Date;
@@ -81,6 +86,7 @@ export interface CreateInvoiceInput {
     description: string;
     quantity: number;
     unitPrice: number;
+    notes?: string;
   }[];
 }
 
@@ -98,12 +104,14 @@ export interface AddLineItemInput {
   description: string;
   quantity: number;
   unitPrice: number;
+  notes?: string;
 }
 
 export interface UpdateLineItemInput {
   description?: string;
   quantity?: number;
   unitPrice?: number;
+  notes?: string;
 }
 
 export interface AddPaymentInput {
@@ -148,9 +156,12 @@ export const mapGlInvoiceLineToLineItem = (
     quantity: Number(line.qty_sold || 0),
     unitPrice: Number(line.selling_price || 0),
     total: Number(line.line_total || 0),
+    notes: line.product_sale_note || '',
     createdAt: new Date(line.created_at),
     updatedAt: new Date(line.updated_at),
     productDetails: line.productDetails,
+    productName: line.renamed_product_name || (line.productDetails ? 
+      (line.productDetails.display_name || line.productDetails.vendor_product_name) : 'Unknown Product'),
   };
 };
 
@@ -163,6 +174,7 @@ export const mapGlCustomerPaymentToPayment = (
     accountId: payment.rowid_accounts || '',
     amount: Number(payment.payment_amount || 0),
     paymentDate: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(payment.created_at),
+    date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(payment.created_at),
     paymentMethod: payment.type_of_payment,
     notes: payment.payment_note,
     createdAt: new Date(payment.created_at),
