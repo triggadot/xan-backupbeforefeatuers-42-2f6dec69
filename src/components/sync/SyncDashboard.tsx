@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, AlertTriangle, Database } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ActiveMappingCard } from './overview/ActiveMappingCard';
 import SyncMetricsCard from './overview/SyncMetricsCard';
 import { SyncLogsList } from './logs/SyncLogsList';
+import { SyncStatus } from './ui/SyncStatus';
 
 const SyncDashboard = () => {
   const [mappings, setMappings] = useState([]);
@@ -19,7 +19,6 @@ const SyncDashboard = () => {
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
-  // Use the full hook return values
   const { 
     allSyncStatuses,
     recentLogs,
@@ -56,7 +55,6 @@ const SyncDashboard = () => {
     fetchMappings();
     refreshData();
     
-    // Set up realtime subscription for mappings
     const mappingsChannel = supabase
       .channel('gl_mappings_changes')
       .on('postgres_changes', 
