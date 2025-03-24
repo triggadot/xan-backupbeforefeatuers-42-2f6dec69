@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { EstimateLine, CustomerCredit } from '@/types/estimate';
 
 const EstimateDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +58,7 @@ const EstimateDetailPage = () => {
 
   const handleUpdateEstimate = async (id: string, data: any) => {
     try {
-      await updateEstimate.mutateAsync({ id, ...data });
+      const result = await updateEstimate.mutateAsync({ id, ...data });
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id);
       setEstimate(updatedEstimate);
@@ -79,9 +80,12 @@ const EstimateDetailPage = () => {
     }
   };
 
-  const handleAddLine = async (estimateGlideId: string, data: any) => {
+  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>) => {
     try {
-      await addEstimateLine(estimateGlideId, data);
+      const result = await addEstimateLine.mutateAsync({ 
+        estimateGlideId, 
+        data: data as any 
+      });
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -94,9 +98,12 @@ const EstimateDetailPage = () => {
     }
   };
 
-  const handleUpdateLine = async (lineId: string, data: any) => {
+  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>) => {
     try {
-      await updateEstimateLine(lineId, data);
+      const result = await updateEstimateLine.mutateAsync({ 
+        lineId, 
+        data: data as any 
+      });
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -109,7 +116,7 @@ const EstimateDetailPage = () => {
 
   const handleDeleteLine = async (lineId: string) => {
     try {
-      await deleteEstimateLine(lineId);
+      await deleteEstimateLine.mutateAsync(lineId);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -120,9 +127,12 @@ const EstimateDetailPage = () => {
     }
   };
 
-  const handleAddCredit = async (estimateGlideId: string, data: any) => {
+  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
     try {
-      await addCustomerCredit(estimateGlideId, data);
+      const result = await addCustomerCredit.mutateAsync({ 
+        estimateGlideId, 
+        data: data as any 
+      });
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -135,9 +145,12 @@ const EstimateDetailPage = () => {
     }
   };
 
-  const handleUpdateCredit = async (creditId: string, data: any) => {
+  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>) => {
     try {
-      await updateCustomerCredit(creditId, data);
+      const result = await updateCustomerCredit.mutateAsync({ 
+        creditId, 
+        data: data as any 
+      });
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -150,7 +163,7 @@ const EstimateDetailPage = () => {
 
   const handleDeleteCredit = async (creditId: string) => {
     try {
-      await deleteCustomerCredit(creditId);
+      await deleteCustomerCredit.mutateAsync(creditId);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);

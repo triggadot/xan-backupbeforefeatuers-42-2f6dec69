@@ -101,7 +101,7 @@ export function LineItemForm({ lineItem, onSubmit, onCancel }: LineItemFormProps
         description: values.description,
         quantity: values.quantity,
         unitPrice: values.unitPrice,
-        total: parseFloat(values.quantity) * parseFloat(values.unitPrice),
+        total: Number(values.quantity) * Number(values.unitPrice),
         notes: values.notes,
       };
       

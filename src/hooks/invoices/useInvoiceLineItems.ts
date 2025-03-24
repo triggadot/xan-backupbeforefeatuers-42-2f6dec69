@@ -15,10 +15,19 @@ export function useInvoiceLineItems() {
       setError(null);
       
       try {
+        // Create a unique glide_row_id for the line item
+        const lineItemGlideId = `INVLINE-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        
+        // Prepare data for database insert
         const lineItemData = {
-          ...data,
+          glide_row_id: lineItemGlideId,
           rowid_invoices: invoiceGlideId,
-          line_total: (data.quantity || 0) * (data.unitPrice || 0)
+          rowid_products: data.productId,
+          renamed_product_name: data.description,
+          qty_sold: data.quantity,
+          selling_price: data.unitPrice,
+          line_total: (data.quantity || 0) * (data.unitPrice || 0),
+          product_sale_note: data.notes
         };
         
         const { data: newLineItem, error: createError } = await supabase
@@ -37,7 +46,20 @@ export function useInvoiceLineItems() {
           description: 'Line item added successfully.',
         });
         
-        return newLineItem as InvoiceLineItem;
+        // Map the database response to our frontend model
+        return {
+          id: newLineItem.id,
+          invoiceId: invoiceGlideId,
+          productId: newLineItem.rowid_products || '',
+          description: newLineItem.renamed_product_name || '',
+          quantity: Number(newLineItem.qty_sold || 0),
+          unitPrice: Number(newLineItem.selling_price || 0),
+          total: Number(newLineItem.line_total || 0),
+          notes: newLineItem.product_sale_note || '',
+          createdAt: new Date(newLineItem.created_at),
+          updatedAt: new Date(newLineItem.updated_at),
+          productName: newLineItem.renamed_product_name || 'Unknown Product'
+        };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error adding line item';
         setError(errorMessage);
@@ -68,11 +90,19 @@ export function useInvoiceLineItems() {
           
         if (fetchError) throw fetchError;
         
-        // Calculate the new line total if quantity or price changed
-        let lineItemData = { ...data };
+        // Prepare data for database update
+        const lineItemData: any = {};
+        
+        if (data.productId !== undefined) lineItemData.rowid_products = data.productId;
+        if (data.description !== undefined) lineItemData.renamed_product_name = data.description;
+        if (data.quantity !== undefined) lineItemData.qty_sold = data.quantity;
+        if (data.unitPrice !== undefined) lineItemData.selling_price = data.unitPrice;
+        if (data.notes !== undefined) lineItemData.product_sale_note = data.notes;
+        
+        // Calculate line total if quantity or price changed
         if (data.quantity !== undefined || data.unitPrice !== undefined) {
-          const quantity = data.quantity !== undefined ? data.quantity : currentLineItem.qty_sold;
-          const unitPrice = data.unitPrice !== undefined ? data.unitPrice : currentLineItem.selling_price;
+          const quantity = data.quantity !== undefined ? data.quantity : Number(currentLineItem.qty_sold);
+          const unitPrice = data.unitPrice !== undefined ? data.unitPrice : Number(currentLineItem.selling_price);
           lineItemData.line_total = quantity * unitPrice;
         }
         
@@ -94,7 +124,20 @@ export function useInvoiceLineItems() {
           description: 'Line item updated successfully.',
         });
         
-        return updatedLineItem as InvoiceLineItem;
+        // Map the database response to our frontend model
+        return {
+          id: updatedLineItem.id,
+          invoiceId: updatedLineItem.rowid_invoices || '',
+          productId: updatedLineItem.rowid_products || '',
+          description: updatedLineItem.renamed_product_name || '',
+          quantity: Number(updatedLineItem.qty_sold || 0),
+          unitPrice: Number(updatedLineItem.selling_price || 0),
+          total: Number(updatedLineItem.line_total || 0),
+          notes: updatedLineItem.product_sale_note || '',
+          createdAt: new Date(updatedLineItem.created_at),
+          updatedAt: new Date(updatedLineItem.updated_at),
+          productName: updatedLineItem.renamed_product_name || 'Unknown Product'
+        };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error updating line item';
         setError(errorMessage);
@@ -168,7 +211,7 @@ export function useInvoiceLineItems() {
         
       if (lineItemsError) throw lineItemsError;
       
-      const total = lineItems.reduce((sum, item) => sum + (parseFloat(item.line_total) || 0), 0);
+      const total = lineItems.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
       
       // Get total payments
       const { data: payments, error: paymentsError } = await supabase
@@ -178,7 +221,7 @@ export function useInvoiceLineItems() {
         
       if (paymentsError) throw paymentsError;
       
-      const totalPaid = payments.reduce((sum, payment) => sum + (parseFloat(payment.payment_amount) || 0), 0);
+      const totalPaid = payments.reduce((sum, payment) => sum + (Number(payment.payment_amount) || 0), 0);
       
       // Update invoice with new totals
       const { error: updateError } = await supabase

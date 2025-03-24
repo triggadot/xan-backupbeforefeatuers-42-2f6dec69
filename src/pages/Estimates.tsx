@@ -42,7 +42,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useEstimatesNew } from '@/hooks/useEstimatesNew';
-import { EstimateWithDetails } from '@/types/estimate';
+import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
 import EstimateForm from '@/components/estimates/EstimateForm';
 import EstimateList from '@/components/estimates/EstimateList';
 import EstimateDetail from '@/components/estimates/EstimateDetail';
@@ -58,7 +58,7 @@ const Estimates = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [estimates, setEstimates] = useState<EstimateWithDetails[]>([]);
 
   const {
     fetchEstimates,
@@ -137,8 +137,10 @@ const Estimates = () => {
       await createEstimate.mutateAsync(data);
       setIsCreateDialogOpen(false);
       loadEstimates();
+      return null;
     } catch (error) {
       console.error('Error creating estimate:', error);
+      return null;
     }
   };
 
@@ -182,7 +184,10 @@ const Estimates = () => {
 
   const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>) => {
     try {
-      await addEstimateLine.mutateAsync({ estimateGlideId, data });
+      await addEstimateLine.mutateAsync({ 
+        estimateGlideId, 
+        data: data as any 
+      });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
         if (updatedEstimate) {
@@ -198,7 +203,10 @@ const Estimates = () => {
 
   const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>) => {
     try {
-      await updateEstimateLine.mutateAsync({ lineId, data });
+      await updateEstimateLine.mutateAsync({ 
+        lineId, 
+        data: data as any 
+      });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
         if (updatedEstimate) {
@@ -230,7 +238,10 @@ const Estimates = () => {
 
   const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
     try {
-      await addCustomerCredit.mutateAsync({ estimateGlideId, data });
+      await addCustomerCredit.mutateAsync({ 
+        estimateGlideId, 
+        data: data as any 
+      });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
         if (updatedEstimate) {
@@ -246,7 +257,10 @@ const Estimates = () => {
 
   const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>) => {
     try {
-      await updateCustomerCredit.mutateAsync({ creditId, data });
+      await updateCustomerCredit.mutateAsync({ 
+        creditId, 
+        data: data as any 
+      });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
         if (updatedEstimate) {
@@ -316,7 +330,7 @@ const Estimates = () => {
             }
           }}
           onUpdate={handleUpdateEstimate}
-          onDelete={deleteEstimate.mutateAsync}
+          onDelete={handleDeleteEstimate}
           onAddLine={handleAddLine}
           onUpdateLine={handleUpdateLine}
           onDeleteLine={handleDeleteLine}
@@ -420,7 +434,7 @@ const Estimates = () => {
                           <TableRow key={estimate.id}>
                             <TableCell>#{estimate.glide_row_id?.substring(4, 10)}</TableCell>
                             <TableCell>{estimate.accountName}</TableCell>
-                            <TableCell>{formatDate(estimate.estimate_date)}</TableCell>
+                            <TableCell>{formatDate(estimate.estimate_date as string)}</TableCell>
                             <TableCell>${estimate.total_amount?.toFixed(2)}</TableCell>
                             <TableCell>
                               <Badge variant={
@@ -496,3 +510,4 @@ const Estimates = () => {
 };
 
 export default Estimates;
+

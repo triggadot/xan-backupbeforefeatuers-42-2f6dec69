@@ -1,65 +1,58 @@
 
-export interface Estimate {
-  id: string;
-  glide_row_id: string;
-  rowid_accounts?: string;
-  accountName?: string;
-  rowid_invoices?: string;
-  status: 'draft' | 'pending' | 'converted';
-  total_amount: number;
-  total_credits: number;
-  balance: number;
-  estimate_date?: string;
-  valid_final_create_invoice_clicked?: boolean;
-  is_a_sample?: boolean;
-  glide_pdf_url?: string;
-  created_at?: string;
-  updated_at?: string;
-  add_note?: boolean;
-  account?: any;
-  estimateLines?: EstimateLine[];
-  credits?: CustomerCredit[];
-}
+import { GlAccount } from './index';
 
 export interface EstimateLine {
   id: string;
   glide_row_id: string;
-  rowid_estimate_lines: string;
-  sale_product_name: string;
+  rowid_estimate_lines?: string;
+  rowid_products?: string;
+  sale_product_name?: string;
   qty_sold: number;
   selling_price: number;
   line_total: number;
+  date_of_sale?: string | Date;
   product_sale_note?: string;
-  date_of_sale?: string;
-  rowid_products?: string;
   total_stock_after_sell?: number;
-  created_at?: string;
-  updated_at?: string;
-  productDetails?: any;
+  created_at: string | Date;
+  updated_at: string | Date;
 }
 
 export interface CustomerCredit {
   id: string;
   glide_row_id: string;
-  rowid_estimates: string;
+  rowid_invoices?: string;
+  rowid_estimates?: string;
   rowid_accounts?: string;
   payment_amount: number;
   payment_note?: string;
-  date_of_payment?: string;
   payment_type?: string;
-  created_at?: string;
-  updated_at?: string;
+  date_of_payment?: string | Date;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+export interface Estimate {
+  id: string;
+  glide_row_id: string;
+  rowid_accounts?: string;
+  rowid_invoices?: string;
+  accountName?: string; // Used for display
+  estimate_date?: string | Date;
+  is_a_sample?: boolean;
+  add_note?: boolean;
+  status: 'pending' | 'draft' | 'converted';
+  total_amount: number;
+  total_credits: number;
+  balance: number;
+  glide_pdf_url?: string;
+  glide_pdf_url2?: string;
+  valid_final_create_invoice_clicked?: boolean;
+  date_invoice_created_date?: string | Date;
+  created_at: string | Date;
+  updated_at: string | Date;
 }
 
 export interface EstimateWithDetails extends Estimate {
-  estimateLines: EstimateLine[];
-  credits: CustomerCredit[];
-}
-
-export interface EstimateFilters {
-  search?: string;
-  status?: string[];
-  accountId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
+  estimateLines?: EstimateLine[];
+  credits?: CustomerCredit[];
 }
