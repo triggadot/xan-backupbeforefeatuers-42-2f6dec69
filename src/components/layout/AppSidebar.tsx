@@ -10,9 +10,7 @@ import {
   BarChart, 
   Settings,
   ChevronLeft, 
-  ChevronRight,
-  RefreshCw,
-  Database
+  ChevronRight
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -47,8 +45,6 @@ export function AppSidebar() {
       alertCircle: AlertCircle,
       barChart: BarChart,
       settings: Settings,
-      refresh: RefreshCw,
-      database: Database
     };
     
     const IconComponent = iconMap[iconName] || AlertCircle;

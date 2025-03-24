@@ -1,9 +1,9 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MappingsList } from './mappings/MappingsList';
+import { MappingDetails } from './mappings/MappingDetails';
 import { GlMapping } from '@/types/glsync';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +18,7 @@ import SyncContainer from './SyncContainer';
 
 const MappingsManager = () => {
   // State declarations
+  const [selectedMapping, setSelectedMapping] = useState<GlMapping | null>(null);
   const [activeTab, setActiveTab] = useState('mappings');
   const [showCreateTableDialog, setShowCreateTableDialog] = useState(false);
   
@@ -27,8 +28,19 @@ const MappingsManager = () => {
   const { toast } = useToast();
   const { tables: supabaseTables, fetchTables, isLoading: isLoadingTables } = useSupabaseTables();
   
+  // Parse URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const mappingIdFromUrl = urlParams.get('id');
+
+  // Event handlers
   const handleViewMapping = (mapping: GlMapping) => {
-    navigate(`/sync/mappings/${mapping.id}`);
+    setSelectedMapping(mapping);
+    navigate(`/sync/mappings?id=${mapping.id}`);
+  };
+
+  const handleBackToList = () => {
+    setSelectedMapping(null);
+    navigate('/sync/mappings');
   };
 
   const handleTableCreated = (tableName: string) => {
@@ -48,7 +60,11 @@ const MappingsManager = () => {
     });
   };
 
-  // Effects from original component...
+  // Effects
+  useEffect(() => {
+    // Initially fetch tables when component mounts
+    fetchTables();
+  }, [fetchTables]);
 
   // Render helpers
   const renderTableManagement = () => (
@@ -109,6 +125,16 @@ const MappingsManager = () => {
       </Card>
     </div>
   );
+
+  // Return/render component
+  if (selectedMapping || mappingIdFromUrl) {
+    return (
+      <MappingDetails 
+        mappingId={selectedMapping?.id || mappingIdFromUrl!} 
+        onBack={handleBackToList}
+      />
+    );
+  }
 
   return (
     <SyncContainer>

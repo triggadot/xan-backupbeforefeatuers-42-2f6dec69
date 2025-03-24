@@ -24,7 +24,7 @@ export const navigationConfig: NavigationConfig = {
     },
     {
       title: "Accounts",
-      href: "/new/accounts",
+      href: "/accounts",
       icon: "users",
     },
     {
@@ -48,9 +48,9 @@ export const navigationConfig: NavigationConfig = {
       icon: "alertCircle",
     },
     {
-      title: "Data Sync",
-      href: "/sync",
-      icon: "refresh",
+      title: "Reports",
+      href: "/reports",
+      icon: "barChart",
     },
     {
       title: "Settings",
@@ -69,7 +69,7 @@ export const navigationConfig: NavigationConfig = {
         },
         {
           title: "Accounts",
-          href: "/new/accounts",
+          href: "/accounts",
           icon: "users",
         },
         {
@@ -97,16 +97,6 @@ export const navigationConfig: NavigationConfig = {
     {
       title: "Management",
       items: [
-        {
-          title: "Data Sync",
-          href: "/sync",
-          icon: "refresh",
-        },
-        {
-          title: "Data Management",
-          href: "/data-management",
-          icon: "database",
-        },
         {
           title: "Reports",
           href: "/reports",

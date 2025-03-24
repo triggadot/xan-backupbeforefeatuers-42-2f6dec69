@@ -1,239 +1,262 @@
 
 import React, { useState } from 'react';
 import { GlSyncRecord } from '@/types/glsync';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  AlertCircle, 
-  CheckCircle, 
-  RefreshCw, 
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircle, CheckCircle, ExternalLink, RefreshCw, XCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
 interface SyncErrorDisplayProps {
   syncErrors: GlSyncRecord[];
   onResolve?: (errorId: string, notes?: string) => Promise<boolean>;
-  onRefresh?: (includeResolved?: boolean) => Promise<void>;
+  onRefresh?: () => Promise<void>;
+  isLoading?: boolean;
   className?: string;
 }
 
 export function SyncErrorDisplay({ 
   syncErrors, 
-  onResolve,
+  onResolve, 
   onRefresh,
-  className = ''
+  isLoading = false,
+  className = "" 
 }: SyncErrorDisplayProps) {
-  const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
-  const [isResolvingError, setIsResolvingError] = useState<string | null>(null);
+  const [selectedError, setSelectedError] = useState<GlSyncRecord | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [includeResolved, setIncludeResolved] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  const toggleErrorExpanded = (errorId: string) => {
-    setExpandedErrors(prev => ({
-      ...prev,
-      [errorId]: !prev[errorId]
-    }));
-  };
-  
-  const handleResolveError = async () => {
-    if (!isResolvingError || !onResolve) return;
+
+  const handleResolve = async () => {
+    if (!selectedError || !onResolve) return;
     
+    setIsResolving(true);
     try {
-      const success = await onResolve(isResolvingError, resolutionNotes);
+      const success = await onResolve(selectedError.id!, resolutionNotes);
       if (success) {
-        setIsResolvingError(null);
+        setSelectedError(null);
         setResolutionNotes('');
       }
-    } catch (error) {
-      console.error('Error resolving sync error:', error);
+    } finally {
+      setIsResolving(false);
     }
   };
-  
+
   const handleRefresh = async () => {
     if (!onRefresh) return;
     
     setIsRefreshing(true);
     try {
-      await onRefresh(includeResolved);
+      await onRefresh();
     } finally {
       setIsRefreshing(false);
     }
   };
-  
-  const getErrorTypeIcon = (errorType: string) => {
-    switch (errorType) {
-      case 'VALIDATION_ERROR':
-        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
-      case 'TRANSFORM_ERROR':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case 'API_ERROR':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case 'RATE_LIMIT':
-        return <AlertCircle className="h-5 w-5 text-amber-500" />;
-      case 'NETWORK_ERROR':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      return format(new Date(timestamp), 'MMM dd, yyyy h:mm a');
+    } catch (e) {
+      return 'Invalid date';
     }
   };
 
-  return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
-          <Badge variant={includeResolved ? 'default' : 'outline'}>
-            {syncErrors.length} Error{syncErrors.length !== 1 ? 's' : ''}
-          </Badge>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setIncludeResolved(!includeResolved)}
-          >
-            {includeResolved ? 'Hide Resolved' : 'Show Resolved'}
-          </Button>
-        </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-      
-      {syncErrors.length === 0 ? (
+  const getErrorIcon = (type: string) => {
+    switch (type) {
+      case 'VALIDATION_ERROR':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'TRANSFORM_ERROR':
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      case 'API_ERROR':
+        return <ExternalLink className="h-4 w-4 text-blue-500" />;
+      case 'RATE_LIMIT':
+        return <RefreshCw className="h-4 w-4 text-purple-500" />;
+      case 'NETWORK_ERROR':
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getErrorTypeBadge = (type: string) => {
+    switch (type) {
+      case 'VALIDATION_ERROR':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Validation</Badge>;
+      case 'TRANSFORM_ERROR':
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">Transform</Badge>;
+      case 'API_ERROR':
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">API</Badge>;
+      case 'RATE_LIMIT':
+        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">Rate Limit</Badge>;
+      case 'NETWORK_ERROR':
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200">Network</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={className}>
         <Card>
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-            <p className="text-lg font-medium mb-1">No Errors Found</p>
-            <p className="text-muted-foreground">
-              Synchronization is working correctly.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        syncErrors.map(error => (
-          <Card 
-            key={error.id}
-            className={error.resolved ? 'opacity-60 border-gray-200' : 'border-red-200'}
-          >
-            <CardHeader className="py-3 px-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-2">
-                  {getErrorTypeIcon(error.type)}
-                  <div>
-                    <CardTitle className="text-base">
-                      {error.type}
-                      {error.resolved && (
-                        <Badge variant="outline" className="ml-2 bg-green-50 text-green-600">
-                          Resolved
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {format(new Date(error.timestamp), 'MMM d, yyyy h:mm a')}
-                    </p>
+          <CardHeader>
+            <CardTitle className="text-lg flex justify-between items-center">
+              <span>Sync Errors</span>
+              <Skeleton className="h-9 w-24" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex p-3 border rounded-md">
+                  <Skeleton className="h-4 w-4 mr-3 mt-1" />
+                  <div className="space-y-2 flex-1">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-5 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-7 w-20" />
+                    </div>
                   </div>
                 </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleErrorExpanded(error.id!)}
-                >
-                  {expandedErrors[error.id!] ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="px-4 pb-4 pt-0">
-              <p className="text-sm mb-2">{error.message}</p>
-              
-              {expandedErrors[error.id!] && (
-                <div className="mt-2 space-y-2">
-                  {error.record && (
-                    <div>
-                      <p className="text-xs font-medium mb-1">Record Data:</p>
-                      <div className="bg-muted p-2 rounded-md overflow-x-auto">
-                        <pre className="text-xs">
-                          {JSON.stringify(error.record, null, 2)}
-                        </pre>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Sync Errors {syncErrors.length > 0 && `(${syncErrors.length})`}</span>
+            {onRefresh && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {syncErrors.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <p className="text-muted-foreground">No sync errors found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {syncErrors.map(error => (
+                <div key={error.id} className="flex p-3 border rounded-md hover:bg-slate-50">
+                  <div className="mr-3 mt-1">
+                    {getErrorIcon(error.type)}
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium">{error.message}</div>
+                      {getErrorTypeBadge(error.type)}
+                    </div>
+                    {error.record && (
+                      <div className="text-sm text-muted-foreground">
+                        Record ID: {error.record.id || error.record.glide_row_id || 'Unknown'}
                       </div>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-muted-foreground">
+                        {formatTimestamp(error.timestamp)}
+                      </div>
+                      {onResolve && !error.resolved && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedError(error);
+                                setResolutionNotes('');
+                              }}
+                            >
+                              Resolve
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Resolve Sync Error</DialogTitle>
+                              <DialogDescription>
+                                Mark this error as resolved and add optional resolution notes.
+                              </DialogDescription>
+                            </DialogHeader>
+                            
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label>Error Message</Label>
+                                <div className="p-2 bg-slate-50 rounded-md text-sm">
+                                  {selectedError?.message}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="resolution-notes">Resolution Notes (Optional)</Label>
+                                <Textarea
+                                  id="resolution-notes"
+                                  value={resolutionNotes}
+                                  onChange={(e) => setResolutionNotes(e.target.value)}
+                                  placeholder="Add notes about how this error was resolved..."
+                                  rows={4}
+                                />
+                              </div>
+                            </div>
+                            
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setSelectedError(null)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleResolve}
+                                disabled={isResolving}
+                              >
+                                {isResolving ? (
+                                  <>
+                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                    Resolving...
+                                  </>
+                                ) : 'Mark as Resolved'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
-                  )}
-                  
-                  {error.resolved && error.resolution_notes && (
-                    <div className="border-t border-gray-200 mt-3 pt-3">
-                      <p className="text-xs font-medium mb-1">Resolution Notes:</p>
-                      <p className="text-sm text-muted-foreground">{error.resolution_notes}</p>
-                    </div>
-                  )}
-                  
-                  {!error.resolved && onResolve && (
-                    <div className="flex justify-end mt-3">
-                      <Button
-                        size="sm"
-                        onClick={() => setIsResolvingError(error.id!)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Mark as Resolved
-                      </Button>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ))
-      )}
-      
-      <Dialog 
-        open={!!isResolvingError} 
-        onOpenChange={(open) => !open && setIsResolvingError(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Resolve Error</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <p className="mb-2 text-sm">Add optional notes about how this error was resolved:</p>
-            <Textarea
-              placeholder="Resolution notes..."
-              value={resolutionNotes}
-              onChange={(e) => setResolutionNotes(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResolvingError(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleResolveError}>
-              Mark as Resolved
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
