@@ -67,9 +67,7 @@ export function useUnpaidInventory() {
         throw new Error('Product not found');
       }
       
-      // Update the appropriate table based on product type
-      const tableName = product.unpaid_type === 'Sample' ? 'gl_samples' : 'gl_fronted_products';
-      
+      // Use the database function to update payment status
       const { error: updateError } = await supabase.rpc('gl_update_product_payment_status', {
         product_id: productId,
         new_status: 'Paid'

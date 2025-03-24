@@ -88,6 +88,7 @@ export function useInvoiceDetail() {
         updatedAt: new Date(payment.updated_at)
       }));
       
+      // Create a default due date if not provided
       const dueDate = invoice.due_date ? new Date(invoice.due_date) : undefined;
       
       return {

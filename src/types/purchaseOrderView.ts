@@ -19,6 +19,7 @@ export interface PurchaseOrderFromView {
   docs_shortlink?: string;
   pdf_link?: string;
   date_payment_date_mddyyyy?: string;
+  notes?: string; // Added notes field
 }
 
 // Type for vendor payments (from gl_vendor_payments table)
@@ -53,6 +54,7 @@ export interface PurchaseOrder {
   pdfLink?: string;
   created_at: string;
   updated_at: string;
+  notes?: string; // Added notes field
 }
 
 // Product from gl_products table

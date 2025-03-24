@@ -16,60 +16,60 @@ export function useUnpaidInventoryView() {
     setError(null);
 
     try {
-      // Fetch from the materialized view for samples
-      const { data: samplesData, error: samplesError } = await supabase
-        .from('mv_unpaid_inventory')
-        .select('*')
-        .eq('unpaid_type', 'Sample');
+      // Fetch from the gl_unpaid_inventory view directly
+      const { data: unpaidInventory, error: fetchError } = await supabase
+        .from('gl_unpaid_inventory')
+        .select('*');
 
-      if (samplesError) throw new Error(samplesError.message);
+      if (fetchError) throw new Error(fetchError.message);
 
-      // Fetch from the materialized view for fronted products
-      const { data: frontedData, error: frontedError } = await supabase
-        .from('mv_unpaid_inventory')
-        .select('*')
-        .eq('unpaid_type', 'Fronted');
+      if (!unpaidInventory) {
+        throw new Error('No data returned from unpaid inventory query');
+      }
 
-      if (frontedError) throw new Error(frontedError.message);
+      // Filter and map the data for samples
+      const mappedSamples: UnpaidProduct[] = unpaidInventory
+        .filter(item => item.unpaid_type === 'Sample')
+        .map(item => ({
+          id: item.id || '',
+          product_id: item.id || '',
+          product_name: item.display_name || item.new_product_name || item.vendor_product_name || '',
+          name: item.display_name || item.new_product_name || item.vendor_product_name || '',
+          quantity: Number(item.total_qty_purchased) || 0,
+          unpaid_value: Number(item.unpaid_value) || 0,
+          unpaid_type: 'Sample',
+          date_created: item.created_at || '',
+          customer_name: item.vendor_name || '',
+          customer_id: item.rowid_accounts || '',
+          vendor_name: item.vendor_name || '',
+          cost: Number(item.cost) || 0,
+          terms_for_fronted_product: '',
+          glide_row_id: item.glide_row_id || '',
+          inventory_value: (Number(item.total_qty_purchased) || 0) * (Number(item.cost) || 0),
+          payment_status: 'unpaid'
+        }));
 
-      // Map the data to our frontend format
-      const mappedSamples: UnpaidProduct[] = samplesData.map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        name: item.product_name, // for component compatibility
-        quantity: item.quantity || 0,
-        unpaid_value: item.unpaid_value || 0,
-        unpaid_type: 'Sample',
-        date_created: item.created_at,
-        customer_name: item.customer_name || 'Unknown',
-        customer_id: item.customer_id || '',
-        vendor_name: item.vendor_name || 'Unknown',
-        cost: item.cost || 0,
-        terms_for_fronted_product: '',
-        glide_row_id: item.glide_row_id,
-        inventory_value: item.inventory_value || 0,
-        payment_status: 'unpaid'
-      }));
-
-      const mappedFronted: UnpaidProduct[] = frontedData.map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        name: item.product_name, // for component compatibility
-        quantity: item.quantity || 0,
-        unpaid_value: item.unpaid_value || 0,
-        unpaid_type: 'Fronted',
-        date_created: item.created_at,
-        customer_name: item.customer_name || 'Unknown',
-        customer_id: item.customer_id || '',
-        vendor_name: item.vendor_name || 'Unknown',
-        cost: item.cost || 0,
-        terms_for_fronted_product: item.terms_for_fronted_product || '',
-        glide_row_id: item.glide_row_id,
-        inventory_value: item.inventory_value || 0,
-        payment_status: 'unpaid'
-      }));
+      // Filter and map the data for fronted products
+      const mappedFronted: UnpaidProduct[] = unpaidInventory
+        .filter(item => item.unpaid_type === 'Fronted')
+        .map(item => ({
+          id: item.id || '',
+          product_id: item.id || '',
+          product_name: item.display_name || item.new_product_name || item.vendor_product_name || '',
+          name: item.display_name || item.new_product_name || item.vendor_product_name || '',
+          quantity: Number(item.total_qty_purchased) || 0,
+          unpaid_value: Number(item.unpaid_value) || 0,
+          unpaid_type: 'Fronted',
+          date_created: item.created_at || '',
+          customer_name: item.vendor_name || '',
+          customer_id: item.rowid_accounts || '',
+          vendor_name: item.vendor_name || '',
+          cost: Number(item.cost) || 0,
+          terms_for_fronted_product: item.terms_for_fronted_product || '',
+          glide_row_id: item.glide_row_id || '',
+          inventory_value: (Number(item.total_qty_purchased) || 0) * (Number(item.cost) || 0),
+          payment_status: 'unpaid'
+        }));
 
       setSamples(mappedSamples);
       setFronted(mappedFronted);
@@ -95,10 +95,11 @@ export function useUnpaidInventoryView() {
 
   const markAsPaid = useCallback(async (id: string, type: 'Sample' | 'Fronted') => {
     try {
-      const { error } = await supabase
-        .from(type === 'Sample' ? 'gl_samples' : 'gl_fronted_products')
-        .update({ paid: true })
-        .eq('id', id);
+      // Use RPC to update product status
+      const { error } = await supabase.rpc('gl_update_product_payment_status', {
+        product_id: id,
+        new_status: 'Paid'
+      });
 
       if (error) throw error;
 
@@ -128,10 +129,11 @@ export function useUnpaidInventoryView() {
 
   const markAsReturned = useCallback(async (id: string, type: 'Sample' | 'Fronted') => {
     try {
-      const { error } = await supabase
-        .from(type === 'Sample' ? 'gl_samples' : 'gl_fronted_products')
-        .update({ returned: true })
-        .eq('id', id);
+      // Use RPC to update product status
+      const { error } = await supabase.rpc('gl_update_product_payment_status', {
+        product_id: id,
+        new_status: 'Returned'
+      });
 
       if (error) throw error;
 

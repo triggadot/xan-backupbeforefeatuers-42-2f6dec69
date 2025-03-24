@@ -79,11 +79,22 @@ export function usePurchaseOrderDetail() {
       }));
       
       // Format vendor name from related account
+      // Handle potential null vendor data safely
       const vendorName = po.vendor && 
                         typeof po.vendor === 'object' && 
                         po.vendor !== null &&
                         'account_name' in po.vendor ? 
                         po.vendor.account_name : 'Unknown Vendor';
+      
+      // Safely extract vendor_uid
+      const vendorUid = po.vendor && 
+                      typeof po.vendor === 'object' && 
+                      po.vendor !== null &&
+                      'accounts_uid' in po.vendor ? 
+                      po.vendor.accounts_uid : undefined;
+
+      // Handle notes field which may not be present in older records
+      const notes = 'notes' in po ? po.notes : '';
       
       // Construct the full PurchaseOrder object
       const purchaseOrder: PurchaseOrder = {
@@ -107,8 +118,8 @@ export function usePurchaseOrderDetail() {
         created_at: po.created_at,
         updated_at: po.updated_at,
         docs_shortlink: po.docs_shortlink,
-        vendor_uid: po.vendor && po.vendor.accounts_uid,
-        notes: po.notes || '',
+        vendor_uid: vendorUid,
+        notes: notes || '',
         lineItems: lineItems,
         vendorPayments: vendorPayments,
         payments: vendorPayments

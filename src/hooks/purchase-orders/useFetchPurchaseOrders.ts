@@ -49,11 +49,11 @@ export function useFetchPurchaseOrders() {
       
       // Format the data to match PurchaseOrderWithVendor interface
       const formattedData: PurchaseOrderWithVendor[] = data.map(po => ({
-        id: po.id || '', 
+        id: po.po_id || '', // Updated to use po_id instead of id
         number: po.purchase_order_uid || po.glide_row_id || '',
         date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
         status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
-        vendorId: po.vendor_id || po.rowid_accounts || '',
+        vendorId: po.vendor_id || '', // Updated to use vendor_id
         vendorName: po.vendor_name || 'Unknown Vendor',
         total: Number(po.total_amount) || 0,
         balance: Number(po.balance) || 0,
