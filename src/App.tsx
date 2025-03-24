@@ -18,6 +18,7 @@ import EditInvoice from '@/pages/EditInvoice';
 import PurchaseOrders from '@/pages/PurchaseOrders';
 import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
 import Estimates from '@/pages/Estimates';
+import EstimateDetail from '@/pages/EstimateDetail';
 import DataManagement from '@/pages/DataManagement';
 import Index from '@/pages/Index';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -109,6 +110,14 @@ function App() {
             } 
           />
           <Route 
+            path="estimates/:id" 
+            element={
+              <ProtectedRoute>
+                <EstimateDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="data-management" 
             element={
               <ProtectedRoute>
@@ -117,9 +126,7 @@ function App() {
             } 
           />
           
-          {/* Sync Routes - Most specific routes first */}
           <Route path="sync">
-            {/* This nesting ensures all /sync/* paths are handled correctly */}
             <Route 
               path="mapping/:id" 
               element={
