@@ -1,27 +1,28 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, AlertTriangle, Database } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { RefreshCw, AlertTriangle, Database, ArrowUpDown } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { supabase } from '@/integrations/supabase/client';
-import { ActiveMappingCard } from './overview/ActiveMappingCard';
 import SyncMetricsCard from './overview/SyncMetricsCard';
 import { SyncLogsList } from './logs/SyncLogsList';
-import { SyncStatus } from './ui/SyncStatus';
+import { useNavigate } from 'react-router-dom';
+import { GlSyncStatus } from '@/types/glsync';
 
 const SyncDashboard = () => {
-  const [mappings, setMappings] = useState([]);
+  const [mappings, setMappings] = useState<GlSyncStatus[]>([]);
   const [isLoadingMappings, setIsLoadingMappings] = useState(true);
   const { syncData } = useGlSync();
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const { 
     allSyncStatuses,
-    recentLogs,
     syncStats,
     isLoading,
     hasError,
@@ -172,13 +173,86 @@ const SyncDashboard = () => {
               {mappings
                 .filter(status => status.enabled)
                 .map((status) => (
-                  <div key={status.mapping_id} className="col-span-1">
-                    <ActiveMappingCard 
-                      status={status} 
-                      onSync={handleSync} 
-                      isSyncing={isSyncing[status.mapping_id] || false} 
-                    />
-                  </div>
+                  <Card key={status.mapping_id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{status.glide_table_display_name}</CardTitle>
+                          <div className="text-sm text-muted-foreground">
+                            {status.supabase_table}
+                          </div>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <ArrowUpDown className="h-4 w-4 mr-1" />
+                          {status.sync_direction === 'to_supabase' ? 'Glide → Supabase' : 
+                           status.sync_direction === 'to_glide' ? 'Supabase → Glide' : 'Bidirectional'}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-sm font-medium">Status</div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              status.current_status === 'processing' ? 'bg-blue-500 animate-pulse' :
+                              status.current_status === 'error' ? 'bg-red-500' :
+                              status.current_status === 'completed' ? 'bg-green-500' :
+                              'bg-gray-300'
+                            }`}></span>
+                            <span className="text-sm">
+                              {status.current_status === 'processing' ? 'Processing' :
+                              status.current_status === 'error' ? 'Error' :
+                              status.current_status === 'completed' ? 'Completed' :
+                              'Idle'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-sm font-medium">Last Sync</div>
+                          <div className="text-sm">
+                            {status.last_sync_completed_at ? 
+                              new Date(status.last_sync_completed_at).toLocaleString() : 
+                              'Never'}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="text-sm font-medium">Records</div>
+                          <div className="text-sm">
+                            {status.records_processed !== null ? 
+                              status.records_processed : '0'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between gap-2 mt-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/sync/mappings?id=${status.mapping_id}`)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleSync(status.connection_id, status.mapping_id)}
+                          disabled={isSyncing[status.mapping_id] || status.current_status === 'processing'}
+                        >
+                          {isSyncing[status.mapping_id] ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Syncing
+                            </>
+                          ) : (
+                            'Sync Now'
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
             </div>
           )}

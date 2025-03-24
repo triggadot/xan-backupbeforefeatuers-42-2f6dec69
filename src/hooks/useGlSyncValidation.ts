@@ -2,12 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-interface ValidationResult {
-  isValid: boolean;
-  message: string;
-  details?: Record<string, string[]>;
-}
+import { ValidationResult } from '@/types/syncLog';
 
 export function useGlSyncValidation() {
   const [validating, setValidating] = useState(false);
@@ -36,21 +31,22 @@ export function useGlSyncValidation() {
       
       console.log('Validation result:', validationResult);
       
-      // Process the validation result - handle both array and object results
+      // Process the validation result
       let result: ValidationResult;
       
-      if (Array.isArray(validationResult) && validationResult.length > 0 && 'is_valid' in validationResult[0]) {
+      if (Array.isArray(validationResult) && validationResult.length > 0) {
         // Handle array result format
         result = {
           isValid: validationResult[0].is_valid === true,
           message: validationResult[0].validation_message || 'Validation completed',
           details: {}
         };
-      } else if (validationResult && typeof validationResult === 'object' && 'is_valid' in validationResult) {
-        // Handle object result format
+      } else if (validationResult && typeof validationResult === 'object') {
+        // Handle object result format with typed assertion
+        const typedResult = validationResult as { is_valid: boolean; validation_message: string };
         result = {
-          isValid: validationResult.is_valid === true,
-          message: validationResult.validation_message || 'Validation completed',
+          isValid: typedResult.is_valid === true,
+          message: typedResult.validation_message || 'Validation completed',
           details: {}
         };
       } else {

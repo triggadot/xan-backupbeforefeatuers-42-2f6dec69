@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SyncLogsList } from './logs/SyncLogsList';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
@@ -10,7 +9,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
