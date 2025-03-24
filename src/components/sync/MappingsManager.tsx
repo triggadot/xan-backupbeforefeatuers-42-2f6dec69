@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MappingsList } from './mappings/MappingsList';
@@ -24,18 +24,15 @@ const MappingsManager = () => {
   
   // Hooks
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshMappings } = useRealtimeMappings();
   const { toast } = useToast();
   const { tables: supabaseTables, fetchTables, isLoading: isLoadingTables } = useSupabaseTables();
   
-  // Parse URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const mappingIdFromUrl = urlParams.get('id');
-
   // Event handlers
   const handleViewMapping = (mapping: GlMapping) => {
     setSelectedMapping(mapping);
-    navigate(`/sync/mappings?id=${mapping.id}`);
+    navigate(`/sync/mappings/${mapping.id}`);
   };
 
   const handleBackToList = () => {
@@ -127,15 +124,7 @@ const MappingsManager = () => {
   );
 
   // Return/render component
-  if (selectedMapping || mappingIdFromUrl) {
-    return (
-      <MappingDetails 
-        mappingId={selectedMapping?.id || mappingIdFromUrl!} 
-        onBack={handleBackToList}
-      />
-    );
-  }
-
+  // This component should not render mapping details anymore - that's handled by MappingView
   return (
     <SyncContainer>
       <div className="flex justify-between items-center mb-6">

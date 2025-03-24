@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mapping } from '@/types/syncLog';
@@ -76,7 +75,7 @@ export const MappingListItem: React.FC<MappingListItemProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onEdit(glMapping)}
+              onClick={() => navigate(`/sync/mappings/${mapping.id}`)}
             >
               <Eye className="h-4 w-4 mr-1" />
               View

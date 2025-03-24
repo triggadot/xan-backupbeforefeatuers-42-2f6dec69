@@ -1,7 +1,7 @@
-
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { glSyncApi } from '@/services/glsync';
+import { supabase } from '@/integrations/supabase/client';
 import { GlideTable, ProductSyncResult } from '@/types/glsync';
 
 export function useGlSync() {
@@ -10,7 +10,7 @@ export function useGlSync() {
   const [error, setError] = useState<string | null>(null);
   const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
 
-  const fetchGlideTables = async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
+  const fetchGlideTables = useCallback(async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
     try {
       setIsLoading(true);
       console.log(`Fetching Glide tables for connection ${connectionId}`);
@@ -39,14 +39,32 @@ export function useGlSync() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const syncData = async (connectionId: string, mappingId: string): Promise<ProductSyncResult> => {
+  // Enhanced syncData function that supports both direct API calls and supabase function calls
+  const syncData = useCallback(async (connectionId: string, mappingId: string, useDirect: boolean = true): Promise<ProductSyncResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await glSyncApi.syncData(connectionId, mappingId);
+      let result;
+      
+      if (useDirect) {
+        // Use the direct API method from glSyncApi
+        result = await glSyncApi.syncData(connectionId, mappingId);
+      } else {
+        // Use the Supabase function invocation directly (previously in useSyncData)
+        const { data, error: invokeError } = await supabase.functions.invoke('glsync', {
+          body: {
+            action: 'syncData',
+            connectionId,
+            mappingId,
+          },
+        });
+        
+        if (invokeError) throw new Error(invokeError.message);
+        result = data as ProductSyncResult;
+      }
       
       if (!result.success) {
         const errorMessage = result.error || 'An unknown error occurred during sync';
@@ -61,8 +79,8 @@ export function useGlSync() {
       return {
         success: result.success,
         error: result.error,
-        recordsProcessed: result.recordsProcessed || 0,
-        failedRecords: result.failedRecords || 0
+        recordsProcessed: result.recordsProcessed || result.processed_records || 0,
+        failedRecords: result.failedRecords || result.failed_records || 0
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred during sync';
@@ -81,16 +99,15 @@ export function useGlSync() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
+  const retryFailedSync = useCallback(async (connectionId: string, mappingId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Use syncData action instead of retryFailedSync since that's not a valid action type
       const { data, error } = await glSyncApi.callSyncFunction({
-        action: "syncData",  // Changed from "retryFailedSync" to "syncData"
+        action: "syncData",
         connectionId,
         mappingId,
       });
@@ -115,7 +132,7 @@ export function useGlSync() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   return {
     isLoading,

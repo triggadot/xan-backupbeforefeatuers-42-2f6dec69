@@ -147,6 +147,14 @@ function App() {
               } 
             />
             <Route 
+              path="mappings/:id" 
+              element={
+                <ProtectedRoute>
+                  <MappingView />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path=":tab" 
               element={
                 <ProtectedRoute>

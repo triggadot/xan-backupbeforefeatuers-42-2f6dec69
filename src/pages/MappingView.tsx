@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MappingDetails } from '@/components/sync/mappings/MappingDetails';
@@ -29,7 +28,7 @@ export default function MappingView() {
   });
 
   const handleBack = () => {
-    navigate('/sync');
+    navigate('/sync/mappings');
   };
 
   if (isLoading) {
