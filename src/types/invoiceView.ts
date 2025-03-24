@@ -1,4 +1,3 @@
-
 // Type for the mv_invoice_customer_details materialized view
 export interface InvoiceFromView {
   invoice_id: string;

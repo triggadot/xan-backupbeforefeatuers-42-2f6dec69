@@ -23,7 +23,7 @@ export interface UnpaidProduct {
   name: string;
   quantity: number;
   unpaid_value: number;
-  unpaid_type: "Sample" | "Fronted" | string; // Modified to accept string to fix type errors
+  unpaid_type: string; // Modified to accept string to fix type errors
   date_created: string;
   customer_name: string;
   customer_id: string;
