@@ -11,8 +11,18 @@ const isValidAccount = (account: any): account is { account_name: string } => {
          'account_name' in account;
 };
 
-// Type guard to check if product details are valid
-const isValidProductDetails = (productDetails: any): productDetails is { display_name: string } => {
+// Enhanced type guard for product details
+const isValidProductDetails = (productDetails: any): productDetails is {
+  id: string;
+  glide_row_id: string;
+  name: string;
+  display_name: string;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  cost?: number;
+  category?: string;
+  product_image1?: string;
+} => {
   return productDetails && 
          typeof productDetails === 'object' && 
          productDetails !== null &&
@@ -69,10 +79,22 @@ export function useInvoiceDetail() {
 
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
         let productName = 'Unknown Product';
+        let validProductDetails = null;
         
         // Use type guard to validate product details
         if (isValidProductDetails(item.productDetails)) {
           productName = item.productDetails.display_name;
+          validProductDetails = {
+            id: item.productDetails.id || '',
+            glide_row_id: item.productDetails.glide_row_id || '',
+            name: item.productDetails.display_name || item.productDetails.vendor_product_name || 'Unknown Product',
+            display_name: item.productDetails.display_name,
+            vendor_product_name: item.productDetails.vendor_product_name,
+            new_product_name: item.productDetails.new_product_name,
+            cost: item.productDetails.cost,
+            category: item.productDetails.category,
+            product_image1: item.productDetails.product_image1
+          };
         }
                            
         return {
@@ -84,10 +106,10 @@ export function useInvoiceDetail() {
           quantity: Number(item.qty_sold || 0),
           unitPrice: Number(item.selling_price || 0),
           total: Number(item.line_total || 0),
-          notes: item.product_sale_note,
+          notes: item.product_sale_note || '',
           createdAt: new Date(item.created_at),
           updatedAt: new Date(item.updated_at),
-          productDetails: isValidProductDetails(item.productDetails) ? item.productDetails : null
+          productDetails: validProductDetails
         };
       });
 
@@ -104,8 +126,9 @@ export function useInvoiceDetail() {
         updatedAt: new Date(payment.updated_at)
       }));
       
-      // Create a default due date if not provided
-      const dueDate = invoice.due_date ? new Date(invoice.due_date) : undefined;
+      // Due date is not guaranteed to exist in the database schema
+      // Use conditional check instead of directly accessing
+      const dueDate = invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : undefined;
       
       return {
         id: invoice.id,

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,6 @@ import {
 } from '@/types/invoiceView';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Type guard to check if product details are valid
 const isValidProductDetails = (productDetails: any): productDetails is ProductDetails => {
   return productDetails && 
          typeof productDetails === 'object' && 
@@ -24,20 +22,17 @@ export function useInvoicesView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all invoices from the materialized view
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // First, ensure the materialized view is refreshed
       const { error: refreshError } = await supabase.rpc('refresh_materialized_view_secure', {
         view_name: 'mv_invoice_customer_details'
       });
       
       if (refreshError) {
         console.warn('Could not refresh materialized view:', refreshError.message);
-        // Continue anyway as the view might still have recent enough data
       }
       
       const { data, error } = await supabase
@@ -47,7 +42,6 @@ export function useInvoicesView() {
         
       if (error) throw error;
       
-      // Map the data to our frontend format
       const mappedInvoices = data.map(invoice => ({
         id: invoice.invoice_id,
         invoiceNumber: invoice.glide_row_id || 'Unknown',
@@ -77,23 +71,19 @@ export function useInvoicesView() {
     }
   }, [toast]);
 
-  // Get a single invoice with all related details
   const getInvoice = useCallback(async (id: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // First, ensure the materialized view is refreshed
       const { error: refreshError } = await supabase.rpc('refresh_materialized_view_secure', {
         view_name: 'mv_invoice_customer_details'
       });
       
       if (refreshError) {
         console.warn('Could not refresh materialized view:', refreshError.message);
-        // Continue anyway as the view might still have recent enough data
       }
       
-      // Get invoice details
       const { data: invoice, error: invoiceError } = await supabase
         .from('mv_invoice_customer_details')
         .select('*')
@@ -102,7 +92,6 @@ export function useInvoicesView() {
         
       if (invoiceError) throw invoiceError;
       
-      // Get invoice line items
       const { data: lineItems, error: lineItemsError } = await supabase
         .from('gl_invoice_lines')
         .select(`
@@ -113,7 +102,6 @@ export function useInvoicesView() {
         
       if (lineItemsError) throw lineItemsError;
       
-      // Get payments
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_customer_payments')
         .select('*')
@@ -121,11 +109,9 @@ export function useInvoicesView() {
         
       if (paymentsError) throw paymentsError;
       
-      // Map line items using type guard
       const mappedLineItems: InvoiceLineItem[] = lineItems.map(item => {
         let productDetails: ProductDetails | null = null;
         
-        // Use type guard to validate product details
         if (isValidProductDetails(item.product)) {
           productDetails = {
             id: item.product.id || '',
@@ -156,7 +142,6 @@ export function useInvoicesView() {
         };
       });
       
-      // Map payments
       const mappedPayments: InvoicePayment[] = payments.map(payment => ({
         id: payment.id,
         invoiceId: invoice.invoice_id,
@@ -170,7 +155,6 @@ export function useInvoicesView() {
         updatedAt: payment.updated_at
       }));
 
-      // Map the complete invoice
       const invoiceWithDetails: InvoiceWithDetails = {
         id: invoice.invoice_id,
         invoiceNumber: invoice.glide_row_id || 'Unknown',
@@ -178,7 +162,7 @@ export function useInvoicesView() {
         customerId: invoice.customer_id,
         customerName: invoice.customer_name,
         date: new Date(invoice.invoice_order_date || invoice.created_at),
-        dueDate: undefined, // Due date is not in the database schema
+        dueDate: undefined,
         invoiceDate: new Date(invoice.invoice_order_date || invoice.created_at),
         subtotal: Number(invoice.total_amount || 0),
         total: Number(invoice.total_amount || 0),
@@ -203,7 +187,6 @@ export function useInvoicesView() {
     }
   }, [toast]);
 
-  // Add a payment to an invoice
   const addPayment = useMutation({
     mutationFn: async (paymentData: {
       invoiceId: string;
@@ -214,11 +197,10 @@ export function useInvoicesView() {
       paymentMethod?: string;
       notes?: string;
     }) => {
-      // Create a new payment record
       const { data: payment, error } = await supabase
         .from('gl_customer_payments')
         .insert({
-          glide_row_id: `payment-${Date.now()}`, // Generate a unique ID
+          glide_row_id: `payment-${Date.now()}`,
           rowid_invoices: paymentData.glideRowId,
           rowid_accounts: paymentData.accountId,
           payment_amount: paymentData.amount,
@@ -241,7 +223,6 @@ export function useInvoicesView() {
         title: 'Payment Added',
         description: 'The payment has been recorded successfully.',
       });
-      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
     },
@@ -254,7 +235,6 @@ export function useInvoicesView() {
     }
   });
 
-  // Delete a payment record
   const deletePayment = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
       try {
@@ -287,7 +267,6 @@ export function useInvoicesView() {
     }
   });
 
-  // Delete a line item from an invoice
   const deleteLineItem = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
       try {
@@ -320,7 +299,6 @@ export function useInvoicesView() {
     }
   });
 
-  // Delete an invoice
   const deleteInvoice = useMutation({
     mutationFn: async (id: string) => {
       try {
@@ -347,7 +325,6 @@ export function useInvoicesView() {
     getInvoice,
     addPayment: useMutation({
       mutationFn: async (paymentData: any) => {
-        // Implementation details preserved
         const { error } = await supabase
           .from('gl_customer_payments')
           .insert({
