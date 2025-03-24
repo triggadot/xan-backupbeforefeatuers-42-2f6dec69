@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEstimatesNew } from '@/hooks/useEstimatesNew';
+import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
+import EstimateList from '@/components/estimates/EstimateList';
+import EstimateDetail from '@/components/estimates/EstimateDetail';
+import EstimateForm from '@/components/estimates/EstimateForm';
+import { formatCurrency } from '@/utils/format-utils';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import {
   Table,
   TableBody,
@@ -12,18 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Eye, FileText, Plus, RefreshCw, Trash } from 'lucide-react';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -41,12 +38,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { useEstimatesNew } from '@/hooks/useEstimatesNew';
-import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
-import EstimateForm from '@/components/estimates/EstimateForm';
-import EstimateList from '@/components/estimates/EstimateList';
-import EstimateDetail from '@/components/estimates/EstimateDetail';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Estimates = () => {
   const navigate = useNavigate();
@@ -77,7 +68,6 @@ const Estimates = () => {
     error
   } = useEstimatesNew();
 
-  // Load estimates on component mount
   useEffect(() => {
     loadEstimates();
   }, []);
@@ -144,49 +134,55 @@ const Estimates = () => {
     }
   };
 
-  const handleUpdateEstimate = async (id: string, data: Partial<EstimateWithDetails>) => {
+  const handleUpdateEstimate = async (id: string, data: Partial<Estimate>): Promise<Estimate | null> => {
     try {
-      await updateEstimate.mutateAsync({ id, ...data });
+      const result = await updateEstimate.mutateAsync({ id, ...data });
       if (activeEstimate && activeEstimate.id === id) {
         const updatedEstimate = await getEstimate(id);
         if (updatedEstimate) {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      loadEstimates();
+      return result;
     } catch (error) {
       console.error('Error updating estimate:', error);
+      return null;
+    }
+  };
+
+  const handleDeleteEstimate = async (id: string): Promise<boolean> => {
+    try {
+      await deleteEstimate.mutateAsync(id);
+      if (isDetailsOpen && activeEstimate?.id === id) {
+        setIsDetailsOpen(false);
+        setActiveEstimate(null);
+      }
+      loadEstimates();
+      return true;
+    } catch (error) {
+      console.error('Error deleting estimate:', error);
       return false;
     }
   };
 
-  const handleDeleteEstimate = (id: string) => {
-    setSelectedEstimateId(id);
-    setIsDeleteAlertOpen(true);
-  };
-
-  const confirmDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (selectedEstimateId) {
       try {
-        await deleteEstimate.mutateAsync(selectedEstimateId);
+        await handleDeleteEstimate(selectedEstimateId);
         setIsDeleteAlertOpen(false);
         setSelectedEstimateId(null);
-        if (isDetailsOpen && activeEstimate?.id === selectedEstimateId) {
-          setIsDetailsOpen(false);
-          setActiveEstimate(null);
-        }
-        loadEstimates(); // Refresh list after delete
       } catch (error) {
         console.error('Error deleting estimate:', error);
       }
     }
   };
 
-  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>) => {
+  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>): Promise<EstimateLine | null> => {
     try {
-      await addEstimateLine.mutateAsync({ 
+      const result = await addEstimateLine.mutateAsync({ 
         estimateGlideId, 
-        data: data as any 
+        data
       });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
@@ -194,18 +190,18 @@ const Estimates = () => {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      return result;
     } catch (error) {
       console.error('Error adding line item:', error);
-      return false;
+      return null;
     }
   };
 
-  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>) => {
+  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>): Promise<EstimateLine | null> => {
     try {
-      await updateEstimateLine.mutateAsync({ 
+      const result = await updateEstimateLine.mutateAsync({ 
         lineId, 
-        data: data as any 
+        data
       });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
@@ -213,14 +209,14 @@ const Estimates = () => {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      return result;
     } catch (error) {
       console.error('Error updating line item:', error);
-      return false;
+      return null;
     }
   };
 
-  const handleDeleteLine = async (lineId: string) => {
+  const handleDeleteLine = async (lineId: string): Promise<boolean> => {
     try {
       await deleteEstimateLine.mutateAsync(lineId);
       if (activeEstimate) {
@@ -236,11 +232,11 @@ const Estimates = () => {
     }
   };
 
-  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
+  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>): Promise<CustomerCredit | null> => {
     try {
-      await addCustomerCredit.mutateAsync({ 
+      const result = await addCustomerCredit.mutateAsync({ 
         estimateGlideId, 
-        data: data as any 
+        data
       });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
@@ -248,18 +244,18 @@ const Estimates = () => {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      return result;
     } catch (error) {
       console.error('Error adding credit:', error);
-      return false;
+      return null;
     }
   };
 
-  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>) => {
+  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>): Promise<CustomerCredit | null> => {
     try {
-      await updateCustomerCredit.mutateAsync({ 
+      const result = await updateCustomerCredit.mutateAsync({ 
         creditId, 
-        data: data as any 
+        data
       });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
@@ -267,14 +263,14 @@ const Estimates = () => {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      return result;
     } catch (error) {
       console.error('Error updating credit:', error);
-      return false;
+      return null;
     }
   };
 
-  const handleDeleteCredit = async (creditId: string) => {
+  const handleDeleteCredit = async (creditId: string): Promise<boolean> => {
     try {
       await deleteCustomerCredit.mutateAsync(creditId);
       if (activeEstimate) {
@@ -290,19 +286,19 @@ const Estimates = () => {
     }
   };
 
-  const handleConvertToInvoice = async (id: string) => {
+  const handleConvertToInvoice = async (id: string): Promise<any> => {
     try {
-      await convertToInvoice.mutateAsync(id);
+      const result = await convertToInvoice.mutateAsync(id);
       if (activeEstimate && activeEstimate.id === id) {
         const updatedEstimate = await getEstimate(id);
         if (updatedEstimate) {
           setActiveEstimate(updatedEstimate);
         }
       }
-      return true;
+      return result;
     } catch (error) {
       console.error('Error converting to invoice:', error);
-      return false;
+      return null;
     }
   };
 
@@ -501,7 +497,7 @@ const Estimates = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSelectedEstimateId(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Continue</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmDelete}>Continue</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -510,4 +506,3 @@ const Estimates = () => {
 };
 
 export default Estimates;
-

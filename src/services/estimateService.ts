@@ -1,6 +1,21 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Estimate, EstimateLine, CustomerCredit } from '@/types/estimate';
+import { Estimate, EstimateLine, CustomerCredit, EstimateWithDetails } from '@/types/estimate';
 import { GlAccount, ProductDetails } from '@/types';
+
+// Helper to convert Date objects to strings
+const convertDatesToStrings = (obj: any) => {
+  if (!obj) return obj;
+  
+  const result = { ...obj };
+  Object.keys(result).forEach(key => {
+    if (result[key] instanceof Date) {
+      result[key] = result[key].toISOString();
+    }
+  });
+  
+  return result;
+};
 
 // Fetch all estimates with basic info
 export async function fetchEstimatesList() {
@@ -101,7 +116,7 @@ export async function fetchEstimateCredits(estimateGlideId: string) {
 }
 
 // Get a single estimate with full details
-export async function fetchEstimateDetails(id: string): Promise<Estimate | null> {
+export async function fetchEstimateDetails(id: string): Promise<EstimateWithDetails | null> {
   try {
     // Get the main estimate data
     const { data: estimate, error: estimateError } = await supabase
@@ -125,9 +140,9 @@ export async function fetchEstimateDetails(id: string): Promise<Estimate | null>
     return {
       ...estimate,
       accountName: account?.account_name || 'Unknown',
-      account: account as GlAccount | undefined,
       estimateLines: estimateLines as EstimateLine[],
       credits: credits as CustomerCredit[],
+      account: account as GlAccount | undefined,
       status: status
     };
   } catch (error) {
@@ -146,7 +161,7 @@ export async function createEstimateRecord(estimateData: Partial<Estimate>) {
     status: 'draft' as const,
     glide_row_id: glideRowId,
     rowid_accounts: estimateData.rowid_accounts,
-    estimate_date: estimateData.estimate_date || new Date().toISOString(),
+    estimate_date: estimateData.estimate_date ? new Date(estimateData.estimate_date).toISOString() : new Date().toISOString(),
     add_note: estimateData.add_note || false,
     is_a_sample: estimateData.is_a_sample || false,
     total_amount: 0,
@@ -166,12 +181,12 @@ export async function createEstimateRecord(estimateData: Partial<Estimate>) {
 
 // Update an estimate
 export async function updateEstimateRecord(id: string, estimateData: Partial<Estimate>) {
-  // Remove nested objects before updating
-  const { account, estimateLines, credits, accountName, ...updateData } = estimateData;
+  // Convert all Date objects to ISO strings
+  const cleanedData = convertDatesToStrings(estimateData);
   
   const { data, error } = await supabase
     .from('gl_estimates')
-    .update(updateData)
+    .update(cleanedData)
     .eq('id', id)
     .select()
     .single();
@@ -214,8 +229,11 @@ export async function deleteEstimateRecord(id: string) {
 
 // Add a new estimate line
 export async function addEstimateLine(estimateGlideId: string, lineData: Partial<EstimateLine>) {
+  // Convert all Date objects to ISO strings
+  const cleanedData = convertDatesToStrings(lineData);
+  
   const newLine = {
-    ...lineData,
+    ...cleanedData,
     rowid_estimate_lines: estimateGlideId,
     glide_row_id: `EL-${Date.now()}`,
     line_total: (lineData.qty_sold || 0) * (lineData.selling_price || 0)
@@ -233,8 +251,11 @@ export async function addEstimateLine(estimateGlideId: string, lineData: Partial
 
 // Update an estimate line
 export async function updateEstimateLine(lineId: string, lineData: Partial<EstimateLine>) {
+  // Convert all Date objects to ISO strings
+  const cleanedData = convertDatesToStrings(lineData);
+  
   // Calculate line total if qty or price is updated
-  let updateData = { ...lineData };
+  let updateData = { ...cleanedData };
   if (lineData.qty_sold !== undefined || lineData.selling_price !== undefined) {
     const { data: existingLine } = await supabase
       .from('gl_estimate_lines')
@@ -271,8 +292,11 @@ export async function deleteEstimateLine(lineId: string) {
 
 // Add a customer credit
 export async function addCustomerCredit(estimateGlideId: string, creditData: Partial<CustomerCredit>) {
+  // Convert all Date objects to ISO strings
+  const cleanedData = convertDatesToStrings(creditData);
+  
   const newCredit = {
-    ...creditData,
+    ...cleanedData,
     rowid_estimates: estimateGlideId,
     glide_row_id: `CR-${Date.now()}`
   };
@@ -289,9 +313,12 @@ export async function addCustomerCredit(estimateGlideId: string, creditData: Par
 
 // Update a customer credit
 export async function updateCustomerCredit(creditId: string, creditData: Partial<CustomerCredit>) {
+  // Convert all Date objects to ISO strings
+  const cleanedData = convertDatesToStrings(creditData);
+  
   const { data, error } = await supabase
     .from('gl_customer_credits')
-    .update(creditData)
+    .update(cleanedData)
     .eq('id', creditId)
     .select()
     .single();
@@ -368,14 +395,8 @@ export async function convertEstimateToInvoice(estimateId: string) {
   return invoice;
 }
 
-// Update EstimateWithDetails to include estimateLines and credits properties
-export interface ExtendedEstimate extends Estimate {
-  estimateLines: EstimateLine[];
-  credits: CustomerCredit[];
-}
-
 // Fix the getEstimateWithDetails function
-export const getEstimateWithDetails = async (estimateId: string): Promise<ExtendedEstimate | null> => {
+export const getEstimateWithDetails = async (estimateId: string): Promise<EstimateWithDetails | null> => {
   try {
     // Get the main estimate data
     const { data: estimate, error: estimateError } = await supabase
@@ -397,11 +418,12 @@ export const getEstimateWithDetails = async (estimateId: string): Promise<Extend
     const status = estimate.status as "draft" | "pending" | "converted";
     
     // Map to domain model
-    const estimateWithDetails: ExtendedEstimate = {
+    const estimateWithDetails: EstimateWithDetails = {
       ...estimate,
       status,
       estimateLines: estimateLines || [],
-      credits: credits || []
+      credits: credits || [],
+      account: account as GlAccount | undefined
     };
 
     return estimateWithDetails;

@@ -79,8 +79,8 @@ export function usePurchaseOrderDetail() {
       
       // If data.vendor is valid, extract the vendor name
       let vendorName = 'Unknown Vendor';
-      if (data.vendor && typeof data.vendor === 'object' && data.vendor !== null && 'account_name' in data.vendor) {
-        vendorName = data.vendor.account_name;
+      if (data.vendor && typeof data.vendor === 'object') {
+        vendorName = data.vendor?.account_name || 'Unknown Vendor';
       }
       
       // Convert dates
@@ -91,23 +91,29 @@ export function usePurchaseOrderDetail() {
       const purchaseOrder = {
         id: data.id,
         glideRowId: data.glide_row_id,
+        glide_row_id: data.glide_row_id, // Add this to satisfy PurchaseOrder interface
         vendorId: data.rowid_accounts,
         vendorName,
         poDate,
         paymentDate,
         status: data.payment_status || 'draft',
         total: Number(data.total_amount || 0),
+        total_amount: Number(data.total_amount || 0), // Add this to satisfy PurchaseOrder interface
         amountPaid: Number(data.total_paid || 0),
+        total_paid: Number(data.total_paid || 0), // Add this to satisfy PurchaseOrder interface
         balance: Number(data.balance || 0),
         productCount: Number(data.product_count || 0),
         pdfLink: data.pdf_link,
         docsShortLink: data.docs_shortlink,
         purchaseOrderUid: data.purchase_order_uid,
-        notes: data.notes || '',
+        notes: '', // Add empty notes since it doesn't exist in the data
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
         products: mappedProducts,
-        payments: mappedPayments
+        payments: mappedPayments,
+        // Add these fields to match the PurchaseOrder interface
+        number: data.purchase_order_uid || '',
+        date: data.po_date || '',
       };
       
       return purchaseOrder;

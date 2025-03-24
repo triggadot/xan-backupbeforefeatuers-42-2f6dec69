@@ -12,6 +12,22 @@ const validateStatus = (status: string): 'pending' | 'draft' | 'converted' => {
   return 'draft'; // Default fallback
 };
 
+// Helper function to convert Date objects to ISO strings
+const convertDatesToISOString = (data: any): any => {
+  if (!data) return data;
+  
+  const result = { ...data };
+  
+  // Convert Date objects to strings
+  Object.keys(result).forEach(key => {
+    if (result[key] instanceof Date) {
+      result[key] = result[key].toISOString();
+    }
+  });
+  
+  return result;
+};
+
 export function useEstimateMutation() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -25,8 +41,11 @@ export function useEstimateMutation() {
         // Ensure status is a valid enum value
         const validStatus = validateStatus(data.status || 'draft');
 
+        // Convert Date objects to strings and prepare data
+        const convertedData = convertDatesToISOString(data);
+        
         const estimateData = {
-          ...data,
+          ...convertedData,
           glide_row_id: glideRowId,
           status: validStatus,
           total_amount: data.total_amount || 0,
@@ -93,9 +112,12 @@ export function useEstimateMutation() {
           updateData.status = validateStatus(updateData.status);
         }
         
+        // Convert Date objects to strings
+        const convertedData = convertDatesToISOString(updateData);
+        
         const { data: result, error } = await supabase
           .from('gl_estimates')
-          .update(updateData)
+          .update(convertedData)
           .eq('id', id)
           .select()
           .single();

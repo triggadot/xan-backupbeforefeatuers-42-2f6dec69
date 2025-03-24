@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Edit, FileText, PlusCircle, Trash2, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -24,17 +23,22 @@ import EstimateLineForm from './EstimateLineForm';
 import CustomerCreditForm from './CustomerCreditForm';
 import EstimateDialog from './EstimateDialog';
 
-// Local formatDate function, renamed to avoid conflict with import
-const formatDateString = (date: string | Date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+const formatDateString = (date: string | Date | undefined) => {
+  if (!date) return 'No date';
+  try {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
 };
 
 interface EstimateDetailProps {
-  estimate: EstimateWithDetails; // Changed to EstimateWithDetails to include lines and credits
+  estimate: EstimateWithDetails;
   isLoading?: boolean;
   onBack: () => void;
   onRefresh: () => void;
@@ -86,7 +90,12 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No date';
-    return format(new Date(dateString), 'MMM d, yyyy');
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const handleEditEstimate = async (data: Partial<Estimate>) => {
@@ -375,7 +384,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
                       {estimate.credits.map((credit) => (
                         <tr key={credit.id} className="border-b">
                           <td className="px-4 py-2">
-                            {credit.date_of_payment ? formatDate(credit.date_of_payment) : 'No date'}
+                            {credit.date_of_payment ? formatDateString(credit.date_of_payment) : 'No date'}
                           </td>
                           <td className="px-4 py-2">
                             <Badge variant="secondary">
@@ -419,7 +428,7 @@ const EstimateDetail: React.FC<EstimateDetailProps> = ({
         
         <CardFooter className="flex justify-between">
           <div className="text-sm text-muted-foreground">
-            Last updated: {formatDateString(estimate.updated_at || '')}
+            Last updated: {formatDateString(estimate.updated_at)}
           </div>
           
           {estimate.status !== 'converted' && (

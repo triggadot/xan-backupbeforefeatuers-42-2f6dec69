@@ -10,11 +10,12 @@ export interface EstimateLine {
   qty_sold: number;
   selling_price: number;
   line_total: number;
-  date_of_sale?: string | Date;
+  date_of_sale?: string; // Changed from string | Date to just string
   product_sale_note?: string;
   total_stock_after_sell?: number;
-  created_at: string | Date;
-  updated_at: string | Date;
+  created_at: string; // Changed from string | Date to just string
+  updated_at: string; // Changed from string | Date to just string
+  productDetails?: any; // Add this to support the operations in the code
 }
 
 export interface CustomerCredit {
@@ -26,9 +27,9 @@ export interface CustomerCredit {
   payment_amount: number;
   payment_note?: string;
   payment_type?: string;
-  date_of_payment?: string | Date;
-  created_at: string | Date;
-  updated_at: string | Date;
+  date_of_payment?: string; // Changed from string | Date to just string
+  created_at: string; // Changed from string | Date to just string
+  updated_at: string; // Changed from string | Date to just string
 }
 
 export interface Estimate {
@@ -37,7 +38,7 @@ export interface Estimate {
   rowid_accounts?: string;
   rowid_invoices?: string;
   accountName?: string; // Used for display
-  estimate_date?: string | Date;
+  estimate_date?: string; // Changed from string | Date to just string
   is_a_sample?: boolean;
   add_note?: boolean;
   status: 'pending' | 'draft' | 'converted';
@@ -47,12 +48,38 @@ export interface Estimate {
   glide_pdf_url?: string;
   glide_pdf_url2?: string;
   valid_final_create_invoice_clicked?: boolean;
-  date_invoice_created_date?: string | Date;
-  created_at: string | Date;
-  updated_at: string | Date;
+  date_invoice_created_date?: string; // Changed from string | Date to just string
+  created_at: string; // Changed from string | Date to just string
+  updated_at: string; // Changed from string | Date to just string
 }
 
 export interface EstimateWithDetails extends Estimate {
   estimateLines?: EstimateLine[];
   credits?: CustomerCredit[];
+  account?: GlAccount; // Add this to support operations in the code
+}
+
+// Add the missing EstimateFilters interface
+export interface EstimateFilters {
+  status?: 'pending' | 'draft' | 'converted';
+  accountId?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
+// Add PurchaseOrder interface to fix issues in PurchaseOrderDetail.tsx
+export interface PurchaseOrder {
+  id: string;
+  glide_row_id: string;
+  number?: string;
+  date?: string;
+  status: string;
+  total_amount: number;
+  total_paid: number;
+  balance: number;
+  vendorId?: string;
+  vendorName?: string;
+  notes?: string;
+  products?: any[];
+  payments?: any[];
 }
