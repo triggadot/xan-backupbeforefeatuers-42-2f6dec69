@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { GlMapping, GlSyncStatus } from '@/types/glsync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
+import { ProgressIndicator } from './ui/ProgressIndicator';
 
 export interface SyncProgressIndicatorProps {
   mapping: GlMapping;
@@ -14,21 +13,12 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
   mapping,
   status: initialStatus 
 }) => {
-  // Pass only the mappingId to useGlSyncStatus according to its signature
+  // State declarations
+  
+  // Hooks
   const { syncStatus } = useGlSyncStatus(mapping.id);
   
-  const calculateProgress = () => {
-    if (!syncStatus) return 0;
-    
-    if (syncStatus.records_processed === null || 
-        syncStatus.total_records === null || 
-        syncStatus.total_records === 0) {
-      return 0;
-    }
-    
-    return Math.min(100, Math.round((syncStatus.records_processed / syncStatus.total_records) * 100));
-  };
-
+  // Return/render component
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -36,14 +26,12 @@ export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Records Processed</span>
-            <span>
-              {syncStatus?.records_processed || 0} / {syncStatus?.total_records || 0}
-            </span>
-          </div>
-          
-          <Progress value={calculateProgress()} className="h-2" />
+          <ProgressIndicator 
+            current={syncStatus?.records_processed} 
+            total={syncStatus?.total_records}
+            showText={true}
+            showPercentage={true}
+          />
           
           <div className="text-sm">
             <div className="flex justify-between">

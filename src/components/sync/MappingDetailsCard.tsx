@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,15 +7,7 @@ import { ArrowRightLeft, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useGlSyncValidation } from '@/hooks/useGlSyncValidation';
-import { SyncStatusDisplay } from './SyncStatusDisplay';
-import { ValidationDisplay } from './ValidationDisplay';
-
-interface ValidationResult {
-  isValid: boolean;
-  message: string;
-  errors?: string[];
-  details?: Record<string, string[]>;
-}
+import { SyncStatusDisplay, ValidationDisplay, ValidationResult } from './ui/StatusDisplay';
 
 export interface MappingDetailsCardProps {
   mapping: GlMapping;

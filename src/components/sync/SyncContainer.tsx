@@ -1,17 +1,19 @@
-
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { GlMapping } from '@/types/glsync';
 
-export interface SyncContainerProps {
-  children?: React.ReactNode;
+interface SyncContainerProps {
+  children: ReactNode;
+  className?: string;
   mapping?: GlMapping;
   onSyncComplete?: () => void;
 }
 
-export function SyncContainer({ children, mapping, onSyncComplete }: SyncContainerProps) {
+const SyncContainer = ({ children, className = '', mapping, onSyncComplete }: SyncContainerProps) => {
   return (
-    <div className="w-full py-3 space-y-4">
+    <div className={`space-y-6 ${className}`}>
       {children}
     </div>
   );
-}
+};
+
+export default SyncContainer;

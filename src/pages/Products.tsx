@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import ProductsTableWrapper from '@/components/feature/product/ProductsTableWrapper';
 import ProductDialog from '@/components/feature/product/ProductDialog';
 import ProductDetails from '@/components/feature/product/ProductDetails';
-import { LoadingState } from '@/components/sync/LoadingState';
+import { LoadingState } from '@/components/sync/ui/StateDisplay';
 import { Product } from '@/types';
 import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';

@@ -238,6 +238,27 @@ UI Component → React Hook → Edge Function → Glide API → Database
 - Use views for complex joined queries
 - Implement database functions for common operations
 
+## Glide Sync Architecture Standardization (2023-06-18)
+
+The Glide Sync functionality has been standardized to follow our sync architecture document (SYNC_ARCHITECTURE.md):
+
+1. **Removed Legacy Product-Specific Sync**:
+   - Deleted `ProductSync.tsx` page as it was redundant with the centralized sync system
+   - Removed product-specific components (`ProductSyncPanel.tsx`, `SyncDetailsPanel.tsx`)
+   - Updated routing in App.tsx to remove the dedicated product sync route
+
+2. **Centralized Sync Architecture**:
+   - All sync operations now follow the standard sync architecture
+   - Generic components handle all entity types, not just products
+   - Improved consistency across the entire sync system
+
+3. **Updated Documentation**:
+   - Updated component README.md to reflect the changes
+   - Removed references to product-specific components
+   - Ensured documentation matches the current architecture
+
+This change ensures that all entity syncing follows the same pattern and leverages our robust sync architecture, making the system more maintainable and consistent.
+
 ---
 
 This document is a living reference and should be updated as the project evolves and new patterns emerge.

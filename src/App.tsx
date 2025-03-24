@@ -1,4 +1,3 @@
-
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/layout/Layout';
@@ -20,7 +19,6 @@ import PurchaseOrders from '@/pages/PurchaseOrders';
 import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
 import Estimates from '@/pages/Estimates';
 import DataManagement from '@/pages/DataManagement';
-import ProductSync from '@/pages/ProductSync';
 import Index from '@/pages/Index';
 import NewAccounts from '@/pages/NewAccounts';
 import NewAccountDetail from '@/pages/NewAccountDetail';
@@ -136,30 +134,36 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="sync" 
-            element={
-              <ProtectedRoute>
-                <Sync />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="sync/mapping/:id" 
-            element={
-              <ProtectedRoute>
-                <MappingView />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="sync/products" 
-            element={
-              <ProtectedRoute>
-                <ProductSync />
-              </ProtectedRoute>
-            } 
-          />
+          
+          {/* Sync Routes - Most specific routes first */}
+          <Route path="sync">
+            {/* This nesting ensures all /sync/* paths are handled correctly */}
+            <Route 
+              path="mapping/:id" 
+              element={
+                <ProtectedRoute>
+                  <MappingView />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path=":tab" 
+              element={
+                <ProtectedRoute>
+                  <Sync />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              index
+              element={
+                <ProtectedRoute>
+                  <Sync />
+                </ProtectedRoute>
+              } 
+            />
+          </Route>
+          
           <Route path="table-demo" element={<TableDemo />} />
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />

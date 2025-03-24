@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ import ConnectionCard from './connections/ConnectionCard';
 import DeleteConnectionDialog from './connections/DeleteConnectionDialog';
 import EditConnectionDialog from './connections/EditConnectionDialog';
 import AddConnectionDialog from './connections/AddConnectionDialog';
+import SyncContainer from './SyncContainer';
 
 const ConnectionsManager = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);
@@ -200,8 +200,54 @@ const ConnectionsManager = () => {
     fetchConnections();
   };
 
+  const renderConnectionsList = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-6 animate-pulse">
+              <div className="h-5 bg-gray-200 rounded w-1/3 mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="flex justify-end space-x-2">
+                <div className="h-9 bg-gray-200 rounded w-24"></div>
+                <div className="h-9 bg-gray-200 rounded w-24"></div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+    
+    if (connections.length === 0) {
+      return (
+        <Card className="p-6 text-center">
+          <p className="text-muted-foreground">No connections found.</p>
+          <p className="mt-2">
+            Create a new connection to get started with syncing Glide data.
+          </p>
+        </Card>
+      );
+    }
+    
+    return (
+      <div className="space-y-4">
+        {connections.map((connection) => (
+          <ConnectionCard
+            key={connection.id}
+            connection={connection}
+            onEdit={handleEditConnection}
+            onDelete={handleConfirmDelete}
+            onTest={handleTestConnection}
+            isTestingConnection={!!isTestingConnection[connection.id]}
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div>
+    <SyncContainer>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">API Connections</h2>
         <div className="flex space-x-2">
@@ -217,49 +263,14 @@ const ConnectionsManager = () => {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-              <div className="flex justify-end space-x-2">
-                <div className="h-9 bg-gray-200 rounded w-24"></div>
-                <div className="h-9 bg-gray-200 rounded w-24"></div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : connections.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">No connections found.</p>
-          <p className="mt-2">
-            Create a new connection to get started with syncing Glide data.
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {connections.map((connection) => (
-            <ConnectionCard
-              key={connection.id}
-              connection={connection}
-              onEdit={handleEditConnection}
-              onDelete={handleConfirmDelete}
-              onTest={handleTestConnection}
-              isTestingConnection={!!isTestingConnection[connection.id]}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Dialogs */}
-      <AddConnectionDialog 
+      {renderConnectionsList()}
+      
+      <AddConnectionDialog
         open={isAddConnectionOpen}
         onOpenChange={setIsAddConnectionOpen}
         onSuccess={handleAddConnectionSuccess}
       />
-
+      
       {selectedConnection && (
         <>
           <EditConnectionDialog
@@ -277,7 +288,7 @@ const ConnectionsManager = () => {
           />
         </>
       )}
-    </div>
+    </SyncContainer>
   );
 };
 

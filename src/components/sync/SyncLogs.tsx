@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Select, 
@@ -13,8 +12,13 @@ import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
 import { SyncLogTable } from './ui/SyncLogTable';
 import { RefreshCw } from 'lucide-react';
 import { SyncLogFilter } from '@/types/syncLog';
+import SyncContainer from './SyncContainer';
 
 const SyncLogs = () => {
+  // State declarations
+  const [localFilter, setLocalFilter] = useState<SyncLogFilter>('all');
+  
+  // Hooks
   const { 
     syncLogs, 
     isLoading, 
@@ -26,16 +30,25 @@ const SyncLogs = () => {
     includeDetails: true,
   });
 
+  // Event handlers
   const handleFilterChange = (value: string) => {
+    setLocalFilter(value as SyncLogFilter);
     setFilter(value as SyncLogFilter);
   };
 
+  // Effects
+  useEffect(() => {
+    // Initialize the local filter with the value from the hook
+    setLocalFilter(filter);
+  }, [filter]);
+
+  // Return/render component
   return (
-    <div className="space-y-4">
+    <SyncContainer>
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Synchronization Logs</h2>
         <div className="flex items-center gap-2">
-          <Select value={filter} onValueChange={handleFilterChange}>
+          <Select value={localFilter} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Filter logs" />
             </SelectTrigger>
@@ -60,7 +73,7 @@ const SyncLogs = () => {
           <SyncLogTable logs={syncLogs} isLoading={isLoading} showAppInfo={true} />
         </CardContent>
       </Card>
-    </div>
+    </SyncContainer>
   );
 };
 
