@@ -1,14 +1,11 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Loader2, Database, ExternalLink } from 'lucide-react';
-import { formatTimestamp } from '@/utils/glsync-transformers';
-import { Link } from 'react-router-dom';
+import { ArrowRightLeft, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { GlSyncStatus } from '@/types/glsync';
-import { ProgressIndicator } from '../ui/ProgressIndicator';
-import { getSyncDirectionIcon, getSyncDirectionLabel } from '../ui/StatusBadgeUtils';
+import { SyncStatus } from '../ui/SyncStatus';
+import { useNavigate } from 'react-router-dom';
 
 interface ActiveMappingCardProps {
   status: GlSyncStatus;
@@ -17,94 +14,82 @@ interface ActiveMappingCardProps {
 }
 
 export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCardProps) {
-  const handleSync = () => {
-    onSync(status.connection_id, status.mapping_id);
+  const navigate = useNavigate();
+  
+  const getSyncDirectionIcon = () => {
+    switch (status.sync_direction) {
+      case 'to_supabase':
+        return <ArrowDown className="h-4 w-4 mr-1" />;
+      case 'to_glide':
+        return <ArrowUp className="h-4 w-4 mr-1" />;
+      case 'both':
+        return <ArrowRightLeft className="h-4 w-4 mr-1" />;
+      default:
+        return null;
+    }
   };
 
-  const isProcessing = status.current_status === 'processing' || status.current_status === 'started';
-  
+  const getSyncDirectionLabel = () => {
+    switch (status.sync_direction) {
+      case 'to_supabase':
+        return 'Glide → Supabase';
+      case 'to_glide':
+        return 'Supabase → Glide';
+      case 'both':
+        return 'Bidirectional';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const handleViewDetails = () => {
+    navigate(`/sync/mappings?id=${status.mapping_id}`);
+  };
+
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="text-lg font-semibold">{status.glide_table_display_name}</h3>
-              <Badge variant={status.enabled ? 'default' : 'outline'} className={status.enabled ? 'bg-green-500' : ''}>
-                {status.enabled ? 'Enabled' : 'Disabled'}
-              </Badge>
+            <CardTitle className="text-lg">{status.glide_table_display_name}</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              {status.supabase_table}
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {status.app_name || 'Unnamed App'} • {status.supabase_table}
-            </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center text-sm text-muted-foreground">
-              {getSyncDirectionIcon(status.sync_direction)}
-              {getSyncDirectionLabel(status.sync_direction)}
-            </div>
+          <div className="flex items-center text-sm text-muted-foreground">
+            {getSyncDirectionIcon()}
+            {getSyncDirectionLabel()}
           </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="pb-2">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Last Sync</p>
-            <p className="text-sm font-medium">
-              {status.last_sync_completed_at ? formatTimestamp(status.last_sync_completed_at) : 'Never'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Status</p>
-            <p className="text-sm font-medium capitalize">
-              {status.current_status || 'Not synced'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Records</p>
-            <p className="text-sm font-medium">
-              {status.records_processed !== null ? status.records_processed : 0} / {status.total_records !== null ? status.total_records : '?'}
-            </p>
-          </div>
-        </div>
+      <CardContent className="space-y-4">
+        <SyncStatus status={status} />
         
-        {isProcessing && (
-          <ProgressIndicator 
-            current={status.records_processed} 
-            total={status.total_records}
+        <div className="flex justify-between gap-2 mt-2">
+          <Button 
+            variant="outline" 
             size="sm"
-            showText={false}
-          />
-        )}
+            onClick={handleViewDetails}
+          >
+            View Details
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => onSync(status.connection_id, status.mapping_id)}
+            disabled={isSyncing || status.current_status === 'processing'}
+          >
+            {isSyncing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Syncing
+              </>
+            ) : (
+              'Sync Now'
+            )}
+          </Button>
+        </div>
       </CardContent>
-      
-      <CardFooter className="flex justify-between pt-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/sync/mapping/${status.mapping_id}`}>
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Details
-          </Link>
-        </Button>
-        <Button 
-          variant="default" 
-          size="sm" 
-          onClick={handleSync}
-          disabled={isSyncing || isProcessing}
-        >
-          {isSyncing || isProcessing ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isSyncing ? 'Starting...' : 'Processing...'}
-            </>
-          ) : (
-            <>
-              Sync Now
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </>
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

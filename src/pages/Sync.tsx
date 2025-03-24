@@ -17,26 +17,23 @@ const Sync = () => {
     }
   }, [tab, navigate]);
 
-  // Render the appropriate component based on the tab
-  const renderContent = () => {
-    switch (tab) {
-      case 'dashboard':
-        return <SyncDashboard />;
-      case 'connections':
-        return <ConnectionsManager />;
-      case 'mappings':
-        return <MappingsManager />;
-      case 'logs':
-        return <SyncLogs />;
-      default:
-        return <SyncDashboard />;
-    }
-  };
-
   return (
-    <div className="container mx-auto py-6 max-w-7xl">
-      {renderContent()}
-    </div>
+    <SyncLayout>
+      {(() => {
+        switch (tab) {
+          case 'dashboard':
+            return <SyncDashboard />;
+          case 'connections':
+            return <ConnectionsManager />;
+          case 'mappings':
+            return <MappingsManager />;
+          case 'logs':
+            return <SyncLogs />;
+          default:
+            return <SyncDashboard />;
+        }
+      })()}
+    </SyncLayout>
   );
 };
 

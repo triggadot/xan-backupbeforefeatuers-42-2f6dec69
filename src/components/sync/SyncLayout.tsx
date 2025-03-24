@@ -1,12 +1,16 @@
 
 import React from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SyncTab {
   id: string;
   label: string;
   path: string;
+}
+
+interface SyncLayoutProps {
+  children: React.ReactNode;
 }
 
 // Define the tabs for sync layout
@@ -17,15 +21,15 @@ const tabs: SyncTab[] = [
   { id: 'logs', label: 'Logs', path: '/sync/logs' }
 ];
 
-const SyncLayout: React.FC = () => {
+const SyncLayout: React.FC<SyncLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
   // Determine current tab based on path
-  const currentTab = tabs.find(tab => location.pathname === tab.path)?.id || 'dashboard';
+  const currentTab = tabs.find(tab => location.pathname.includes(tab.id))?.id || 'dashboard';
 
   return (
-    <div className="container mx-auto py-6 max-w-full">
+    <div className="container mx-auto py-6 max-w-7xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Glide Sync</h1>
@@ -49,7 +53,7 @@ const SyncLayout: React.FC = () => {
         </TabsList>
         
         <div className="mt-4">
-          <Outlet />
+          {children}
         </div>
       </Tabs>
     </div>

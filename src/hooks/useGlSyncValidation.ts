@@ -1,8 +1,13 @@
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ValidationResult } from '@/types/syncLog';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  details?: Record<string, string[]>;
+}
 
 export function useGlSyncValidation() {
   const [validating, setValidating] = useState(false);
@@ -12,59 +17,58 @@ export function useGlSyncValidation() {
   const validateMappingConfig = useCallback(async (mappingId: string) => {
     setValidating(true);
     try {
-      const { data, error } = await supabase
-        .rpc('gl_validate_column_mapping', { p_mapping_id: mappingId });
-        
-      if (error) {
-        setValidation({
-          isValid: false,
-          message: `Validation error: ${error.message}`
+      // First get the mapping details
+      const { data: mappingData, error: mappingError } = await supabase
+        .from('gl_mappings')
+        .select('*')
+        .eq('id', mappingId)
+        .single();
+      
+      if (mappingError) throw mappingError;
+      
+      // Call the validation function
+      const { data: validationResult, error: validationError } = await supabase
+        .rpc('gl_validate_column_mapping', { 
+          p_supabase_table: mappingData.supabase_table,
+          p_column_mappings: mappingData.column_mappings
         });
-        return false;
-      }
       
-      if (!data || !data[0]) {
-        setValidation({
-          isValid: false,
-          message: 'No validation result returned'
-        });
-        return false;
-      }
+      if (validationError) throw validationError;
       
-      // Access the first element of the array since RPC returns an array
-      const result = data[0];
+      // Process the validation result
+      const result: ValidationResult = {
+        isValid: validationResult.is_valid,
+        message: validationResult.validation_message,
+        details: {}
+      };
       
-      setValidation({
-        isValid: result.is_valid,
-        message: result.validation_message
+      // Set validation state and show toast
+      setValidation(result);
+      
+      toast({
+        title: result.isValid ? 'Validation Successful' : 'Validation Failed',
+        description: result.message,
+        variant: result.isValid ? 'default' : 'destructive',
       });
       
-      if (result.is_valid) {
-        toast({
-          title: 'Validation Successful',
-          description: 'The mapping configuration is valid.',
-        });
-      } else {
-        toast({
-          title: 'Validation Issues',
-          description: result.validation_message,
-          variant: 'destructive',
-        });
-      }
-      
-      return result.is_valid;
+      return result;
     } catch (error) {
       console.error('Error validating mapping:', error);
-      setValidation({
+      
+      const errorResult: ValidationResult = {
         isValid: false,
-        message: `Unexpected error during validation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+        message: error instanceof Error ? error.message : 'An unknown error occurred during validation',
+      };
+      
+      setValidation(errorResult);
+      
       toast({
         title: 'Validation Error',
-        description: 'Failed to validate mapping configuration',
+        description: errorResult.message,
         variant: 'destructive',
       });
-      return false;
+      
+      return errorResult;
     } finally {
       setValidating(false);
     }
@@ -74,6 +78,5 @@ export function useGlSyncValidation() {
     validating,
     validation,
     validateMappingConfig,
-    resetValidation: () => setValidation(null)
   };
 }

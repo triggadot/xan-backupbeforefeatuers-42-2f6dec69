@@ -1,55 +1,55 @@
 
-import { useState, useCallback } from 'react';
-import { useFetchPurchaseOrders } from './purchase-orders/useFetchPurchaseOrders';
-import { usePurchaseOrderDetail } from './purchase-orders/usePurchaseOrderDetail';
-import { usePurchaseOrderMutation } from './purchase-orders/usePurchaseOrderMutation';
-import { PurchaseOrderFilters } from '@/types/purchaseOrder';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { usePurchaseOrderDetail } from './purchase-orders/usePurchaseOrderDetail';
+
+interface PurchaseOrder {
+  id: string;
+  vendor_uid: string | null;
+  po_date: string | null;
+  purchase_order_uid: string | null;
+  payment_status: string | null;
+  total_amount: number | null;
+  balance: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export function usePurchaseOrders() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  
-  // Import functionality from smaller hooks
-  const { fetchPurchaseOrders: baseFetchPurchaseOrders } = useFetchPurchaseOrders();
-  const { getPurchaseOrder } = usePurchaseOrderDetail();
-  const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderMutation();
 
-  // Wrapper function that updates loading and error states
-  const fetchPurchaseOrders = useCallback(async (filters?: PurchaseOrderFilters) => {
+  useEffect(() => {
+    fetchPurchaseOrders();
+  }, []);
+
+  const fetchPurchaseOrders = async () => {
     setIsLoading(true);
-    setError('');
-    
     try {
-      const result = await baseFetchPurchaseOrders(filters);
-      if (result.error) {
-        throw result.error;
-      }
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error fetching purchase orders';
-      setError(errorMessage);
-      console.error('Error in usePurchaseOrders.fetchPurchaseOrders:', err);
+      const { data, error } = await supabase
+        .from('gl_purchase_orders')
+        .select('*')
+        .order('po_date', { ascending: false });
       
+      if (error) throw error;
+      setPurchaseOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching purchase orders:', error);
       toast({
-        title: "Error fetching purchase orders",
-        description: errorMessage,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to load purchase orders',
+        variant: 'destructive',
       });
-      
-      return { data: [], error: err };
     } finally {
       setIsLoading(false);
     }
-  }, [baseFetchPurchaseOrders, toast]);
+  };
 
   return {
-    fetchPurchaseOrders,
-    getPurchaseOrder,
-    createPurchaseOrder,
-    updatePurchaseOrder,
+    purchaseOrders,
     isLoading,
-    error
+    refreshPurchaseOrders: fetchPurchaseOrders
   };
 }
