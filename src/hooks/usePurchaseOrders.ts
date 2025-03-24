@@ -29,10 +29,10 @@ export function usePurchaseOrders() {
       if (error) throw error;
       
       // Map the data to match our PurchaseOrder interface
-      const mappedData: PurchaseOrder[] = data?.map(po => ({
+      const mappedData: PurchaseOrder[] = (data || []).map(po => ({
         id: po.id,
         glide_row_id: po.glide_row_id,
-        vendor_uid: po.rowid_accounts,
+        vendor_uid: po.rowid_accounts || '',
         po_date: po.po_date,
         purchase_order_uid: po.purchase_order_uid,
         number: po.purchase_order_uid || '',
@@ -48,7 +48,7 @@ export function usePurchaseOrders() {
         vendorPayments: [], // Empty array, would typically be fetched separately
         created_at: po.created_at,
         updated_at: po.updated_at
-      })) || [];
+      }));
       
       setPurchaseOrders(mappedData);
       return { data: mappedData, error: null };
@@ -82,8 +82,11 @@ export function usePurchaseOrders() {
         glide_row_id: data.glide_row_id,
         number: data.purchase_order_uid || '',
         vendorId: data.rowid_accounts || '',
+        vendor_uid: data.rowid_accounts || '',
         vendorName: 'Vendor', // Default name, would typically be fetched
         date: new Date(data.po_date || new Date()),
+        po_date: data.po_date,
+        purchase_order_uid: data.purchase_order_uid,
         status: (data.payment_status || 'draft') as PurchaseOrder['status'],
         payment_status: data.payment_status,
         total_amount: data.total_amount || 0,

@@ -34,16 +34,33 @@ export function useGlSyncValidation() {
       
       if (validationError) throw validationError;
       
-      // Process the validation result
-      const result: ValidationResult = {
-        isValid: Array.isArray(validationResult) && validationResult.length > 0 
-          ? validationResult[0].is_valid 
-          : false,
-        message: Array.isArray(validationResult) && validationResult.length > 0 
-          ? validationResult[0].validation_message 
-          : 'Unable to validate mapping configuration',
-        details: {}
-      };
+      console.log('Validation result:', validationResult);
+      
+      // Process the validation result - handle both array and object results
+      let result: ValidationResult;
+      
+      if (Array.isArray(validationResult) && validationResult.length > 0 && 'is_valid' in validationResult[0]) {
+        // Handle array result format
+        result = {
+          isValid: validationResult[0].is_valid === true,
+          message: validationResult[0].validation_message || 'Validation completed',
+          details: {}
+        };
+      } else if (validationResult && typeof validationResult === 'object' && 'is_valid' in validationResult) {
+        // Handle object result format
+        result = {
+          isValid: validationResult.is_valid === true,
+          message: validationResult.validation_message || 'Validation completed',
+          details: {}
+        };
+      } else {
+        // Default case for unexpected result format
+        result = {
+          isValid: false,
+          message: 'Unable to validate mapping configuration: unexpected result format',
+          details: {}
+        };
+      }
       
       // Set validation state and show toast
       setValidation(result);
