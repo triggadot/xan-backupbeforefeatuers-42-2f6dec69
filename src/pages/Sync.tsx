@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import SyncLayout from '@/components/sync/SyncLayout';
+import SyncContainer from '@/components/sync/SyncContainer';
 import SyncDashboard from '@/components/sync/SyncDashboard';
 import ConnectionsManager from '@/components/sync/ConnectionsManager';
 import MappingsManager from '@/components/sync/MappingsManager';
@@ -14,11 +14,6 @@ const Sync = () => {
   const location = useLocation();
   const { tab } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
-  
-  console.log('==== Sync Component Debug Info ====');
-  console.log('Sync component rendered with tab param:', tab);
-  console.log('Current location pathname:', location.pathname);
-  console.log('Is URL path valid?', tab ? VALID_TABS.includes(tab) : false);
   
   useEffect(() => {
     // Redirect if needed, but prevent infinite loops
@@ -57,7 +52,6 @@ const Sync = () => {
     
     // Use tab parameter to determine which component to render
     const currentTab = tab && VALID_TABS.includes(tab) ? tab : 'dashboard';
-    console.log('Rendering content for tab:', currentTab);
     
     switch (currentTab) {
       case 'connections':
@@ -73,9 +67,11 @@ const Sync = () => {
   };
 
   return (
-    <SyncLayout>
-      {renderContent()}
-    </SyncLayout>
+    <div className="container mx-auto py-6">
+      <SyncContainer>
+        {renderContent()}
+      </SyncContainer>
+    </div>
   );
 };
 

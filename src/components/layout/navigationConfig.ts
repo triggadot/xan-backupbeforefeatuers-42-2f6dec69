@@ -1,4 +1,3 @@
-
 export interface NavigationItem {
   title: string;
   href: string;
@@ -106,6 +105,31 @@ export const navigationConfig: NavigationConfig = {
           title: "Settings",
           href: "/settings",
           icon: "settings",
+        }
+      ]
+    },
+    {
+      title: "Glide Sync",
+      items: [
+        {
+          title: "Sync Dashboard",
+          href: "/sync/dashboard",
+          icon: "refreshCw",
+        },
+        {
+          title: "Connections",
+          href: "/sync/connections",
+          icon: "link",
+        },
+        {
+          title: "Mappings",
+          href: "/sync/mappings",
+          icon: "table",
+        },
+        {
+          title: "Sync Logs",
+          href: "/sync/logs",
+          icon: "history",
         }
       ]
     }

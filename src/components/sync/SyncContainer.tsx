@@ -10,7 +10,7 @@ interface SyncContainerProps {
 
 const SyncContainer = ({ children, className = '', mapping, onSyncComplete }: SyncContainerProps) => {
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 bg-white rounded-lg shadow-sm p-6 ${className}`}>
       {children}
     </div>
   );

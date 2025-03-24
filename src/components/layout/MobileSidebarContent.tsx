@@ -1,9 +1,22 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navigationConfig } from './navigationConfig';
-import { icons } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  Package, 
+  ShoppingBag, 
+  AlertCircle, 
+  BarChart, 
+  Settings,
+  RefreshCw,
+  Link as LinkIcon,
+  Table,
+  History,
+  Circle 
+} from 'lucide-react';
 
 interface MobileSidebarContentProps {
   onClose?: () => void;
@@ -13,9 +26,23 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
   const location = useLocation();
   
   // Function to render a Lucide icon by name
-  const LucideIcon = (iconName: string) => {
-    const IconComponent = (icons as any)[iconName] || (icons as any)["Circle"];
-    return <IconComponent className="h-4 w-4 mr-2" />;
+  const renderIcon = (iconName: string) => {
+    const iconMap: Record<string, React.ReactElement> = {
+      dashboard: <LayoutDashboard className="h-4 w-4 mr-2" />,
+      users: <Users className="h-4 w-4 mr-2" />,
+      fileText: <FileText className="h-4 w-4 mr-2" />,
+      package: <Package className="h-4 w-4 mr-2" />,
+      shoppingBag: <ShoppingBag className="h-4 w-4 mr-2" />,
+      alertCircle: <AlertCircle className="h-4 w-4 mr-2" />,
+      barChart: <BarChart className="h-4 w-4 mr-2" />,
+      settings: <Settings className="h-4 w-4 mr-2" />,
+      refreshCw: <RefreshCw className="h-4 w-4 mr-2" />,
+      link: <LinkIcon className="h-4 w-4 mr-2" />,
+      table: <Table className="h-4 w-4 mr-2" />,
+      history: <History className="h-4 w-4 mr-2" />
+    };
+    
+    return iconMap[iconName] || <Circle className="h-4 w-4 mr-2" />;
   };
   
   const isActive = (href: string) => {
@@ -46,7 +73,7 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
                 : "text-muted-foreground hover:bg-muted"
             )}
           >
-            {LucideIcon(item.icon)}
+            {renderIcon(item.icon)}
             <span className="truncate">{item.title}</span>
           </Link>
         ))}

@@ -1,3 +1,6 @@
+// THIS FILE IS KEPT AS A BACKUP - THE FUNCTIONALITY HAS BEEN INTEGRATED INTO THE MAIN SIDEBAR
+// DO NOT USE THIS COMPONENT DIRECTLY
+
 import React, { ReactNode, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -101,4 +104,4 @@ const SyncLayout: React.FC<SyncLayoutProps> = ({ children }) => {
   );
 };
 
-export default SyncLayout;
+export default SyncLayout; 

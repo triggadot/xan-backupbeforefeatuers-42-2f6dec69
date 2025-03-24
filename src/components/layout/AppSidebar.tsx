@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -10,7 +9,11 @@ import {
   BarChart, 
   Settings,
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
+  Link as LinkIcon,
+  Table,
+  History
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -45,6 +48,10 @@ export function AppSidebar() {
       alertCircle: AlertCircle,
       barChart: BarChart,
       settings: Settings,
+      refreshCw: RefreshCw,
+      link: LinkIcon,
+      table: Table,
+      history: History
     };
     
     const IconComponent = iconMap[iconName] || AlertCircle;
@@ -60,7 +67,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            {isExpanded && <span className="text-xl">Glide Sync</span>}
+            {isExpanded && <span className="text-xl">Xchange App</span>}
           </Link>
           <div className="flex-1" />
           {!isMobile && (
@@ -117,7 +124,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-3">
         <div className="text-xs text-muted-foreground">
           {isExpanded && (
-            <p className="px-2">© 2023 Glide Sync. All rights reserved.</p>
+            <p className="px-2">© 2023 Xchange. All rights reserved.</p>
           )}
         </div>
       </SidebarFooter>
