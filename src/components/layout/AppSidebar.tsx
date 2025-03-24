@@ -13,7 +13,8 @@ import {
   RefreshCw,
   Link as LinkIcon,
   Table,
-  History
+  History,
+  ClipboardList
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,8 @@ export function AppSidebar() {
       refreshCw: RefreshCw,
       link: LinkIcon,
       table: Table,
-      history: History
+      history: History,
+      clipboardList: ClipboardList
     };
     
     const IconComponent = iconMap[iconName] || AlertCircle;

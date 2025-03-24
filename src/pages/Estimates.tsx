@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -59,11 +58,9 @@ const Estimates = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
 
   const {
-    estimates,
-    isLoading,
-    error,
     fetchEstimates,
     getEstimate,
     createEstimate,
@@ -75,8 +72,20 @@ const Estimates = () => {
     addCustomerCredit,
     updateCustomerCredit,
     deleteCustomerCredit,
-    convertToInvoice
+    convertToInvoice,
+    isLoading,
+    error
   } = useEstimatesNew();
+
+  // Load estimates on component mount
+  useEffect(() => {
+    loadEstimates();
+  }, []);
+
+  const loadEstimates = async () => {
+    const data = await fetchEstimates();
+    setEstimates(data);
+  };
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
@@ -103,8 +112,16 @@ const Estimates = () => {
   const handleViewEstimate = async (id: string) => {
     try {
       const details = await getEstimate(id);
-      setActiveEstimate(details);
-      setIsDetailsOpen(true);
+      if (details) {
+        setActiveEstimate(details);
+        setIsDetailsOpen(true);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to load estimate details.',
+          variant: 'destructive',
+        });
+      }
     } catch (err) {
       console.error('Error loading estimate details:', err);
       toast({
@@ -119,7 +136,7 @@ const Estimates = () => {
     try {
       await createEstimate.mutateAsync(data);
       setIsCreateDialogOpen(false);
-      fetchEstimates();
+      loadEstimates();
     } catch (error) {
       console.error('Error creating estimate:', error);
     }
@@ -130,7 +147,9 @@ const Estimates = () => {
       await updateEstimate.mutateAsync({ id, ...data });
       if (activeEstimate && activeEstimate.id === id) {
         const updatedEstimate = await getEstimate(id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -154,18 +173,21 @@ const Estimates = () => {
           setIsDetailsOpen(false);
           setActiveEstimate(null);
         }
+        loadEstimates(); // Refresh list after delete
       } catch (error) {
         console.error('Error deleting estimate:', error);
       }
     }
   };
 
-  const handleAddLine = async (estimateGlideId: string, data: any) => {
+  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>) => {
     try {
       await addEstimateLine.mutateAsync({ estimateGlideId, data });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -174,12 +196,14 @@ const Estimates = () => {
     }
   };
 
-  const handleUpdateLine = async (lineId: string, data: any) => {
+  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>) => {
     try {
       await updateEstimateLine.mutateAsync({ lineId, data });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -193,7 +217,9 @@ const Estimates = () => {
       await deleteEstimateLine.mutateAsync(lineId);
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -202,12 +228,14 @@ const Estimates = () => {
     }
   };
 
-  const handleAddCredit = async (estimateGlideId: string, data: any) => {
+  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
     try {
       await addCustomerCredit.mutateAsync({ estimateGlideId, data });
       if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -216,12 +244,14 @@ const Estimates = () => {
     }
   };
 
-  const handleUpdateCredit = async (creditId: string, data: any) => {
+  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>) => {
     try {
       await updateCustomerCredit.mutateAsync({ creditId, data });
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -235,7 +265,9 @@ const Estimates = () => {
       await deleteCustomerCredit.mutateAsync(creditId);
       if (activeEstimate) {
         const updatedEstimate = await getEstimate(activeEstimate.id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -249,7 +281,9 @@ const Estimates = () => {
       await convertToInvoice.mutateAsync(id);
       if (activeEstimate && activeEstimate.id === id) {
         const updatedEstimate = await getEstimate(id);
-        setActiveEstimate(updatedEstimate);
+        if (updatedEstimate) {
+          setActiveEstimate(updatedEstimate);
+        }
       }
       return true;
     } catch (error) {
@@ -259,7 +293,10 @@ const Estimates = () => {
   };
 
   const handleRefresh = () => {
-    fetchEstimates();
+    loadEstimates();
+    if (activeEstimate) {
+      handleViewEstimate(activeEstimate.id);
+    }
   };
 
   return (

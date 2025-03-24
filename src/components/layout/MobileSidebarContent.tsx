@@ -15,7 +15,8 @@ import {
   Link as LinkIcon,
   Table,
   History,
-  Circle 
+  Circle,
+  ClipboardList
 } from 'lucide-react';
 
 interface MobileSidebarContentProps {
@@ -39,7 +40,8 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
       refreshCw: <RefreshCw className="h-4 w-4 mr-2" />,
       link: <LinkIcon className="h-4 w-4 mr-2" />,
       table: <Table className="h-4 w-4 mr-2" />,
-      history: <History className="h-4 w-4 mr-2" />
+      history: <History className="h-4 w-4 mr-2" />,
+      clipboardList: <ClipboardList className="h-4 w-4 mr-2" />
     };
     
     return iconMap[iconName] || <Circle className="h-4 w-4 mr-2" />;

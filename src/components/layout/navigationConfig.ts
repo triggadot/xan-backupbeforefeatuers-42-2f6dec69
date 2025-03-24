@@ -27,6 +27,11 @@ export const navigationConfig: NavigationConfig = {
       icon: "users",
     },
     {
+      title: "Estimates",
+      href: "/estimates",
+      icon: "clipboardList",
+    },
+    {
       title: "Invoices",
       href: "/invoices",
       icon: "fileText",
@@ -70,6 +75,11 @@ export const navigationConfig: NavigationConfig = {
           title: "Accounts",
           href: "/accounts",
           icon: "users",
+        },
+        {
+          title: "Estimates",
+          href: "/estimates",
+          icon: "clipboardList",
         },
         {
           title: "Invoices",
