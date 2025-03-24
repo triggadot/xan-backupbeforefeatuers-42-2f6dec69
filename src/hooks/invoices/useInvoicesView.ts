@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,32 +36,37 @@ export function useInvoicesView() {
         console.warn('Could not refresh materialized view:', refreshError.message);
       }
       
+      // First query the invoice data
       const { data, error } = await supabase
         .from('mv_invoice_customer_details')
-        .select(`
-          *,
-          (
-            SELECT COUNT(*)
-            FROM gl_invoice_lines
-            WHERE rowid_invoices = mv_invoice_customer_details.glide_row_id
-          ) as line_items_count
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
-      const mappedInvoices = data.map(invoice => ({
-        id: invoice.invoice_id,
-        invoiceNumber: invoice.glide_row_id || 'Unknown',
-        glideRowId: invoice.glide_row_id,
-        customerId: invoice.customer_id,
-        customerName: invoice.customer_name,
-        date: new Date(invoice.invoice_order_date || invoice.created_at),
-        total: Number(invoice.total_amount),
-        balance: Number(invoice.balance),
-        status: invoice.payment_status || 'draft',
-        lineItemsCount: invoice.line_items_count ? Number(invoice.line_items_count) : 0,
-        notes: invoice.notes,
+      // Then get the line item counts separately
+      const mappedInvoices = await Promise.all(data.map(async (invoice) => {
+        // Get line items count for this invoice
+        const { count, error: countError } = await supabase
+          .from('gl_invoice_lines')
+          .select('*', { count: 'exact', head: true })
+          .eq('rowid_invoices', invoice.glide_row_id);
+          
+        const lineItemsCount = countError ? 0 : (count || 0);
+        
+        return {
+          id: invoice.invoice_id,
+          invoiceNumber: invoice.glide_row_id || 'Unknown',
+          glideRowId: invoice.glide_row_id,
+          customerId: invoice.customer_id,
+          customerName: invoice.customer_name,
+          date: new Date(invoice.invoice_order_date || invoice.created_at),
+          total: Number(invoice.total_amount),
+          balance: Number(invoice.balance),
+          status: invoice.payment_status || 'draft',
+          lineItemsCount: lineItemsCount,
+          notes: invoice.notes,
+        };
       }));
       
       return mappedInvoices;
