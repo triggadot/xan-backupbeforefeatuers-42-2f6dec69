@@ -1,4 +1,5 @@
-import React, { ReactNode, useEffect } from 'react';
+
+import React, { ReactNode } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 
@@ -27,44 +28,24 @@ const SyncLayout: React.FC<SyncLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { tab } = useParams();
   
-  console.log('==== SyncLayout Debug Info ====');
-  console.log('SyncLayout rendered with tab param:', tab);
-  console.log('SyncLayout current path:', location.pathname);
-  
-  useEffect(() => {
-    // Log when component mounts with current route info
-    console.log('SyncLayout mounted with route params:', {
-      pathname: location.pathname,
-      tabParam: tab,
-      validTab: tab ? VALID_TABS.includes(tab) : false
-    });
-  }, [location.pathname, tab]);
-  
   // Determine which tab should be active
   let activeTab = 'dashboard'; // Default tab
   
-  // First check if there's a valid tab parameter
   if (tab && VALID_TABS.includes(tab)) {
     activeTab = tab;
-  } 
-  // If not, try to determine from the pathname
-  else if (location.pathname) {
-    // Check each tab path
+  } else {
+    // Try to determine from the pathname
     for (const tabItem of tabs) {
-      if (location.pathname === tabItem.path || 
-          location.pathname === tabItem.path + '/') {
+      if (location.pathname === tabItem.path || location.pathname === tabItem.path + '/') {
         activeTab = tabItem.id;
         break;
       }
     }
   }
   
-  console.log('SyncLayout selected tab:', activeTab);
-  
   const handleTabClick = (tabId: string) => {
     const targetTab = tabs.find(t => t.id === tabId);
     if (targetTab) {
-      console.log('Navigating to tab:', targetTab.path);
       navigate(targetTab.path);
     }
   };
