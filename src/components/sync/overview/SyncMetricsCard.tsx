@@ -1,109 +1,111 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { GlSyncStats } from '@/types/glsync';
-import { formatDateBrief } from '@/utils/date-utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format, subDays } from 'date-fns';
 
 interface SyncMetricsCardProps {
   syncStats: GlSyncStats[];
   isLoading: boolean;
 }
 
-const SyncMetricsCard = ({ syncStats, isLoading }: SyncMetricsCardProps) => {
-  // Prepare chart data
+export default function SyncMetricsCard({ syncStats, isLoading }: SyncMetricsCardProps) {
+  // Process data for the chart
   const chartData = syncStats.map(stat => ({
-    ...stat,
-    date: formatDateBrief(stat.sync_date),
+    date: format(new Date(stat.sync_date), 'MMM d'),
+    successful: stat.successful_syncs,
+    failed: stat.failed_syncs,
+    records: stat.total_records_processed
   })).reverse();
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Sync Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-[200px] w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+  
+  // Fill in missing dates if needed
+  const today = new Date();
+  const filledChartData = [...chartData];
+  
+  // Only add placeholder data if we have no stats
+  if (filledChartData.length === 0) {
+    for (let i = 6; i >= 0; i--) {
+      filledChartData.push({
+        date: format(subDays(today, i), 'MMM d'),
+        successful: 0,
+        failed: 0,
+        records: 0
+      });
+    }
   }
 
-  // Calculate totals from the stats
-  const totalSyncs = syncStats.reduce((sum, stat) => sum + stat.syncs, 0);
-  const totalRecords = syncStats.reduce((sum, stat) => sum + stat.total_records_processed, 0);
-  const successRate = totalSyncs ? 
-    Math.round((syncStats.reduce((sum, stat) => sum + stat.successful_syncs, 0) / totalSyncs) * 100) : 
-    0;
-
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full">
+      <CardHeader className="pb-2">
         <CardTitle className="text-lg">Sync Activity</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorSyncs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorRecords" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Area 
-                type="monotone" 
-                dataKey="syncs" 
-                stroke="#8884d8" 
-                fillOpacity={1} 
-                fill="url(#colorSyncs)" 
-              />
-              <Area 
-                type="monotone" 
-                dataKey="total_records_processed" 
-                stroke="#82ca9d" 
-                fillOpacity={1} 
-                fill="url(#colorRecords)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
-            <div className="text-sm text-muted-foreground">Total Syncs</div>
-            <div className="text-2xl font-semibold mt-1">{totalSyncs}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Success Rate: {successRate}%
-            </div>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full" />
           </div>
-          <div className="p-4 bg-slate-50 rounded-md dark:bg-slate-800">
-            <div className="text-sm text-muted-foreground">Records Processed</div>
-            <div className="text-2xl font-semibold mt-1">{totalRecords.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Across {syncStats.length} days
-            </div>
+        ) : (
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={filledChartData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 15 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  formatter={(value, name) => {
+                    return [`${value}`, name === 'successful' ? 'Successful' : name === 'failed' ? 'Failed' : 'Records'];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, marginTop: 10 }} />
+                <Bar dataKey="successful" name="Successful" fill="#22c55e" />
+                <Bar dataKey="failed" name="Failed" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Total Syncs</p>
+            <p className="text-xl font-semibold">
+              {isLoading ? (
+                <Skeleton className="h-7 w-10 mx-auto" />
+              ) : (
+                syncStats.reduce((acc, stat) => acc + stat.syncs, 0)
+              )}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Success Rate</p>
+            <p className="text-xl font-semibold">
+              {isLoading ? (
+                <Skeleton className="h-7 w-16 mx-auto" />
+              ) : (
+                (() => {
+                  const total = syncStats.reduce((acc, stat) => acc + stat.syncs, 0);
+                  const successful = syncStats.reduce((acc, stat) => acc + stat.successful_syncs, 0);
+                  return total === 0 ? '0%' : `${Math.round((successful / total) * 100)}%`;
+                })()
+              )}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Records</p>
+            <p className="text-xl font-semibold">
+              {isLoading ? (
+                <Skeleton className="h-7 w-16 mx-auto" />
+              ) : (
+                syncStats.reduce((acc, stat) => acc + stat.total_records_processed, 0).toLocaleString()
+              )}
+            </p>
           </div>
         </div>
       </CardContent>
     </Card>
   );
-};
-
-export default SyncMetricsCard;
+}

@@ -1,67 +1,80 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SyncLogsList } from './logs/SyncLogsList';
+import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
+import { useConnections } from '@/hooks/useConnections';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
-import { SyncLogTable } from './ui/SyncLogTable';
-import { RefreshCw } from 'lucide-react';
-import { SyncLogFilter } from '@/types/syncLog';
 
-const SyncLogs = () => {
-  const { 
-    syncLogs, 
-    isLoading, 
-    refreshLogs, 
-    filter, 
-    setFilter 
-  } = useRealtimeSyncLogs({
-    limit: 50,
-    includeDetails: true,
-  });
+export default function SyncLogs() {
+  const [selectedMapping, setSelectedMapping] = useState<string | null>(null);
+  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
+  const { mappings, isLoading: isMappingsLoading } = useRealtimeMappings();
+  const { connections, isLoading: isConnectionsLoading } = useConnections();
 
-  const handleFilterChange = (value: string) => {
-    setFilter(value as SyncLogFilter);
-  };
+  const filteredMappings = selectedConnection 
+    ? mappings.filter(mapping => mapping.connection_id === selectedConnection)
+    : mappings;
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Synchronization Logs</h2>
-        <div className="flex items-center gap-2">
-          <Select value={filter} onValueChange={handleFilterChange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Filter logs" />
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+        <div className="w-full sm:w-1/3">
+          <Select
+            value={selectedConnection || ''}
+            onValueChange={(value) => {
+              setSelectedConnection(value === '' ? null : value);
+              setSelectedMapping(null);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Connections" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Logs</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
+              <SelectGroup>
+                <SelectItem value="">All Connections</SelectItem>
+                {connections.map((connection) => (
+                  <SelectItem key={connection.id} value={connection.id}>
+                    {connection.app_name || 'Unnamed App'}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={refreshLogs}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+        </div>
+
+        <div className="w-full sm:w-1/3">
+          <Select
+            value={selectedMapping || ''}
+            onValueChange={(value) => setSelectedMapping(value === '' ? null : value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Mappings" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="">All Mappings</SelectItem>
+                {filteredMappings.map((mapping) => (
+                  <SelectItem key={mapping.id} value={mapping.id}>
+                    {mapping.glide_table_display_name} → {mapping.supabase_table}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Recent Sync Activities</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SyncLogTable logs={syncLogs} isLoading={isLoading} showAppInfo={true} />
-        </CardContent>
-      </Card>
+      <SyncLogsList mappingId={selectedMapping} limit={50} />
     </div>
   );
-};
-
-export default SyncLogs;
+}

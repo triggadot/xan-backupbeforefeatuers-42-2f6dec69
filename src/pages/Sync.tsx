@@ -15,8 +15,10 @@ const Sync = () => {
   useEffect(() => {
     if (tab) {
       setActiveTab(tab);
+    } else {
+      navigate('/sync/dashboard', { replace: true });
     }
-  }, [tab]);
+  }, [tab, navigate]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);

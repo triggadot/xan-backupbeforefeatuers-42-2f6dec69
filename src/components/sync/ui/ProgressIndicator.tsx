@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 
@@ -8,6 +9,7 @@ interface ProgressIndicatorProps {
   showPercentage?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  label?: string;
 }
 
 export function ProgressIndicator({
@@ -16,7 +18,8 @@ export function ProgressIndicator({
   showText = true,
   showPercentage = true,
   size = 'md',
-  className = ''
+  className = '',
+  label = 'Progress'
 }: ProgressIndicatorProps) {
   // Calculate progress percentage, but handle null/undefined values
   const calculateProgress = (): number => {
@@ -37,19 +40,14 @@ export function ProgressIndicator({
     <div className={`w-full space-y-1 ${className}`}>
       {showText && (
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Progress</span>
+          <span>{label}</span>
           <span>
             {current ?? 0} / {total ?? '?'} 
             {showPercentage && ` (${progress}%)`}
           </span>
         </div>
       )}
-      <div className={`w-full bg-gray-100 rounded-full ${heightClass}`}>
-        <div 
-          className={`bg-blue-500 rounded-full ${heightClass}`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <Progress value={progress} className={heightClass} />
     </div>
   );
-} 
+}

@@ -1,18 +1,16 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { RefreshCw, AlertTriangle, Database } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import SyncMetricsCard from './SyncMetricsCard';
-import { formatTimestamp } from '@/utils/glsync-transformers';
 import { supabase } from '@/integrations/supabase/client';
-import { getStatusBadge, getStatusIcon } from './ui/StatusBadgeUtils';
 import { ActiveMappingCard } from './overview/ActiveMappingCard';
+import SyncMetricsCard from './overview/SyncMetricsCard';
+import { SyncLogsList } from './logs/SyncLogsList';
 
 const SyncDashboard = () => {
   const [mappings, setMappings] = useState([]);
@@ -137,15 +135,17 @@ const SyncDashboard = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
+        <Button variant="outline" size="sm" onClick={refreshAll}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh Data
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">Active Mappings</h2>
-            <Button variant="outline" size="sm" onClick={refreshAll}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
+          <h3 className="text-lg font-semibold mb-4">Active Mappings</h3>
 
           {isLoadingMappings ? (
             <div className="grid grid-cols-1 gap-4">
@@ -187,7 +187,7 @@ const SyncDashboard = () => {
         </div>
 
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
+          <h3 className="text-lg font-semibold mb-4">Sync Statistics</h3>
           <SyncMetricsCard 
             syncStats={syncStats} 
             isLoading={isLoading} 
@@ -196,55 +196,8 @@ const SyncDashboard = () => {
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Recent Activity</h2>
-        
-        {isLoading ? (
-          <Card>
-            <div className="p-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center py-3 border-b last:border-b-0">
-                  <Skeleton className="h-8 w-8 rounded-full mr-4" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        ) : recentLogs.length === 0 ? (
-          <Card className="p-6 text-center">
-            <p className="text-muted-foreground">No recent activity found.</p>
-          </Card>
-        ) : (
-          <Card>
-            <div className="p-4">
-              {recentLogs.map((log) => (
-                <div key={log.id} className="flex items-start py-3 border-b last:border-b-0">
-                  <div className="mr-4 mt-1">
-                    {getStatusIcon(log.status)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">
-                          {log.app_name || 'Unnamed App'}: {log.glide_table_display_name || log.glide_table || 'Unknown'} → {log.supabase_table || 'Unknown'}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {log.message || `Status: ${log.status}`}
-                          {log.records_processed ? ` (${log.records_processed} records)` : ''}
-                        </p>
-                      </div>
-                      <p className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                        {formatTimestamp(log.started_at)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+        <SyncLogsList limit={5} />
       </div>
     </div>
   );
