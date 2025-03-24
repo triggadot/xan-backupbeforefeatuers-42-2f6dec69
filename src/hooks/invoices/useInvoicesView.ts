@@ -37,7 +37,14 @@ export function useInvoicesView() {
       
       const { data, error } = await supabase
         .from('mv_invoice_customer_details')
-        .select('*')
+        .select(`
+          *,
+          (
+            SELECT COUNT(*)
+            FROM gl_invoice_lines
+            WHERE rowid_invoices = mv_invoice_customer_details.glide_row_id
+          ) as line_items_count
+        `)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -52,7 +59,7 @@ export function useInvoicesView() {
         total: Number(invoice.total_amount),
         balance: Number(invoice.balance),
         status: invoice.payment_status || 'draft',
-        lineItemsCount: Number(invoice.line_items_count || 0), // Add fallback for line_items_count
+        lineItemsCount: invoice.line_items_count ? Number(invoice.line_items_count) : 0,
         notes: invoice.notes,
       }));
       
