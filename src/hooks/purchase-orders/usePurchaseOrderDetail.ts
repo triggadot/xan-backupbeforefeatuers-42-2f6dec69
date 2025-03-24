@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment, ProductDetails } from '@/types/purchaseOrder';
@@ -87,12 +88,12 @@ export function usePurchaseOrderDetail() {
       
       // Use type guard to check vendor data
       let vendorName = 'Unknown Vendor';
-      let vendorUid: string | undefined = undefined;
+      let vendorUid: string = ''; // Initialize as empty string
 
       if (isValidVendor(po.vendor)) {
         vendorName = po.vendor.account_name || 'Unknown Vendor';
-        // Ensure vendorUid is a string or undefined
-        vendorUid = po.vendor.accounts_uid ? String(po.vendor.accounts_uid) : undefined;
+        // Ensure vendorUid is a string
+        vendorUid = typeof po.vendor.accounts_uid === 'string' ? po.vendor.accounts_uid : '';
       }
       
       // Handle notes field which may not be present in older records

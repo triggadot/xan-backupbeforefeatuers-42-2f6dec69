@@ -52,7 +52,7 @@ export function useInvoicesView() {
         total: Number(invoice.total_amount),
         balance: Number(invoice.balance),
         status: invoice.payment_status || 'draft',
-        lineItemsCount: Number(invoice.line_items_count || 0),
+        lineItemsCount: Number(invoice.line_items_count || 0), // Add fallback for line_items_count
         notes: invoice.notes,
       }));
       

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrderFilters, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
@@ -60,7 +61,7 @@ export function useFetchPurchaseOrders() {
       
       // Format the data to match PurchaseOrderWithVendor interface
       const formattedData: PurchaseOrderWithVendor[] = data.map(po => ({
-        id: po.id ? String(po.id) : '', // Use id instead of po_id
+        id: String(po.vendor_id || po.glide_row_id), // Use vendor_id as fallback or generate an ID
         number: po.purchase_order_uid || po.glide_row_id || '',
         date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
         status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
