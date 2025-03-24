@@ -28,16 +28,20 @@ export function useGlSyncValidation() {
       
       // Call the validation function
       const { data: validationResult, error: validationError } = await supabase
-        .rpc('gl_validate_mapping', { 
+        .rpc('gl_validate_column_mapping', { 
           p_mapping_id: mappingId
         });
       
       if (validationError) throw validationError;
       
-      // Process the validation result - assuming validationResult is a single object with is_valid and validation_message props
+      // Process the validation result
       const result: ValidationResult = {
-        isValid: validationResult.is_valid,
-        message: validationResult.validation_message,
+        isValid: Array.isArray(validationResult) && validationResult.length > 0 
+          ? validationResult[0].is_valid 
+          : false,
+        message: Array.isArray(validationResult) && validationResult.length > 0 
+          ? validationResult[0].validation_message 
+          : 'Unable to validate mapping configuration',
         details: {}
       };
       

@@ -29,15 +29,23 @@ export function usePurchaseOrders() {
       if (error) throw error;
       
       // Map the data to match our PurchaseOrder interface
-      const mappedData = data?.map(po => ({
+      const mappedData: PurchaseOrder[] = data?.map(po => ({
         id: po.id,
         glide_row_id: po.glide_row_id,
         vendor_uid: po.rowid_accounts,
         po_date: po.po_date,
         purchase_order_uid: po.purchase_order_uid,
+        number: po.purchase_order_uid || '',
+        vendorId: po.rowid_accounts || '',
+        vendorName: 'Vendor', // Default name, would typically be fetched
+        date: new Date(po.po_date || new Date()),
+        status: (po.payment_status || 'draft') as PurchaseOrder['status'],
         payment_status: po.payment_status,
-        total_amount: po.total_amount,
-        balance: po.balance,
+        total_amount: po.total_amount || 0,
+        total_paid: po.total_paid || 0,
+        balance: po.balance || 0,
+        lineItems: [], // Empty array, would typically be fetched separately
+        vendorPayments: [], // Empty array, would typically be fetched separately
         created_at: po.created_at,
         updated_at: po.updated_at
       })) || [];
@@ -69,19 +77,20 @@ export function usePurchaseOrders() {
       if (error) throw error;
       
       // Format the purchase order data
-      const purchaseOrder = {
+      const purchaseOrder: PurchaseOrder = {
         id: data.id,
         glide_row_id: data.glide_row_id,
         number: data.purchase_order_uid || '',
         vendorId: data.rowid_accounts || '',
-        vendorName: 'Vendor', // You would typically fetch this from accounts table
+        vendorName: 'Vendor', // Default name, would typically be fetched
         date: new Date(data.po_date || new Date()),
         status: (data.payment_status || 'draft') as PurchaseOrder['status'],
+        payment_status: data.payment_status,
         total_amount: data.total_amount || 0,
         total_paid: data.total_paid || 0,
         balance: data.balance || 0,
-        lineItems: [], // You would typically fetch these separately
-        vendorPayments: [], // You would typically fetch these separately
+        lineItems: [], // Empty array, would typically be fetched separately
+        vendorPayments: [], // Empty array, would typically be fetched separately
         created_at: data.created_at,
         updated_at: data.updated_at
       };
