@@ -25,9 +25,14 @@ const PurchaseOrderDetail = () => {
     if (id) {
       const fetchPurchaseOrderData = async () => {
         setIsLoading(true);
-        const data = await getPurchaseOrder(id);
-        setPurchaseOrder(data);
-        setIsLoading(false);
+        try {
+          const data = await getPurchaseOrder(id);
+          setPurchaseOrder(data);
+        } catch (error) {
+          console.error("Error fetching purchase order:", error);
+        } finally {
+          setIsLoading(false);
+        }
       };
       fetchPurchaseOrderData();
     }

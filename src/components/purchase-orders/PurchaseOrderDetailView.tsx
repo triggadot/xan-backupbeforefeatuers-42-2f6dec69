@@ -28,8 +28,12 @@ const PurchaseOrderDetailView: React.FC = () => {
   React.useEffect(() => {
     if (id) {
       const fetchPurchaseOrderData = async () => {
-        const data = await getPurchaseOrder(id);
-        setPurchaseOrder(data);
+        try {
+          const data = await getPurchaseOrder(id);
+          setPurchaseOrder(data);
+        } catch (error) {
+          console.error("Error fetching purchase order:", error);
+        }
       };
       fetchPurchaseOrderData();
     }
