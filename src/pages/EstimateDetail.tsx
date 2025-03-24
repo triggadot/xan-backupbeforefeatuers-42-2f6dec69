@@ -81,33 +81,35 @@ const EstimateDetailPage = () => {
 
   const handleAddLine = async (estimateGlideId: string, data: any) => {
     try {
-      await addEstimateLine.mutateAsync({ estimateGlideId, data });
+      await addEstimateLine(estimateGlideId, data);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
-      return true;
+      return updatedEstimate.estimateLines?.find(line => 
+        line.sale_product_name === data.sale_product_name
+      ) || null;
     } catch (error) {
       console.error('Error adding line item:', error);
-      return false;
+      return null;
     }
   };
 
   const handleUpdateLine = async (lineId: string, data: any) => {
     try {
-      await updateEstimateLine.mutateAsync({ lineId, data });
+      await updateEstimateLine(lineId, data);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
-      return true;
+      return updatedEstimate.estimateLines?.find(line => line.id === lineId) || null;
     } catch (error) {
       console.error('Error updating line item:', error);
-      return false;
+      return null;
     }
   };
 
   const handleDeleteLine = async (lineId: string) => {
     try {
-      await deleteEstimateLine.mutateAsync(lineId);
+      await deleteEstimateLine(lineId);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
@@ -120,33 +122,35 @@ const EstimateDetailPage = () => {
 
   const handleAddCredit = async (estimateGlideId: string, data: any) => {
     try {
-      await addCustomerCredit.mutateAsync({ estimateGlideId, data });
+      await addCustomerCredit(estimateGlideId, data);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
-      return true;
+      return updatedEstimate.credits?.find(credit => 
+        credit.payment_amount === data.payment_amount
+      ) || null;
     } catch (error) {
       console.error('Error adding credit:', error);
-      return false;
+      return null;
     }
   };
 
   const handleUpdateCredit = async (creditId: string, data: any) => {
     try {
-      await updateCustomerCredit.mutateAsync({ creditId, data });
+      await updateCustomerCredit(creditId, data);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);
-      return true;
+      return updatedEstimate.credits?.find(credit => credit.id === creditId) || null;
     } catch (error) {
       console.error('Error updating credit:', error);
-      return false;
+      return null;
     }
   };
 
   const handleDeleteCredit = async (creditId: string) => {
     try {
-      await deleteCustomerCredit.mutateAsync(creditId);
+      await deleteCustomerCredit(creditId);
       // Refresh estimate data
       const updatedEstimate = await getEstimate(id as string);
       setEstimate(updatedEstimate);

@@ -97,7 +97,7 @@ export function usePurchaseOrderDetail() {
       }
       
       // Handle notes field which may not be present in older records
-      const notes = 'notes' in po ? po.notes : '';
+      const notes = po.notes || '';
       
       // Construct the full PurchaseOrder object
       const purchaseOrder: PurchaseOrder = {
@@ -122,7 +122,7 @@ export function usePurchaseOrderDetail() {
         updated_at: po.updated_at,
         docs_shortlink: po.docs_shortlink,
         vendor_uid: vendorUid,
-        notes: notes || '',
+        notes: notes,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
         payments: vendorPayments
