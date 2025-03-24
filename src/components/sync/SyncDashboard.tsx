@@ -1,28 +1,30 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, AlertTriangle, Database, ArrowUpDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowRight, RefreshCw, Check, AlertTriangle, Clock, Database, ExternalLink } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
+import SyncMetricsCard from './SyncMetricsCard';
+import { formatTimestamp } from '@/utils/glsync-transformers';
 import { supabase } from '@/integrations/supabase/client';
-import SyncMetricsCard from './overview/SyncMetricsCard';
-import { SyncLogsList } from './logs/SyncLogsList';
-import { useNavigate } from 'react-router-dom';
-import { GlSyncStatus } from '@/types/glsync';
+import { getStatusBadge, getStatusIcon } from './ui/StatusBadgeUtils';
+import { ActiveMappingCard } from './overview/ActiveMappingCard';
 
 const SyncDashboard = () => {
-  const [mappings, setMappings] = useState<GlSyncStatus[]>([]);
+  const [mappings, setMappings] = useState([]);
   const [isLoadingMappings, setIsLoadingMappings] = useState(true);
   const { syncData } = useGlSync();
   const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
-  const navigate = useNavigate();
   
+  // Use the full hook return values
   const { 
     allSyncStatuses,
+    recentLogs,
     syncStats,
     isLoading,
     hasError,
@@ -56,6 +58,7 @@ const SyncDashboard = () => {
     fetchMappings();
     refreshData();
     
+    // Set up realtime subscription for mappings
     const mappingsChannel = supabase
       .channel('gl_mappings_changes')
       .on('postgres_changes', 
@@ -134,17 +137,15 @@ const SyncDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
-        <Button variant="outline" size="sm" onClick={refreshAll}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh Data
-        </Button>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <h3 className="text-lg font-semibold mb-4">Active Mappings</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold">Active Mappings</h2>
+            <Button variant="outline" size="sm" onClick={refreshAll}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
 
           {isLoadingMappings ? (
             <div className="grid grid-cols-1 gap-4">
@@ -173,93 +174,20 @@ const SyncDashboard = () => {
               {mappings
                 .filter(status => status.enabled)
                 .map((status) => (
-                  <Card key={status.mapping_id} className="overflow-hidden">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{status.glide_table_display_name}</CardTitle>
-                          <div className="text-sm text-muted-foreground">
-                            {status.supabase_table}
-                          </div>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <ArrowUpDown className="h-4 w-4 mr-1" />
-                          {status.sync_direction === 'to_supabase' ? 'Glide → Supabase' : 
-                           status.sync_direction === 'to_glide' ? 'Supabase → Glide' : 'Bidirectional'}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="text-sm font-medium">Status</div>
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${
-                              status.current_status === 'processing' ? 'bg-blue-500 animate-pulse' :
-                              status.current_status === 'error' ? 'bg-red-500' :
-                              status.current_status === 'completed' ? 'bg-green-500' :
-                              'bg-gray-300'
-                            }`}></span>
-                            <span className="text-sm">
-                              {status.current_status === 'processing' ? 'Processing' :
-                              status.current_status === 'error' ? 'Error' :
-                              status.current_status === 'completed' ? 'Completed' :
-                              'Idle'}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm font-medium">Last Sync</div>
-                          <div className="text-sm">
-                            {status.last_sync_completed_at ? 
-                              new Date(status.last_sync_completed_at).toLocaleString() : 
-                              'Never'}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-sm font-medium">Records</div>
-                          <div className="text-sm">
-                            {status.records_processed !== null ? 
-                              status.records_processed : '0'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between gap-2 mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => navigate(`/sync/mappings?id=${status.mapping_id}`)}
-                        >
-                          View Details
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleSync(status.connection_id, status.mapping_id)}
-                          disabled={isSyncing[status.mapping_id] || status.current_status === 'processing'}
-                        >
-                          {isSyncing[status.mapping_id] ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Syncing
-                            </>
-                          ) : (
-                            'Sync Now'
-                          )}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div key={status.mapping_id} className="col-span-1">
+                    <ActiveMappingCard 
+                      status={status} 
+                      onSync={handleSync} 
+                      isSyncing={isSyncing[status.mapping_id] || false} 
+                    />
+                  </div>
                 ))}
             </div>
           )}
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-4">Sync Statistics</h3>
+          <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
           <SyncMetricsCard 
             syncStats={syncStats} 
             isLoading={isLoading} 
@@ -268,8 +196,55 @@ const SyncDashboard = () => {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-        <SyncLogsList limit={5} />
+        <h2 className="text-2xl font-semibold mb-4">Recent Activity</h2>
+        
+        {isLoading ? (
+          <Card>
+            <div className="p-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center py-3 border-b last:border-b-0">
+                  <Skeleton className="h-8 w-8 rounded-full mr-4" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : recentLogs.length === 0 ? (
+          <Card className="p-6 text-center">
+            <p className="text-muted-foreground">No recent activity found.</p>
+          </Card>
+        ) : (
+          <Card>
+            <div className="p-4">
+              {recentLogs.map((log) => (
+                <div key={log.id} className="flex items-start py-3 border-b last:border-b-0">
+                  <div className="mr-4 mt-1">
+                    {getStatusIcon(log.status)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">
+                          {log.app_name || 'Unnamed App'}: {log.glide_table_display_name || log.glide_table || 'Unknown'} → {log.supabase_table || 'Unknown'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {log.message || `Status: ${log.status}`}
+                          {log.records_processed ? ` (${log.records_processed} records)` : ''}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                        {formatTimestamp(log.started_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -1,72 +1,52 @@
-
 import React from 'react';
-import { CheckCircle, AlertTriangle, Loader2, Clock, ArrowUp, ArrowDown, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Check, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
-export function getStatusColor(status: string | null): string {
-  switch (status) {
+export function getStatusBadge(status: string | null) {
+  if (!status) return <Badge variant="outline">Unknown</Badge>;
+  
+  switch (status.toLowerCase()) {
     case 'completed':
-      return 'text-green-500';
-    case 'failed':
-      return 'text-red-500';
+      return <Badge className="bg-green-500">Completed</Badge>;
     case 'processing':
+      return <Badge className="bg-blue-500">Processing</Badge>;
+    case 'failed':
+      return <Badge className="bg-red-500">Failed</Badge>;
     case 'started':
-      return 'text-blue-500';
+      return <Badge className="bg-yellow-500">Started</Badge>;
     default:
-      return 'text-gray-400';
+      return <Badge variant="outline">{status}</Badge>;
   }
 }
 
 export function getStatusIcon(status: string | null) {
-  switch (status) {
+  if (!status) return <Clock className="h-5 w-5 text-gray-400" />;
+  
+  switch (status.toLowerCase()) {
     case 'completed':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'failed':
-      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      return <Check className="h-5 w-5 text-green-500" />;
     case 'processing':
-    case 'started':
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-    default:
-      return <Clock className="h-4 w-4 text-gray-400" />;
-  }
-}
-
-export function getStatusBadge(status: string | null) {
-  switch (status) {
-    case 'completed':
-      return <Badge className="bg-green-500">Completed</Badge>;
+      return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
     case 'failed':
-      return <Badge variant="destructive">Failed</Badge>;
-    case 'processing':
+      return <AlertTriangle className="h-5 w-5 text-red-500" />;
     case 'started':
-      return <Badge className="bg-blue-500">In Progress</Badge>;
+      return <Clock className="h-5 w-5 text-yellow-500" />;
     default:
-      return <Badge variant="outline">Not Synced</Badge>;
+      return <Clock className="h-5 w-5 text-gray-400" />;
   }
 }
 
-export function getSyncDirectionIcon(direction: string | null) {
-  switch (direction) {
-    case 'to_supabase':
-      return <ArrowDown className="h-4 w-4" />;
-    case 'to_glide':
-      return <ArrowUp className="h-4 w-4" />;
-    case 'both':
-      return <ArrowRightLeft className="h-4 w-4" />;
-    default:
-      return null;
-  }
-}
+export const statusColors = {
+  completed: 'green',
+  processing: 'blue',
+  failed: 'red',
+  started: 'yellow',
+  unknown: 'gray'
+};
 
-export function getSyncDirectionLabel(direction: string | null): string {
-  switch (direction) {
-    case 'to_supabase':
-      return 'Glide → Supabase';
-    case 'to_glide':
-      return 'Supabase → Glide';
-    case 'both':
-      return 'Bidirectional';
-    default:
-      return 'Unknown';
-  }
-}
+export function getStatusColor(status: string | null): string {
+  if (!status) return statusColors.unknown;
+  
+  const normalizedStatus = status.toLowerCase();
+  return statusColors[normalizedStatus as keyof typeof statusColors] || statusColors.unknown;
+} 

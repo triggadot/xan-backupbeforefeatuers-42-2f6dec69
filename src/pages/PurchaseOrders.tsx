@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -21,34 +22,9 @@ export default function PurchaseOrders() {
   }, []);
 
   const loadPurchaseOrders = async () => {
-    try {
-      const result = await fetchPurchaseOrders();
-      if (!result.error && result.data) {
-        // Transform the data to match PurchaseOrderWithVendor
-        const transformedData: PurchaseOrderWithVendor[] = result.data.map(po => ({
-          id: po.id,
-          number: po.number || po.purchase_order_uid || '',
-          date: new Date(po.po_date || po.date || new Date()),
-          status: po.status,
-          vendorId: po.vendorId || po.vendor_uid || '',
-          vendorName: po.vendorName || 'Vendor',
-          total: po.total_amount,
-          balance: po.balance,
-          paymentCount: 0,
-          createdAt: new Date(po.created_at || new Date()),
-          updatedAt: new Date(po.updated_at || new Date()),
-          productCount: 0,
-          totalPaid: po.total_paid
-        }));
-        setPurchaseOrders(transformedData);
-      }
-    } catch (error) {
-      console.error("Error loading purchase orders:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load purchase orders",
-        variant: "destructive"
-      });
+    const result = await fetchPurchaseOrders();
+    if (!result.error) {
+      setPurchaseOrders(result.data);
     }
   };
 

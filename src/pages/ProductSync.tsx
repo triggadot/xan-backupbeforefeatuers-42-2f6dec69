@@ -13,9 +13,8 @@ import { SyncContainer } from '@/components/sync/SyncContainer';
 import { LoadingState } from '@/components/sync/LoadingState';
 import { InvalidMapping } from '@/components/sync/InvalidMapping';
 import { GlMapping, GlProduct, GlSyncLog } from '@/types/glsync';
+import { SyncLog } from '@/types/syncLog';
 import { SyncLogTable } from '@/components/sync/ui/SyncLogTable';
-import { getStatusIcon, getStatusBadge } from '@/components/sync/ui/StatusBadgeUtils';
-import { ProgressIndicator } from '@/components/sync/ui/ProgressIndicator';
 
 const ProductSync = () => {
   const { mappingId } = useParams();

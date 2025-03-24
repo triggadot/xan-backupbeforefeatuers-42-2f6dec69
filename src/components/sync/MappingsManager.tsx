@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, TableProperties, Link, Plus } from 'lucide-react';
@@ -14,9 +15,6 @@ import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SupabaseTableSelector } from './mappings/SupabaseTableSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SyncStatus } from './ui/SyncStatus';
-import { getStatusBadge, getSyncDirectionIcon, getSyncDirectionLabel } from './ui/StatusBadgeUtils';
-import { ProgressIndicator } from './ui/ProgressIndicator';
 
 const MappingsManager = () => {
   const navigate = useNavigate();

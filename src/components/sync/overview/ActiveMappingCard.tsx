@@ -1,11 +1,12 @@
-
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRightLeft, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
+import { formatTimestamp } from '@/utils/date-utils';
+import { getStatusBadge, getStatusIcon } from '../ui/StatusBadgeUtils';
 import { GlSyncStatus } from '@/types/glsync';
-import { SyncStatus } from '../ui/SyncStatus';
-import { useNavigate } from 'react-router-dom';
+import { ProgressIndicator } from '../ui/ProgressIndicator';
 
 interface ActiveMappingCardProps {
   status: GlSyncStatus;
@@ -14,82 +15,82 @@ interface ActiveMappingCardProps {
 }
 
 export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCardProps) {
-  const navigate = useNavigate();
-  
-  const getSyncDirectionIcon = () => {
-    switch (status.sync_direction) {
-      case 'to_supabase':
-        return <ArrowDown className="h-4 w-4 mr-1" />;
-      case 'to_glide':
-        return <ArrowUp className="h-4 w-4 mr-1" />;
-      case 'both':
-        return <ArrowRightLeft className="h-4 w-4 mr-1" />;
-      default:
-        return null;
-    }
-  };
-
-  const getSyncDirectionLabel = () => {
-    switch (status.sync_direction) {
-      case 'to_supabase':
-        return 'Glide → Supabase';
-      case 'to_glide':
-        return 'Supabase → Glide';
-      case 'both':
-        return 'Bidirectional';
-      default:
-        return 'Unknown';
-    }
-  };
-
-  const handleViewDetails = () => {
-    navigate(`/sync/mappings?id=${status.mapping_id}`);
-  };
-
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{status.glide_table_display_name}</CardTitle>
+            <CardTitle className="text-base font-medium">
+              {status.glide_table_display_name}
+            </CardTitle>
             <div className="text-sm text-muted-foreground">
-              {status.supabase_table}
+              {status.app_name} → {status.supabase_table}
             </div>
           </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            {getSyncDirectionIcon()}
-            {getSyncDirectionLabel()}
+          <div className="flex items-center">
+            {getStatusBadge(status.current_status)}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <SyncStatus status={status} />
-        
-        <div className="flex justify-between gap-2 mt-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleViewDetails}
-          >
-            View Details
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => onSync(status.connection_id, status.mapping_id)}
-            disabled={isSyncing || status.current_status === 'processing'}
-          >
-            {isSyncing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Syncing
-              </>
-            ) : (
-              'Sync Now'
-            )}
-          </Button>
+      
+      <CardContent>
+        <div className="text-sm mt-2 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Status:</span>
+            <div className="flex items-center gap-1">
+              {getStatusIcon(status.current_status)}
+              <span>
+                {status.current_status
+                  ? status.current_status.charAt(0).toUpperCase() + status.current_status.slice(1)
+                  : 'Not synced'}
+              </span>
+            </div>
+          </div>
+          
+          <ProgressIndicator 
+            current={status.records_processed} 
+            total={status.total_records} 
+          />
+          
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-sm text-muted-foreground">
+              Last sync: {formatTimestamp(status.last_sync_completed_at)}
+            </div>
+            <div className="flex space-x-2">
+              <Link to={
+                status.supabase_table === 'gl_products' 
+                  ? `/sync/products/${status.mapping_id}` 
+                  : `/sync/mappings/${status.mapping_id}`
+              }>
+                <Button 
+                  size="sm"
+                  variant="outline"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Details
+                </Button>
+              </Link>
+              <Button 
+                size="sm"
+                onClick={() => onSync(status.connection_id, status.mapping_id)}
+                disabled={isSyncing || status.current_status === 'processing'}
+              >
+                {isSyncing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Now
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
-}
+} 

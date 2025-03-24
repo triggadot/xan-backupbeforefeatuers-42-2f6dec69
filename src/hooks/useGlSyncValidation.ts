@@ -1,98 +1,62 @@
 
 import { useState, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ValidationResult } from '@/types/syncLog';
+import { useToast } from '@/hooks/use-toast';
+import { MappingValidationResult } from '@/types/glsync';
 
 export function useGlSyncValidation() {
   const [validating, setValidating] = useState(false);
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [validation, setValidation] = useState<{ isValid: boolean; message: string } | null>(null);
   const { toast } = useToast();
 
-  const validateMappingConfig = useCallback(async (mappingId: string) => {
+  const validateMappingConfig = useCallback(async (mappingId: string): Promise<boolean> => {
     setValidating(true);
     try {
-      // First get the mapping details
-      const { data: mappingData, error: mappingError } = await supabase
-        .from('gl_mappings')
-        .select('*')
-        .eq('id', mappingId)
-        .single();
-      
-      if (mappingError) throw mappingError;
-      
-      // Call the validation function
-      const { data: validationResult, error: validationError } = await supabase
-        .rpc('gl_validate_column_mapping', { 
-          p_mapping_id: mappingId
-        });
-      
-      if (validationError) throw validationError;
-      
-      console.log('Validation result:', validationResult);
-      
-      // Process the validation result
-      let result: ValidationResult;
-      
-      if (Array.isArray(validationResult) && validationResult.length > 0) {
-        // Handle array result format
-        result = {
-          isValid: validationResult[0].is_valid === true,
-          message: validationResult[0].validation_message || 'Validation completed',
-          details: {}
-        };
-      } else if (validationResult && typeof validationResult === 'object') {
-        // Handle object result format with typed assertion
-        const typedResult = validationResult as { is_valid: boolean; validation_message: string };
-        result = {
-          isValid: typedResult.is_valid === true,
-          message: typedResult.validation_message || 'Validation completed',
-          details: {}
-        };
-      } else {
-        // Default case for unexpected result format
-        result = {
-          isValid: false,
-          message: 'Unable to validate mapping configuration: unexpected result format',
-          details: {}
-        };
-      }
-      
-      // Set validation state and show toast
-      setValidation(result);
-      
-      toast({
-        title: result.isValid ? 'Validation Successful' : 'Validation Failed',
-        description: result.message,
-        variant: result.isValid ? 'default' : 'destructive',
+      // Call the validate RPC function
+      const { data, error } = await supabase.rpc('gl_validate_column_mapping', {
+        p_mapping_id: mappingId
       });
       
-      return result;
+      if (error) {
+        throw new Error(`Validation error: ${error.message}`);
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('No validation result returned');
+      }
+      
+      // Success - get the results from the first row
+      const result: MappingValidationResult = data[0];
+      
+      setValidation({
+        isValid: result.is_valid,
+        message: result.validation_message
+      });
+      
+      return result.is_valid;
     } catch (error) {
-      console.error('Error validating mapping:', error);
+      console.error('Error validating mapping configuration:', error);
       
-      const errorResult: ValidationResult = {
+      setValidation({
         isValid: false,
-        message: error instanceof Error ? error.message : 'An unknown error occurred during validation',
-      };
-      
-      setValidation(errorResult);
+        message: `Error during validation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
       
       toast({
-        title: 'Validation Error',
-        description: errorResult.message,
+        title: 'Validation error',
+        description: error instanceof Error ? error.message : 'Unknown error occurred during validation',
         variant: 'destructive',
       });
       
-      return errorResult;
+      return false;
     } finally {
       setValidating(false);
     }
   }, [toast]);
 
   return {
-    validating,
-    validation,
     validateMappingConfig,
+    validating,
+    validation
   };
 }
