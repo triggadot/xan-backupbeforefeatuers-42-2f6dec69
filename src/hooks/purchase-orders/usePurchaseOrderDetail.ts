@@ -89,7 +89,7 @@ export function usePurchaseOrderDetail() {
         vendor: vendorData,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
-        notes: purchaseOrder.notes || '', // Not stored directly in purchase_orders
+        notes: '', // Default empty notes since it doesn't exist in DB
         subtotal: Number(purchaseOrder.total_amount || 0),
         tax: 0, // Not stored directly
         total_amount: Number(purchaseOrder.total_amount || 0),

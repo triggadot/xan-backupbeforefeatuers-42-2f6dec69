@@ -67,33 +67,7 @@ export function usePurchaseOrdersView() {
       if (!data) return [];
       
       // Map to PurchaseOrderWithVendor format
-      return data.map(po => {
-        // Safely get vendor name with null checks
-        let vendorName = 'Unknown Vendor';
-        
-        if (po.vendor && 
-            typeof po.vendor === 'object' && 
-            po.vendor !== null) {
-          if (hasProperty(po.vendor, 'account_name')) {
-            vendorName = po.vendor.account_name || 'Unknown Vendor';
-          }
-        }
-        
-        return {
-          id: po.glide_row_id,
-          number: po.purchase_order_uid || po.id.substring(0, 8),
-          date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
-          status: po.payment_status || 'draft',
-          vendorId: po.rowid_accounts || '',
-          vendorName: vendorName,
-          total: Number(po.total_amount || 0),
-          balance: Number(po.balance || 0),
-          totalPaid: Number(po.total_paid || 0),
-          productCount: Number(po.product_count || 0),
-          createdAt: new Date(po.created_at),
-          updatedAt: po.updated_at ? new Date(po.updated_at) : new Date()
-        };
-      });
+      return data.map(mapPurchaseOrderData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase orders';
       setError(errorMessage);
@@ -117,3 +91,31 @@ export function usePurchaseOrdersView() {
     error
   };
 }
+
+const mapPurchaseOrderData = (po) => {
+  // Safely get vendor name with null checks
+  let vendorName = 'Unknown Vendor';
+  
+  if (po.vendor && 
+      typeof po.vendor === 'object' && 
+      po.vendor !== null) {
+    if (hasProperty(po.vendor, 'account_name')) {
+      vendorName = po.vendor.account_name || 'Unknown Vendor';
+    }
+  }
+  
+  return {
+    id: po.glide_row_id,
+    number: po.purchase_order_uid || po.id.substring(0, 8),
+    date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+    status: po.payment_status || 'draft',
+    vendorId: po.rowid_accounts || '',
+    vendorName: vendorName,
+    total: Number(po.total_amount || 0),
+    balance: Number(po.balance || 0),
+    totalPaid: Number(po.total_paid || 0),
+    productCount: Number(po.product_count || 0),
+    createdAt: new Date(po.created_at),
+    updatedAt: po.updated_at ? new Date(po.updated_at) : new Date()
+  };
+};

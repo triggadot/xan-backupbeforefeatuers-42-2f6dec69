@@ -1,21 +1,13 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useInvoiceDetail } from './useInvoiceDetail';
-import { useInvoiceLineItems } from './useInvoiceLineItems';
-import { useInvoicePayments } from './useInvoicePayments';
-import { Invoice, InvoiceFilters, InvoiceWithDetails } from '@/types/invoice';
-import { InvoiceListItem } from '@/types/invoiceView';
+import { InvoiceFilters, InvoiceWithCustomer } from '@/types/invoice';
 import { hasProperty } from '@/types/supabase';
 
 export function useInvoicesView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { getInvoice } = useInvoiceDetail();
-  const { deleteLineItem, addLineItem, updateLineItem } = useInvoiceLineItems();
-  const { deletePayment, addPayment, updatePayment } = useInvoicePayments();
-  
-  const fetchInvoices = useCallback(async (filters?: InvoiceFilters): Promise<InvoiceListItem[]> => {
+  const fetchInvoices = useCallback(async (filters?: InvoiceFilters): Promise<InvoiceWithCustomer[]> => {
     setIsLoading(true);
     setError(null);
     
@@ -27,6 +19,7 @@ export function useInvoicesView() {
           customer:rowid_accounts(*)
         `);
       
+      // Apply filters if provided
       if (filters) {
         if (filters.status && filters.status !== 'all') {
           query = query.eq('payment_status', filters.status);
@@ -36,22 +29,22 @@ export function useInvoicesView() {
           query = query.eq('rowid_accounts', filters.customerId);
         }
         
-        if (filters.dateFrom) {
-          const fromDate = filters.dateFrom instanceof Date 
-            ? filters.dateFrom.toISOString()
-            : new Date(filters.dateFrom).toISOString();
+        if (filters.fromDate) {
+          const fromDate = filters.fromDate instanceof Date 
+            ? filters.fromDate.toISOString()
+            : new Date(filters.fromDate).toISOString();
           query = query.gte('invoice_order_date', fromDate);
         }
         
-        if (filters.dateTo) {
-          const toDate = filters.dateTo instanceof Date 
-            ? filters.dateTo.toISOString()
-            : new Date(filters.dateTo).toISOString();
+        if (filters.toDate) {
+          const toDate = filters.toDate instanceof Date 
+            ? filters.toDate.toISOString()
+            : new Date(filters.toDate).toISOString();
           query = query.lte('invoice_order_date', toDate);
         }
         
         if (filters.search) {
-          query = query.or(`glide_row_id.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+          query = query.or(`invoice_number.ilike.%${filters.search}%,customer.account_name.ilike.%${filters.search}%`);
         }
       }
       
@@ -64,6 +57,7 @@ export function useInvoicesView() {
       if (!data) return [];
       
       return data.map(invoice => {
+        // Safely get customer name with null checks
         let customerName = 'Unknown Customer';
         
         if (invoice.customer && 
@@ -74,24 +68,26 @@ export function useInvoicesView() {
           }
         }
         
-        const invoiceDate = invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at);
-        const dueDate = new Date(invoiceDate);
-        dueDate.setDate(dueDate.getDate() + 30);
+        // Use invoice_order_date to calculate due date since due_date doesn't exist
+        const invoiceDate = invoice.invoice_order_date 
+          ? new Date(invoice.invoice_order_date) 
+          : new Date(invoice.created_at);
+        
+        // Add 30 days to invoice date as default due date
+        const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
         
         return {
-          id: invoice.id,
-          invoiceNumber: invoice.glide_row_id || invoice.id.substring(0, 8),
-          glideRowId: invoice.glide_row_id,
-          customerId: invoice.rowid_accounts || '',
+          id: invoice.glide_row_id,
+          invoiceNumber: invoice.glide_row_id,
           customerName: customerName,
-          date: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
-          dueDate: dueDate,
-          total: Number(invoice.total_amount || 0),
-          balance: Number(invoice.balance || 0),
+          invoiceDate: invoiceDate,
+          dueDate: dueDate, // Using calculated due date
           status: invoice.payment_status || 'draft',
-          lineItemsCount: 0,
-          notes: invoice.notes || '',
-          amountPaid: Number(invoice.total_paid || 0)
+          amount: Number(invoice.total_amount || 0),
+          amountPaid: Number(invoice.total_paid || 0),
+          balance: Number(invoice.balance || 0),
+          createdAt: new Date(invoice.created_at),
+          updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined
         };
       });
     } catch (err) {
@@ -106,13 +102,6 @@ export function useInvoicesView() {
   
   return {
     fetchInvoices,
-    getInvoice,
-    deleteLineItem,
-    addLineItem,
-    updateLineItem,
-    deletePayment,
-    addPayment,
-    updatePayment,
     isLoading,
     error
   };

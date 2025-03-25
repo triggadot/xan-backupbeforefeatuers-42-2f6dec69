@@ -14,7 +14,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: fetchError } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .select('*');
         
       if (fetchError) throw fetchError;
@@ -37,7 +37,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: fetchError } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .select('*')
         .eq('id', id)
         .single();
@@ -62,7 +62,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: createError } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .insert(entity)
         .select()
         .single();
@@ -87,7 +87,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: updateError } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .update(updates)
         .eq('id', id)
         .select()
@@ -113,7 +113,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { error: deleteError } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .delete()
         .eq('id', id);
         

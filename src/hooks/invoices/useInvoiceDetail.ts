@@ -89,7 +89,7 @@ export function useInvoiceDetail() {
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
       
-      // Fixed: Use invoice_order_date for dueDate since due_date field doesn't exist
+      // Create a calculated due date since it doesn't exist in the database
       const dueDate = invoice.invoice_order_date ? 
         new Date(new Date(invoice.invoice_order_date).getTime() + 30 * 24 * 60 * 60 * 1000) : // Add 30 days to invoice date as default due date
         undefined;
