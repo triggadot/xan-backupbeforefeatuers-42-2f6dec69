@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PurchaseOrder, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
+import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 

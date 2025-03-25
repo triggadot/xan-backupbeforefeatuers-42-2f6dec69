@@ -1,9 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// Define allowed table names based on Supabase schema
+// Define allowed table names as a type to avoid excessive type instantiation
 type SupabaseTable = 
   | 'gl_accounts'
   | 'gl_connections'

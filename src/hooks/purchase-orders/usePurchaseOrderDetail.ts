@@ -39,7 +39,7 @@ export function usePurchaseOrderDetail() {
         
       if (paymentsError) throw paymentsError;
       
-      // Format vendor name safely
+      // Format vendor name safely with null checks
       const vendorName = purchaseOrder.vendor && 
                          typeof purchaseOrder.vendor === 'object' && 
                          'account_name' in purchaseOrder.vendor 
@@ -92,9 +92,8 @@ export function usePurchaseOrderDetail() {
         amountPaid: totalPaid,
         subtotal: total,
         tax: 0,
-        createdAt: new Date(purchaseOrder.created_at),
-        updatedAt: purchaseOrder.updated_at ? new Date(purchaseOrder.updated_at) : new Date(),
         created_at: purchaseOrder.created_at,
+        updated_at: purchaseOrder.updated_at || null,
         rowid_accounts: purchaseOrder.rowid_accounts
       };
     } catch (err) {

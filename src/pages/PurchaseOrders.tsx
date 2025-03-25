@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useStandardizedPurchaseOrders } from '@/hooks/purchase-orders/useStandardizedPurchaseOrders';
-import { PurchaseOrderList } from '@/components/purchase-orders/PurchaseOrderList';
+import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import { PurchaseOrderFilters } from '@/components/purchase-orders/PurchaseOrderFilters';
 import { PurchaseOrderFilters as FilterOptions } from '@/types/purchaseOrder';
 
@@ -52,17 +52,16 @@ export default function PurchaseOrders() {
       
       <div className="mb-6">
         <PurchaseOrderFilters 
-          onFilterChange={handleFilterChange}
           filters={filters}
+          onChange={handleFilterChange}
         />
       </div>
       
       <PurchaseOrderList 
-        data={purchaseOrders}
+        purchaseOrders={purchaseOrders}
         isLoading={isLoading}
         error={null}
         onView={handleViewPO}
-        onCreate={handleCreatePO}
       />
     </div>
   );

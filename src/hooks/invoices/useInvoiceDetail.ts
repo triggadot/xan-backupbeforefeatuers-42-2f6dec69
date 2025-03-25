@@ -74,8 +74,10 @@ export function useInvoiceDetail() {
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
-      // Safely get customer name
-      const customerName = invoice.customer && typeof invoice.customer === 'object' && 'account_name' in invoice.customer
+      // Safely get customer name with null checks
+      const customerName = invoice.customer && 
+                           typeof invoice.customer === 'object' && 
+                           'account_name' in invoice.customer
         ? (invoice.customer.account_name || 'Unknown Customer')
         : 'Unknown Customer';
       
