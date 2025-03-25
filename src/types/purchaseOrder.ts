@@ -1,93 +1,63 @@
 
-export interface PurchaseOrder {
-  id: string;
-  glide_row_id: string;
-  purchase_order_uid?: string;
-  number: string;
-  rowid_accounts?: string;
+import { EntityBase, EntityStatus, EntityWithAmount } from './common';
+
+export interface PurchaseOrder extends EntityBase, EntityWithAmount {
+  number?: string;
+  date?: Date | string;
+  status: string;
   vendorId?: string;
-  vendorName: string;
-  po_date?: string;
-  date: Date;
-  dueDate?: Date;
-  payment_status?: string;
-  status: 'draft' | 'sent' | 'received' | 'partial' | 'complete';
-  total_amount: number;
-  total_paid: number;
-  total?: number;
-  balance: number;
-  product_count?: number;
-  created_at?: string;
-  updated_at?: string;
-  docs_shortlink?: string;
-  vendor_uid?: string;
+  vendorName?: string;
   notes?: string;
   lineItems: PurchaseOrderLineItem[];
   vendorPayments: VendorPayment[];
-  payments?: VendorPayment[];
+  products?: any[];
+  payments?: any[];
+  // Additional fields for the detail view
+  subtotal?: number;
+  tax?: number;
+  dueDate?: Date | string;
+  amountPaid?: number;
+  balance?: number;
+  total?: number;
 }
 
 export interface PurchaseOrderLineItem {
   id: string;
-  rowid_products: string;
-  product_name: string;
-  description?: string;
   quantity: number;
-  unit_price: number;
-  unitPrice?: number;
+  unitPrice: number;
   total: number;
+  description?: string;
   productId?: string;
-  productDetails?: ProductDetails;
-}
-
-export interface ProductDetails {
-  id: string;
-  glide_row_id: string;
-  name: string;
-  display_name?: string;
-  vendor_product_name?: string;
-  new_product_name?: string;
-  cost?: number;
-  total_qty_purchased?: number;
-  category?: string;
-  product_image1?: string;
-  purchase_notes?: string;
-  created_at?: string;
-  updated_at?: string;
+  productDetails?: any;
 }
 
 export interface VendorPayment {
   id: string;
-  date: Date | null;
   amount: number;
+  date?: Date | string;
   method?: string;
   notes?: string;
-}
-
-export interface PurchaseOrderFilters {
-  search?: string;
-  status?: string;
-  accountId?: string;
-  vendorId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  fromDate?: Date;
-  toDate?: Date;
 }
 
 export interface PurchaseOrderWithVendor {
   id: string;
   number: string;
-  date: Date;
-  status: PurchaseOrder['status'];
+  date: Date | string;
+  status: EntityStatus;
   vendorId: string;
   vendorName: string;
   total: number;
   balance: number;
-  paymentCount?: number;
-  lastPaymentDate?: Date;
+  totalPaid: number;
+  productCount: number;
   createdAt: Date;
   updatedAt: Date;
-  productCount: number;
-  totalPaid: number;
+}
+
+export interface PurchaseOrderFilters {
+  status?: string;
+  vendorId?: string;
+  search?: string;
+  fromDate?: Date;
+  toDate?: Date;
 }
