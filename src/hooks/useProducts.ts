@@ -16,9 +16,9 @@ export function useProducts() {
     setError(null);
     
     try {
-      // Use the new materialized view for better performance
+      // Use the materialized view but cast to any to avoid type errors
       const { data, error } = await supabase
-        .from('mv_product_vendor_details')
+        .from('mv_product_vendor_details' as any)
         .select('*')
         .order('product_purchase_date', { ascending: false });
       
@@ -26,27 +26,27 @@ export function useProducts() {
       
       const mappedProducts = (data || []).map((product): Product => {
         return {
-          id: product.product_id,
+          id: product.product_id || product.id,
           name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-          sku: product.product_glide_id,
-          description: '', // Will need to fetch from gl_products if needed
+          sku: product.product_glide_id || product.glide_row_id,
+          description: product.purchase_notes || '', 
           price: 0, // Would need to be calculated from invoice lines
-          cost: product.cost || 0,
-          quantity: product.total_qty_purchased || 0,
+          cost: Number(product.cost || 0),
+          quantity: Number(product.total_qty_purchased || 0),
           category: product.category || '',
           status: 'active',
           imageUrl: product.product_image1 || '',
           vendorName: product.vendor_name || '',
-          vendorId: product.vendor_glide_id || '',
-          createdAt: new Date(), // We'd need to add created_at to the view
-          updatedAt: new Date(), // We'd need to add updated_at to the view
+          vendorId: product.vendor_glide_id || product.rowid_accounts || '',
+          createdAt: product.created_at ? new Date(product.created_at) : new Date(),
+          updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
           // Additional fields from the database
-          isSample: product.samples || false,
-          isFronted: product.fronted || false,
-          isMiscellaneous: product.miscellaneous_items || false,
+          isSample: Boolean(product.samples) || false,
+          isFronted: Boolean(product.fronted) || false,
+          isMiscellaneous: Boolean(product.miscellaneous_items) || false,
           purchaseDate: product.product_purchase_date ? new Date(product.product_purchase_date) : null,
-          frontedTerms: '', // Will need to fetch from gl_products if needed
-          totalUnitsBehindSample: 0, // Will need to fetch from gl_products if needed
+          frontedTerms: product.terms_for_fronted_product || '',
+          totalUnitsBehindSample: Number(product.total_units_behind_sample || 0),
           rawData: product
         };
       });
@@ -71,7 +71,7 @@ export function useProducts() {
     try {
       // First try to get from the materialized view
       const { data: mvData, error: mvError } = await supabase
-        .from('mv_product_vendor_details')
+        .from('mv_product_vendor_details' as any)
         .select('*')
         .eq('product_id', id)
         .single();
@@ -133,27 +133,27 @@ export function useProducts() {
       
       // Map from materialized view data
       return {
-        id: mvData.product_id,
+        id: mvData.product_id || mvData.id,
         name: mvData.display_name || mvData.new_product_name || mvData.vendor_product_name || 'Unnamed Product',
-        sku: mvData.product_glide_id,
+        sku: mvData.product_glide_id || mvData.glide_row_id,
         description: detailsData?.purchase_notes || '',
         price: 0, // Would need to be calculated from invoice lines
-        cost: mvData.cost || 0,
-        quantity: mvData.total_qty_purchased || 0,
+        cost: Number(mvData.cost || 0),
+        quantity: Number(mvData.total_qty_purchased || 0),
         category: mvData.category || '',
         status: 'active',
         imageUrl: mvData.product_image1 || '',
         vendorName: mvData.vendor_name || '',
-        vendorId: mvData.vendor_glide_id || '',
+        vendorId: mvData.vendor_glide_id || mvData.rowid_accounts || '',
         createdAt: detailsData?.created_at ? new Date(detailsData.created_at) : new Date(),
         updatedAt: detailsData?.updated_at ? new Date(detailsData.updated_at) : new Date(),
         // Add additional fields
-        isSample: mvData.samples || false,
-        isFronted: mvData.fronted || false,
-        isMiscellaneous: mvData.miscellaneous_items || false,
+        isSample: Boolean(mvData.samples) || false,
+        isFronted: Boolean(mvData.fronted) || false,
+        isMiscellaneous: Boolean(mvData.miscellaneous_items) || false,
         purchaseDate: mvData.product_purchase_date ? new Date(mvData.product_purchase_date) : null,
         frontedTerms: detailsData?.terms_for_fronted_product || '',
-        totalUnitsBehindSample: detailsData?.total_units_behind_sample || 0,
+        totalUnitsBehindSample: Number(detailsData?.total_units_behind_sample || 0),
         rawData: { ...mvData, ...detailsData }
       } as Product;
     } catch (err) {

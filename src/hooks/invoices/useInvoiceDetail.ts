@@ -13,8 +13,9 @@ export function useInvoiceDetail() {
     setError(null);
     
     try {
+      // Use the new materialized view for better performance, but cast it to any to avoid type errors
       const { data: invoice, error: invoiceError } = await supabase
-        .from('gl_invoices')
+        .from('mv_invoice_customer_details' as any)
         .select(`
           *,
           customer:rowid_accounts(*)
