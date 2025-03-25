@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +10,8 @@ import {
   asDate,
   isJsonRecord,
   ProductViewRow,
-  ProductRow
+  ProductRow,
+  asString
 } from '@/types/supabase';
 
 export function useProducts() {
@@ -36,6 +38,7 @@ export function useProducts() {
       
       if (error) throw error;
       
+      // Use type assertion to avoid deep type instantiation
       const mappedProducts = (data || []).map((row: any): Product => {
         const viewRow = row as ProductViewRow;
         return {
@@ -86,7 +89,7 @@ export function useProducts() {
       const { data: mvData, error: mvError } = await supabase
         .from('mv_product_vendor_details')
         .select('*')
-        .eq('product_id', id)
+        .eq('id', id)
         .single();
       
       if (mvError || !mvData) {
@@ -144,6 +147,10 @@ export function useProducts() {
         } as Product;
       }
       
+      // Handle materialized view data directly as record with known keys
+      // instead of using ProductViewRow to avoid excessive type instantiation
+      const productData = mvData as Record<string, unknown>;
+      
       // Get additional details not in materialized view
       const { data: detailsData, error: detailsError } = await supabase
         .from('gl_products')
@@ -153,35 +160,30 @@ export function useProducts() {
         
       if (detailsError) throw detailsError;
       
-      // Safely access properties that may not exist
-      const viewRow = mvData as ProductViewRow;
-      const productId = viewRow.id || viewRow.product_id;
-      const productGlideId = viewRow.glide_row_id || viewRow.product_glide_id;
-      
-      // Map from materialized view data
+      // Use direct property access with type safety via asString, asNumber, etc.
       return {
-        id: String(productId || ''),
-        name: String(viewRow.display_name || viewRow.new_product_name || viewRow.vendor_product_name || 'Unnamed Product'),
-        sku: String(productGlideId || ''),
-        description: String(detailsData?.purchase_notes || ''),
+        id: asString(productData.id || ''),
+        name: asString(productData.display_name || productData.new_product_name || productData.vendor_product_name || 'Unnamed Product'),
+        sku: asString(productData.glide_row_id || ''),
+        description: asString(detailsData?.purchase_notes || ''),
         price: 0, // Would need to be calculated from invoice lines
-        cost: asNumber(viewRow.cost || 0),
-        quantity: asNumber(viewRow.total_qty_purchased || 0),
-        category: String(viewRow.category || ''),
+        cost: asNumber(productData.cost || 0),
+        quantity: asNumber(productData.total_qty_purchased || 0),
+        category: asString(productData.category || ''),
         status: 'active',
-        imageUrl: String(viewRow.product_image1 || ''),
-        vendorName: String(viewRow.vendor_name || ''),
-        vendorId: String(viewRow.vendor_glide_id || viewRow.rowid_accounts || ''),
+        imageUrl: asString(productData.product_image1 || ''),
+        vendorName: asString(productData.vendor_name || ''),
+        vendorId: asString(productData.rowid_accounts || ''),
         createdAt: asDate(detailsData?.created_at) || new Date(),
         updatedAt: asDate(detailsData?.updated_at) || new Date(),
         // Add additional fields
-        isSample: asBoolean(viewRow.samples || false),
-        isFronted: asBoolean(viewRow.fronted || false),
-        isMiscellaneous: asBoolean(viewRow.miscellaneous_items || false),
-        purchaseDate: asDate(viewRow.product_purchase_date),
-        frontedTerms: String(detailsData?.terms_for_fronted_product || ''),
+        isSample: asBoolean(productData.samples || false),
+        isFronted: asBoolean(productData.fronted || false),
+        isMiscellaneous: asBoolean(productData.miscellaneous_items || false),
+        purchaseDate: asDate(productData.product_purchase_date),
+        frontedTerms: asString(detailsData?.terms_for_fronted_product || ''),
         totalUnitsBehindSample: asNumber(detailsData?.total_units_behind_sample || 0),
-        rawData: { ...mvData, ...detailsData }
+        rawData: { ...productData, ...detailsData }
       } as Product;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product';

@@ -8,7 +8,8 @@ import {
   hasProperty, 
   asNumber, 
   asDate, 
-  parseJsonIfString 
+  parseJsonIfString,
+  asString
 } from '@/types/supabase';
 
 export function usePurchaseOrderDetail() {
@@ -51,10 +52,10 @@ export function usePurchaseOrderDetail() {
         vendorData = vendorObj;
         
         if (vendorObj && hasProperty(vendorObj, 'account_name')) {
-          vendorName = String(vendorObj.account_name) || 'Unknown Vendor';
+          vendorName = asString(vendorObj.account_name) || 'Unknown Vendor';
         }
       } else if (po.vendor_name) {
-        vendorName = po.vendor_name;
+        vendorName = asString(po.vendor_name);
       }
       
       // Get products for this PO

@@ -7,7 +7,8 @@ import {
   hasProperty, 
   asNumber,
   asDate,
-  parseJsonIfString
+  parseJsonIfString,
+  asString
 } from '@/types/supabase';
 
 export function useInvoiceDetail() {
@@ -50,7 +51,7 @@ export function useInvoiceDetail() {
         customerData = customerObj;
         
         if (customerObj && hasProperty(customerObj, 'account_name')) {
-          customerName = String(customerObj.account_name) || 'Unknown Customer';
+          customerName = asString(customerObj.account_name) || 'Unknown Customer';
         }
       }
       

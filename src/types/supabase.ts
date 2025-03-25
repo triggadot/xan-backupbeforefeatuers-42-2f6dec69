@@ -37,6 +37,18 @@ export function hasProperty<K extends string>(obj: unknown, prop: K): obj is { [
   return isJsonRecord(obj) && prop in obj;
 }
 
+// Function to safely parse a JSON string if it's a string, otherwise return as is
+export function parseJsonIfString<T>(value: unknown): T | null {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch (e) {
+      return null;
+    }
+  }
+  return value as T;
+}
+
 // Helper functions for type conversion
 export function asString(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -120,6 +132,11 @@ export interface PurchaseOrderRow {
   product_count?: number | string;
   // This can be a complex object, so we use a union type
   vendor?: string | Record<string, unknown> | null;
+  date_payment_date_mddyyyy?: string;
+  docs_shortlink?: string;
+  // Add these fields for materialized view compatibility
+  vendor_name?: string;
+  vendor_id?: string;
   [key: string]: unknown;
 }
 
@@ -135,6 +152,10 @@ export interface InvoiceRow {
   total_amount?: number | string;
   total_paid?: number | string;
   balance?: number | string;
+  due_date?: string;
+  tax_rate?: number | string;
+  tax_amount?: number | string;
+  notes?: string;
   // This can be a complex object, so we use a union type
   customer?: string | Record<string, unknown> | null;
   [key: string]: unknown;
