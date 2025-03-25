@@ -39,7 +39,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
       }
       
       // Cast the data to the expected return type
-      return (data || []) as T[];
+      return (data || []) as unknown as T[];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
@@ -70,7 +70,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         throw apiError;
       }
       
-      return data as T;
+      return data as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
@@ -106,7 +106,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         description: 'Record created successfully',
       });
       
-      return newRecord as T;
+      return newRecord as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating data';
       setError(errorMessage);
@@ -143,7 +143,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         description: 'Record updated successfully',
       });
       
-      return updatedRecord as T;
+      return updatedRecord as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while updating data';
       setError(errorMessage);

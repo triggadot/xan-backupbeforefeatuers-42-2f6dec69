@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceWithDetails } from '@/types/invoice';
+import { hasProperty } from '@/types/supabase';
 
 export function useInvoiceDetail() {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +43,24 @@ export function useInvoiceDetail() {
         
       if (paymentsError) throw paymentsError;
       
+      // Safely get customer name with null checks
+      let customerName = 'Unknown Customer';
+      if (invoice.customer && 
+          typeof invoice.customer === 'object' && 
+          invoice.customer !== null) {
+        if (hasProperty(invoice.customer, 'account_name')) {
+          customerName = invoice.customer.account_name || 'Unknown Customer';
+        }
+      }
+      
+      // Safely determine if we have account data
+      let accountData = undefined;
+      if (invoice.customer && 
+          typeof invoice.customer === 'object' && 
+          invoice.customer !== null) {
+        accountData = invoice.customer;
+      }
+      
       // Convert from DB format to InvoiceWithDetails format
       const formattedLineItems = lineItems.map(item => ({
         id: item.id,
@@ -73,22 +92,6 @@ export function useInvoiceDetail() {
       
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
-
-      // Safely get customer name with null checks
-      let customerName = 'Unknown Customer';
-      if (invoice.customer && 
-          typeof invoice.customer === 'object' && 
-          invoice.customer !== null) {
-        customerName = invoice.customer.account_name || 'Unknown Customer';
-      }
-      
-      // Safely determine if we have account data
-      let accountData = undefined;
-      if (invoice.customer && 
-          typeof invoice.customer === 'object' && 
-          invoice.customer !== null) {
-        accountData = invoice.customer;
-      }
       
       return {
         id: invoice.id,

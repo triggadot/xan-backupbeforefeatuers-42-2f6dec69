@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
+import { hasProperty } from '@/types/supabase';
 
 export function usePurchaseOrderDetail() {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +45,7 @@ export function usePurchaseOrderDetail() {
       if (purchaseOrder.vendor && 
           typeof purchaseOrder.vendor === 'object' && 
           purchaseOrder.vendor !== null) {
-        if ('account_name' in purchaseOrder.vendor) {
+        if (hasProperty(purchaseOrder.vendor, 'account_name')) {
           vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
         }
       }
