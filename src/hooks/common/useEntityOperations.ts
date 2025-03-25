@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { asTable } from '@/utils/supabase';
+import { asTable, asRecord, asRecordArray, SupabaseTableName } from '@/utils/supabase';
 
 // Generic hook for basic CRUD operations on any entity
 export function useEntityOperations<T extends { id: string }>(tableName: string) {
@@ -19,7 +19,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: string)
         
       if (fetchError) throw fetchError;
       
-      return (data || []) as T[];
+      return asRecordArray<T>(data || []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -43,7 +43,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: string)
         
       if (fetchError) throw fetchError;
       
-      return data as T;
+      return asRecord<T>(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -67,7 +67,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: string)
         
       if (createError) throw createError;
       
-      return data as T;
+      return asRecord<T>(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -92,7 +92,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: string)
         
       if (updateError) throw updateError;
       
-      return data as T;
+      return asRecord<T>(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);

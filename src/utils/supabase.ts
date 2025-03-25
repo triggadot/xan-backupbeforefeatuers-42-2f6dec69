@@ -1,12 +1,41 @@
 
 import { Database } from '@/integrations/supabase/types';
 
-// Define table names as a type for type safety
-export type SupabaseTableName = string;
+// Define a union type for all valid Supabase table names for better type safety
+export type SupabaseTableName = 
+  | 'gl_accounts'
+  | 'gl_connections'
+  | 'gl_customer_credits'
+  | 'gl_customer_payments'
+  | 'gl_estimate_lines'
+  | 'gl_estimates'
+  | 'gl_expenses'
+  | 'gl_invoice_lines'
+  | 'gl_invoices'
+  | 'gl_mappings'
+  | 'gl_products'
+  | 'gl_purchase_orders'
+  | 'gl_shipping_records'
+  | 'gl_sync_errors'
+  | 'gl_sync_logs'
+  | 'gl_vendor_payments'
+  | 'profiles';
 
-// Type-safe way to convert a SupabaseTableName to a string
-export function asTable(tableName: SupabaseTableName): string {
-  return tableName as string;
+// Convert a string to a SupabaseTableName if it's a valid table name
+export function asTable(tableName: string): SupabaseTableName {
+  const validTables = [
+    'gl_accounts', 'gl_connections', 'gl_customer_credits', 'gl_customer_payments',
+    'gl_estimate_lines', 'gl_estimates', 'gl_expenses', 'gl_invoice_lines',
+    'gl_invoices', 'gl_mappings', 'gl_products', 'gl_purchase_orders',
+    'gl_shipping_records', 'gl_sync_errors', 'gl_sync_logs', 'gl_vendor_payments',
+    'profiles'
+  ];
+  
+  if (!validTables.includes(tableName)) {
+    console.warn(`Table name '${tableName}' might not be valid. Please check.`);
+  }
+  
+  return tableName as SupabaseTableName;
 }
 
 // Type guard to check if a value is an object with an ID

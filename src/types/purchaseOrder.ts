@@ -37,6 +37,7 @@ export interface PurchaseOrderLineItem {
   productDetails?: any;
   product_name?: string;
   unit_price?: number;
+  notes?: string; // Added notes field
 }
 
 export interface VendorPayment {
