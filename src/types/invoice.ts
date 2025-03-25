@@ -1,6 +1,6 @@
 
 import { EntityBase, EntityStatus, EntityWithAccount, EntityWithAmount, EntityWithStatus } from './common';
-import { GlAccount } from './account';
+import { GlAccount } from './accounts';
 
 export interface InvoiceLineItem {
   id: string;
@@ -55,6 +55,7 @@ export interface InvoiceWithDetails extends Invoice {
   notes?: string;
   total?: number;
   amountPaid: number;
+  subtotal?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -62,10 +63,10 @@ export interface InvoiceWithDetails extends Invoice {
 export interface InvoiceFilters {
   status?: EntityStatus | string;
   customerId?: string;
-  fromDate?: string;
-  toDate?: string;
-  dateFrom?: string;
-  dateTo?: string;
+  fromDate?: string | Date;
+  toDate?: string | Date;
+  dateFrom?: string | Date;
+  dateTo?: string | Date;
   search?: string;
 }
 

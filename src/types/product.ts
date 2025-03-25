@@ -1,58 +1,74 @@
 
-import { EntityBase } from './common';
+import { EntityBase, EntityStatus } from './common';
 
 export interface Product extends EntityBase {
-  display_name?: string;
-  vendor_product_name?: string;
-  new_product_name?: string;
-  cost?: number;
-  total_qty_purchased?: number;
+  name: string;
+  sku?: string;
+  description?: string;
   category?: string;
-  product_image1?: string;
-  purchase_notes?: string;
-  rowid_accounts?: string;
-  rowid_purchase_orders?: string;
-  product_purchase_date?: string;
-  vendor?: {
-    id: string;
-    account_name: string;
-  };
-  // Sample and fronted fields
-  samples?: boolean;
-  fronted?: boolean;
-  total_units_behind_sample?: number;
-  terms_for_fronted_product?: string;
-  miscellaneous_items?: boolean;
-  
-  // UI helper fields
-  name?: string; // Computed from display_name or vendor_product_name
+  price: number;
+  cost: number;
+  quantity: number;
+  status: EntityStatus;
+  vendorId?: string;
   vendorName?: string;
-  totalCost?: number; // Computed from cost * total_qty_purchased
-  currentInventory?: number;
-  totalSold?: number;
-  totalSampled?: number;
+  imageUrl?: string;
+  
+  // Additional fields for business logic
+  isSample?: boolean;
+  isFronted?: boolean;
+  isMiscellaneous?: boolean;
+  purchaseDate?: Date | null;
+  frontedTerms?: string;
+  totalUnitsBehindSample?: number;
 }
 
-export interface ProductWithInventory extends Product {
-  current_inventory: number;
-  total_sold: number;
-  inventory_value: number;
-  payment_status: string;
-  sample_value?: number;
-  fronted_value?: number;
+export interface ProductInvoiceLine {
+  id: string;
+  productId: string;
+  invoiceId: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  description?: string;
+  notes?: string;
 }
 
-export interface UnpaidProduct extends Product {
+export interface ProductEstimateLine {
+  id: string;
+  productId: string;
+  estimateId: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  description?: string;
+  notes?: string;
+}
+
+export interface UnpaidProduct {
+  id: string;
+  product_id: string;
+  name: string;
+  quantity: number;
   unpaid_value: number;
   unpaid_type: string;
-  vendor_name?: string;
+  date_created: string;
+  created_at: string; // Required field that was missing
+  customer_name: string;
+  customer_id: string;
+  product_image?: string;
+  notes?: string;
+  status: string;
+  is_sample: boolean;
+  is_fronted: boolean;
+  payment_status: string;
 }
 
 export interface ProductFilters {
   category?: string;
   vendorId?: string;
+  status?: EntityStatus;
   search?: string;
-  inStock?: boolean;
-  showSamples?: boolean;
-  showFronted?: boolean;
+  onlySamples?: boolean;
+  onlyFronted?: boolean;
 }

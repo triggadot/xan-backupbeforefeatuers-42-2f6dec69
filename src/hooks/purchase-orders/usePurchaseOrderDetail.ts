@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchaseOrder';
@@ -23,7 +24,9 @@ export function usePurchaseOrderDetail() {
       if (poError) throw poError;
       
       // Get vendor name using optional chaining and nullish coalescing
-      const vendorName = data.vendor?.account_name ?? 'Unknown Vendor';
+      const vendorName = data.vendor && 'account_name' in data.vendor 
+        ? data.vendor.account_name 
+        : 'Unknown Vendor';
       
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
@@ -48,8 +51,8 @@ export function usePurchaseOrderDetail() {
         vendorId: data.rowid_accounts || '',
         vendorName: vendorName,
         status: data.payment_status || 'draft',
-        total: Number(data.total_amount || 0),
-        totalPaid: Number(data.total_paid || 0),
+        total_amount: Number(data.total_amount || 0),
+        total_paid: Number(data.total_paid || 0),
         balance: Number(data.balance || 0),
         amountPaid: Number(data.total_paid || 0),
         notes: data.notes || '',
@@ -58,7 +61,7 @@ export function usePurchaseOrderDetail() {
         subtotal: Number(data.total_amount || 0),
         lineItems: products.map(item => ({
           id: item.id,
-          productId: item.rowid_products || '',
+          productId: item.glide_row_id || '',
           description: item.vendor_product_name || item.new_product_name || 'Unknown',
           product_name: item.vendor_product_name || item.new_product_name || 'Unknown',
           quantity: Number(item.total_qty_purchased || 0),

@@ -9,6 +9,23 @@ export function usePurchaseOrderMutation() {
   const [error, setError] = useState<string>('');
   const { toast } = useToast();
 
+  // Function to safely convert a Date or string to ISO string format
+  const toISOString = (dateInput?: Date | string): string | undefined => {
+    if (!dateInput) return undefined;
+    
+    try {
+      // If it's a Date object, use toISOString directly
+      if (dateInput instanceof Date) {
+        return dateInput.toISOString();
+      }
+      // If it's a string, convert to Date first
+      return new Date(dateInput).toISOString();
+    } catch (e) {
+      console.error('Error converting date:', e);
+      return undefined;
+    }
+  };
+
   // Create a new purchase order
   const createPurchaseOrder = async (data: Partial<PurchaseOrder>) => {
     setIsLoading(true);
@@ -16,11 +33,7 @@ export function usePurchaseOrderMutation() {
     
     try {
       // Convert date to ISO string format if it exists
-      const poDate = data.date instanceof Date 
-        ? data.date.toISOString() 
-        : typeof data.date === 'string' 
-          ? new Date(data.date).toISOString() 
-          : new Date().toISOString();
+      const poDate = toISOString(data.date) || new Date().toISOString();
 
       const { data: newPo, error } = await supabase
         .from('gl_purchase_orders')
@@ -63,17 +76,8 @@ export function usePurchaseOrderMutation() {
     
     try {
       // Convert dates to ISO string format if they exist
-      const poDate = data.date instanceof Date 
-        ? data.date.toISOString() 
-        : typeof data.date === 'string' 
-          ? new Date(data.date).toISOString() 
-          : undefined;
-
-      const dueDate = data.dueDate instanceof Date 
-        ? data.dueDate.toISOString() 
-        : typeof data.dueDate === 'string' 
-          ? new Date(data.dueDate).toISOString() 
-          : undefined;
+      const poDate = toISOString(data.date);
+      const dueDate = toISOString(data.dueDate);
 
       const { data: updatedPo, error } = await supabase
         .from('gl_purchase_orders')

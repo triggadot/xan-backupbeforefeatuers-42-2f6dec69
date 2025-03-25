@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { X, Search, Calendar, Filter } from 'lucide-react';
@@ -42,7 +43,8 @@ export const InvoiceFilterBar = ({
     if (value === 'all') {
       onFiltersChange({ ...filters, status: undefined });
     } else {
-      onFiltersChange({ ...filters, status: [value] });
+      // Convert single string to string, not array
+      onFiltersChange({ ...filters, status: value });
     }
   };
 
@@ -55,10 +57,12 @@ export const InvoiceFilterBar = ({
   };
 
   const handleDateFromChange = (date: Date | undefined) => {
+    // Use the date directly as it's now compatible with the updated InvoiceFilters type
     onFiltersChange({ ...filters, dateFrom: date });
   };
 
   const handleDateToChange = (date: Date | undefined) => {
+    // Use the date directly as it's now compatible with the updated InvoiceFilters type
     onFiltersChange({ ...filters, dateTo: date });
   };
 
@@ -98,7 +102,7 @@ export const InvoiceFilterBar = ({
         </div>
 
         <Select 
-          value={filters.status?.[0] || 'all'} 
+          value={typeof filters.status === 'string' ? filters.status : 'all'} 
           onValueChange={handleStatusChange}
         >
           <SelectTrigger className="w-[150px]">
@@ -140,8 +144,13 @@ export const InvoiceFilterBar = ({
               <Calendar className="mr-2 h-4 w-4" />
               {filters.dateFrom ? (
                 <>
-                  {format(filters.dateFrom, 'LLL dd, y')}
-                  {filters.dateTo && ` - ${format(filters.dateTo, 'LLL dd, y')}`}
+                  {filters.dateFrom instanceof Date 
+                    ? format(filters.dateFrom, 'LLL dd, y')
+                    : filters.dateFrom}
+                  {filters.dateTo && 
+                    ` - ${filters.dateTo instanceof Date 
+                      ? format(filters.dateTo, 'LLL dd, y') 
+                      : filters.dateTo}`}
                 </>
               ) : (
                 "Date Range"
@@ -156,7 +165,7 @@ export const InvoiceFilterBar = ({
                   <span className="text-xs text-muted-foreground">From</span>
                   <CalendarComponent
                     mode="single"
-                    selected={filters.dateFrom}
+                    selected={filters.dateFrom instanceof Date ? filters.dateFrom : undefined}
                     onSelect={handleDateFromChange}
                     initialFocus
                     className="p-3 pointer-events-auto"
@@ -168,7 +177,7 @@ export const InvoiceFilterBar = ({
                   <span className="text-xs text-muted-foreground">To</span>
                   <CalendarComponent
                     mode="single"
-                    selected={filters.dateTo}
+                    selected={filters.dateTo instanceof Date ? filters.dateTo : undefined}
                     onSelect={handleDateToChange}
                     initialFocus
                     className="p-3 pointer-events-auto"

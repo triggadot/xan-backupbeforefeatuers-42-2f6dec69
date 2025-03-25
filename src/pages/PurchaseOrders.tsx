@@ -24,7 +24,11 @@ export default function PurchaseOrders() {
   const loadPurchaseOrders = async () => {
     try {
       const result = await fetchPurchaseOrders();
-      setPurchaseOrders(Array.isArray(result) ? result : []);
+      if (result && result.data) {
+        setPurchaseOrders(result.data);
+      } else {
+        setPurchaseOrders([]);
+      }
     } catch (error) {
       console.error('Error loading purchase orders:', error);
       toast({

@@ -9,10 +9,11 @@ import { EntityBase, EntityStatus, EntityWithName } from '../common';
  * Account type represents the primary interface for client/vendor entities
  * Extends EntityBase to inherit common fields like id, created_at, etc.
  */
-export interface Account extends Omit<EntityWithName, 'glide_row_id'> {
+export interface Account extends Omit<EntityBase, 'glide_row_id'> {
   // Business identification
   accounts_uid?: string;  
   glide_row_id: string;
+  name: string;
   
   // Classification
   type: 'Customer' | 'Vendor' | 'Customer & Vendor';
@@ -30,7 +31,7 @@ export interface Account extends Omit<EntityWithName, 'glide_row_id'> {
   notes?: string;
   
   // Status
-  status: EntityStatus;
+  status: 'active' | 'inactive' | EntityStatus;
   
   // Financial information
   balance: number;
@@ -59,7 +60,7 @@ export interface GlAccount {
 export interface AccountFormData {
   name: string;
   type: 'Customer' | 'Vendor' | 'Customer & Vendor';
-  status: EntityStatus;
+  status: 'active' | 'inactive';
   email?: string;
   phone?: string;
   website?: string;
@@ -73,7 +74,7 @@ export interface AccountFormData {
 export interface AccountFilters {
   type?: 'customer' | 'vendor' | 'both';
   search?: string;
-  status?: EntityStatus;
+  status?: 'active' | 'inactive';
   hasBalance?: boolean;
 }
 

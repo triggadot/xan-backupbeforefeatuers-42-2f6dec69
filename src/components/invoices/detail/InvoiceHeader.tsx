@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { StatusBadge } from '../shared/StatusBadge';
 import { InvoiceWithDetails } from '@/types/invoice';
+import { EntityStatus } from '@/types/common';
 
 interface InvoiceHeaderProps {
   invoice: InvoiceWithDetails;
@@ -28,7 +29,7 @@ export const InvoiceHeader = ({ invoice, onBack, onEdit, onDelete }: InvoiceHead
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Invoice #{invoice.invoiceNumber}</h1>
-            <StatusBadge status={invoice.status} />
+            <StatusBadge status={invoice.status as EntityStatus} />
           </div>
           <div className="text-sm text-muted-foreground flex items-center mt-1">
             <Calendar className="h-3 w-3 mr-1" />
