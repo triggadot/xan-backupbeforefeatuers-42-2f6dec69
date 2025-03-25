@@ -1,8 +1,6 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
 import { PurchaseOrder } from '@/types/purchaseOrder';
@@ -12,6 +10,9 @@ import { ProductsTable } from './ProductsTable';
 import { PaymentsTable } from './PaymentsTable';
 import { DeleteConfirmDialog } from '../../invoices/detail/DeleteConfirmDialog';
 import { AddPaymentDialog } from './AddPaymentDialog';
+import { PurchaseOrderDetailSkeleton } from './PurchaseOrderDetailSkeleton';
+import { NotFoundView } from './NotFoundView';
+import { VendorDetailsCard } from './VendorDetailsCard';
 
 export function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -81,13 +82,6 @@ export function PurchaseOrderDetail() {
         description: 'Product deleted successfully.',
       });
       
-      const updatedPO = {
-        ...purchaseOrder,
-        lineItems: purchaseOrder.lineItems.filter(item => item.id !== productId)
-      };
-      
-      setPurchaseOrder(updatedPO);
-      
       fetchPurchaseOrder();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -110,13 +104,6 @@ export function PurchaseOrderDetail() {
         description: 'Payment deleted successfully.',
       });
       
-      const updatedPO = {
-        ...purchaseOrder,
-        vendorPayments: purchaseOrder.vendorPayments.filter(payment => payment.id !== paymentId)
-      };
-      
-      setPurchaseOrder(updatedPO);
-      
       fetchPurchaseOrder();
     } catch (error) {
       console.error('Error deleting payment:', error);
@@ -133,35 +120,11 @@ export function PurchaseOrderDetail() {
   };
   
   if (isLoading) {
-    return (
-      <div className="container py-6 max-w-5xl">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <Skeleton className="h-10 w-[300px]" />
-          <Skeleton className="h-10 w-[120px]" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-        </div>
-        <Skeleton className="h-[400px] mb-6" />
-        <Skeleton className="h-[200px]" />
-      </div>
-    );
+    return <PurchaseOrderDetailSkeleton />;
   }
   
   if (!purchaseOrder) {
-    return (
-      <div className="container py-6 max-w-5xl text-center">
-        <h2 className="text-2xl font-bold mb-4">Purchase Order Not Found</h2>
-        <p className="text-muted-foreground mb-6">The purchase order you're looking for doesn't exist or has been deleted.</p>
-        <button 
-          onClick={handleBack}
-          className="text-primary hover:underline"
-        >
-          Return to Purchase Order List
-        </button>
-      </div>
-    );
+    return <NotFoundView onBack={handleBack} />;
   }
   
   return (
@@ -174,15 +137,7 @@ export function PurchaseOrderDetail() {
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Vendor Details</h3>
-          <p className="font-medium">{purchaseOrder.vendorName}</p>
-          {purchaseOrder.vendor && (
-            <>
-              {/* Add vendor details if available */}
-            </>
-          )}
-        </Card>
+        <VendorDetailsCard purchaseOrder={purchaseOrder} />
         
         <PurchaseOrderInfo 
           purchaseOrder={purchaseOrder}
