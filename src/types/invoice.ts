@@ -54,6 +54,7 @@ export interface InvoiceWithDetails extends Invoice {
   account?: GlAccount;
   notes?: string;
   total?: number;
+  amountPaid: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

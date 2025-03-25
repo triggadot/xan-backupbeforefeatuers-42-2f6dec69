@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Mail, Phone, AlertCircle, DollarSign, FileText, PackageOpen, Calendar, User } from 'lucide-react';
@@ -26,7 +25,9 @@ const AccountDetailView: React.FC = () => {
         title={null}
         notFoundMessage="The requested account could not be found. It may have been deleted or you may not have permission to view it."
         backLink="/accounts"
-      />
+      >
+        {null}
+      </EntityDetailLayout>
     );
   }
 

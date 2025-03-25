@@ -209,6 +209,8 @@ export function InvoiceDetail() {
   }
 
   const isEditable = invoice.status !== 'paid';
+  // Ensure status is one of the allowed values
+  const safeStatus = (invoice?.status || "draft") as "draft" | "sent" | "overdue" | "paid" | "partial";
 
   return (
     <div className="container py-6 max-w-4xl">
@@ -219,7 +221,7 @@ export function InvoiceDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">Invoice {invoice?.invoiceNumber}</h1>
-          <StatusBadge status={invoice?.status || "draft"} />
+          <StatusBadge status={safeStatus} />
         </div>
 
         <div className="flex items-center gap-2">

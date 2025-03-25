@@ -15,10 +15,11 @@ export function usePurchaseOrderMutation() {
     setError('');
     
     try {
+      // Convert date to ISO string format if it exists
       const poDate = data.date instanceof Date 
         ? data.date.toISOString() 
         : typeof data.date === 'string' 
-          ? data.date 
+          ? new Date(data.date).toISOString() 
           : new Date().toISOString();
 
       const { data: newPo, error } = await supabase
@@ -61,16 +62,17 @@ export function usePurchaseOrderMutation() {
     setError('');
     
     try {
+      // Convert dates to ISO string format if they exist
       const poDate = data.date instanceof Date 
         ? data.date.toISOString() 
         : typeof data.date === 'string' 
-          ? data.date 
+          ? new Date(data.date).toISOString() 
           : undefined;
 
       const dueDate = data.dueDate instanceof Date 
         ? data.dueDate.toISOString() 
         : typeof data.dueDate === 'string' 
-          ? data.dueDate 
+          ? new Date(data.dueDate).toISOString() 
           : undefined;
 
       const { data: updatedPo, error } = await supabase

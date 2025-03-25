@@ -12,7 +12,7 @@ import { EntityBase, EntityStatus, EntityWithName } from '../common';
 export interface Account extends Omit<EntityWithName, 'glide_row_id'> {
   // Business identification
   accounts_uid?: string;  
-  glide_row_id?: string;
+  glide_row_id: string;
   
   // Classification
   type: 'Customer' | 'Vendor' | 'Customer & Vendor';

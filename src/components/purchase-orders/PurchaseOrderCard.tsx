@@ -29,14 +29,20 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
     }
   };
 
-  const formatDate = (dateInput: string | Date) => {
+  const formatDate = (dateInput: string | Date | undefined) => {
     if (!dateInput) return 'No date';
-    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    
+    try {
+      const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   return (
