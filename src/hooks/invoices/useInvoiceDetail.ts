@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice, InvoiceWithDetails } from '@/types/invoice';
+import { Invoice, InvoiceWithDetails, InvoiceLineItem, InvoicePayment } from '@/types/invoice';
 import { hasProperty } from '@/types/supabase';
 
 export function useInvoiceDetail() {
@@ -13,7 +13,6 @@ export function useInvoiceDetail() {
     setError(null);
     
     try {
-      // Query the invoice with its customer
       const { data: invoice, error: invoiceError } = await supabase
         .from('gl_invoices')
         .select(`
@@ -25,26 +24,7 @@ export function useInvoiceDetail() {
         
       if (invoiceError) throw invoiceError;
       
-      // Get the line items for this invoice
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('gl_invoice_lines')
-        .select(`
-          *,
-          product:rowid_products(*)
-        `)
-        .eq('rowid_invoices', id);
-        
-      if (lineItemsError) throw lineItemsError;
-      
-      // Get the payments for this invoice
-      const { data: payments, error: paymentsError } = await supabase
-        .from('gl_customer_payments')
-        .select('*')
-        .eq('rowid_invoices', id);
-        
-      if (paymentsError) throw paymentsError;
-      
-      // Safely get customer name with null checks
+      // Safely handle customer data
       let customerName = 'Unknown Customer';
       let customerData = undefined;
       
@@ -58,8 +38,26 @@ export function useInvoiceDetail() {
         }
       }
       
-      // Format line items
-      const formattedLineItems = lineItems.map(item => ({
+      // Fetch line items and payments
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('gl_invoice_lines')
+        .select(`
+          *,
+          product:rowid_products(*)
+        `)
+        .eq('rowid_invoices', id);
+        
+      if (lineItemsError) throw lineItemsError;
+      
+      const { data: payments, error: paymentsError } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .eq('rowid_invoices', id);
+        
+      if (paymentsError) throw paymentsError;
+      
+      // Format line items and payments
+      const formattedLineItems: InvoiceLineItem[] = lineItems.map(item => ({
         id: item.id,
         invoiceId: item.rowid_invoices,
         productId: item.rowid_products || '',
@@ -74,8 +72,7 @@ export function useInvoiceDetail() {
         productDetails: item.product
       }));
       
-      // Format payments
-      const formattedPayments = payments.map(payment => ({
+      const formattedPayments: InvoicePayment[] = payments.map(payment => ({
         id: payment.id,
         invoiceId: payment.rowid_invoices,
         accountId: payment.rowid_accounts || '',
@@ -88,11 +85,10 @@ export function useInvoiceDetail() {
         updatedAt: new Date(payment.updated_at)
       }));
       
-      // Calculate subtotal and total paid
+      // Calculate subtotal
       const subtotal = formattedLineItems.reduce((sum, item) => sum + item.total, 0);
-      const amountPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
       
-      // Use actual due_date if available or calculate it (30 days after invoice date)
+      // Use actual due_date or calculate it (30 days after invoice date)
       const invoiceDate = invoice.invoice_order_date 
         ? new Date(invoice.invoice_order_date) 
         : new Date(invoice.created_at);
@@ -107,7 +103,9 @@ export function useInvoiceDetail() {
         status = 'draft';
       }
       
-      // Return the complete invoice with details
+      // Calculate amount paid
+      const amountPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+      
       return {
         id: invoice.glide_row_id,
         glide_row_id: invoice.glide_row_id,
@@ -117,23 +115,22 @@ export function useInvoiceDetail() {
         invoiceDate: invoiceDate,
         dueDate: dueDate,
         status: status as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
-        amount: Number(invoice.total_amount || 0),
         total_amount: Number(invoice.total_amount || 0),
         total_paid: Number(invoice.total_paid || 0),
         balance: Number(invoice.balance || 0),
         lineItems: formattedLineItems,
         payments: formattedPayments,
-        notes: invoice.notes || '',
         account: customerData,
-        total: Number(invoice.total_amount || 0),
-        amountPaid: amountPaid,
+        total: subtotal,
         subtotal: subtotal,
+        amountPaid: amountPaid,
+        notes: invoice.notes || '',
+        tax_rate: Number(invoice.tax_rate || 0),
+        tax_amount: Number(invoice.tax_amount || 0),
         created_at: invoice.created_at,
         updated_at: invoice.updated_at,
         createdAt: new Date(invoice.created_at),
-        updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined,
-        tax_rate: Number(invoice.tax_rate || 0),
-        tax_amount: Number(invoice.tax_amount || 0)
+        updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching invoice';
