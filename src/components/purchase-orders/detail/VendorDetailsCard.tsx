@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 import { Building2, Mail, Phone, MapPin } from 'lucide-react';
@@ -19,10 +18,10 @@ export function VendorDetailsCard({ purchaseOrder }: VendorDetailsCardProps) {
         
         {purchaseOrder.vendor && (
           <>
-            {purchaseOrder.vendor.email && (
+            {purchaseOrder.vendor.email_of_who_added && (
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">{purchaseOrder.vendor.email}</p>
+                <p className="text-sm text-muted-foreground">{purchaseOrder.vendor.email_of_who_added}</p>
               </div>
             )}
             
