@@ -4,7 +4,7 @@ import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/format-utils';
-import { ArrowRight, Calendar, FileText, User } from 'lucide-react';
+import { Calendar, FileText, User, Package } from 'lucide-react';
 
 interface PurchaseOrderCardProps {
   purchaseOrder: PurchaseOrderWithVendor;
@@ -54,7 +54,9 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-1 truncate">PO #{purchaseOrder.number}</h3>
+              <h3 className="font-semibold text-lg mb-1 truncate">
+                PO #{purchaseOrder.number || purchaseOrder.id.substring(0, 8)}
+              </h3>
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground mb-2">
                 <User size={14} />
@@ -67,7 +69,7 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
               </div>
               
               <div className="flex gap-1 items-center text-sm text-muted-foreground">
-                <FileText size={14} />
+                <Package size={14} />
                 <span>{purchaseOrder.productCount || 0} items</span>
               </div>
               
@@ -96,6 +98,6 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
       </Card>
     </div>
   );
-};
+}
 
 export default PurchaseOrderCard;

@@ -1,35 +1,32 @@
 
 import React from 'react';
 import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import PurchaseOrderCard from './PurchaseOrderCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Plus, RefreshCw } from 'lucide-react';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrderWithVendor[];
   isLoading: boolean;
   error: Error | string | null;
-  onView: (id: string) => void;
+  onViewPurchaseOrder: (purchaseOrder: PurchaseOrderWithVendor) => void;
+  onCreatePurchaseOrder: () => void;
 }
 
 const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
   purchaseOrders,
   isLoading,
   error,
-  onView
+  onViewPurchaseOrder,
+  onCreatePurchaseOrder
 }) => {
-  if (isLoading) {
+  if (isLoading && purchaseOrders.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-4">
-        {[...Array(5)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <CardTitle><Skeleton className="h-4 w-[200px]" /></CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array(6).fill(0).map((_, index) => (
+          <Skeleton key={index} className="h-[200px] w-full" />
         ))}
       </div>
     );
@@ -37,35 +34,37 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
 
   if (error) {
     return (
-      <div className="text-center py-6 text-destructive">
-        {(error as Error).message || String(error)}
-      </div>
+      <Card>
+        <CardContent className="py-12 text-center">
+          <h3 className="font-medium text-lg mb-2 text-destructive">Error Loading Purchase Orders</h3>
+          <p className="text-muted-foreground mb-4">{typeof error === 'string' ? error : error.message}</p>
+        </CardContent>
+      </Card>
     );
   }
 
   if (purchaseOrders.length === 0) {
     return (
-      <div className="text-center py-6 text-muted-foreground">
-        No purchase orders found.
-      </div>
+      <Card>
+        <CardContent className="py-12 text-center">
+          <h3 className="font-medium text-lg mb-2">No purchase orders found</h3>
+          <p className="text-muted-foreground mb-4">Create your first purchase order to get started.</p>
+          <Button onClick={onCreatePurchaseOrder}>
+            <Plus className="mr-2 h-4 w-4" /> Create Purchase Order
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {purchaseOrders.map((purchaseOrder) => (
-        <Card
+        <PurchaseOrderCard
           key={purchaseOrder.id}
-          className="cursor-pointer hover:bg-secondary transition-colors"
-          onClick={() => onView(purchaseOrder.id)}
-        >
-          <CardHeader>
-            <CardTitle>{purchaseOrder.number}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Vendor: {purchaseOrder.vendorName}
-          </CardContent>
-        </Card>
+          purchaseOrder={purchaseOrder}
+          onClick={() => onViewPurchaseOrder(purchaseOrder)}
+        />
       ))}
     </div>
   );

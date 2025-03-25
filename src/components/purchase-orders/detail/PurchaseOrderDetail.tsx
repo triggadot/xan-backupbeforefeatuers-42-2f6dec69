@@ -1,193 +1,112 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
+import { useParams, useNavigate } from 'react-router-dom';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { PurchaseOrder } from '@/types/purchaseOrder';
-import { PurchaseOrderHeader } from './PurchaseOrderHeader';
-import { PurchaseOrderInfo } from './PurchaseOrderInfo';
-import { ProductsTable } from './ProductsTable';
-import { PaymentsTable } from './PaymentsTable';
-import { DeleteConfirmDialog } from '../../invoices/detail/DeleteConfirmDialog';
-import { AddPaymentDialog } from './AddPaymentDialog';
+import { EntityDetailLayout } from '@/components/common/EntityDetailLayout';
 import { PurchaseOrderDetailSkeleton } from './PurchaseOrderDetailSkeleton';
 import { NotFoundView } from './NotFoundView';
+import { PurchaseOrderHeader } from './PurchaseOrderHeader';
+import { PurchaseOrderInfo } from './PurchaseOrderInfo';
 import { VendorDetailsCard } from './VendorDetailsCard';
+import { ProductsTable } from './ProductsTable';
+import { PaymentsTable } from './PaymentsTable';
+import { formatCurrency } from '@/utils/format-utils';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 export function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { getPurchaseOrder, deleteProduct, deletePayment } = usePurchaseOrdersView();
-  
+  const { getPurchaseOrder, updatePurchaseOrder, isLoading } = usePurchaseOrders();
   const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  
+  const [isLoadingPurchaseOrder, setIsLoadingPurchaseOrder] = useState(true);
+
   useEffect(() => {
-    fetchPurchaseOrder();
+    if (id) {
+      loadPurchaseOrder(id);
+    }
   }, [id]);
-  
-  const fetchPurchaseOrder = async () => {
-    if (!id) return;
-    
-    setIsLoading(true);
+
+  const loadPurchaseOrder = async (purchaseOrderId: string) => {
+    setIsLoadingPurchaseOrder(true);
     try {
-      const data = await getPurchaseOrder(id);
-      if (data) {
-        setPurchaseOrder(data);
-      }
+      const data = await getPurchaseOrder(purchaseOrderId);
+      setPurchaseOrder(data);
     } catch (error) {
-      console.error('Error fetching purchase order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load purchase order details.',
-        variant: 'destructive',
-      });
+      console.error('Error loading purchase order:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingPurchaseOrder(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (id) {
+      loadPurchaseOrder(id);
+    }
+  };
+
+  const getStatusVariant = (status: string): "default" | "destructive" | "outline" | "secondary" | "success" | "warning" => {
+    switch (status) {
+      case 'draft':
+        return 'secondary';
+      case 'sent':
+        return 'default';
+      case 'received':
+        return 'default';
+      case 'partial':
+        return 'warning';
+      case 'complete':
+        return 'success';
+      default:
+        return 'default';
     }
   };
   
-  const handleBack = () => {
+  const goBackToList = () => {
     navigate('/purchase-orders');
   };
-  
-  const handleEdit = () => {
-    navigate(`/purchase-orders/${id}/edit`);
-  };
-  
-  const handleDelete = () => {
-    setIsDeleteDialogOpen(true);
-  };
-  
-  const confirmDelete = async () => {
-    setIsDeleteDialogOpen(false);
-    toast({
-      title: 'Success',
-      description: 'Purchase Order deleted successfully.',
-    });
-    navigate('/purchase-orders');
-  };
-  
-  const handleDeleteProduct = async (productId: string) => {
-    if (!purchaseOrder) return;
-    
-    try {
-      await deleteProduct.mutateAsync({ id: productId });
-      
-      toast({
-        title: 'Success',
-        description: 'Product deleted successfully.',
-      });
-      
-      fetchPurchaseOrder();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete product.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!purchaseOrder) return;
-    
-    try {
-      await deletePayment.mutateAsync({ id: paymentId });
-      
-      toast({
-        title: 'Success',
-        description: 'Payment deleted successfully.',
-      });
-      
-      fetchPurchaseOrder();
-    } catch (error) {
-      console.error('Error deleting payment:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete payment.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  const handleAddPayment = () => {
-    setIsAddPaymentOpen(true);
-  };
-  
-  if (isLoading) {
+
+  if (isLoadingPurchaseOrder) {
     return <PurchaseOrderDetailSkeleton />;
   }
-  
+
   if (!purchaseOrder) {
-    return <NotFoundView onBack={handleBack} />;
+    return <NotFoundView onBack={goBackToList} />;
   }
-  
+
   return (
-    <div className="container py-6 max-w-5xl">
-      <PurchaseOrderHeader 
-        purchaseOrder={purchaseOrder}
-        onBack={handleBack}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+    <EntityDetailLayout
+      title={`Purchase Order ${purchaseOrder.number || `#${purchaseOrder.id.substring(0, 8)}`}`}
+      status={{
+        label: purchaseOrder.status,
+        variant: getStatusVariant(purchaseOrder.status)
+      }}
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-3 w-3 mr-2" />
+            Refresh
+          </Button>
+        </>
+      }
+      backLink="/purchase-orders"
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PurchaseOrderInfo purchaseOrder={purchaseOrder} />
         <VendorDetailsCard purchaseOrder={purchaseOrder} />
-        
-        <PurchaseOrderInfo 
-          purchaseOrder={purchaseOrder}
-          onAddPayment={handleAddPayment}
-        />
       </div>
-      
-      <div className="my-6 border rounded-md bg-card overflow-hidden">
-        <ProductsTable 
-          products={purchaseOrder.lineItems}
-          purchaseOrderId={purchaseOrder.id}
-          purchaseOrderGlideRowId={purchaseOrder.glide_row_id}
-          status={purchaseOrder.status}
-          onDeleteProduct={handleDeleteProduct}
-        />
+
+      <div className="mt-6">
+        <ProductsTable purchaseOrder={purchaseOrder} onRefresh={handleRefresh} />
       </div>
-      
-      <div className="my-6 border rounded-md bg-card overflow-hidden">
+
+      <div className="mt-6">
         <PaymentsTable 
-          payments={purchaseOrder.vendorPayments}
-          purchaseOrderId={purchaseOrder.id}
-          purchaseOrderGlideRowId={purchaseOrder.glide_row_id}
-          vendorId={purchaseOrder.vendorId || ''}
-          purchaseOrderTotal={purchaseOrder.total_amount}
-          purchaseOrderBalance={purchaseOrder.balance || 0}
-          status={purchaseOrder.status}
-          onDeletePayment={handleDeletePayment}
+          purchaseOrder={purchaseOrder} 
+          onRefresh={handleRefresh}
         />
       </div>
-      
-      <DeleteConfirmDialog
-        title="Delete Purchase Order"
-        description="Are you sure you want to delete this purchase order? This action cannot be undone."
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={confirmDelete}
-      />
-      
-      <AddPaymentDialog 
-        purchaseOrderId={purchaseOrder.id}
-        purchaseOrderGlideRowId={purchaseOrder.glide_row_id}
-        vendorId={purchaseOrder.vendorId || ''}
-        purchaseOrderTotal={purchaseOrder.total_amount}
-        purchaseOrderBalance={purchaseOrder.balance || 0}
-        open={isAddPaymentOpen}
-        onOpenChange={setIsAddPaymentOpen}
-        onSuccess={fetchPurchaseOrder}
-      />
-    </div>
+    </EntityDetailLayout>
   );
 }
-
-export default PurchaseOrderDetail;

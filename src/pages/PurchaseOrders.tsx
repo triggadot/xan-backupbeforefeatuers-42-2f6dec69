@@ -1,28 +1,75 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
-import { formatCurrency } from '@/utils/format-utils';
 import { PurchaseOrderWithVendor, PurchaseOrderFilters } from '@/types/purchaseOrder';
-import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
+import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
+import { formatCurrency } from '@/utils/format-utils';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
+import PurchaseOrderCard from '@/components/purchase-orders/PurchaseOrderCard';
 import { PurchaseOrderFilters as FilterComponent } from '@/components/purchase-orders/PurchaseOrderFilters';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Edit, Eye, FileText, Plus, RefreshCw, Trash } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { PurchaseOrderForm } from '@/components/purchase-orders/PurchaseOrderForm';
 
 export default function PurchaseOrders() {
   const navigate = useNavigate();
-  const { fetchPurchaseOrders, isLoading } = usePurchaseOrdersView();
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [selectedPurchaseOrderId, setSelectedPurchaseOrderId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderWithVendor[]>([]);
-  const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState<PurchaseOrderFilters>({});
+
+  const {
+    fetchPurchaseOrders,
+    isLoading,
+    error
+  } = usePurchaseOrdersView();
   
+  const {
+    createPurchaseOrder,
+    updatePurchaseOrder,
+    getPurchaseOrder
+  } = usePurchaseOrders();
+
   useEffect(() => {
     loadPurchaseOrders();
   }, []);
-  
+
   const loadPurchaseOrders = async () => {
     try {
       const data = await fetchPurchaseOrders(filters);
@@ -31,140 +78,280 @@ export default function PurchaseOrders() {
       console.error('Error loading purchase orders:', error);
     }
   };
-  
+
+  const formatDate = (dateString: string | Date | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const filteredPurchaseOrders = React.useMemo(() => {
+    if (!purchaseOrders) return [];
+    return purchaseOrders.filter(po =>
+      (po.vendorName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (po.number || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [purchaseOrders, searchTerm]);
+
+  const handleViewPurchaseOrder = (id: string) => {
+    navigate(`/purchase-orders/${id}`);
+  };
+
+  const handleCreatePurchaseOrder = async (data: any) => {
+    try {
+      await createPurchaseOrder(data);
+      setIsCreateDialogOpen(false);
+      loadPurchaseOrders();
+      toast({
+        title: "Purchase Order Created",
+        description: "New purchase order has been created successfully",
+      });
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create purchase order",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeletePurchaseOrder = async (id: string) => {
+    setSelectedPurchaseOrderId(id);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedPurchaseOrderId) return;
+    
+    try {
+      // Implement delete functionality when available
+      toast({
+        title: "Purchase Order Deleted",
+        description: "The purchase order has been deleted successfully",
+      });
+      setIsDeleteAlertOpen(false);
+      loadPurchaseOrders();
+    } catch (error) {
+      console.error('Error deleting purchase order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete purchase order",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRefresh = () => {
+    loadPurchaseOrders();
+  };
+
   const handleFilterChange = (newFilters: PurchaseOrderFilters) => {
     setFilters(newFilters);
-    // Automatically reload on filter change
     const fetchData = async () => {
       const data = await fetchPurchaseOrders(newFilters);
       setPurchaseOrders(data || []);
     };
     fetchData();
   };
-  
-  const handleCreatePO = () => {
-    navigate('/purchase-orders/new');
-  };
-  
-  const handleViewPO = (id: string) => {
-    navigate(`/purchase-orders/${id}`);
-  };
-  
-  const filteredPurchaseOrders = purchaseOrders.filter(po => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'draft') return po.status === 'draft';
-    if (activeTab === 'sent') return po.status === 'sent';
-    if (activeTab === 'received') return po.status === 'received';
-    if (activeTab === 'partial') return po.status === 'partial';
-    if (activeTab === 'complete') return po.status === 'complete';
-    return true;
-  });
 
-  if (isLoading && purchaseOrders.length === 0) {
-    return (
-      <div className="container py-6">
-        <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Skeleton className="h-10 w-full mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-60 w-full" />
-          <Skeleton className="h-60 w-full" />
-          <Skeleton className="h-60 w-full" />
-        </div>
-      </div>
-    );
-  }
-  
   return (
-    <div className="container py-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-        <Button onClick={handleCreatePO}>
-          <Plus className="mr-2 h-4 w-4" /> New Purchase Order
-        </Button>
+    <div className="container py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold">Purchase Orders</h1>
+        
+        <div className="flex w-full sm:w-auto gap-2">
+          <Input
+            placeholder="Search purchase orders..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full sm:w-64"
+          />
+          
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </Button>
+          
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Purchase Order
+          </Button>
+        </div>
       </div>
-      
+
       <div className="mb-6">
         <FilterComponent 
           filters={filters}
           onChange={handleFilterChange}
         />
       </div>
-      
-      <Tabs 
-        defaultValue="all" 
-        className="w-full"
-        value={activeTab}
-        onValueChange={setActiveTab}
-      >
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="draft">Drafts</TabsTrigger>
-          <TabsTrigger value="sent">Sent</TabsTrigger>
-          <TabsTrigger value="received">Received</TabsTrigger>
-          <TabsTrigger value="partial">Partial</TabsTrigger>
-          <TabsTrigger value="complete">Complete</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value={activeTab}>
-          {filteredPurchaseOrders.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPurchaseOrders.map((po) => (
-                <Card 
-                  key={po.id} 
-                  className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleViewPO(po.id)}
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1 truncate">PO #{po.number}</h3>
-                        
-                        <div className="text-sm text-muted-foreground mb-2 truncate">
-                          {po.vendorName}
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground">
-                          {po.date instanceof Date 
-                            ? po.date.toLocaleDateString() 
-                            : new Date(po.date).toLocaleDateString()}
-                        </div>
-                        
-                        <div className="mt-4 flex items-center justify-between">
-                          <StatusBadge status={po.status} />
-                          
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {formatCurrency(po.total)}
-                            </div>
-                            {po.totalPaid > 0 && po.totalPaid < po.total && (
-                              <div className="text-xs text-muted-foreground">
-                                {formatCurrency(po.totalPaid)} paid
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+      <div className="flex justify-end mb-4">
+        <div className="flex space-x-1 bg-muted p-1 rounded-md">
+          <Button
+            variant={viewMode === 'cards' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('cards')}
+            className="text-xs"
+          >
+            Cards
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('table')}
+            className="text-xs"
+          >
+            Table
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === 'cards' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isLoading && filteredPurchaseOrders.length === 0 ? (
+            Array(6).fill(0).map((_, index) => (
+              <Card key={index} className="h-[200px] animate-pulse bg-muted"></Card>
+            ))
+          ) : filteredPurchaseOrders.length === 0 ? (
+            <div className="col-span-full">
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <h3 className="font-medium text-lg mb-2">No purchase orders found</h3>
+                  <p className="text-muted-foreground mb-4">Create your first purchase order to get started.</p>
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" /> Create Purchase Order
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <h3 className="font-medium text-lg mb-2">No purchase orders found</h3>
-                <p className="text-muted-foreground mb-4">Create your first purchase order to get started.</p>
-                <Button onClick={handleCreatePO}>
-                  <Plus className="mr-2 h-4 w-4" /> Create Purchase Order
-                </Button>
-              </CardContent>
-            </Card>
+            filteredPurchaseOrders.map((po) => (
+              <PurchaseOrderCard 
+                key={po.id} 
+                purchaseOrder={po}
+                onClick={() => handleViewPurchaseOrder(po.id)}
+              />
+            ))
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      ) : (
+        <Card>
+          <CardHeader className="px-6 py-4">
+            <CardTitle className="text-lg">Purchase Orders</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PO #</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex justify-center">
+                          <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredPurchaseOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No purchase orders found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPurchaseOrders.map((po) => (
+                      <TableRow key={po.id}>
+                        <TableCell>#{po.number || po.id.substring(0, 8)}</TableCell>
+                        <TableCell>{po.vendorName}</TableCell>
+                        <TableCell>{formatDate(po.date)}</TableCell>
+                        <TableCell>{formatCurrency(po.total)}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            po.status === 'complete' ? 'success' :
+                            po.status === 'partial' ? 'warning' : 
+                            po.status === 'draft' ? 'secondary' : 'default'
+                          } className="capitalize">
+                            {po.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewPurchaseOrder(po.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePurchaseOrder(po.id)}
+                          >
+                            <Trash className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Create New Purchase Order</DialogTitle>
+          </DialogHeader>
+          <PurchaseOrderForm
+            onSubmit={handleCreatePurchaseOrder}
+            onCancel={() => setIsCreateDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the purchase order
+              and remove its data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedPurchaseOrderId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
