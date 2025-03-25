@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SupabaseTableName, EntityRecord } from '@/types/supabase';
+import { EntityRecord, SupabaseTableName, asEntityRecord, asEntityRecordArray } from '@/types/supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
 // Use a type parameter that extends EntityRecord to ensure each entity has an id
 export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseTableName) {
@@ -38,8 +39,8 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         throw apiError;
       }
       
-      // Cast the data to the expected return type
-      return (data || []) as unknown as T[];
+      // Cast the data to the expected return type using our type assertion helper
+      return asEntityRecordArray<T>(data || []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
@@ -67,10 +68,14 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         .single();
         
       if (apiError) {
+        if ((apiError as PostgrestError).code === 'PGRST116') {
+          // No rows returned, not really an error
+          return null;
+        }
         throw apiError;
       }
       
-      return data as unknown as T;
+      return data ? asEntityRecord<T>(data) : null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
@@ -106,7 +111,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         description: 'Record created successfully',
       });
       
-      return newRecord as unknown as T;
+      return newRecord ? asEntityRecord<T>(newRecord) : null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating data';
       setError(errorMessage);
@@ -143,7 +148,7 @@ export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseT
         description: 'Record updated successfully',
       });
       
-      return updatedRecord as unknown as T;
+      return updatedRecord ? asEntityRecord<T>(updatedRecord) : null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while updating data';
       setError(errorMessage);

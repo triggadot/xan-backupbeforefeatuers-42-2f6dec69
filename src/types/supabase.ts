@@ -1,8 +1,8 @@
 
 import { Database } from '@/integrations/supabase/types';
 
-// Define table names as a type for type safety
-export type SupabaseTableName = keyof (Database['public']['Tables'] & Database['public']['Views']);
+// Define table names as a union type for type safety
+export type SupabaseTableName = keyof Database['public']['Tables'] | keyof Database['public']['Views'];
 
 // Extract row type from a table name
 export type TableRow<T extends SupabaseTableName> = 
@@ -31,4 +31,17 @@ export function isEntityRecord(value: unknown): value is EntityRecord {
 // Type guard for checking if a property exists and is not null/undefined
 export function hasProperty<T, K extends string>(obj: T, key: K): obj is T & Record<K, unknown> {
   return obj !== null && typeof obj === 'object' && key in obj && (obj as any)[key] !== null && (obj as any)[key] !== undefined;
+}
+
+// Type assertion helper for casting database results to the expected type
+export function asEntityRecord<T extends EntityRecord>(value: unknown): T {
+  if (!isEntityRecord(value)) {
+    throw new Error('Value is not a valid EntityRecord');
+  }
+  return value as T;
+}
+
+// Type assertion helper for casting database results array to the expected type array
+export function asEntityRecordArray<T extends EntityRecord>(values: unknown[]): T[] {
+  return values.map(value => asEntityRecord<T>(value));
 }

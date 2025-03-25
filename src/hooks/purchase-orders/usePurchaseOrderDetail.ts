@@ -42,6 +42,7 @@ export function usePurchaseOrderDetail() {
       
       // Safely get vendor name with proper null checks
       let vendorName = 'Unknown Vendor';
+      
       if (purchaseOrder.vendor && 
           typeof purchaseOrder.vendor === 'object' && 
           purchaseOrder.vendor !== null) {

@@ -45,20 +45,16 @@ export function useInvoiceDetail() {
       
       // Safely get customer name with null checks
       let customerName = 'Unknown Customer';
-      if (invoice.customer && 
-          typeof invoice.customer === 'object' && 
-          invoice.customer !== null) {
-        if (hasProperty(invoice.customer, 'account_name')) {
-          customerName = invoice.customer.account_name || 'Unknown Customer';
-        }
-      }
-      
-      // Safely determine if we have account data
       let accountData = undefined;
+      
       if (invoice.customer && 
           typeof invoice.customer === 'object' && 
           invoice.customer !== null) {
         accountData = invoice.customer;
+        
+        if (hasProperty(invoice.customer, 'account_name')) {
+          customerName = invoice.customer.account_name || 'Unknown Customer';
+        }
       }
       
       // Convert from DB format to InvoiceWithDetails format
