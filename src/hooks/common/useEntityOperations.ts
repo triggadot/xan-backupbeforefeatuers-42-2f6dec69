@@ -1,11 +1,9 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PostgrestResponse } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
-// Define simple types to prevent deep instantiation issues
-type TableRecord = Record<string, any>;
+// Simplified base record type to prevent deep instantiation
+export type TableRecord = Record<string, any>;
 type RecordId = string | number;
 
 export function useEntityOperations<T extends TableRecord>(tableName: string) {

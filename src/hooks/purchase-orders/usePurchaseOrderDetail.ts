@@ -39,13 +39,14 @@ export function usePurchaseOrderDetail() {
         
       if (paymentsError) throw paymentsError;
       
-      // Format vendor name safely with null checks
-      const vendorName = purchaseOrder.vendor && 
-                         typeof purchaseOrder.vendor === 'object' && 
-                         purchaseOrder.vendor !== null &&
-                         'account_name' in purchaseOrder.vendor 
-                         ? purchaseOrder.vendor.account_name 
-                         : 'Unknown Vendor';
+      // Safely get vendor name with proper null checks
+      let vendorName = 'Unknown Vendor';
+      if (purchaseOrder.vendor && 
+          typeof purchaseOrder.vendor === 'object' && 
+          purchaseOrder.vendor !== null &&
+          'account_name' in purchaseOrder.vendor) {
+        vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
+      }
       
       // Format line items (products in this case)
       const lineItems = products.map(product => ({

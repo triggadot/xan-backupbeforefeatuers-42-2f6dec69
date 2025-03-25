@@ -76,11 +76,17 @@ export function useInvoiceDetail() {
 
       // Safely get customer name with null checks
       const customerName = invoice.customer && 
-                         typeof invoice.customer === 'object' && 
-                         invoice.customer !== null &&
-                         'account_name' in invoice.customer
-        ? (invoice.customer.account_name || 'Unknown Customer')
-        : 'Unknown Customer';
+                        typeof invoice.customer === 'object' && 
+                        invoice.customer !== null ?
+                        (invoice.customer.account_name || 'Unknown Customer') :
+                        'Unknown Customer';
+      
+      // Safely determine if we have account data
+      const accountData = invoice.customer && 
+                       typeof invoice.customer === 'object' && 
+                       invoice.customer !== null ? 
+                       invoice.customer : 
+                       undefined;
       
       return {
         id: invoice.id,
@@ -96,9 +102,7 @@ export function useInvoiceDetail() {
         notes: invoice.notes || '',
         lineItems: formattedLineItems,
         payments: formattedPayments,
-        account: (invoice.customer && typeof invoice.customer === 'object' && invoice.customer !== null) 
-                ? invoice.customer 
-                : undefined,
+        account: accountData,
         amountPaid: totalPaid,
         subtotal: Number(invoice.total_amount || 0),
         created_at: invoice.created_at,
