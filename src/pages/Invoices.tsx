@@ -10,21 +10,38 @@ import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { formatCurrency } from '@/utils/format-utils';
 import { InvoiceListItem } from '@/types/invoiceView';
 import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
+import { InvoiceFilterBar } from '@/components/invoices/list/InvoiceFilters';
+import { InvoiceFilters } from '@/types/invoice';
 
 export default function Invoices() {
   const navigate = useNavigate();
   const { fetchInvoices, isLoading } = useInvoicesView();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [activeTab, setActiveTab] = useState('all');
+  const [filters, setFilters] = useState<InvoiceFilters>({});
   
   useEffect(() => {
-    const loadInvoices = async () => {
-      const data = await fetchInvoices();
+    loadInvoices();
+  }, []);
+  
+  const loadInvoices = async () => {
+    try {
+      const data = await fetchInvoices(filters);
+      setInvoices(data);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    }
+  };
+  
+  const handleFilterChange = (newFilters: InvoiceFilters) => {
+    setFilters(newFilters);
+    // Automatically reload on filter change
+    const fetchData = async () => {
+      const data = await fetchInvoices(newFilters);
       setInvoices(data);
     };
-    
-    loadInvoices();
-  }, [fetchInvoices]);
+    fetchData();
+  };
   
   const handleCreateInvoice = () => {
     navigate('/invoices/new');
@@ -40,10 +57,11 @@ export default function Invoices() {
     if (activeTab === 'sent') return invoice.status === 'sent';
     if (activeTab === 'paid') return invoice.status === 'paid';
     if (activeTab === 'overdue') return invoice.status === 'overdue';
+    if (activeTab === 'partial') return invoice.status === 'partial';
     return true;
   });
 
-  if (isLoading) {
+  if (isLoading && invoices.length === 0) {
     return (
       <div className="container py-6">
         <div className="flex justify-between items-center mb-6">
@@ -69,6 +87,13 @@ export default function Invoices() {
         </Button>
       </div>
       
+      <div className="mb-6">
+        <InvoiceFilterBar 
+          filters={filters}
+          onFiltersChange={handleFilterChange}
+        />
+      </div>
+      
       <Tabs 
         defaultValue="all" 
         className="w-full"
@@ -80,6 +105,7 @@ export default function Invoices() {
           <TabsTrigger value="draft">Drafts</TabsTrigger>
           <TabsTrigger value="sent">Sent</TabsTrigger>
           <TabsTrigger value="paid">Paid</TabsTrigger>
+          <TabsTrigger value="partial">Partial</TabsTrigger>
           <TabsTrigger value="overdue">Overdue</TabsTrigger>
         </TabsList>
         

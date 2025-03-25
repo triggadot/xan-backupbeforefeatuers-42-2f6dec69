@@ -47,6 +47,8 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   updatedAt?: Date;
   created_at: string;
   updated_at?: string;
+  glide_row_id: string;
+  total_amount: number;
 }
 
 export interface InvoiceWithDetails extends Invoice {
@@ -91,4 +93,20 @@ export interface UpdateInvoiceInput {
   dueDate?: Date;
   status?: string;
   notes?: string;
+}
+
+export interface InvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  glideRowId: string;
+  customerId: string;
+  customerName: string;
+  date: Date;
+  dueDate?: Date;
+  total: number;
+  balance: number;
+  status: string;
+  lineItemsCount: number;
+  notes?: string;
+  amountPaid: number;
 }

@@ -1,5 +1,6 @@
 
 import { EntityBase, EntityStatus, EntityWithAmount } from './common';
+import { GlAccount } from './accounts';
 
 export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   number?: string;
@@ -7,6 +8,7 @@ export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   status: string;
   vendorId?: string;
   vendorName?: string;
+  vendor?: GlAccount;
   notes?: string;
   lineItems: PurchaseOrderLineItem[];
   vendorPayments: VendorPayment[];
@@ -21,6 +23,8 @@ export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   total?: number;
   total_paid?: number;
   rowid_accounts?: string;
+  glide_row_id: string;
+  total_amount: number;
 }
 
 export interface PurchaseOrderLineItem {
