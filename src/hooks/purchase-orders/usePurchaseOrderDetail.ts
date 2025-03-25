@@ -43,9 +43,10 @@ export function usePurchaseOrderDetail() {
       let vendorName = 'Unknown Vendor';
       if (purchaseOrder.vendor && 
           typeof purchaseOrder.vendor === 'object' && 
-          purchaseOrder.vendor !== null &&
-          'account_name' in purchaseOrder.vendor) {
-        vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
+          purchaseOrder.vendor !== null) {
+        if ('account_name' in purchaseOrder.vendor) {
+          vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
+        }
       }
       
       // Format line items (products in this case)

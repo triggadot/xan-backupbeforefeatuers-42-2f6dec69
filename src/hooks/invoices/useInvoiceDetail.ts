@@ -75,18 +75,20 @@ export function useInvoiceDetail() {
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
       // Safely get customer name with null checks
-      const customerName = invoice.customer && 
-                        typeof invoice.customer === 'object' && 
-                        invoice.customer !== null ?
-                        (invoice.customer.account_name || 'Unknown Customer') :
-                        'Unknown Customer';
+      let customerName = 'Unknown Customer';
+      if (invoice.customer && 
+          typeof invoice.customer === 'object' && 
+          invoice.customer !== null) {
+        customerName = invoice.customer.account_name || 'Unknown Customer';
+      }
       
       // Safely determine if we have account data
-      const accountData = invoice.customer && 
-                       typeof invoice.customer === 'object' && 
-                       invoice.customer !== null ? 
-                       invoice.customer : 
-                       undefined;
+      let accountData = undefined;
+      if (invoice.customer && 
+          typeof invoice.customer === 'object' && 
+          invoice.customer !== null) {
+        accountData = invoice.customer;
+      }
       
       return {
         id: invoice.id,

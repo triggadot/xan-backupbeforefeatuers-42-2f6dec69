@@ -1,12 +1,11 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { SupabaseTableName, EntityRecord } from '@/types/supabase';
 
-// Simplified base record type to prevent deep instantiation
-export type TableRecord = Record<string, any>;
-type RecordId = string | number;
-
-export function useEntityOperations<T extends TableRecord>(tableName: string) {
+// Use a type parameter that extends EntityRecord to ensure each entity has an id
+export function useEntityOperations<T extends EntityRecord>(tableName: SupabaseTableName) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -39,7 +38,8 @@ export function useEntityOperations<T extends TableRecord>(tableName: string) {
         throw apiError;
       }
       
-      return data as T[];
+      // Cast the data to the expected return type
+      return (data || []) as T[];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
@@ -55,7 +55,7 @@ export function useEntityOperations<T extends TableRecord>(tableName: string) {
   };
 
   // Fetch a single record by ID
-  const fetchById = async (id: RecordId): Promise<T | null> => {
+  const fetchById = async (id: string): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
     
@@ -122,7 +122,7 @@ export function useEntityOperations<T extends TableRecord>(tableName: string) {
   };
 
   // Update an existing record
-  const update = async (id: RecordId, data: Partial<T>): Promise<T | null> => {
+  const update = async (id: string, data: Partial<T>): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
     
@@ -159,7 +159,7 @@ export function useEntityOperations<T extends TableRecord>(tableName: string) {
   };
 
   // Remove a record
-  const remove = async (id: RecordId): Promise<boolean> => {
+  const remove = async (id: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
