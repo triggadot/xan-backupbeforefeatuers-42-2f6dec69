@@ -9,13 +9,13 @@ import { EntityBase, EntityStatus, EntityWithName } from '../common';
  * Account type represents the primary interface for client/vendor entities
  * Extends EntityBase to inherit common fields like id, created_at, etc.
  */
-export interface Account extends EntityWithName {
+export interface Account extends Omit<EntityWithName, 'glide_row_id'> {
   // Business identification
   accounts_uid?: string;  
   glide_row_id?: string;
   
   // Classification
-  type: 'Customer' | 'Vendor' | 'Customer & Vendor' | 'Unknown';
+  type: 'Customer' | 'Vendor' | 'Customer & Vendor';
   is_customer: boolean;
   is_vendor: boolean;
   

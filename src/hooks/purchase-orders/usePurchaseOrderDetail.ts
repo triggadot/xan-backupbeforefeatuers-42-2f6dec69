@@ -88,8 +88,7 @@ export function usePurchaseOrderDetail() {
       const paymentDate = data.date_payment_date_mddyyyy ? new Date(data.date_payment_date_mddyyyy) : null;
       
       // Add notes - we'll check if it exists in the data
-      // In the database schema, notes might not be defined for gl_purchase_orders
-      const notes = data.purchase_notes || data.notes || '';
+      const notes = data.notes || '';
       
       // Map the purchase order
       const purchaseOrder = {
@@ -111,8 +110,8 @@ export function usePurchaseOrderDetail() {
         docsShortLink: data.docs_shortlink,
         purchaseOrderUid: data.purchase_order_uid,
         notes, // Use the notes variable from above
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at),
+        created_at: data.created_at,
+        updated_at: data.updated_at,
         products: mappedProducts,
         payments: mappedPayments,
         // Add these fields to match the PurchaseOrder interface

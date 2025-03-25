@@ -39,7 +39,7 @@ interface PurchaseOrderFormProps {
 export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: PurchaseOrderFormProps) {
   const navigate = useNavigate();
   const { accounts } = useAccountsNew();
-  const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrders();
+  const { createOrder, updateOrder } = usePurchaseOrders();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -64,7 +64,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: Purc
     
     try {
       if (isEdit && initialData) {
-        await updatePurchaseOrder(initialData.id, {
+        await updateOrder(initialData.id, {
           vendorId: values.vendorId,
           date: values.date,
           number: values.number,
@@ -76,7 +76,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onClose }: Purc
           onClose();
         }
       } else {
-        await createPurchaseOrder({
+        await createOrder({
           vendorId: values.vendorId,
           date: values.date,
           number: values.number,

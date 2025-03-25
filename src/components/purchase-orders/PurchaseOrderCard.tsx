@@ -29,9 +29,10 @@ const PurchaseOrderCard: React.FC<PurchaseOrderCardProps> = ({ purchaseOrder, on
     }
   };
 
-  const formatDate = (date: Date) => {
-    if (!date) return 'No date';
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (dateInput: string | Date) => {
+    if (!dateInput) return 'No date';
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

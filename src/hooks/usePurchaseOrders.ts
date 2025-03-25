@@ -26,9 +26,13 @@ export function usePurchaseOrders() {
     }
   };
   
+  // Return all methods from standardizedHook and add in methods we need
   return {
     ...standardizedHook,
     getPurchaseOrder,
+    // These are aliases to match the method names used in PurchaseOrderForm
+    createPurchaseOrder: standardizedHook.createOrder,
+    updatePurchaseOrder: standardizedHook.updateOrder,
     isLoading: isLoading || standardizedHook.isLoading || detailHook.isLoading,
     error: error || standardizedHook.error || detailHook.error
   };

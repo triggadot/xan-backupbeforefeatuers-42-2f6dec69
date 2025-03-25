@@ -15,11 +15,17 @@ export function usePurchaseOrderMutation() {
     setError('');
     
     try {
+      const poDate = data.date instanceof Date 
+        ? data.date.toISOString() 
+        : typeof data.date === 'string' 
+          ? data.date 
+          : new Date().toISOString();
+
       const { data: newPo, error } = await supabase
         .from('gl_purchase_orders')
         .insert({
           rowid_accounts: data.vendorId || data.rowid_accounts,
-          po_date: data.date?.toISOString(),
+          po_date: poDate,
           purchase_order_uid: data.number,
           notes: data.notes,
           payment_status: data.status || 'draft',
@@ -55,15 +61,27 @@ export function usePurchaseOrderMutation() {
     setError('');
     
     try {
+      const poDate = data.date instanceof Date 
+        ? data.date.toISOString() 
+        : typeof data.date === 'string' 
+          ? data.date 
+          : undefined;
+
+      const dueDate = data.dueDate instanceof Date 
+        ? data.dueDate.toISOString() 
+        : typeof data.dueDate === 'string' 
+          ? data.dueDate 
+          : undefined;
+
       const { data: updatedPo, error } = await supabase
         .from('gl_purchase_orders')
         .update({
           rowid_accounts: data.vendorId || data.rowid_accounts,
-          po_date: data.date?.toISOString(),
+          po_date: poDate,
           purchase_order_uid: data.number,
           notes: data.notes,
           payment_status: data.status,
-          date_payment_date_mddyyyy: data.dueDate?.toISOString()
+          date_payment_date_mddyyyy: dueDate
         })
         .eq('glide_row_id', id)
         .select()
