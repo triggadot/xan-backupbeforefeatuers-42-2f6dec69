@@ -111,11 +111,15 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onSubmit, onCan
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {vendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
+                  {vendors.length > 0 ? (
+                    vendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-vendors">No vendors available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />

@@ -79,6 +79,12 @@ export function LineItemForm({ lineItem, onSubmit, onCancel }: LineItemFormProps
   }, [toast]);
 
   const handleProductChange = (productId: string) => {
+    if (productId === 'none') {
+      // Handle "No product selected" option
+      form.setValue('productId', '');
+      return;
+    }
+    
     const product = products.find(p => p.glide_row_id === productId);
     if (product) {
       form.setValue('productId', product.glide_row_id);
@@ -128,9 +134,9 @@ export function LineItemForm({ lineItem, onSubmit, onCancel }: LineItemFormProps
             <FormItem>
               <FormLabel>Product</FormLabel>
               <Select
-                value={field.value}
+                value={field.value || 'none'}
                 onValueChange={(value) => {
-                  field.onChange(value);
+                  field.onChange(value === 'none' ? '' : value);
                   handleProductChange(value);
                 }}
               >
