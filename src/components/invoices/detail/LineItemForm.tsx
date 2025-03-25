@@ -140,7 +140,7 @@ export function LineItemForm({ lineItem, onSubmit, onCancel }: LineItemFormProps
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">-- No product selected --</SelectItem>
+                  <SelectItem value="none">-- No product selected --</SelectItem>
                   {products.map((product) => (
                     <SelectItem key={product.glide_row_id} value={product.glide_row_id}>
                       {product.display_name || product.vendor_product_name}

@@ -102,7 +102,7 @@ export function PurchaseOrderForm({ initialData, isEdit = false, onSubmit, onCan
               <FormLabel>Vendor</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                defaultValue={field.value}
+                defaultValue={field.value || undefined}
                 disabled={isSubmitting}
               >
                 <FormControl>

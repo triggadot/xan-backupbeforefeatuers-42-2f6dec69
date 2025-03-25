@@ -202,15 +202,15 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
               <div className="grid gap-2">
                 <Label htmlFor="rowid_accounts">Vendor</Label>
                 <Select 
-                  value={String(formValues.rowid_accounts || '')}
-                  onValueChange={value => handleChange('rowid_accounts', value)}
+                  value={String(formValues.rowid_accounts || 'none')}
+                  onValueChange={value => handleChange('rowid_accounts', value === 'none' ? '' : value)}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select vendor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {vendors.map(vendor => (
                       <SelectItem key={vendor.id} value={vendor.glide_row_id}>
                         {vendor.account_name}
