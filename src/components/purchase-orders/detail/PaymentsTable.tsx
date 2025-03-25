@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Edit, Plus, Trash2 } from 'lucide-react';
 import { VendorPayment } from '@/types/purchaseOrder';
@@ -18,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { PaymentForm } from './PaymentForm';
 import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
 
-interface PaymentsTableProps {
+export interface PaymentsTableProps {
   payments: VendorPayment[];
   purchaseOrderId: string;
   purchaseOrderGlideRowId: string;

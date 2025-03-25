@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ProductForm } from './ProductForm';
 import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
 
-interface ProductsTableProps {
+export interface ProductsTableProps {
   products: PurchaseOrderLineItem[];
   purchaseOrderId: string;
   purchaseOrderGlideRowId: string;
