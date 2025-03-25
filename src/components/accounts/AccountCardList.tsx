@@ -1,5 +1,5 @@
 import React from 'react';
-import { Account } from '@/types/accountNew';
+import { Account } from '@/types/accounts';
 import AccountCard from './AccountCard';
 import { Spinner } from '@/components/ui/spinner';
 

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, RefreshCw, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import AccountCardList from '@/components/accounts/AccountCardList';
 import AccountForm from '@/components/accounts/AccountForm';
 import { useAccountsNew } from '@/hooks/useAccountsNew';
-import { Account } from '@/types/accountNew';
+import { Account, AccountFormData } from '@/types/accounts';
 
 const Accounts: React.FC = () => {
   const { accounts, isLoading, error, fetchAccounts, addAccount } = useAccountsNew();
@@ -25,7 +26,7 @@ const Accounts: React.FC = () => {
     (account.type && account.type.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleAddAccount = async (data: any) => {
+  const handleAddAccount = async (data: AccountFormData) => {
     setIsSubmitting(true);
     try {
       await addAccount({
@@ -38,7 +39,6 @@ const Accounts: React.FC = () => {
         notes: data.notes,
         status: 'active',
         balance: 0,
-        glide_row_id: '', // Will be generated in the hook
       });
       setIsCreateDialogOpen(false);
     } finally {

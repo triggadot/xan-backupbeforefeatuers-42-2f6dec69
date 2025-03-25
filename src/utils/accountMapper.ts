@@ -2,8 +2,7 @@
 /**
  * Utilities for mapping account data between database and frontend models
  */
-import { GlAccount } from '@/types/account';
-import { Account } from '@/types/accountNew';
+import { GlAccount, Account } from '@/types/accounts';
 
 /**
  * Determines the account type from the client_type field
@@ -61,7 +60,7 @@ export function mapViewAccountToAccount(account: GlAccount): Account {
   
   return {
     id: account.id,
-    name: account.account_name,
+    name: account.account_name || 'Unnamed Account',
     type: getAccountTypeLabel(type) as Account['type'],
     glide_row_id: account.glide_row_id,
     accounts_uid: account.accounts_uid,
@@ -69,7 +68,7 @@ export function mapViewAccountToAccount(account: GlAccount): Account {
     status: 'active',
     balance: Number(account.balance) || 0,
     photo: account.photo,
-    created_at: account.created_at,
+    created_at: account.created_at || new Date().toISOString(),
     updated_at: account.updated_at,
     is_customer,
     is_vendor

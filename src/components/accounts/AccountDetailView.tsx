@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { determineAccountType, getAccountTypeLabel } from '@/utils/accountMapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Account } from '@/types/accountNew';
+import { Account } from '@/types/accounts';
 import { format } from 'date-fns';
 
 const AccountDetailView: React.FC = () => {

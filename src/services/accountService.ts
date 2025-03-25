@@ -1,8 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Account } from '@/types/accountNew';
+import { Account, GlAccount, AccountFilters } from '@/types/accounts';
 import { mapViewAccountToAccount } from '@/utils/accountMapper';
-import { GlAccount } from '@/types/account';
 
 /**
  * Fetch a single account by its ID
@@ -41,7 +40,7 @@ export async function fetchAccountById(id: string): Promise<Account | null> {
 /**
  * Fetch a list of accounts with optional filters
  */
-export async function fetchAccounts(filters?: any): Promise<Account[]> {
+export async function fetchAccounts(filters?: AccountFilters): Promise<Account[]> {
   try {
     let query = supabase
       .from('gl_accounts')
@@ -78,6 +77,11 @@ export async function fetchAccounts(filters?: any): Promise<Account[]> {
       query = query.gt('balance', 0);
     }
     
+    if (filters?.status) {
+      // Note: Currently gl_accounts doesn't have a status field
+      // This is a placeholder for when that field is added
+    }
+    
     const { data, error } = await query;
     
     if (error) throw error;
@@ -87,6 +91,87 @@ export async function fetchAccounts(filters?: any): Promise<Account[]> {
   } catch (error) {
     console.error('Error fetching accounts:', error);
     throw new Error('Failed to fetch accounts');
+  }
+}
+
+/**
+ * Fetch all accounts without filters
+ */
+export async function fetchAllAccounts(): Promise<Account[]> {
+  return fetchAccounts();
+}
+
+/**
+ * Create a new account
+ */
+export async function createAccount(accountData: Partial<Account>): Promise<string> {
+  try {
+    // Map the Account type to the database structure
+    const dbAccount = {
+      account_name: accountData.name,
+      client_type: accountData.type,
+      email_of_who_added: accountData.email,
+      photo: accountData.photo,
+      glide_row_id: accountData.glide_row_id || crypto.randomUUID(), // Generate a UUID if not provided
+      accounts_uid: accountData.accounts_uid,
+      balance: accountData.balance || 0
+    };
+    
+    const { data, error } = await supabase
+      .from('gl_accounts')
+      .insert(dbAccount)
+      .select('id')
+      .single();
+      
+    if (error) throw error;
+    
+    return data.id;
+  } catch (error) {
+    console.error('Error creating account:', error);
+    throw new Error('Failed to create account');
+  }
+}
+
+/**
+ * Update an existing account
+ */
+export async function updateAccount(id: string, accountData: Partial<Account>): Promise<void> {
+  try {
+    // Map the Account type to the database structure
+    const dbAccount: Partial<GlAccount> = {};
+    
+    if (accountData.name !== undefined) dbAccount.account_name = accountData.name;
+    if (accountData.type !== undefined) dbAccount.client_type = accountData.type;
+    if (accountData.email !== undefined) dbAccount.email_of_who_added = accountData.email;
+    if (accountData.photo !== undefined) dbAccount.photo = accountData.photo;
+    if (accountData.balance !== undefined) dbAccount.balance = accountData.balance;
+    
+    const { error } = await supabase
+      .from('gl_accounts')
+      .update(dbAccount)
+      .eq('id', id);
+      
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating account:', error);
+    throw new Error('Failed to update account');
+  }
+}
+
+/**
+ * Delete an account
+ */
+export async function deleteAccount(id: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('gl_accounts')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    throw new Error('Failed to delete account');
   }
 }
 

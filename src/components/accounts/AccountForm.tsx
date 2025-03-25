@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Account } from '@/types/accountNew';
+import { Account, AccountFormData } from '@/types/accounts';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -34,11 +33,9 @@ const accountSchema = z.object({
   notes: z.string().optional().or(z.literal('')),
 });
 
-type AccountFormValues = z.infer<typeof accountSchema>;
-
 interface AccountFormProps {
   defaultValues?: Partial<Account>;
-  onSubmit: (data: AccountFormValues) => void;
+  onSubmit: (data: AccountFormData) => void;
   isSubmitting: boolean;
 }
 
@@ -47,7 +44,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const form = useForm<AccountFormValues>({
+  const form = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
       name: defaultValues?.name || '',

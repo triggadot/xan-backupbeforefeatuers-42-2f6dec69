@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from 'react';
-import { Account } from '@/types/accountNew';
+import { Account, AccountRelatedData } from '@/types/accounts';
 import { fetchAccountById, fetchAccountRelatedData } from '@/services/accountService';
 import { useToast } from '@/hooks/use-toast';
 
 export function useAccount(id: string) {
   const [account, setAccount] = useState<Account | null>(null);
-  const [relatedData, setRelatedData] = useState<any>(null);
+  const [relatedData, setRelatedData] = useState<AccountRelatedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();

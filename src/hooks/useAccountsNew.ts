@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Account } from '@/types/accountNew';
+import { Account } from '@/types/accounts';
 import { 
   fetchAllAccounts, 
   fetchAccountById, 
@@ -52,7 +52,7 @@ export function useAccountsNew() {
     }
   }, [toast]);
 
-  const addAccount = useCallback(async (accountData: Omit<Account, 'id' | 'created_at' | 'updated_at' | 'is_customer' | 'is_vendor' | 'invoice_count' | 'total_invoiced' | 'total_paid' | 'last_invoice_date' | 'last_payment_date'>) => {
+  const addAccount = useCallback(async (accountData: Partial<Account>) => {
     try {
       await createAccount(accountData);
       
