@@ -89,6 +89,11 @@ export function useInvoiceDetail() {
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
       
+      // Fixed: Use invoice_order_date for dueDate since due_date field doesn't exist
+      const dueDate = invoice.invoice_order_date ? 
+        new Date(new Date(invoice.invoice_order_date).getTime() + 30 * 24 * 60 * 60 * 1000) : // Add 30 days to invoice date as default due date
+        undefined;
+      
       // Convert to InvoiceWithDetails format
       return {
         id: invoice.id,
@@ -97,7 +102,7 @@ export function useInvoiceDetail() {
         customerId: invoice.rowid_accounts || '',
         customerName: customerName,
         invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
-        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+        dueDate: dueDate,
         status: (invoice.payment_status || 'draft') as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
         total_amount: Number(invoice.total_amount || 0),
         total_paid: Number(invoice.total_paid || 0),

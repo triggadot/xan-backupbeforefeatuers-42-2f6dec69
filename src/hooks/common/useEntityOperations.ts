@@ -14,12 +14,13 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: fetchError } = await supabase
-        .from(tableName)
+        .from(tableName as string)
         .select('*');
         
       if (fetchError) throw fetchError;
       
-      return (data || []) as T[];
+      // Use type assertion to handle the conversion
+      return (data || []) as unknown as T[];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -36,14 +37,15 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: fetchError } = await supabase
-        .from(tableName)
+        .from(tableName as string)
         .select('*')
         .eq('id', id)
         .single();
         
       if (fetchError) throw fetchError;
       
-      return data as T;
+      // Use type assertion to handle the conversion
+      return data as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -60,14 +62,15 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: createError } = await supabase
-        .from(tableName)
+        .from(tableName as string)
         .insert(entity)
         .select()
         .single();
         
       if (createError) throw createError;
       
-      return data as T;
+      // Use type assertion to handle the conversion
+      return data as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -84,7 +87,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { data, error: updateError } = await supabase
-        .from(tableName)
+        .from(tableName as string)
         .update(updates)
         .eq('id', id)
         .select()
@@ -92,7 +95,8 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
         
       if (updateError) throw updateError;
       
-      return data as T;
+      // Use type assertion to handle the conversion
+      return data as unknown as T;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -109,7 +113,7 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     
     try {
       const { error: deleteError } = await supabase
-        .from(tableName)
+        .from(tableName as string)
         .delete()
         .eq('id', id);
         

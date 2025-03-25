@@ -43,8 +43,10 @@ export function AddPaymentDialog({
         purchaseOrderGlideId: purchaseOrderGlideRowId,
         data: {
           ...data,
-          vendorId
-        }
+          // Pass vendorId separately since it's not part of the form data
+          // but used in the backend
+        },
+        vendorId // Pass vendorId separately
       });
       
       onOpenChange(false);

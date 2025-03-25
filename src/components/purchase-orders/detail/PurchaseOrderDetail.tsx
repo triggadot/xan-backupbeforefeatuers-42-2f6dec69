@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -63,7 +62,6 @@ export function PurchaseOrderDetail() {
   };
   
   const confirmDelete = async () => {
-    // TODO: Implement delete purchase order functionality
     setIsDeleteDialogOpen(false);
     toast({
       title: 'Success',
@@ -76,14 +74,13 @@ export function PurchaseOrderDetail() {
     if (!purchaseOrder) return;
     
     try {
-      await deleteProduct.mutateAsync(productId);
+      await deleteProduct.mutateAsync({ id: productId });
       
       toast({
         title: 'Success',
         description: 'Product deleted successfully.',
       });
       
-      // Update the UI by removing the deleted product
       const updatedPO = {
         ...purchaseOrder,
         lineItems: purchaseOrder.lineItems.filter(item => item.id !== productId)
@@ -91,7 +88,6 @@ export function PurchaseOrderDetail() {
       
       setPurchaseOrder(updatedPO);
       
-      // Refresh data to get updated totals
       fetchPurchaseOrder();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -107,14 +103,13 @@ export function PurchaseOrderDetail() {
     if (!purchaseOrder) return;
     
     try {
-      await deletePayment.mutateAsync(paymentId);
+      await deletePayment.mutateAsync({ id: paymentId });
       
       toast({
         title: 'Success',
         description: 'Payment deleted successfully.',
       });
       
-      // Update the UI by removing the deleted payment
       const updatedPO = {
         ...purchaseOrder,
         vendorPayments: purchaseOrder.vendorPayments.filter(payment => payment.id !== paymentId)
@@ -122,7 +117,6 @@ export function PurchaseOrderDetail() {
       
       setPurchaseOrder(updatedPO);
       
-      // Refresh data to get updated totals
       fetchPurchaseOrder();
     } catch (error) {
       console.error('Error deleting payment:', error);

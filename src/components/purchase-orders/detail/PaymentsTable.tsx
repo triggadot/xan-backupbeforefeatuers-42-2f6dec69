@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Edit, Plus, Trash2 } from 'lucide-react';
 import { VendorPayment } from '@/types/purchaseOrder';
@@ -52,11 +51,9 @@ export function PaymentsTable({
       });
     } else {
       await addPayment.mutateAsync({ 
-        purchaseOrderGlideId: purchaseOrderGlideRowId, 
-        data: {
-          ...data,
-          vendorId
-        }
+        purchaseOrderGlideId: purchaseOrderGlideRowId,
+        data,
+        vendorId
       });
     }
     setCurrentPayment(null);

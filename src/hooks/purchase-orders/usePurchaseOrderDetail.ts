@@ -75,7 +75,8 @@ export function usePurchaseOrderDetail() {
         amount: Number(payment.payment_amount || 0),
         date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(payment.created_at),
         method: 'Payment', // Default value as it's not in the database
-        notes: payment.vendor_purchase_note || ''
+        notes: payment.vendor_purchase_note || '',
+        vendorId: payment.rowid_accounts || purchaseOrder.rowid_accounts || '' // Add vendorId
       }));
       
       return {
@@ -88,7 +89,7 @@ export function usePurchaseOrderDetail() {
         vendor: vendorData,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
-        notes: '', // Not stored directly in purchase_orders
+        notes: purchaseOrder.notes || '', // Not stored directly in purchase_orders
         subtotal: Number(purchaseOrder.total_amount || 0),
         tax: 0, // Not stored directly
         total_amount: Number(purchaseOrder.total_amount || 0),
@@ -96,7 +97,7 @@ export function usePurchaseOrderDetail() {
         balance: Number(purchaseOrder.balance || 0),
         glide_row_id: purchaseOrder.glide_row_id,
         rowid_accounts: purchaseOrder.rowid_accounts,
-        created_at: purchaseOrder.created_at
+        created_at: purchaseOrder.created_at // Required by the interface
       };
     } catch (err) {
       console.error('Error fetching purchase order:', err);

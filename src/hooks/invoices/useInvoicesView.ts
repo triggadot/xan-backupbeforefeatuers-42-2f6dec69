@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useInvoiceDetail } from './useInvoiceDetail';
@@ -21,7 +20,6 @@ export function useInvoicesView() {
     setError(null);
     
     try {
-      // Build query with filters
       let query = supabase
         .from('gl_invoices')
         .select(`
@@ -29,7 +27,6 @@ export function useInvoicesView() {
           customer:rowid_accounts(*)
         `);
       
-      // Apply filters if provided
       if (filters) {
         if (filters.status && filters.status !== 'all') {
           query = query.eq('payment_status', filters.status);
@@ -54,12 +51,10 @@ export function useInvoicesView() {
         }
         
         if (filters.search) {
-          // Simple search by invoice ID or notes
           query = query.or(`glide_row_id.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
         }
       }
       
-      // Order by date descending
       query = query.order('created_at', { ascending: false });
       
       const { data, error: fetchError } = await query;
@@ -68,9 +63,7 @@ export function useInvoicesView() {
       
       if (!data) return [];
       
-      // Map to InvoiceListItem format
       return data.map(invoice => {
-        // Safely get customer name with null checks
         let customerName = 'Unknown Customer';
         
         if (invoice.customer && 
@@ -81,20 +74,23 @@ export function useInvoicesView() {
           }
         }
         
+        const invoiceDate = invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at);
+        const dueDate = new Date(invoiceDate);
+        dueDate.setDate(dueDate.getDate() + 30);
+        
         return {
-          id: invoice.glide_row_id,
+          id: invoice.id,
           invoiceNumber: invoice.glide_row_id || invoice.id.substring(0, 8),
           glideRowId: invoice.glide_row_id,
           customerId: invoice.rowid_accounts || '',
           customerName: customerName,
-          date: new Date(invoice.invoice_order_date || invoice.created_at),
-          // Use optional chaining for due_date in case it doesn't exist
-          dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+          date: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
+          dueDate: dueDate,
           total: Number(invoice.total_amount || 0),
           balance: Number(invoice.balance || 0),
           status: invoice.payment_status || 'draft',
-          lineItemsCount: 0, // We don't have this info in the query
-          notes: invoice.notes,
+          lineItemsCount: 0,
+          notes: invoice.notes || '',
           amountPaid: Number(invoice.total_paid || 0)
         };
       });

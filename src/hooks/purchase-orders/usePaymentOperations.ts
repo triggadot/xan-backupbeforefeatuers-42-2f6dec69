@@ -10,7 +10,11 @@ export function usePaymentOperations() {
   const { toast } = useToast();
 
   const addPayment = {
-    mutateAsync: async ({ purchaseOrderGlideId, vendorId, data }: { 
+    mutateAsync: async ({ 
+      purchaseOrderGlideId, 
+      vendorId, 
+      data 
+    }: { 
       purchaseOrderGlideId: string, 
       vendorId: string,
       data: Partial<VendorPayment>
@@ -54,7 +58,8 @@ export function usePaymentOperations() {
           amount: Number(newPayment.payment_amount || 0),
           date: newPayment.date_of_payment ? new Date(newPayment.date_of_payment) : new Date(newPayment.created_at),
           method: 'Payment',
-          notes: newPayment.vendor_purchase_note || ''
+          notes: newPayment.vendor_purchase_note || '',
+          vendorId: newPayment.rowid_accounts
         };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error adding payment';
@@ -121,7 +126,8 @@ export function usePaymentOperations() {
           amount: Number(updatedPayment.payment_amount || 0),
           date: updatedPayment.date_of_payment ? new Date(updatedPayment.date_of_payment) : new Date(updatedPayment.created_at),
           method: 'Payment',
-          notes: updatedPayment.vendor_purchase_note || ''
+          notes: updatedPayment.vendor_purchase_note || '',
+          vendorId: updatedPayment.rowid_accounts
         };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Error updating payment';
