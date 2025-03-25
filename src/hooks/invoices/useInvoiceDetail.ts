@@ -101,6 +101,12 @@ export function useInvoiceDetail() {
         ? new Date(invoice.due_date) 
         : new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
       
+      // Ensure status is one of the valid types
+      let status = invoice.payment_status || 'draft';
+      if (!['draft', 'sent', 'paid', 'partial', 'overdue'].includes(status)) {
+        status = 'draft';
+      }
+      
       // Return the complete invoice with details
       return {
         id: invoice.glide_row_id,
@@ -110,7 +116,7 @@ export function useInvoiceDetail() {
         customerName: customerName,
         invoiceDate: invoiceDate,
         dueDate: dueDate,
-        status: invoice.payment_status || 'draft',
+        status: status as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
         amount: Number(invoice.total_amount || 0),
         total_amount: Number(invoice.total_amount || 0),
         total_paid: Number(invoice.total_paid || 0),

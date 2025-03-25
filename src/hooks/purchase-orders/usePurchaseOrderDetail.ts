@@ -107,7 +107,7 @@ export function usePurchaseOrderDetail() {
         total_amount: Number(purchaseOrder.total_amount || 0),
         created_at: purchaseOrder.created_at,
         updated_at: purchaseOrder.updated_at,
-        notes: purchaseOrder.notes || ''
+        notes: purchaseOrder.docs_shortlink || '' // Use docs_shortlink as notes field or empty string
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase order';
