@@ -8,8 +8,41 @@ import {
   ProductRow,
   asNumber,
   asBoolean,
-  asDate
+  asDate,
+  isJsonRecord
 } from '@/types/supabase';
+
+// Type for raw data returned from Supabase
+type ProductViewRow = {
+  id?: string | number;
+  product_id?: string;
+  glide_row_id?: string;
+  display_name?: string;
+  new_product_name?: string;
+  vendor_product_name?: string;
+  cost?: number | string;
+  total_qty_purchased?: number | string;
+  category?: string;
+  product_image1?: string;
+  purchase_notes?: string;
+  rowid_accounts?: string;
+  product_purchase_date?: string;
+  po_po_date?: string;
+  samples?: boolean;
+  fronted?: boolean;
+  samples_or_fronted?: boolean;
+  miscellaneous_items?: boolean;
+  terms_for_fronted_product?: string;
+  total_units_behind_sample?: number | string;
+  vendor_name?: string;
+  vendor_id?: string;
+  vendor_uid?: string;
+  vendor_glide_id?: string;
+  product_glide_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+};
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,7 +68,10 @@ export function useProducts() {
       
       if (error) throw error;
       
-      const mappedProducts = (data || []).map((product: ProductRow): Product => {
+      const mappedProducts = (data || []).map((row: ProductViewRow): Product => {
+        // Cast the raw row to a more strongly typed ProductRow
+        const product = row as unknown as ProductRow;
+        
         return {
           id: String(product.id || product.glide_row_id || ''),
           name: String(product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product'),
@@ -103,14 +139,15 @@ export function useProducts() {
         if (!data) throw new Error('Product not found');
         
         // Extract vendorData safely
-        const product = data as ProductRow;
-        const vendorData = product.gl_accounts || {};
-        const vendorName = vendorData && typeof vendorData === 'object' && 'account_name' in vendorData
-          ? String(vendorData.account_name || '')
-          : '';
-        const vendorUid = vendorData && typeof vendorData === 'object' && 'accounts_uid' in vendorData
-          ? String(vendorData.accounts_uid || '')
-          : '';
+        const product = data as unknown as ProductRow;
+        const vendorData = product.gl_accounts;
+        let vendorName = '';
+        let vendorUid = '';
+        
+        if (vendorData && isJsonRecord(vendorData)) {
+          vendorName = 'account_name' in vendorData ? String(vendorData.account_name || '') : '';
+          vendorUid = 'accounts_uid' in vendorData ? String(vendorData.accounts_uid || '') : '';
+        }
         
         return {
           id: String(product.id || ''),
@@ -147,7 +184,8 @@ export function useProducts() {
         
       if (detailsError) throw detailsError;
       
-      const product = mvData as ProductRow;
+      // Cast to our expected row structure
+      const product = mvData as unknown as ProductRow;
       
       // Map from materialized view data
       return {

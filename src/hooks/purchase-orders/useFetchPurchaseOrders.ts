@@ -7,7 +7,8 @@ import {
   PurchaseOrderRow,
   hasProperty, 
   asNumber,
-  asDate 
+  asDate,
+  isJsonRecord
 } from '@/types/supabase';
 
 export function useFetchPurchaseOrders() {
@@ -66,20 +67,25 @@ export function useFetchPurchaseOrders() {
       if (fetchError) throw fetchError;
       
       // Format the data to match PurchaseOrderWithVendor interface
-      const formattedData: PurchaseOrderWithVendor[] = (data || []).map((po: PurchaseOrderRow) => ({
-        id: po.glide_row_id || '',
-        number: po.purchase_order_uid || po.glide_row_id || '',
-        date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
-        status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
-        vendorId: po.vendor_id ? String(po.vendor_id) : '',
-        vendorName: po.vendor_name || 'Unknown Vendor',
-        total: asNumber(po.total_amount),
-        balance: asNumber(po.balance),
-        productCount: asNumber(po.product_count) || asNumber(po.product_count_calc) || 0,
-        totalPaid: asNumber(po.total_paid),
-        createdAt: asDate(po.created_at) || new Date(),
-        updatedAt: asDate(po.updated_at) || asDate(po.created_at) || new Date()
-      }));
+      const formattedData: PurchaseOrderWithVendor[] = (data || []).map((row) => {
+        // Convert the raw data to PurchaseOrderRow
+        const po = row as unknown as PurchaseOrderRow;
+        
+        return {
+          id: po.glide_row_id || '',
+          number: po.purchase_order_uid || po.glide_row_id || '',
+          date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
+          status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
+          vendorId: po.vendor_id ? String(po.vendor_id) : '',
+          vendorName: po.vendor_name || 'Unknown Vendor',
+          total: asNumber(po.total_amount),
+          balance: asNumber(po.balance),
+          productCount: asNumber(po.product_count) || asNumber(po.product_count_calc) || 0,
+          totalPaid: asNumber(po.total_paid),
+          createdAt: asDate(po.created_at) || new Date(),
+          updatedAt: asDate(po.updated_at) || asDate(po.created_at) || new Date()
+        };
+      });
       
       return { data: formattedData, error: null };
     } catch (err) {

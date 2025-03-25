@@ -11,6 +11,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Type guard for checking JSON values that could be records
+export function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return isRecord(value);
+}
+
 // Generic Database Row Type - base interface for database rows
 export interface DatabaseRow {
   id?: string | number;
@@ -44,10 +49,8 @@ export interface ProductRow extends DatabaseRow {
   vendor_uid?: string;
   vendor_glide_id?: string;
   product_glide_id?: string;
-  po_number?: string;
-  po_date?: string;
-  po_status?: string;
   vendor?: Record<string, unknown> | string;
+  gl_accounts?: Record<string, unknown>;
   [key: string]: unknown; // Allow additional properties
 }
 

@@ -1,8 +1,7 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceFilters, InvoiceWithCustomer, InvoiceListItem } from '@/types/invoice';
-import { hasProperty } from '@/types/supabase';
+import { hasProperty, isJsonRecord } from '@/types/supabase';
 import { useInvoiceLineItems } from './useInvoiceLineItems';
 import { useInvoicePayments } from './useInvoicePayments';
 import { useInvoiceDetail } from './useInvoiceDetail';
@@ -75,10 +74,9 @@ export function useInvoicesView() {
         let customerName = 'Unknown Customer';
         
         if (invoice.customer && 
-            typeof invoice.customer === 'object' && 
-            invoice.customer !== null) {
+            isJsonRecord(invoice.customer)) {
           if (hasProperty(invoice.customer, 'account_name')) {
-            customerName = invoice.customer.account_name || 'Unknown Customer';
+            customerName = String(invoice.customer.account_name) || 'Unknown Customer';
           }
         }
         
