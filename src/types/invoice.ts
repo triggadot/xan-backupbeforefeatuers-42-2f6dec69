@@ -40,19 +40,31 @@ export interface Invoice extends EntityBase, EntityWithStatus, EntityWithAmount,
   balance: number;
   lineItems?: InvoiceLineItem[];
   payments?: InvoicePayment[];
+  notes?: string;
+  total?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface InvoiceWithDetails extends Invoice {
   lineItems: InvoiceLineItem[];
   payments: InvoicePayment[];
   account?: GlAccount;
+  notes?: string;
+  total?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface InvoiceFilters {
-  status?: EntityStatus;
+  status?: EntityStatus | string;
   customerId?: string;
   fromDate?: string;
   toDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
   search?: string;
 }
 

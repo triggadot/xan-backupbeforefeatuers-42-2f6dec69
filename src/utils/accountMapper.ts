@@ -49,3 +49,22 @@ export function getAccountTypeLabel(type: 'customer' | 'vendor' | 'both' | 'unkn
       return 'Unknown';
   }
 }
+
+/**
+ * Maps a database account to a frontend Account model
+ */
+export function mapViewAccountToAccount(account: any) {
+  const type = determineAccountType(account.client_type);
+  
+  return {
+    id: account.id,
+    name: account.account_name,
+    type: getAccountTypeLabel(type),
+    email: account.email_of_who_added,
+    status: 'active',
+    balance: account.balance || 0,
+    photo: account.photo,
+    createdAt: new Date(account.created_at),
+    updatedAt: account.updated_at ? new Date(account.updated_at) : undefined
+  };
+}

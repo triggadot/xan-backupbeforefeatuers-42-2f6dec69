@@ -1,55 +1,35 @@
 
-import { useState, useCallback } from 'react';
-import { useFetchPurchaseOrders } from './purchase-orders/useFetchPurchaseOrders';
+import { useState } from 'react';
+import { useStandardizedPurchaseOrders } from './purchase-orders/useStandardizedPurchaseOrders';
 import { usePurchaseOrderDetail } from './purchase-orders/usePurchaseOrderDetail';
-import { usePurchaseOrderMutation } from './purchase-orders/usePurchaseOrderMutation';
-import { PurchaseOrderFilters } from '@/types/purchaseOrder';
-import { useToast } from '@/hooks/use-toast';
+import { PurchaseOrder } from '@/types/purchaseOrder';
 
 export function usePurchaseOrders() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
   
-  // Import functionality from smaller hooks
-  const { fetchPurchaseOrders: baseFetchPurchaseOrders } = useFetchPurchaseOrders();
-  const { getPurchaseOrder } = usePurchaseOrderDetail();
-  const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderMutation();
-
-  // Wrapper function that updates loading and error states
-  const fetchPurchaseOrders = useCallback(async (filters?: PurchaseOrderFilters) => {
+  const standardizedHook = useStandardizedPurchaseOrders();
+  const detailHook = usePurchaseOrderDetail();
+  
+  const getPurchaseOrder = async (id: string): Promise<PurchaseOrder | null> => {
     setIsLoading(true);
-    setError('');
-    
     try {
-      const result = await baseFetchPurchaseOrders(filters);
-      if (result.error) {
-        throw result.error;
-      }
+      const result = await detailHook.getPurchaseOrder(id);
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error fetching purchase orders';
+      const errorMessage = err instanceof Error ? err.message : 'Error fetching purchase order';
       setError(errorMessage);
-      console.error('Error in usePurchaseOrders.fetchPurchaseOrders:', err);
-      
-      toast({
-        title: "Error fetching purchase orders",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      
-      return { data: [], error: err };
+      console.error('Error in usePurchaseOrders.getPurchaseOrder:', err);
+      return null;
     } finally {
       setIsLoading(false);
     }
-  }, [baseFetchPurchaseOrders, toast]);
-
+  };
+  
   return {
-    fetchPurchaseOrders,
+    ...standardizedHook,
     getPurchaseOrder,
-    createPurchaseOrder,
-    updatePurchaseOrder,
-    isLoading,
-    error
+    isLoading: isLoading || standardizedHook.isLoading || detailHook.isLoading,
+    error: error || standardizedHook.error || detailHook.error
   };
 }

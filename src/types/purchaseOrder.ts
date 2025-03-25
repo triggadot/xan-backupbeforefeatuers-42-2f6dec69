@@ -19,6 +19,8 @@ export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   amountPaid?: number;
   balance?: number;
   total?: number;
+  rowid_accounts?: string;
+  total_paid?: number;
 }
 
 export interface PurchaseOrderLineItem {
@@ -29,6 +31,8 @@ export interface PurchaseOrderLineItem {
   description?: string;
   productId?: string;
   productDetails?: any;
+  product_name?: string;
+  unit_price?: number;
 }
 
 export interface VendorPayment {

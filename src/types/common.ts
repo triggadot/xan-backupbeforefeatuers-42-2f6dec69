@@ -2,6 +2,7 @@
 /**
  * Common entity types used throughout the application
  */
+import { LucideIcon } from 'lucide-react';
 
 export type EntityStatus = 
   // Invoice statuses
@@ -13,6 +14,7 @@ export type EntityStatus =
   // Purchase order statuses
   | 'pending'
   | 'complete'
+  | 'received'
   // Estimate statuses
   | 'converted'
   // Generic statuses
@@ -37,7 +39,7 @@ export interface EntityWithAccount extends EntityBase {
 }
 
 export interface EntityWithStatus extends EntityBase {
-  status: EntityStatus;
+  status: EntityStatus | string;
 }
 
 export interface EntityWithAmount extends EntityBase {

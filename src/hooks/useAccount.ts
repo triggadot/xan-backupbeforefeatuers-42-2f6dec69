@@ -1,12 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { Account } from '@/types/accountNew';
-import { fetchAccountById } from '@/services/accountService';
+import { GlAccount } from '@/types/account';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export function useAccount(id: string) {
-  const [account, setAccount] = useState<Account | null>(null);
+  const [account, setAccount] = useState<GlAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function loadAccount() {
@@ -19,18 +21,35 @@ export function useAccount(id: string) {
       setError(null);
 
       try {
-        const data = await fetchAccountById(id);
+        const { data, error: fetchError } = await supabase
+          .from('gl_accounts')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) {
+          throw fetchError;
+        }
+        
         setAccount(data);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch account';
+      } catch (err: any) {
+        const errorMessage = err?.message || 'Failed to fetch account';
         setError(errorMessage);
+        
+        toast({
+          title: 'Error',
+          description: 'Could not load account details',
+          variant: 'destructive'
+        });
+        
+        console.error('Error fetching account:', err);
       } finally {
         setIsLoading(false);
       }
     }
 
     loadAccount();
-  }, [id]);
+  }, [id, toast]);
 
   return { account, isLoading, error };
 }

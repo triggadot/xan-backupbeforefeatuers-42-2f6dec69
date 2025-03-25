@@ -28,7 +28,20 @@ const PurchaseOrderDetailView: React.FC = () => {
     if (id) {
       const fetchPurchaseOrderData = async () => {
         const data = await getPurchaseOrder(id);
-        setPurchaseOrder(data);
+        if (data) {
+          setPurchaseOrder({
+            ...data,
+            // Add these fields to satisfy TypeScript, they will be overridden by data anyway
+            id: data.id,
+            glide_row_id: data.glide_row_id,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+            total_amount: data.total_amount,
+            lineItems: data.lineItems || [],
+            vendorPayments: data.vendorPayments || [],
+            status: data.status
+          });
+        }
       };
       fetchPurchaseOrderData();
     }
@@ -51,7 +64,8 @@ const PurchaseOrderDetailView: React.FC = () => {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -72,6 +86,7 @@ const PurchaseOrderDetailView: React.FC = () => {
         title={null}
         notFoundMessage="The requested purchase order could not be found. It may have been deleted or you may not have permission to view it."
         backLink="/purchase-orders"
+        children={null}
       />
     );
   }
@@ -100,12 +115,12 @@ const PurchaseOrderDetailView: React.FC = () => {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">PO Date:</span>
-              <span>{purchaseOrder?.date ? formatDate(purchaseOrder.date as Date) : 'N/A'}</span>
+              <span>{purchaseOrder?.date ? formatDate(purchaseOrder.date) : 'N/A'}</span>
             </div>
             {purchaseOrder?.dueDate && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment Due:</span>
-                <span>{formatDate(purchaseOrder.dueDate as Date)}</span>
+                <span>{formatDate(purchaseOrder.dueDate)}</span>
               </div>
             )}
           </div>
@@ -164,7 +179,7 @@ const PurchaseOrderDetailView: React.FC = () => {
                         to={`/products/${item.productDetails.id}`}
                         className="font-medium hover:underline text-blue-600 flex items-center gap-1"
                       >
-                        {item.productDetails.display_name || item.productDetails.name} <ExternalLink className="h-3 w-3" />
+                        {item.productDetails.display_name || item.productDetails.name || item.description} <ExternalLink className="h-3 w-3" />
                       </Link>
                     </div>
                   ) : (
@@ -222,7 +237,7 @@ const PurchaseOrderDetailView: React.FC = () => {
             <TableBody>
               {purchaseOrder.vendorPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell>{payment.date ? formatDate(payment.date as Date) : 'N/A'}</TableCell>
+                  <TableCell>{payment.date ? formatDate(payment.date) : 'N/A'}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
                   <TableCell>{payment.method || '-'}</TableCell>
                   <TableCell>{payment.notes || '-'}</TableCell>

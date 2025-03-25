@@ -42,6 +42,12 @@ export interface ProductWithInventory extends Product {
   fronted_value?: number;
 }
 
+export interface UnpaidProduct extends Product {
+  unpaid_value: number;
+  unpaid_type: string;
+  vendor_name?: string;
+}
+
 export interface ProductFilters {
   category?: string;
   vendorId?: string;
