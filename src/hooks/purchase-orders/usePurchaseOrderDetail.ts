@@ -2,7 +2,14 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment } from '@/types/purchaseOrder';
-import { hasProperty } from '@/types/supabase';
+import { 
+  PurchaseOrderRow, 
+  ProductRow,
+  hasProperty, 
+  asNumber, 
+  asDate, 
+  parseJsonIfString 
+} from '@/types/supabase';
 
 export function usePurchaseOrderDetail() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,30 +34,34 @@ export function usePurchaseOrderDetail() {
         
       if (poError) throw poError;
       
+      if (!purchaseOrder) {
+        throw new Error(`Purchase order with ID ${id} not found`);
+      }
+
+      const po = purchaseOrder as PurchaseOrderRow;
+      
       // Safely get vendor data
       let vendorName = 'Unknown Vendor';
       let vendorData = undefined;
       
-      if (purchaseOrder.vendor) {
+      if (po.vendor) {
         // If it's a string (JSON), parse it
-        const vendorObj = typeof purchaseOrder.vendor === 'string' 
-          ? JSON.parse(purchaseOrder.vendor) 
-          : purchaseOrder.vendor;
+        const vendorObj = parseJsonIfString<Record<string, unknown>>(po.vendor);
           
         vendorData = vendorObj;
         
-        if (hasProperty(vendorObj, 'account_name')) {
-          vendorName = vendorObj.account_name || 'Unknown Vendor';
+        if (vendorObj && hasProperty(vendorObj, 'account_name')) {
+          vendorName = String(vendorObj.account_name) || 'Unknown Vendor';
         }
-      } else if (purchaseOrder.vendor_name) {
-        vendorName = purchaseOrder.vendor_name;
+      } else if (po.vendor_name) {
+        vendorName = po.vendor_name;
       }
       
       // Get products for this PO
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
-        .eq('rowid_purchase_orders', purchaseOrder.glide_row_id);
+        .eq('rowid_purchase_orders', po.glide_row_id);
         
       if (productsError) throw productsError;
       
@@ -58,58 +69,58 @@ export function usePurchaseOrderDetail() {
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
-        .eq('rowid_purchase_orders', purchaseOrder.glide_row_id);
+        .eq('rowid_purchase_orders', po.glide_row_id);
         
       if (paymentsError) throw paymentsError;
       
       // Format products
-      const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
-        id: product.id,
-        quantity: Number(product.total_qty_purchased || 0),
-        unitPrice: Number(product.cost || 0),
-        total: Number(product.total_qty_purchased || 0) * Number(product.cost || 0),
-        description: product.display_name || 'Unnamed Product',
-        productId: product.glide_row_id || product.id,
+      const lineItems: PurchaseOrderLineItem[] = products.map((product: ProductRow) => ({
+        id: String(product.id || ''),
+        quantity: asNumber(product.total_qty_purchased || 0),
+        unitPrice: asNumber(product.cost || 0),
+        total: asNumber(product.total_qty_purchased || 0) * asNumber(product.cost || 0),
+        description: String(product.display_name) || 'Unnamed Product',
+        productId: String(product.glide_row_id || product.id || ''),
         productDetails: product,
-        product_name: product.display_name || 'Unnamed Product',
-        unit_price: Number(product.cost || 0),
-        notes: product.purchase_notes || ''
+        product_name: String(product.display_name) || 'Unnamed Product',
+        unit_price: asNumber(product.cost || 0),
+        notes: String(product.purchase_notes || '')
       }));
       
       // Format payments
       const vendorPayments: VendorPayment[] = payments.map(payment => ({
-        id: payment.id,
-        amount: Number(payment.payment_amount || 0),
-        date: payment.date_of_payment || payment.created_at,
+        id: String(payment.id || ''),
+        amount: asNumber(payment.payment_amount || 0),
+        date: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
         method: 'Payment',
-        notes: payment.vendor_purchase_note || '',
-        vendorId: purchaseOrder.rowid_accounts || ''
+        notes: String(payment.vendor_purchase_note || ''),
+        vendorId: String(po.rowid_accounts || '')
       }));
       
       // Return the purchase order
       return {
-        id: purchaseOrder.glide_row_id,
-        number: purchaseOrder.purchase_order_uid || purchaseOrder.glide_row_id,
-        date: purchaseOrder.po_date ? new Date(purchaseOrder.po_date) : new Date(purchaseOrder.created_at),
-        status: purchaseOrder.payment_status || 'draft',
-        vendorId: purchaseOrder.rowid_accounts || '',
+        id: String(po.glide_row_id || ''),
+        number: String(po.purchase_order_uid || po.glide_row_id || ''),
+        date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
+        status: String(po.payment_status || 'draft'),
+        vendorId: String(po.rowid_accounts || ''),
         vendorName: vendorName,
         vendor: vendorData,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
-        subtotal: Number(purchaseOrder.total_amount || 0),
+        subtotal: asNumber(po.total_amount || 0),
         tax: 0, // No tax field in the database
-        dueDate: purchaseOrder.date_payment_date_mddyyyy ? new Date(purchaseOrder.date_payment_date_mddyyyy) : undefined,
-        amountPaid: Number(purchaseOrder.total_paid || 0),
-        balance: Number(purchaseOrder.balance || 0),
-        total: Number(purchaseOrder.total_amount || 0),
-        total_paid: Number(purchaseOrder.total_paid || 0),
-        rowid_accounts: purchaseOrder.rowid_accounts || '',
-        glide_row_id: purchaseOrder.glide_row_id,
-        total_amount: Number(purchaseOrder.total_amount || 0),
-        created_at: purchaseOrder.created_at,
-        updated_at: purchaseOrder.updated_at,
-        notes: purchaseOrder.docs_shortlink || '' // Use docs_shortlink as notes field or empty string
+        dueDate: asDate(po.date_payment_date_mddyyyy),
+        amountPaid: asNumber(po.total_paid || 0),
+        balance: asNumber(po.balance || 0),
+        total: asNumber(po.total_amount || 0),
+        total_paid: asNumber(po.total_paid || 0),
+        rowid_accounts: String(po.rowid_accounts || ''),
+        glide_row_id: String(po.glide_row_id || ''),
+        total_amount: asNumber(po.total_amount || 0),
+        created_at: String(po.created_at || ''),
+        updated_at: String(po.updated_at || ''),
+        notes: String(po.docs_shortlink || '') // Use docs_shortlink as notes field or empty string
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase order';

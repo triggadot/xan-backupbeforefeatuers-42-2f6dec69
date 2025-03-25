@@ -3,6 +3,12 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrderFilters, PurchaseOrderWithVendor } from '@/types/purchaseOrder';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  PurchaseOrderRow,
+  hasProperty, 
+  asNumber,
+  asDate 
+} from '@/types/supabase';
 
 export function useFetchPurchaseOrders() {
   const [isLoading, setIsLoading] = useState(false);
@@ -60,19 +66,19 @@ export function useFetchPurchaseOrders() {
       if (fetchError) throw fetchError;
       
       // Format the data to match PurchaseOrderWithVendor interface
-      const formattedData: PurchaseOrderWithVendor[] = (data || []).map(po => ({
+      const formattedData: PurchaseOrderWithVendor[] = (data || []).map((po: PurchaseOrderRow) => ({
         id: po.glide_row_id || '',
         number: po.purchase_order_uid || po.glide_row_id || '',
-        date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+        date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
         status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
         vendorId: po.vendor_id ? String(po.vendor_id) : '',
         vendorName: po.vendor_name || 'Unknown Vendor',
-        total: Number(po.total_amount) || 0,
-        balance: Number(po.balance) || 0,
-        productCount: Number(po.product_count) || Number(po.product_count_calc) || 0,
-        totalPaid: Number(po.total_paid) || 0,
-        createdAt: new Date(po.created_at),
-        updatedAt: new Date(po.updated_at || po.created_at)
+        total: asNumber(po.total_amount),
+        balance: asNumber(po.balance),
+        productCount: asNumber(po.product_count) || asNumber(po.product_count_calc) || 0,
+        totalPaid: asNumber(po.total_paid),
+        createdAt: asDate(po.created_at) || new Date(),
+        updatedAt: asDate(po.updated_at) || asDate(po.created_at) || new Date()
       }));
       
       return { data: formattedData, error: null };
