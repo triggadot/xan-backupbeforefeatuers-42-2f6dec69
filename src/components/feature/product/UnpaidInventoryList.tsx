@@ -89,7 +89,7 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                 <AmountDisplay amount={product.unpaid_value} variant="destructive" />
               </TableCell>
               <TableCell className="max-w-[200px] truncate">
-                {product.notes || '-'}
+                {product.notes || product.terms_for_fronted_product || '-'}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">

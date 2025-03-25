@@ -52,6 +52,12 @@ export function usePurchaseOrderDetail() {
         if (hasProperty(purchaseOrder.vendor, 'account_name')) {
           vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
         }
+        
+        // Get the accounts_uid from the vendor
+        if (hasProperty(purchaseOrder.vendor, 'accounts_uid')) {
+          // We have the accounts_uid
+          console.log('Vendor accounts_uid:', purchaseOrder.vendor.accounts_uid);
+        }
       }
       
       // Format products
@@ -60,10 +66,10 @@ export function usePurchaseOrderDetail() {
         quantity: Number(product.total_qty_purchased || 0),
         unitPrice: Number(product.cost || 0),
         total: Number(product.total_qty_purchased || 0) * Number(product.cost || 0),
-        description: product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+        description: product.display_name || 'Unnamed Product',
         productId: product.glide_row_id || product.id,
         productDetails: product,
-        product_name: product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+        product_name: product.display_name || 'Unnamed Product',
         unit_price: Number(product.cost || 0),
         notes: product.purchase_notes || ''
       }));
@@ -101,7 +107,7 @@ export function usePurchaseOrderDetail() {
         total_amount: Number(purchaseOrder.total_amount || 0),
         created_at: purchaseOrder.created_at,
         updated_at: purchaseOrder.updated_at,
-        notes: purchaseOrder.notes || '' // Add default value for notes
+        notes: purchaseOrder.notes || ''
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase order';

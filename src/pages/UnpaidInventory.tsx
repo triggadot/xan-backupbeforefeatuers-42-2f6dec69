@@ -61,6 +61,8 @@ const UnpaidInventory: React.FC = () => {
 
   const markAsReturned = async (productId: string): Promise<boolean> => {
     try {
+      // Using the new inventory calculation function would be good here
+      // but for now we'll just zero out the quantity
       const { error } = await supabase
         .from('gl_products')
         .update({

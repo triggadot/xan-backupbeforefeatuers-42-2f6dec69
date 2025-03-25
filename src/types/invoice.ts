@@ -35,7 +35,7 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   customerId: string;
   customerName: string;
   invoiceDate: Date;
-  dueDate?: Date;
+  dueDate?: Date; // Now mapped from db field
   status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
   total_paid: number;
   balance: number;
@@ -49,6 +49,8 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   updated_at?: string;
   glide_row_id: string;
   total_amount: number;
+  tax_rate?: number; // New field
+  tax_amount?: number; // New field
 }
 
 export interface InvoiceWithDetails extends Invoice {
@@ -99,6 +101,7 @@ export interface CreateInvoiceInput {
   dueDate?: Date;
   status: string;
   notes?: string;
+  tax_rate?: number; // New field
   lineItems: Array<{
     productId: string;
     description: string;
@@ -113,6 +116,7 @@ export interface UpdateInvoiceInput {
   dueDate?: Date;
   status?: string;
   notes?: string;
+  tax_rate?: number; // New field
 }
 
 export interface InvoiceListItem {

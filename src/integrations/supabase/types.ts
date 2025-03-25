@@ -12,7 +12,7 @@ export type Database = {
       gl_accounts: {
         Row: {
           account_name: string | null
-          accounts_uid: string | null
+          accounts_uid: string
           balance: number | null
           client_type: string | null
           created_at: string | null
@@ -25,7 +25,7 @@ export type Database = {
         }
         Insert: {
           account_name?: string | null
-          accounts_uid?: string | null
+          accounts_uid?: string
           balance?: number | null
           client_type?: string | null
           created_at?: string | null
@@ -38,7 +38,7 @@ export type Database = {
         }
         Update: {
           account_name?: string | null
-          accounts_uid?: string | null
+          accounts_uid?: string
           balance?: number | null
           client_type?: string | null
           created_at?: string | null
@@ -396,6 +396,7 @@ export type Database = {
           created_at: string | null
           created_timestamp: string | null
           doc_glideforeverlink: string | null
+          due_date: string | null
           glide_row_id: string
           id: string
           invoice_order_date: string | null
@@ -404,6 +405,8 @@ export type Database = {
           processed: boolean | null
           rowid_accounts: string | null
           submitted_timestamp: string | null
+          tax_amount: number | null
+          tax_rate: number | null
           total_amount: number | null
           total_paid: number | null
           updated_at: string | null
@@ -414,6 +417,7 @@ export type Database = {
           created_at?: string | null
           created_timestamp?: string | null
           doc_glideforeverlink?: string | null
+          due_date?: string | null
           glide_row_id: string
           id?: string
           invoice_order_date?: string | null
@@ -422,6 +426,8 @@ export type Database = {
           processed?: boolean | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
@@ -432,6 +438,7 @@ export type Database = {
           created_at?: string | null
           created_timestamp?: string | null
           doc_glideforeverlink?: string | null
+          due_date?: string | null
           glide_row_id?: string
           id?: string
           invoice_order_date?: string | null
@@ -440,6 +447,8 @@ export type Database = {
           processed?: boolean | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          tax_amount?: number | null
+          tax_rate?: number | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
@@ -1185,6 +1194,14 @@ export type Database = {
       }
     }
     Functions: {
+      generate_estimate_uid: {
+        Args: {
+          account_uid: string
+          estimate_date: string
+          is_sample: boolean
+        }
+        Returns: string
+      }
       generate_invoice_uid: {
         Args: {
           account_uid: string

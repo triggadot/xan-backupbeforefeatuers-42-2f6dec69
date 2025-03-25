@@ -3,7 +3,8 @@ import { EntityBase } from './common';
 
 export interface GlAccount extends EntityBase {
   account_name: string;
-  client_type?: string;
+  accounts_uid: string; // Now required
+  client_type: 'Customer' | 'Vendor' | 'Customer & Vendor'; // Constrained values
   email_of_who_added?: string;
   date_added_client?: string;
   photo?: string;
@@ -19,4 +20,5 @@ export interface AccountFilters {
   type?: 'customer' | 'vendor' | 'both';
   search?: string;
   hasBalance?: boolean;
+  status?: string;
 }
