@@ -30,12 +30,13 @@ export interface InvoicePayment {
   updatedAt: Date;
 }
 
-export interface Invoice extends EntityBase, EntityWithStatus, EntityWithAmount, EntityWithAccount {
+export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount {
   invoiceNumber: string;
   customerId: string;
   customerName: string;
   invoiceDate: Date;
   dueDate?: Date;
+  status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
   total_paid: number;
   balance: number;
   lineItems?: InvoiceLineItem[];
@@ -55,13 +56,13 @@ export interface InvoiceWithDetails extends Invoice {
   notes?: string;
   total?: number;
   amountPaid: number;
-  subtotal?: number;
+  subtotal: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export interface InvoiceFilters {
-  status?: EntityStatus | string;
+  status?: string;
   customerId?: string;
   fromDate?: string | Date;
   toDate?: string | Date;

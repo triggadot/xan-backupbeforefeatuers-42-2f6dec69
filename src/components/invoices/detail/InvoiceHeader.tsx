@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { StatusBadge } from '../shared/StatusBadge';
 import { InvoiceWithDetails } from '@/types/invoice';
-import { EntityStatus } from '@/types/common';
 
 interface InvoiceHeaderProps {
   invoice: InvoiceWithDetails;
@@ -20,6 +19,9 @@ interface InvoiceHeaderProps {
 }
 
 export const InvoiceHeader = ({ invoice, onBack, onEdit, onDelete }: InvoiceHeaderProps) => {
+  // Ensure status is one of the allowed values for Invoice
+  const invoiceStatus = (invoice.status as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue');
+  
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -29,7 +31,7 @@ export const InvoiceHeader = ({ invoice, onBack, onEdit, onDelete }: InvoiceHead
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Invoice #{invoice.invoiceNumber}</h1>
-            <StatusBadge status={invoice.status as EntityStatus} />
+            <StatusBadge status={invoiceStatus} />
           </div>
           <div className="text-sm text-muted-foreground flex items-center mt-1">
             <Calendar className="h-3 w-3 mr-1" />

@@ -73,22 +73,27 @@ export function useInvoiceDetail() {
       
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+      // Safely get customer name
+      const customerName = invoice.customer && typeof invoice.customer === 'object' && 'account_name' in invoice.customer
+        ? (invoice.customer.account_name || 'Unknown Customer')
+        : 'Unknown Customer';
       
       return {
         id: invoice.id,
         glide_row_id: invoice.glide_row_id,
         invoiceNumber: invoice.glide_row_id || invoice.id.substring(0, 8),
         customerId: invoice.rowid_accounts || '',
-        customerName: invoice.customer ? (invoice.customer.account_name || 'Unknown Customer') : 'Unknown Customer',
+        customerName: customerName,
         invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
-        status: invoice.payment_status || 'draft',
+        status: (invoice.payment_status || 'draft') as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
         total_amount: Number(invoice.total_amount || 0),
         total_paid: Number(invoice.total_paid || 0),
         balance: Number(invoice.balance || 0),
         notes: invoice.notes || '',
         lineItems: formattedLineItems,
         payments: formattedPayments,
-        account: invoice.customer,
+        account: (invoice.customer && typeof invoice.customer === 'object') ? invoice.customer : undefined,
         amountPaid: totalPaid,
         subtotal: Number(invoice.total_amount || 0),
         created_at: invoice.created_at,

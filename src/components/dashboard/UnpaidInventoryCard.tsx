@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UnpaidProduct } from '@/types/product';
-import { formatCurrency } from '@/utils/format-utils';
 import { useNavigate } from 'react-router-dom';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
@@ -86,14 +85,14 @@ const UnpaidInventoryCard: React.FC<UnpaidInventoryCardProps> = ({
                 <div key={product.id} className="flex justify-between items-center border-b pb-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm truncate max-w-[200px]" title={product.vendor_product_name || product.new_product_name || product.display_name}>
-                        {product.vendor_product_name || product.new_product_name || product.display_name}
+                      <h4 className="font-medium text-sm truncate max-w-[200px]" title={product.name}>
+                        {product.name}
                       </h4>
                       <Badge variant={product.unpaid_type === 'Sample' ? 'secondary' : 'outline'}>
                         {product.unpaid_type}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{product.vendor_name}</p>
+                    <p className="text-xs text-muted-foreground">{product.customer_name}</p>
                   </div>
                   <div className="text-right">
                     <AmountDisplay 

@@ -3,8 +3,28 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Define allowed table names based on Supabase schema
+type SupabaseTable = 
+  | 'gl_accounts'
+  | 'gl_connections'
+  | 'gl_customer_credits'
+  | 'gl_customer_payments'
+  | 'gl_estimate_lines'
+  | 'gl_estimates'
+  | 'gl_expenses'
+  | 'gl_invoice_lines'
+  | 'gl_invoices'
+  | 'gl_mappings'
+  | 'gl_products'
+  | 'gl_purchase_orders'
+  | 'gl_shipping_records'
+  | 'gl_sync_errors'
+  | 'gl_sync_logs'
+  | 'gl_vendor_payments'
+  | 'profiles';
+
 interface EntityOperationsConfig {
-  tableName: string;
+  tableName: SupabaseTable;
   entityName: string;
 }
 
@@ -56,7 +76,7 @@ export function useEntityOperations<T>({ tableName, entityName }: EntityOperatio
         variant: "destructive"
       });
       
-      return { data: [], error: err };
+      return { data: [] as T[], error: err };
     } finally {
       setIsLoading(false);
     }

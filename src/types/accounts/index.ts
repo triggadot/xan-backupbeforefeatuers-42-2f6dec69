@@ -30,8 +30,8 @@ export interface Account extends Omit<EntityBase, 'glide_row_id'> {
   photo?: string;
   notes?: string;
   
-  // Status
-  status: 'active' | 'inactive' | EntityStatus;
+  // Status - now matching accountNew.ts definition
+  status: 'active' | 'inactive';
   
   // Financial information
   balance: number;

@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UnpaidProduct } from '@/types/product';
-import { formatCurrency } from '@/utils/format-utils';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
 
 interface UnpaidInventoryListProps {
@@ -73,8 +72,8 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
         <TableBody>
           {products.map((product) => (
             <TableRow key={product.id}>
-              <TableCell className="font-medium">{product.vendor_product_name || product.new_product_name || product.display_name}</TableCell>
-              <TableCell>{product.vendor_name}</TableCell>
+              <TableCell className="font-medium">{product.name}</TableCell>
+              <TableCell>{product.customer_name}</TableCell>
               <TableCell>
                 <Badge
                   variant={product.unpaid_type === 'Sample' ? 'secondary' : 'outline'}
@@ -82,22 +81,22 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                   {product.unpaid_type}
                 </Badge>
               </TableCell>
-              <TableCell>{product.total_qty_purchased}</TableCell>
+              <TableCell>{product.quantity}</TableCell>
               <TableCell>
-                <AmountDisplay amount={product.cost} variant="default" />
+                <AmountDisplay amount={product.unpaid_value / (product.quantity || 1)} variant="default" />
               </TableCell>
               <TableCell>
                 <AmountDisplay amount={product.unpaid_value} variant="destructive" />
               </TableCell>
               <TableCell className="max-w-[200px] truncate">
-                {product.terms_for_fronted_product || '-'}
+                {product.notes || '-'}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handlePay(product.glide_row_id)}
+                    onClick={() => handlePay(product.product_id)}
                   >
                     Pay
                   </Button>
@@ -105,7 +104,7 @@ const UnpaidInventoryList: React.FC<UnpaidInventoryListProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleReturn(product.glide_row_id)}
+                      onClick={() => handleReturn(product.product_id)}
                     >
                       Return
                     </Button>

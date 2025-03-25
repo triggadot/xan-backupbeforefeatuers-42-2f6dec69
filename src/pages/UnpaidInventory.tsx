@@ -1,25 +1,97 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUnpaidInventory } from '@/hooks/useUnpaidInventory';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UnpaidInventoryList from '@/components/feature/product/UnpaidInventoryList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
+import { UnpaidProduct } from '@/types/product';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const UnpaidInventory: React.FC = () => {
-  const { 
-    unpaidProducts, 
-    isLoading, 
-    error, 
-    fetchUnpaidInventory,
-    markAsPaid,
-    markAsReturned
-  } = useUnpaidInventory();
+  const { products, isLoading, error } = useUnpaidInventory();
+  const [unpaidProducts, setUnpaidProducts] = useState<UnpaidProduct[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchUnpaidInventory();
-  }, []); // Run once on component mount
+    if (products) {
+      setUnpaidProducts(products);
+    }
+  }, [products]);
+
+  const fetchUnpaidInventory = async () => {
+    // Refresh the page - no need for a full implementation since useUnpaidInventory will refresh on mount
+    window.location.reload();
+  };
+
+  const markAsPaid = async (productId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('gl_products')
+        .update({
+          samples: false,
+          fronted: false,
+          samples_or_fronted: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('glide_row_id', productId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Product marked as paid",
+      });
+      
+      // Update local state
+      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      return true;
+    } catch (err) {
+      console.error('Error marking product as paid:', err);
+      toast({
+        title: "Error",
+        description: "Failed to mark product as paid",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  const markAsReturned = async (productId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('gl_products')
+        .update({
+          total_qty_purchased: 0,
+          samples: false,
+          fronted: false,
+          samples_or_fronted: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('glide_row_id', productId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Product marked as returned",
+      });
+      
+      // Update local state
+      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      return true;
+    } catch (err) {
+      console.error('Error marking product as returned:', err);
+      toast({
+        title: "Error",
+        description: "Failed to mark product as returned",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
 
   const totalSampleValue = unpaidProducts
     .filter(p => p.unpaid_type === 'Sample')
@@ -33,15 +105,6 @@ const UnpaidInventory: React.FC = () => {
 
   const handleRefresh = () => {
     fetchUnpaidInventory();
-  };
-
-  // Create wrapper functions that return booleans
-  const handleMarkAsPaid = async (productId: string): Promise<boolean> => {
-    return await markAsPaid(productId);
-  };
-
-  const handleMarkAsReturned = async (productId: string): Promise<boolean> => {
-    return await markAsReturned(productId);
   };
 
   return (
@@ -120,8 +183,8 @@ const UnpaidInventory: React.FC = () => {
         <UnpaidInventoryList 
           products={unpaidProducts}
           isLoading={isLoading}
-          onPay={handleMarkAsPaid}
-          onReturn={handleMarkAsReturned}
+          onPay={markAsPaid}
+          onReturn={markAsReturned}
         />
       )}
     </div>
