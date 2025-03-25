@@ -13,29 +13,37 @@ export function usePurchaseOrderDetail() {
     setError(null);
     
     try {
+      // Refresh the materialized view
+      await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_purchase_order_vendor_details'
+      });
+      
+      // Fetch from the materialized view
       const { data: purchaseOrder, error: poError } = await supabase
-        .from('gl_purchase_orders')
-        .select(`
-          *,
-          vendor:rowid_accounts(*)
-        `)
+        .from('mv_purchase_order_vendor_details')
+        .select('*')
         .eq('glide_row_id', id)
         .single();
         
       if (poError) throw poError;
       
-      // Safely get vendor name with null checks
+      // Safely get vendor data
       let vendorName = 'Unknown Vendor';
       let vendorData = undefined;
       
-      if (purchaseOrder.vendor && 
-          typeof purchaseOrder.vendor === 'object' && 
-          purchaseOrder.vendor !== null) {
-        vendorData = purchaseOrder.vendor;
+      if (purchaseOrder.vendor) {
+        // If it's a string (JSON), parse it
+        const vendorObj = typeof purchaseOrder.vendor === 'string' 
+          ? JSON.parse(purchaseOrder.vendor) 
+          : purchaseOrder.vendor;
+          
+        vendorData = vendorObj;
         
-        if (hasProperty(purchaseOrder.vendor, 'account_name')) {
-          vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
+        if (hasProperty(vendorObj, 'account_name')) {
+          vendorName = vendorObj.account_name || 'Unknown Vendor';
         }
+      } else if (purchaseOrder.vendor_name) {
+        vendorName = purchaseOrder.vendor_name;
       }
       
       // Get products for this PO

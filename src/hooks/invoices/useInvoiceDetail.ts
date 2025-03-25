@@ -13,13 +13,15 @@ export function useInvoiceDetail() {
     setError(null);
     
     try {
-      // Use the new materialized view for better performance, but cast it to any to avoid type errors
+      // Refresh the materialized view
+      await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_invoice_customer_details'
+      });
+      
+      // Fetch from the materialized view
       const { data: invoice, error: invoiceError } = await supabase
-        .from('mv_invoice_customer_details' as any)
-        .select(`
-          *,
-          customer:rowid_accounts(*)
-        `)
+        .from('mv_invoice_customer_details')
+        .select('*')
         .eq('glide_row_id', id)
         .single();
         
@@ -29,13 +31,16 @@ export function useInvoiceDetail() {
       let customerName = 'Unknown Customer';
       let customerData = undefined;
       
-      if (invoice.customer && 
-          typeof invoice.customer === 'object' && 
-          invoice.customer !== null) {
-        customerData = invoice.customer;
+      if (invoice.customer) {
+        // If it's a string (JSON), parse it
+        const customerObj = typeof invoice.customer === 'string' 
+          ? JSON.parse(invoice.customer) 
+          : invoice.customer;
+          
+        customerData = customerObj;
         
-        if (hasProperty(invoice.customer, 'account_name')) {
-          customerName = invoice.customer.account_name || 'Unknown Customer';
+        if (hasProperty(customerObj, 'account_name')) {
+          customerName = customerObj.account_name || 'Unknown Customer';
         }
       }
       

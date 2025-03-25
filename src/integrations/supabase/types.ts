@@ -1066,23 +1066,97 @@ export type Database = {
       mv_invoice_customer_details: {
         Row: {
           balance: number | null
-          client_type: string | null
           created_at: string | null
+          created_timestamp: string | null
+          customer: Json | null
+          customer_id: string | null
           customer_name: string | null
           customer_uid: string | null
+          doc_glideforeverlink: string | null
           due_date: string | null
           glide_row_id: string | null
           id: string | null
           invoice_order_date: string | null
-          line_items_count: number | null
+          line_item_count: number | null
+          line_items_total: number | null
           notes: string | null
           payment_status: string | null
+          payments_total: number | null
+          processed: boolean | null
           rowid_accounts: string | null
+          submitted_timestamp: string | null
           tax_amount: number | null
           tax_rate: number | null
           total_amount: number | null
           total_paid: number | null
           updated_at: string | null
+          user_email: string | null
+        }
+        Relationships: []
+      }
+      mv_product_vendor_details: {
+        Row: {
+          category: string | null
+          cost: number | null
+          created_at: string | null
+          date_timestamp_subm: string | null
+          display_name: string | null
+          email_email_of_user_who_added_product: string | null
+          fronted: boolean | null
+          glide_row_id: string | null
+          id: string | null
+          miscellaneous_items: boolean | null
+          new_product_name: string | null
+          po_date: string | null
+          po_number: string | null
+          po_po_date: string | null
+          po_poui_dfrom_add_prod: string | null
+          po_status: string | null
+          product_image1: string | null
+          product_purchase_date: string | null
+          purchase_notes: string | null
+          rowid_accounts: string | null
+          rowid_purchase_orders: string | null
+          rowid_vendor_payments: string | null
+          samples: boolean | null
+          samples_or_fronted: boolean | null
+          terms_for_fronted_product: string | null
+          total_qty_purchased: number | null
+          total_units_behind_sample: number | null
+          updated_at: string | null
+          vendor: Json | null
+          vendor_glide_id: string | null
+          vendor_id: string | null
+          vendor_name: string | null
+          vendor_product_name: string | null
+          vendor_uid: string | null
+        }
+        Relationships: []
+      }
+      mv_purchase_order_vendor_details: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          date_payment_date_mddyyyy: string | null
+          docs_shortlink: string | null
+          glide_row_id: string | null
+          id: string | null
+          payment_status: string | null
+          payments_total: number | null
+          pdf_link: string | null
+          po_date: string | null
+          product_count: number | null
+          product_count_calc: number | null
+          products_total: number | null
+          purchase_order_uid: string | null
+          rowid_accounts: string | null
+          total_amount: number | null
+          total_paid: number | null
+          updated_at: string | null
+          vendor: Json | null
+          vendor_id: string | null
+          vendor_name: string | null
+          vendor_uid: string | null
         }
         Relationships: []
       }

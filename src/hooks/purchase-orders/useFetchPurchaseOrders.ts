@@ -25,9 +25,9 @@ export function useFetchPurchaseOrders() {
         // Continue anyway as the view might still have recent enough data
       }
       
-      // Build the base query - casting to any to avoid TS errors since we can't modify types.ts
+      // Build the base query - using the materialized view
       let query = supabase
-        .from('mv_purchase_order_vendor_details' as any)
+        .from('mv_purchase_order_vendor_details')
         .select('*');
       
       // Apply filters if provided
@@ -61,15 +61,15 @@ export function useFetchPurchaseOrders() {
       
       // Format the data to match PurchaseOrderWithVendor interface
       const formattedData: PurchaseOrderWithVendor[] = (data || []).map(po => ({
-        id: String(po.vendor_id || po.glide_row_id || ''), // Use vendor_id as fallback or generate an ID
+        id: po.glide_row_id || '',
         number: po.purchase_order_uid || po.glide_row_id || '',
         date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
         status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
-        vendorId: po.vendor_id ? String(po.vendor_id) : '', // Ensure vendor_id is a string
+        vendorId: po.vendor_id ? String(po.vendor_id) : '',
         vendorName: po.vendor_name || 'Unknown Vendor',
         total: Number(po.total_amount) || 0,
         balance: Number(po.balance) || 0,
-        productCount: Number(po.product_count) || 0,
+        productCount: Number(po.product_count) || Number(po.product_count_calc) || 0,
         totalPaid: Number(po.total_paid) || 0,
         createdAt: new Date(po.created_at),
         updatedAt: new Date(po.updated_at || po.created_at)

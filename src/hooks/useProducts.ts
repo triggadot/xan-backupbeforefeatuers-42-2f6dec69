@@ -16,9 +16,14 @@ export function useProducts() {
     setError(null);
     
     try {
-      // Use the materialized view but cast to any to avoid type errors
+      // Refresh the materialized view
+      await supabase.rpc('refresh_materialized_view_secure', {
+        view_name: 'mv_product_vendor_details'
+      });
+      
+      // Use the materialized view for improved performance
       const { data, error } = await supabase
-        .from('mv_product_vendor_details' as any)
+        .from('mv_product_vendor_details')
         .select('*')
         .order('product_purchase_date', { ascending: false });
       
@@ -26,9 +31,9 @@ export function useProducts() {
       
       const mappedProducts = (data || []).map((product): Product => {
         return {
-          id: product.product_id || product.id,
+          id: product.id || product.glide_row_id,
           name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
-          sku: product.product_glide_id || product.glide_row_id,
+          sku: product.glide_row_id,
           description: product.purchase_notes || '', 
           price: 0, // Would need to be calculated from invoice lines
           cost: Number(product.cost || 0),
