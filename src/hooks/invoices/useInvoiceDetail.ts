@@ -69,7 +69,7 @@ export function useInvoiceDetail() {
         notes: item.product_sale_note || '',
         createdAt: new Date(item.created_at),
         updatedAt: new Date(item.updated_at),
-        productDetails: item.product
+        productDetails: item.product || undefined
       }));
       
       const formattedPayments: InvoicePayment[] = payments.map(payment => ({

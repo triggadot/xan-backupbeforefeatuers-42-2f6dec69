@@ -24,6 +24,20 @@ export function usePurchaseOrderDetail() {
         
       if (poError) throw poError;
       
+      // Safely get vendor name with null checks
+      let vendorName = 'Unknown Vendor';
+      let vendorData = undefined;
+      
+      if (purchaseOrder.vendor && 
+          typeof purchaseOrder.vendor === 'object' && 
+          purchaseOrder.vendor !== null) {
+        vendorData = purchaseOrder.vendor;
+        
+        if (hasProperty(purchaseOrder.vendor, 'account_name')) {
+          vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
+        }
+      }
+      
       // Get products for this PO
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
@@ -39,26 +53,6 @@ export function usePurchaseOrderDetail() {
         .eq('rowid_purchase_orders', purchaseOrder.glide_row_id);
         
       if (paymentsError) throw paymentsError;
-      
-      // Safely get vendor name with null checks
-      let vendorName = 'Unknown Vendor';
-      let vendorData = undefined;
-      
-      if (purchaseOrder.vendor && 
-          typeof purchaseOrder.vendor === 'object' && 
-          purchaseOrder.vendor !== null) {
-        vendorData = purchaseOrder.vendor;
-        
-        if (hasProperty(purchaseOrder.vendor, 'account_name')) {
-          vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
-        }
-        
-        // Get the accounts_uid from the vendor
-        if (hasProperty(purchaseOrder.vendor, 'accounts_uid')) {
-          // We have the accounts_uid
-          console.log('Vendor accounts_uid:', purchaseOrder.vendor.accounts_uid);
-        }
-      }
       
       // Format products
       const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
