@@ -59,7 +59,7 @@ export interface EstimateWithDetails extends Estimate {
   account?: GlAccount; // Add this to support operations in the code
 }
 
-// Add the missing EstimateFilters interface
+// Add the EstimateFilters interface
 export interface EstimateFilters {
   status?: 'pending' | 'draft' | 'converted';
   accountId?: string;
@@ -67,7 +67,7 @@ export interface EstimateFilters {
   toDate?: string;
 }
 
-// Add PurchaseOrder interface to fix issues in PurchaseOrderDetail.tsx
+// Update PurchaseOrder interface to fix issues in PurchaseOrderDetail.tsx
 export interface PurchaseOrder {
   id: string;
   glide_row_id: string;
@@ -80,6 +80,8 @@ export interface PurchaseOrder {
   vendorId?: string;
   vendorName?: string;
   notes?: string;
+  lineItems: any[];
+  vendorPayments: any[];
   products?: any[];
   payments?: any[];
 }

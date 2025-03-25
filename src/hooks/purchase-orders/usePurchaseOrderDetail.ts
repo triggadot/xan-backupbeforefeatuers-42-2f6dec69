@@ -77,15 +77,18 @@ export function usePurchaseOrderDetail() {
         updatedAt: new Date(payment.updated_at)
       }));
       
-      // If data.vendor is valid, extract the vendor name
+      // If data.vendor is valid, extract the vendor name - add null check
       let vendorName = 'Unknown Vendor';
-      if (data.vendor && typeof data.vendor === 'object') {
-        vendorName = data.vendor?.account_name || 'Unknown Vendor';
+      if (data.vendor && typeof data.vendor === 'object' && data.vendor !== null) {
+        vendorName = data.vendor.account_name || 'Unknown Vendor';
       }
       
       // Convert dates
       const poDate = data.po_date ? new Date(data.po_date) : null;
       const paymentDate = data.date_payment_date_mddyyyy ? new Date(data.date_payment_date_mddyyyy) : null;
+      
+      // Add notes with null check
+      const notes = data.notes || '';
       
       // Map the purchase order
       const purchaseOrder = {
@@ -106,7 +109,7 @@ export function usePurchaseOrderDetail() {
         pdfLink: data.pdf_link,
         docsShortLink: data.docs_shortlink,
         purchaseOrderUid: data.purchase_order_uid,
-        notes: '', // Add empty notes since it doesn't exist in the data
+        notes, // Use the notes variable from above
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
         products: mappedProducts,
@@ -114,6 +117,37 @@ export function usePurchaseOrderDetail() {
         // Add these fields to match the PurchaseOrder interface
         number: data.purchase_order_uid || '',
         date: data.po_date || '',
+        // Add lineItems and vendorPayments to match the expected PurchaseOrder interface
+        lineItems: mappedProducts.map(p => ({
+          id: p.id,
+          product_name: p.name,
+          description: p.notes,
+          quantity: p.quantity,
+          unit_price: p.cost,
+          unitPrice: p.cost,
+          total: p.totalCost,
+          rowid_products: p.glideRowId,
+          productDetails: {
+            id: p.id,
+            glide_row_id: p.glideRowId,
+            name: p.name,
+            display_name: p.displayName,
+            vendor_product_name: p.vendorProductName,
+            new_product_name: p.newProductName,
+            cost: p.cost,
+            total_qty_purchased: p.quantity,
+            category: p.category,
+            product_image1: p.imageUrl,
+            purchase_notes: p.notes
+          }
+        })),
+        vendorPayments: mappedPayments.map(p => ({
+          id: p.id,
+          date: p.paymentDate,
+          amount: p.amount,
+          method: '',
+          notes: p.notes
+        }))
       };
       
       return purchaseOrder;
