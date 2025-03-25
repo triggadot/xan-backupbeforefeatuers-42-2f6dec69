@@ -1,11 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  ProductRow,
   asNumber,
   asBoolean,
   asDate,
@@ -69,32 +67,29 @@ export function useProducts() {
       if (error) throw error;
       
       const mappedProducts = (data || []).map((row: ProductViewRow): Product => {
-        // Cast the raw row to a more strongly typed ProductRow
-        const product = row as unknown as ProductRow;
-        
         return {
-          id: String(product.id || product.glide_row_id || ''),
-          name: String(product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product'),
-          sku: String(product.glide_row_id || ''),
-          description: String(product.purchase_notes || ''), 
+          id: String(row.id || row.glide_row_id || ''),
+          name: String(row.display_name || row.new_product_name || row.vendor_product_name || 'Unnamed Product'),
+          sku: String(row.glide_row_id || ''),
+          description: String(row.purchase_notes || ''), 
           price: 0, // Would need to be calculated from invoice lines
-          cost: asNumber(product.cost || 0),
-          quantity: asNumber(product.total_qty_purchased || 0),
-          category: String(product.category || ''),
+          cost: asNumber(row.cost || 0),
+          quantity: asNumber(row.total_qty_purchased || 0),
+          category: String(row.category || ''),
           status: 'active',
-          imageUrl: String(product.product_image1 || ''),
-          vendorName: String(product.vendor_name || ''),
-          vendorId: String(product.vendor_glide_id || product.rowid_accounts || ''),
-          createdAt: asDate(product.created_at) || new Date(),
-          updatedAt: asDate(product.updated_at) || new Date(),
+          imageUrl: String(row.product_image1 || ''),
+          vendorName: String(row.vendor_name || ''),
+          vendorId: String(row.vendor_glide_id || row.rowid_accounts || ''),
+          createdAt: asDate(row.created_at) || new Date(),
+          updatedAt: asDate(row.updated_at) || new Date(),
           // Additional fields from the database
-          isSample: asBoolean(product.samples || false),
-          isFronted: asBoolean(product.fronted || false),
-          isMiscellaneous: asBoolean(product.miscellaneous_items || false),
-          purchaseDate: asDate(product.product_purchase_date),
-          frontedTerms: String(product.terms_for_fronted_product || ''),
-          totalUnitsBehindSample: asNumber(product.total_units_behind_sample || 0),
-          rawData: product
+          isSample: asBoolean(row.samples || false),
+          isFronted: asBoolean(row.fronted || false),
+          isMiscellaneous: asBoolean(row.miscellaneous_items || false),
+          purchaseDate: asDate(row.product_purchase_date),
+          frontedTerms: String(row.terms_for_fronted_product || ''),
+          totalUnitsBehindSample: asNumber(row.total_units_behind_sample || 0),
+          rawData: row
         };
       });
       
@@ -139,8 +134,7 @@ export function useProducts() {
         if (!data) throw new Error('Product not found');
         
         // Extract vendorData safely
-        const product = data as unknown as ProductRow;
-        const vendorData = product.gl_accounts;
+        const vendorData = data.gl_accounts;
         let vendorName = '';
         let vendorUid = '';
         
@@ -150,28 +144,28 @@ export function useProducts() {
         }
         
         return {
-          id: String(product.id || ''),
-          name: String(product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product'),
-          sku: String(product.glide_row_id || ''),
-          description: String(product.purchase_notes || ''),
+          id: String(data.id || ''),
+          name: String(data.display_name || data.new_product_name || data.vendor_product_name || 'Unnamed Product'),
+          sku: String(data.glide_row_id || ''),
+          description: String(data.purchase_notes || ''),
           price: 0, // Would need to be calculated from invoice lines
-          cost: asNumber(product.cost || 0),
-          quantity: asNumber(product.total_qty_purchased || 0),
-          category: String(product.category || ''),
+          cost: asNumber(data.cost || 0),
+          quantity: asNumber(data.total_qty_purchased || 0),
+          category: String(data.category || ''),
           status: 'active',
-          imageUrl: String(product.product_image1 || ''),
+          imageUrl: String(data.product_image1 || ''),
           vendorName: vendorName,
-          vendorId: String(product.rowid_accounts || ''),
-          createdAt: asDate(product.created_at) || new Date(),
-          updatedAt: asDate(product.updated_at) || new Date(),
+          vendorId: String(data.rowid_accounts || ''),
+          createdAt: asDate(data.created_at) || new Date(),
+          updatedAt: asDate(data.updated_at) || new Date(),
           // Add additional fields
-          isSample: asBoolean(product.samples || false),
-          isFronted: asBoolean(product.fronted || false),
-          isMiscellaneous: asBoolean(product.miscellaneous_items || false),
-          purchaseDate: asDate(product.product_purchase_date),
-          frontedTerms: String(product.terms_for_fronted_product || ''),
-          totalUnitsBehindSample: asNumber(product.total_units_behind_sample || 0),
-          rawData: product
+          isSample: asBoolean(data.samples || false),
+          isFronted: asBoolean(data.fronted || false),
+          isMiscellaneous: asBoolean(data.miscellaneous_items || false),
+          purchaseDate: asDate(data.product_purchase_date),
+          frontedTerms: String(data.terms_for_fronted_product || ''),
+          totalUnitsBehindSample: asNumber(data.total_units_behind_sample || 0),
+          rawData: data
         } as Product;
       }
       
@@ -184,33 +178,30 @@ export function useProducts() {
         
       if (detailsError) throw detailsError;
       
-      // Cast to our expected row structure
-      const product = mvData as unknown as ProductRow;
-      
       // Map from materialized view data
       return {
-        id: String(product.product_id || product.id || ''),
-        name: String(product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product'),
-        sku: String(product.product_glide_id || product.glide_row_id || ''),
+        id: String(mvData.product_id || mvData.id || ''),
+        name: String(mvData.display_name || mvData.new_product_name || mvData.vendor_product_name || 'Unnamed Product'),
+        sku: String(mvData.product_glide_id || mvData.glide_row_id || ''),
         description: String(detailsData?.purchase_notes || ''),
         price: 0, // Would need to be calculated from invoice lines
-        cost: asNumber(product.cost || 0),
-        quantity: asNumber(product.total_qty_purchased || 0),
-        category: String(product.category || ''),
+        cost: asNumber(mvData.cost || 0),
+        quantity: asNumber(mvData.total_qty_purchased || 0),
+        category: String(mvData.category || ''),
         status: 'active',
-        imageUrl: String(product.product_image1 || ''),
-        vendorName: String(product.vendor_name || ''),
-        vendorId: String(product.vendor_glide_id || product.rowid_accounts || ''),
+        imageUrl: String(mvData.product_image1 || ''),
+        vendorName: String(mvData.vendor_name || ''),
+        vendorId: String(mvData.vendor_glide_id || mvData.rowid_accounts || ''),
         createdAt: asDate(detailsData?.created_at) || new Date(),
         updatedAt: asDate(detailsData?.updated_at) || new Date(),
         // Add additional fields
-        isSample: asBoolean(product.samples || false),
-        isFronted: asBoolean(product.fronted || false),
-        isMiscellaneous: asBoolean(product.miscellaneous_items || false),
-        purchaseDate: asDate(product.product_purchase_date),
+        isSample: asBoolean(mvData.samples || false),
+        isFronted: asBoolean(mvData.fronted || false),
+        isMiscellaneous: asBoolean(mvData.miscellaneous_items || false),
+        purchaseDate: asDate(mvData.product_purchase_date),
         frontedTerms: String(detailsData?.terms_for_fronted_product || ''),
         totalUnitsBehindSample: asNumber(detailsData?.total_units_behind_sample || 0),
-        rawData: { ...product, ...detailsData }
+        rawData: { ...mvData, ...detailsData }
       } as Product;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product';

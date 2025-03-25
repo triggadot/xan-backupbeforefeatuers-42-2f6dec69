@@ -6,12 +6,13 @@ import { PostgrestError } from '@supabase/supabase-js';
 export type SupabaseTableName = keyof Database['public']['Tables'] | 
                                 keyof Database['public']['Views'];
 
-// Expanded PostgrestError type
-export interface SelectQueryError extends PostgrestError {
-  // Additional fields that might be in the error
-  details?: string;
-  hint?: string;
+// Expanded PostgrestError type without extending PostgrestError
+export interface SelectQueryError {
+  // Core PostgrestError properties
+  message: string;
   code?: string;
+  hint?: string;
+  details?: string;
 }
 
 // Utility function to safely cast a string to a valid Supabase table name

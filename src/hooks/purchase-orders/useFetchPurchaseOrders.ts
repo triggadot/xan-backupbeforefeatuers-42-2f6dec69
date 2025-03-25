@@ -67,23 +67,21 @@ export function useFetchPurchaseOrders() {
       if (fetchError) throw fetchError;
       
       // Format the data to match PurchaseOrderWithVendor interface
-      const formattedData: PurchaseOrderWithVendor[] = (data || []).map((row) => {
-        // Convert the raw data to PurchaseOrderRow
-        const po = row as unknown as PurchaseOrderRow;
-        
+      const formattedData: PurchaseOrderWithVendor[] = (data || []).map((row: any) => {
+        // Instead of casting to PurchaseOrderRow, work with raw response
         return {
-          id: po.glide_row_id || '',
-          number: po.purchase_order_uid || po.glide_row_id || '',
-          date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
-          status: (po.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
-          vendorId: po.vendor_id ? String(po.vendor_id) : '',
-          vendorName: po.vendor_name || 'Unknown Vendor',
-          total: asNumber(po.total_amount),
-          balance: asNumber(po.balance),
-          productCount: asNumber(po.product_count) || asNumber(po.product_count_calc) || 0,
-          totalPaid: asNumber(po.total_paid),
-          createdAt: asDate(po.created_at) || new Date(),
-          updatedAt: asDate(po.updated_at) || asDate(po.created_at) || new Date()
+          id: row.glide_row_id || '',
+          number: row.purchase_order_uid || row.glide_row_id || '',
+          date: asDate(row.po_date) || asDate(row.created_at) || new Date(),
+          status: (row.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
+          vendorId: row.vendor_id ? String(row.vendor_id) : '',
+          vendorName: row.vendor_name || 'Unknown Vendor',
+          total: asNumber(row.total_amount),
+          balance: asNumber(row.balance),
+          productCount: asNumber(row.product_count) || asNumber(row.product_count_calc) || 0,
+          totalPaid: asNumber(row.total_paid),
+          createdAt: asDate(row.created_at) || new Date(),
+          updatedAt: asDate(row.updated_at) || asDate(row.created_at) || new Date()
         };
       });
       

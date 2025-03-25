@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceFilters, InvoiceWithCustomer, InvoiceListItem } from '@/types/invoice';
@@ -74,6 +75,7 @@ export function useInvoicesView() {
         let customerName = 'Unknown Customer';
         
         if (invoice.customer && 
+            invoice.customer !== null &&
             isJsonRecord(invoice.customer)) {
           if (hasProperty(invoice.customer, 'account_name')) {
             customerName = String(invoice.customer.account_name) || 'Unknown Customer';
