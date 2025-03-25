@@ -57,7 +57,7 @@ export function InvoiceInfo({ invoice, onAddPayment }: InvoiceInfoProps) {
         
         <div className="grid grid-cols-2 gap-2 mt-1">
           <div className="text-muted-foreground">Amount Paid</div>
-          <div className="font-medium text-right">{formatCurrency(invoice.total_paid || 0)}</div>
+          <div className="font-medium text-right">{formatCurrency(invoice.amountPaid || 0)}</div>
         </div>
         
         <div className="grid grid-cols-2 gap-2 mt-2 text-lg">

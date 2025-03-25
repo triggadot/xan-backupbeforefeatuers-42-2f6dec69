@@ -66,6 +66,8 @@ export function useInvoicesView() {
       
       if (fetchError) throw fetchError;
       
+      if (!data) return [];
+      
       // Map to InvoiceListItem format
       return data.map(invoice => {
         // Safely get customer name with null checks
@@ -86,6 +88,7 @@ export function useInvoicesView() {
           customerId: invoice.rowid_accounts || '',
           customerName: customerName,
           date: new Date(invoice.invoice_order_date || invoice.created_at),
+          // Use optional chaining for due_date in case it doesn't exist
           dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
           total: Number(invoice.total_amount || 0),
           balance: Number(invoice.balance || 0),

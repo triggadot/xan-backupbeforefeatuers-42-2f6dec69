@@ -95,7 +95,8 @@ export function usePurchaseOrderDetail() {
         total_paid: Number(purchaseOrder.total_paid || 0),
         balance: Number(purchaseOrder.balance || 0),
         glide_row_id: purchaseOrder.glide_row_id,
-        rowid_accounts: purchaseOrder.rowid_accounts
+        rowid_accounts: purchaseOrder.rowid_accounts,
+        created_at: purchaseOrder.created_at
       };
     } catch (err) {
       console.error('Error fetching purchase order:', err);

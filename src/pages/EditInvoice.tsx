@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { InvoiceForm } from '@/components/invoices/form/InvoiceForm';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { useToast } from '@/hooks/use-toast';
-import { InvoiceWithDetails as InvoiceViewDetails } from '@/types/invoiceView';
 import { InvoiceWithDetails } from '@/types/invoice';
 
 const EditInvoice: React.FC = () => {

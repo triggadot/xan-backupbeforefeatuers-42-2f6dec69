@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { InvoiceWithDetails } from '@/types/invoice';
@@ -75,7 +75,7 @@ export function InvoiceDetail() {
     if (!invoice) return;
     
     try {
-      await deleteLineItem.mutateAsync(itemId);
+      await deleteLineItem.mutateAsync({ id: itemId });
       
       toast({
         title: 'Success',
@@ -106,7 +106,7 @@ export function InvoiceDetail() {
     if (!invoice) return;
     
     try {
-      await deletePayment.mutateAsync(paymentId);
+      await deletePayment.mutateAsync({ id: paymentId });
       
       toast({
         title: 'Success',

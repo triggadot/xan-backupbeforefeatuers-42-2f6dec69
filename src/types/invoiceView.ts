@@ -12,5 +12,5 @@ export interface InvoiceListItem {
   status: string;
   lineItemsCount: number;
   notes?: string;
-  amountPaid: number; // Added this field
+  amountPaid: number;
 }

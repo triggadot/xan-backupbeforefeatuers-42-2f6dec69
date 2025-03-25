@@ -25,6 +25,7 @@ export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   rowid_accounts?: string;
   glide_row_id: string;
   total_amount: number;
+  created_at?: string;
 }
 
 export interface PurchaseOrderLineItem {
@@ -52,7 +53,7 @@ export interface PurchaseOrderWithVendor {
   id: string;
   number: string;
   date: Date | string;
-  status: EntityStatus;
+  status: string; // Changed from EntityStatus to string
   vendorId: string;
   vendorName: string;
   total: number;

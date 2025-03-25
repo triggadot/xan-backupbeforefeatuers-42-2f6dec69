@@ -89,6 +89,7 @@ export function useInvoiceDetail() {
       // Calculate the total amount paid
       const totalPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
       
+      // Convert to InvoiceWithDetails format
       return {
         id: invoice.id,
         glide_row_id: invoice.glide_row_id || '',
@@ -96,6 +97,7 @@ export function useInvoiceDetail() {
         customerId: invoice.rowid_accounts || '',
         customerName: customerName,
         invoiceDate: invoice.invoice_order_date ? new Date(invoice.invoice_order_date) : new Date(invoice.created_at),
+        dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
         status: (invoice.payment_status || 'draft') as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
         total_amount: Number(invoice.total_amount || 0),
         total_paid: Number(invoice.total_paid || 0),
