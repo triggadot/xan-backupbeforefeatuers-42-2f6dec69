@@ -1,134 +1,165 @@
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrderLineItem } from '@/types/purchaseOrder';
+import { useToast } from '@/hooks/use-toast';
 
 export function useProductOperations() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Add a product to a purchase order
-  const addProduct = useMutation({
-    mutationFn: async ({ 
-      purchaseOrderGlideId, 
-      data 
-    }: { 
-      purchaseOrderGlideId: string, 
-      data: Partial<PurchaseOrderLineItem> 
-    }) => {
+  const addProduct = {
+    mutateAsync: async ({ purchaseOrderGlideId, data }: { purchaseOrderGlideId: string, data: Partial<PurchaseOrderLineItem> }): Promise<PurchaseOrderLineItem | null> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const { data: newProduct, error: productError } = await supabase
+        // Create a unique glide_row_id for the product
+        const productGlideId = `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        
+        // Prepare data for database insert
+        const productData = {
+          glide_row_id: productGlideId,
+          rowid_purchase_orders: purchaseOrderGlideId,
+          vendor_product_name: data.description,
+          new_product_name: data.product_name || data.description,
+          cost: data.unitPrice || data.unit_price,
+          total_qty_purchased: data.quantity,
+          purchase_notes: data.notes
+        };
+        
+        const { data: newProduct, error: createError } = await supabase
           .from('gl_products')
-          .insert({
-            rowid_purchase_orders: purchaseOrderGlideId,
-            vendor_product_name: data.product_name || data.description,
-            new_product_name: data.description,
-            cost: data.unitPrice || data.unit_price,
-            total_qty_purchased: data.quantity,
-            purchase_notes: data.notes
-          })
+          .insert([productData])
           .select()
           .single();
+          
+        if (createError) throw createError;
         
-        if (productError) throw productError;
+        toast({
+          title: 'Success',
+          description: 'Product added successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return newProduct;
+        // Map the database response to our frontend model
+        return {
+          id: newProduct.id,
+          quantity: Number(newProduct.total_qty_purchased || 0),
+          unitPrice: Number(newProduct.cost || 0),
+          total: Number(newProduct.total_qty_purchased || 0) * Number(newProduct.cost || 0),
+          description: newProduct.new_product_name || newProduct.vendor_product_name || 'Unnamed Product',
+          productId: newProduct.glide_row_id,
+          product_name: newProduct.new_product_name || newProduct.vendor_product_name || 'Unnamed Product',
+          unit_price: Number(newProduct.cost || 0),
+          notes: newProduct.purchase_notes || ''
+        };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error adding product';
         setError(errorMessage);
-        console.error('Error adding product:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
-  // Update a product
-  const updateProduct = useMutation({
-    mutationFn: async ({ 
-      id, 
-      data 
-    }: { 
-      id: string, 
-      data: Partial<PurchaseOrderLineItem> 
-    }) => {
+  const updateProduct = {
+    mutateAsync: async ({ id, data }: { id: string, data: Partial<PurchaseOrderLineItem> }): Promise<PurchaseOrderLineItem | null> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const { data: updatedProduct, error: productError } = await supabase
+        const productData: any = {};
+        
+        if (data.description !== undefined) {
+          productData.vendor_product_name = data.description;
+          productData.new_product_name = data.product_name || data.description;
+        }
+        if (data.unitPrice !== undefined || data.unit_price !== undefined) {
+          productData.cost = data.unitPrice || data.unit_price;
+        }
+        if (data.quantity !== undefined) productData.total_qty_purchased = data.quantity;
+        if (data.notes !== undefined) productData.purchase_notes = data.notes;
+        
+        const { data: updatedProduct, error: updateError } = await supabase
           .from('gl_products')
-          .update({
-            vendor_product_name: data.product_name || data.description,
-            new_product_name: data.description,
-            cost: data.unitPrice || data.unit_price,
-            total_qty_purchased: data.quantity,
-            purchase_notes: data.notes
-          })
+          .update(productData)
           .eq('id', id)
           .select()
           .single();
+          
+        if (updateError) throw updateError;
         
-        if (productError) throw productError;
+        toast({
+          title: 'Success',
+          description: 'Product updated successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return updatedProduct;
+        return {
+          id: updatedProduct.id,
+          quantity: Number(updatedProduct.total_qty_purchased || 0),
+          unitPrice: Number(updatedProduct.cost || 0),
+          total: Number(updatedProduct.total_qty_purchased || 0) * Number(updatedProduct.cost || 0),
+          description: updatedProduct.new_product_name || updatedProduct.vendor_product_name || 'Unnamed Product',
+          productId: updatedProduct.glide_row_id,
+          product_name: updatedProduct.new_product_name || updatedProduct.vendor_product_name || 'Unnamed Product',
+          unit_price: Number(updatedProduct.cost || 0),
+          notes: updatedProduct.purchase_notes || ''
+        };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error updating product';
         setError(errorMessage);
-        console.error('Error updating product:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
-  // Delete a product
-  const deleteProduct = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+  const deleteProduct = {
+    mutateAsync: async ({ id }: { id: string }): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const { error: productError } = await supabase
+        const { error: deleteError } = await supabase
           .from('gl_products')
           .delete()
           .eq('id', id);
+          
+        if (deleteError) throw deleteError;
         
-        if (productError) throw productError;
+        toast({
+          title: 'Success',
+          description: 'Product deleted successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return id;
+        return true;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error deleting product';
         setError(errorMessage);
-        console.error('Error deleting product:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
   return {
     addProduct,

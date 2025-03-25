@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { asTable, SupabaseTableName } from '@/utils/supabase';
+import { SupabaseTableName } from '@/utils/supabase';
 
 // Generic hook for basic CRUD operations on any entity
 export function useEntityOperations<T extends { id: string }>(tableName: SupabaseTableName) {
@@ -13,8 +13,10 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     setError(null);
     
     try {
+      // Using type assertion to bypass the type checking issue
+      // since we know tableName is a valid table name at runtime
       const { data, error: fetchError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .select('*');
         
       if (fetchError) throw fetchError;
@@ -36,8 +38,9 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     setError(null);
     
     try {
+      // Using type assertion to bypass the type checking issue
       const { data, error: fetchError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .select('*')
         .eq('id', id)
         .single();
@@ -61,8 +64,9 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     setError(null);
     
     try {
+      // Using type assertion to bypass the type checking issue
       const { data, error: createError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .insert(entity)
         .select()
         .single();
@@ -86,8 +90,9 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     setError(null);
     
     try {
+      // Using type assertion to bypass the type checking issue
       const { data, error: updateError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -112,8 +117,9 @@ export function useEntityOperations<T extends { id: string }>(tableName: Supabas
     setError(null);
     
     try {
+      // Using type assertion to bypass the type checking issue
       const { error: deleteError } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .delete()
         .eq('id', id);
         

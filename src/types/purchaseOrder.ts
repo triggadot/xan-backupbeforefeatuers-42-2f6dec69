@@ -1,8 +1,8 @@
-
-import { EntityBase, EntityStatus, EntityWithAmount } from './common';
+import { EntityStatus, EntityWithAmount } from './common';
 import { GlAccount } from './accounts';
 
-export interface PurchaseOrder extends Omit<EntityBase, 'created_at'>, EntityWithAmount {
+export interface PurchaseOrder {
+  id: string;
   number?: string;
   date?: Date | string;
   status: string;
@@ -25,7 +25,7 @@ export interface PurchaseOrder extends Omit<EntityBase, 'created_at'>, EntityWit
   rowid_accounts?: string;
   glide_row_id: string;
   total_amount: number;
-  created_at: string; // Required but separate from EntityBase
+  created_at: string; // Required for database compatibility
   updated_at?: string; // Optional for future compatibility
 }
 

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment } from '@/types/purchaseOrder';
 import { hasProperty } from '@/types/supabase';
 
 export function usePurchaseOrderDetail() {
@@ -13,7 +13,6 @@ export function usePurchaseOrderDetail() {
     setError(null);
     
     try {
-      // Get purchase order details
       const { data: purchaseOrder, error: poError } = await supabase
         .from('gl_purchase_orders')
         .select(`
@@ -25,7 +24,7 @@ export function usePurchaseOrderDetail() {
         
       if (poError) throw poError;
       
-      // Get products/line items
+      // Get products for this PO
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
@@ -33,7 +32,7 @@ export function usePurchaseOrderDetail() {
         
       if (productsError) throw productsError;
       
-      // Get vendor payments
+      // Get payments for this PO
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
@@ -41,7 +40,7 @@ export function usePurchaseOrderDetail() {
         
       if (paymentsError) throw paymentsError;
       
-      // Get vendor name with null checks
+      // Safely get vendor name with null checks
       let vendorName = 'Unknown Vendor';
       let vendorData = undefined;
       
@@ -55,53 +54,58 @@ export function usePurchaseOrderDetail() {
         }
       }
       
-      // Format line items
-      const lineItems = products.map(product => ({
+      // Format products
+      const lineItems: PurchaseOrderLineItem[] = products.map(product => ({
         id: product.id,
         quantity: Number(product.total_qty_purchased || 0),
         unitPrice: Number(product.cost || 0),
         total: Number(product.total_qty_purchased || 0) * Number(product.cost || 0),
-        description: product.vendor_product_name || product.new_product_name || 'Unknown Product',
-        productId: product.glide_row_id,
+        description: product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+        productId: product.glide_row_id || product.id,
         productDetails: product,
-        product_name: product.vendor_product_name || product.new_product_name || 'Unknown Product',
+        product_name: product.new_product_name || product.vendor_product_name || 'Unnamed Product',
         unit_price: Number(product.cost || 0),
-        notes: product.purchase_notes || '' // Add notes from product
+        notes: product.purchase_notes || ''
       }));
       
-      // Format vendor payments
-      const vendorPayments = payments.map(payment => ({
+      // Format payments
+      const vendorPayments: VendorPayment[] = payments.map(payment => ({
         id: payment.id,
         amount: Number(payment.payment_amount || 0),
-        date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(payment.created_at),
-        method: 'Payment', // Default value as it's not in the database
+        date: payment.date_of_payment || payment.created_at,
+        method: 'Payment',
         notes: payment.vendor_purchase_note || '',
-        vendorId: payment.rowid_accounts || purchaseOrder.rowid_accounts || '' // Add vendorId
+        vendorId: purchaseOrder.rowid_accounts || ''
       }));
       
+      // Return the purchase order
       return {
-        id: purchaseOrder.id,
-        number: purchaseOrder.purchase_order_uid || purchaseOrder.id.substring(0, 8),
+        id: purchaseOrder.glide_row_id,
+        number: purchaseOrder.purchase_order_uid || purchaseOrder.glide_row_id,
         date: purchaseOrder.po_date ? new Date(purchaseOrder.po_date) : new Date(purchaseOrder.created_at),
         status: purchaseOrder.payment_status || 'draft',
-        vendorId: purchaseOrder.rowid_accounts,
+        vendorId: purchaseOrder.rowid_accounts || '',
         vendorName: vendorName,
         vendor: vendorData,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
-        notes: '', // Default empty notes since it doesn't exist in DB
         subtotal: Number(purchaseOrder.total_amount || 0),
-        tax: 0, // Not stored directly
-        total_amount: Number(purchaseOrder.total_amount || 0),
-        total_paid: Number(purchaseOrder.total_paid || 0),
+        tax: 0, // No tax field in the database
+        dueDate: purchaseOrder.date_payment_date_mddyyyy ? new Date(purchaseOrder.date_payment_date_mddyyyy) : undefined,
+        amountPaid: Number(purchaseOrder.total_paid || 0),
         balance: Number(purchaseOrder.balance || 0),
+        total: Number(purchaseOrder.total_amount || 0),
+        total_paid: Number(purchaseOrder.total_paid || 0),
+        rowid_accounts: purchaseOrder.rowid_accounts || '',
         glide_row_id: purchaseOrder.glide_row_id,
-        rowid_accounts: purchaseOrder.rowid_accounts,
-        created_at: purchaseOrder.created_at // Required by the interface
+        total_amount: Number(purchaseOrder.total_amount || 0),
+        created_at: purchaseOrder.created_at,
+        updated_at: purchaseOrder.updated_at
       };
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase order';
+      setError(errorMessage);
       console.error('Error fetching purchase order:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error fetching purchase order');
       return null;
     } finally {
       setIsLoading(false);

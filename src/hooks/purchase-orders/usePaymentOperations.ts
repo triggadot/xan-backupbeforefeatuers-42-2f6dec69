@@ -1,145 +1,156 @@
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { VendorPayment } from '@/types/purchaseOrder';
+import { useToast } from '@/hooks/use-toast';
 
 export function usePaymentOperations() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Add a payment to a purchase order
-  const addPayment = useMutation({
-    mutationFn: async ({ 
-      purchaseOrderGlideId, 
-      data,
-      vendorId 
-    }: { 
-      purchaseOrderGlideId: string, 
-      data: Partial<VendorPayment>,
-      vendorId: string 
-    }) => {
+  const addPayment = {
+    mutateAsync: async ({ purchaseOrderGlideId, data, vendorId }: { purchaseOrderGlideId: string, data: Partial<VendorPayment>, vendorId: string }): Promise<VendorPayment | null> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const { data: newPayment, error: paymentError } = await supabase
+        // Create a unique glide_row_id for the payment
+        const paymentGlideId = `VPAY-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        
+        // Prepare data for database insert
+        const paymentData = {
+          glide_row_id: paymentGlideId,
+          rowid_purchase_orders: purchaseOrderGlideId,
+          rowid_accounts: vendorId,
+          payment_amount: data.amount,
+          date_of_payment: data.date instanceof Date ? data.date.toISOString() : data.date,
+          vendor_purchase_note: data.notes || ''
+        };
+        
+        const { data: newPayment, error: createError } = await supabase
           .from('gl_vendor_payments')
-          .insert({
-            rowid_purchase_orders: purchaseOrderGlideId,
-            rowid_accounts: vendorId,
-            payment_amount: data.amount,
-            date_of_payment: data.date instanceof Date ? data.date.toISOString() : data.date,
-            vendor_purchase_note: data.notes
-          })
+          .insert([paymentData])
           .select()
           .single();
+          
+        if (createError) throw createError;
         
-        if (paymentError) throw paymentError;
+        toast({
+          title: 'Success',
+          description: 'Payment added successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return newPayment;
+        // Map the database response to our frontend model
+        return {
+          id: newPayment.id,
+          amount: Number(newPayment.payment_amount || 0),
+          date: newPayment.date_of_payment || newPayment.created_at,
+          method: 'Payment',
+          notes: newPayment.vendor_purchase_note || '',
+          vendorId: vendorId
+        };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error adding payment';
         setError(errorMessage);
-        console.error('Error adding payment:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
-  // Update a payment
-  const updatePayment = useMutation({
-    mutationFn: async ({ 
-      id, 
-      data,
-      vendorId 
-    }: { 
-      id: string, 
-      data: Partial<VendorPayment>,
-      vendorId?: string
-    }) => {
+  const updatePayment = {
+    mutateAsync: async ({ id, data }: { id: string, data: Partial<VendorPayment> }): Promise<VendorPayment | null> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const updateData: any = {
-          payment_amount: data.amount,
-          vendor_purchase_note: data.notes
-        };
+        const paymentData: any = {};
         
-        if (data.date) {
-          updateData.date_of_payment = data.date instanceof Date ? 
-            data.date.toISOString() : data.date;
+        if (data.amount !== undefined) paymentData.payment_amount = data.amount;
+        if (data.date !== undefined) {
+          paymentData.date_of_payment = data.date instanceof Date 
+            ? data.date.toISOString() 
+            : data.date;
         }
+        if (data.notes !== undefined) paymentData.vendor_purchase_note = data.notes;
         
-        if (vendorId) {
-          updateData.rowid_accounts = vendorId;
-        }
-        
-        const { data: updatedPayment, error: paymentError } = await supabase
+        const { data: updatedPayment, error: updateError } = await supabase
           .from('gl_vendor_payments')
-          .update(updateData)
+          .update(paymentData)
           .eq('id', id)
           .select()
           .single();
+          
+        if (updateError) throw updateError;
         
-        if (paymentError) throw paymentError;
+        toast({
+          title: 'Success',
+          description: 'Payment updated successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return updatedPayment;
+        return {
+          id: updatedPayment.id,
+          amount: Number(updatedPayment.payment_amount || 0),
+          date: updatedPayment.date_of_payment || updatedPayment.created_at,
+          method: 'Payment',
+          notes: updatedPayment.vendor_purchase_note || '',
+          vendorId: updatedPayment.rowid_accounts || ''
+        };
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error updating payment';
         setError(errorMessage);
-        console.error('Error updating payment:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
-  // Delete a payment
-  const deletePayment = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+  const deletePayment = {
+    mutateAsync: async ({ id }: { id: string }): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const { error: paymentError } = await supabase
+        const { error: deleteError } = await supabase
           .from('gl_vendor_payments')
           .delete()
           .eq('id', id);
+          
+        if (deleteError) throw deleteError;
         
-        if (paymentError) throw paymentError;
+        toast({
+          title: 'Success',
+          description: 'Payment deleted successfully.',
+        });
         
-        // Trigger PO totals update via DB trigger
-        
-        return id;
+        return true;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        const errorMessage = err instanceof Error ? err.message : 'Error deleting payment';
         setError(errorMessage);
-        console.error('Error deleting payment:', err);
-        throw err;
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
       } finally {
         setIsLoading(false);
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
     }
-  });
+  };
 
   return {
     addPayment,

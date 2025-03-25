@@ -1,4 +1,3 @@
-
 import { EntityBase, EntityStatus, EntityWithAccount, EntityWithAmount, EntityWithStatus } from './common';
 import { GlAccount } from './accounts';
 
@@ -61,6 +60,21 @@ export interface InvoiceWithDetails extends Invoice {
   subtotal: number;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface InvoiceWithCustomer {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  invoiceDate: Date;
+  dueDate: Date;
+  status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
+  amount: number;
+  amountPaid: number;
+  balance: number;
+  createdAt: Date;
+  updatedAt?: Date;
+  customer?: GlAccount;
 }
 
 export interface InvoiceFilters {

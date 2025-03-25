@@ -1,11 +1,24 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceFilters, InvoiceWithCustomer } from '@/types/invoice';
 import { hasProperty } from '@/types/supabase';
+import { useInvoiceLineItems } from './useInvoiceLineItems';
+import { useInvoicePayments } from './useInvoicePayments';
+import { useInvoiceDetail } from './useInvoiceDetail';
+import { useInvoiceDeletion } from './useInvoiceDeletion';
+import { useToast } from '@/hooks/use-toast';
 
 export function useInvoicesView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  // Import functionality from smaller hooks
+  const lineItemHooks = useInvoiceLineItems();
+  const paymentHooks = useInvoicePayments();
+  const detailHook = useInvoiceDetail();
+  const deletionHook = useInvoiceDeletion();
   
   const fetchInvoices = useCallback(async (filters?: InvoiceFilters): Promise<InvoiceWithCustomer[]> => {
     setIsLoading(true);
@@ -87,7 +100,8 @@ export function useInvoicesView() {
           amountPaid: Number(invoice.total_paid || 0),
           balance: Number(invoice.balance || 0),
           createdAt: new Date(invoice.created_at),
-          updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined
+          updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined,
+          customer: invoice.customer
         };
       });
     } catch (err) {
@@ -100,9 +114,18 @@ export function useInvoicesView() {
     }
   }, []);
   
+  // Combine all the hooks' methods
   return {
     fetchInvoices,
-    isLoading,
-    error
+    getInvoice: detailHook.getInvoice,
+    addLineItem: lineItemHooks.addLineItem,
+    updateLineItem: lineItemHooks.updateLineItem,
+    deleteLineItem: lineItemHooks.deleteLineItem,
+    addPayment: paymentHooks.addPayment,
+    updatePayment: paymentHooks.updatePayment,
+    deletePayment: paymentHooks.deletePayment,
+    deleteInvoice: deletionHook?.deleteInvoice || (async () => Promise.resolve(false)),
+    isLoading: isLoading || lineItemHooks.isLoading || paymentHooks.isLoading || detailHook.isLoading,
+    error: error || lineItemHooks.error || paymentHooks.error || detailHook.error
   };
 }
