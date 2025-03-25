@@ -87,8 +87,9 @@ export function usePurchaseOrderDetail() {
       const poDate = data.po_date ? new Date(data.po_date) : null;
       const paymentDate = data.date_payment_date_mddyyyy ? new Date(data.date_payment_date_mddyyyy) : null;
       
-      // Add notes with null check
-      const notes = data.notes || '';
+      // Add notes - we'll check if it exists in the data
+      // In the database schema, notes might not be defined for gl_purchase_orders
+      const notes = data.purchase_notes || data.notes || '';
       
       // Map the purchase order
       const purchaseOrder = {
@@ -116,7 +117,7 @@ export function usePurchaseOrderDetail() {
         payments: mappedPayments,
         // Add these fields to match the PurchaseOrder interface
         number: data.purchase_order_uid || '',
-        date: data.po_date || '',
+        date: data.po_date ? new Date(data.po_date) : new Date(), // Convert to Date instead of string
         // Add lineItems and vendorPayments to match the expected PurchaseOrder interface
         lineItems: mappedProducts.map(p => ({
           id: p.id,
