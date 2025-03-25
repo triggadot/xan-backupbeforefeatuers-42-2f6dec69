@@ -1,41 +1,20 @@
-import { useState, useCallback } from 'react';
+
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { PostgrestResponse } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
-// Define allowed table names as a type to avoid excessive type instantiation
-type SupabaseTable = 
-  | 'gl_accounts'
-  | 'gl_connections'
-  | 'gl_customer_credits'
-  | 'gl_customer_payments'
-  | 'gl_estimate_lines'
-  | 'gl_estimates'
-  | 'gl_expenses'
-  | 'gl_invoice_lines'
-  | 'gl_invoices'
-  | 'gl_mappings'
-  | 'gl_products'
-  | 'gl_purchase_orders'
-  | 'gl_shipping_records'
-  | 'gl_sync_errors'
-  | 'gl_sync_logs'
-  | 'gl_vendor_payments'
-  | 'profiles';
+// Define simple types to prevent deep instantiation issues
+type TableRecord = Record<string, any>;
+type RecordId = string | number;
 
-interface EntityOperationsConfig {
-  tableName: SupabaseTable;
-  entityName: string;
-}
-
-/**
- * A reusable hook for common entity operations (fetch, create, update, delete)
- */
-export function useEntityOperations<T>({ tableName, entityName }: EntityOperationsConfig) {
+export function useEntityOperations<T extends TableRecord>(tableName: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchEntities = useCallback(async (filters?: Record<string, any>) => {
+  // Fetch all records with optional filters
+  const fetchAll = async (filters?: Record<string, any>): Promise<T[]> => {
     setIsLoading(true);
     setError(null);
     
@@ -43,14 +22,12 @@ export function useEntityOperations<T>({ tableName, entityName }: EntityOperatio
       let query = supabase
         .from(tableName)
         .select('*');
-      
+        
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== '') {
             if (Array.isArray(value)) {
               query = query.in(key, value);
-            } else if (typeof value === 'string' && value.includes('%')) {
-              query = query.ilike(key, value);
             } else {
               query = query.eq(key, value);
             }
@@ -58,174 +35,172 @@ export function useEntityOperations<T>({ tableName, entityName }: EntityOperatio
         });
       }
       
-      const { data, error: fetchError } = await query
-        .order('created_at', { ascending: false });
+      const { data, error: apiError } = await query;
       
-      if (fetchError) throw fetchError;
+      if (apiError) {
+        throw apiError;
+      }
       
-      return { data: data as T[], error: null };
+      return data as T[];
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Error fetching ${entityName}`;
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
-      console.error(`Error in useEntityOperations.fetchEntities for ${entityName}:`, err);
-      
       toast({
-        title: `Error fetching ${entityName}`,
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
-      
-      return { data: [] as T[], error: err };
+      return [];
     } finally {
       setIsLoading(false);
     }
-  }, [tableName, entityName, toast]);
-  
-  const getEntity = useCallback(async (id: string) => {
+  };
+
+  // Fetch a single record by ID
+  const fetchById = async (id: RecordId): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const { data, error: fetchError } = await supabase
+      const { data, error: apiError } = await supabase
         .from(tableName)
         .select('*')
         .eq('id', id)
         .single();
-      
-      if (fetchError) throw fetchError;
+        
+      if (apiError) {
+        throw apiError;
+      }
       
       return data as T;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Error fetching ${entityName}`;
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
       setError(errorMessage);
-      console.error(`Error in useEntityOperations.getEntity for ${entityName}:`, err);
-      
       toast({
-        title: `Error fetching ${entityName}`,
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
-      
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [tableName, entityName, toast]);
-  
-  const createEntity = useCallback(async (data: Partial<T>) => {
+  };
+
+  // Create a new record
+  const create = async (data: Partial<T>): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const { data: newEntity, error: createError } = await supabase
+      const { data: newRecord, error: apiError } = await supabase
         .from(tableName)
-        .insert([data])
+        .insert(data)
         .select()
         .single();
-      
-      if (createError) throw createError;
+        
+      if (apiError) {
+        throw apiError;
+      }
       
       toast({
-        title: `${entityName} Created`,
-        description: `New ${entityName.toLowerCase()} has been created successfully.`
+        title: 'Success',
+        description: 'Record created successfully',
       });
       
-      return newEntity as T;
+      return newRecord as T;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Error creating ${entityName}`;
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating data';
       setError(errorMessage);
-      console.error(`Error in useEntityOperations.createEntity for ${entityName}:`, err);
-      
       toast({
-        title: `Error creating ${entityName}`,
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
-      
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [tableName, entityName, toast]);
-  
-  const updateEntity = useCallback(async (id: string, data: Partial<T>) => {
+  };
+
+  // Update an existing record
+  const update = async (id: RecordId, data: Partial<T>): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const { data: updatedEntity, error: updateError } = await supabase
+      const { data: updatedRecord, error: apiError } = await supabase
         .from(tableName)
         .update(data)
         .eq('id', id)
         .select()
         .single();
-      
-      if (updateError) throw updateError;
+        
+      if (apiError) {
+        throw apiError;
+      }
       
       toast({
-        title: `${entityName} Updated`,
-        description: `${entityName} has been updated successfully.`
+        title: 'Success',
+        description: 'Record updated successfully',
       });
       
-      return updatedEntity as T;
+      return updatedRecord as T;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Error updating ${entityName}`;
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while updating data';
       setError(errorMessage);
-      console.error(`Error in useEntityOperations.updateEntity for ${entityName}:`, err);
-      
       toast({
-        title: `Error updating ${entityName}`,
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
-      
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [tableName, entityName, toast]);
-  
-  const deleteEntity = useCallback(async (id: string) => {
+  };
+
+  // Remove a record
+  const remove = async (id: RecordId): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const { error: deleteError } = await supabase
+      const { error: apiError } = await supabase
         .from(tableName)
         .delete()
         .eq('id', id);
-      
-      if (deleteError) throw deleteError;
+        
+      if (apiError) {
+        throw apiError;
+      }
       
       toast({
-        title: `${entityName} Deleted`,
-        description: `${entityName} has been deleted successfully.`
+        title: 'Success',
+        description: 'Record deleted successfully',
       });
       
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Error deleting ${entityName}`;
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while deleting data';
       setError(errorMessage);
-      console.error(`Error in useEntityOperations.deleteEntity for ${entityName}:`, err);
-      
       toast({
-        title: `Error deleting ${entityName}`,
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
-      
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [tableName, entityName, toast]);
-  
+  };
+
   return {
-    fetchEntities,
-    getEntity,
-    createEntity,
-    updateEntity,
-    deleteEntity,
+    fetchAll,
+    fetchById,
+    create,
+    update,
+    remove,
     isLoading,
     error
   };
