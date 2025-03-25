@@ -4,6 +4,9 @@ import { Database } from '@/integrations/supabase/types';
 // Define table names as a union type for type safety
 export type SupabaseTableName = keyof Database['public']['Tables'] | keyof Database['public']['Views'];
 
+// Define a string literal type for direct table access (used by supabase client)
+export type DirectTableAccess = string;
+
 // Extract row type from a table name
 export type TableRow<T extends SupabaseTableName> = 
   T extends keyof Database['public']['Tables'] 
@@ -41,7 +44,20 @@ export function asEntityRecord<T extends EntityRecord>(value: unknown): T {
   return value as T;
 }
 
+// Type guard to check if an array only contains EntityRecords
+export function isEntityRecordArray(values: unknown[]): values is EntityRecord[] {
+  return values.every(isEntityRecord);
+}
+
 // Type assertion helper for casting database results array to the expected type array
 export function asEntityRecordArray<T extends EntityRecord>(values: unknown[]): T[] {
-  return values.map(value => asEntityRecord<T>(value));
+  if (!Array.isArray(values) || !values.every(isEntityRecord)) {
+    throw new Error('Values array contains non-EntityRecord items');
+  }
+  return values as T[];
+}
+
+// Helper to safely cast to any table to avoid TypeScript errors with Supabase client
+export function asTable(tableName: SupabaseTableName): DirectTableAccess {
+  return tableName as string;
 }

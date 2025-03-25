@@ -42,10 +42,13 @@ export function usePurchaseOrderDetail() {
       
       // Safely get vendor name with proper null checks
       let vendorName = 'Unknown Vendor';
+      let vendorData = undefined;
       
       if (purchaseOrder.vendor && 
           typeof purchaseOrder.vendor === 'object' && 
           purchaseOrder.vendor !== null) {
+        vendorData = purchaseOrder.vendor;
+        
         if (hasProperty(purchaseOrder.vendor, 'account_name')) {
           vendorName = purchaseOrder.vendor.account_name || 'Unknown Vendor';
         }
@@ -81,12 +84,13 @@ export function usePurchaseOrderDetail() {
       
       return {
         id: purchaseOrder.id,
-        glide_row_id: purchaseOrder.glide_row_id,
+        glide_row_id: purchaseOrder.glide_row_id || '',
         number: purchaseOrder.purchase_order_uid || purchaseOrder.glide_row_id || '',
         date: purchaseOrder.po_date ? new Date(purchaseOrder.po_date) : new Date(purchaseOrder.created_at),
         status: purchaseOrder.payment_status || 'draft',
         vendorId: purchaseOrder.rowid_accounts || '',
         vendorName: vendorName,
+        vendor: vendorData,
         notes: notes,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
@@ -99,7 +103,7 @@ export function usePurchaseOrderDetail() {
         tax: 0,
         created_at: purchaseOrder.created_at,
         updated_at: purchaseOrder.updated_at || null,
-        rowid_accounts: purchaseOrder.rowid_accounts
+        rowid_accounts: purchaseOrder.rowid_accounts || ''
       };
     } catch (err) {
       console.error('Error fetching purchase order:', err);

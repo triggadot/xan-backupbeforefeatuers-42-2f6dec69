@@ -4,62 +4,34 @@ import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
-import { InvoiceTable } from '@/components/invoices/list/InvoiceTable';
+import { formatCurrency } from '@/utils/format-utils';
 import { InvoiceListItem } from '@/types/invoiceView';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
 
 export default function Invoices() {
   const navigate = useNavigate();
-  const { fetchInvoices, deleteInvoice, isLoading } = useInvoicesView();
+  const { fetchInvoices, isLoading } = useInvoicesView();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceListItem | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   
   useEffect(() => {
+    const loadInvoices = async () => {
+      const data = await fetchInvoices();
+      setInvoices(data);
+    };
+    
     loadInvoices();
-  }, []);
-  
-  const loadInvoices = async () => {
-    const data = await fetchInvoices();
-    setInvoices(data);
-  };
+  }, [fetchInvoices]);
   
   const handleCreateInvoice = () => {
     navigate('/invoices/new');
   };
   
-  const handleEditInvoice = (invoice: InvoiceListItem) => {
-    navigate(`/invoices/${invoice.id}/edit`);
-  };
-  
-  const handleDeleteInvoice = async () => {
-    if (selectedInvoice) {
-      try {
-        await deleteInvoice.mutateAsync(selectedInvoice.id);
-        setShowDeleteDialog(false);
-        setSelectedInvoice(null);
-        loadInvoices();
-      } catch (error) {
-        console.error('Error deleting invoice:', error);
-      }
-    }
-  };
-  
-  const confirmDelete = (invoice: InvoiceListItem) => {
-    setSelectedInvoice(invoice);
-    setShowDeleteDialog(true);
+  const handleInvoiceClick = (invoice: InvoiceListItem) => {
+    navigate(`/invoices/${invoice.id}`);
   };
   
   const filteredInvoices = invoices.filter(invoice => {
@@ -78,7 +50,12 @@ export default function Invoices() {
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-10 w-full mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-60 w-full" />
+          <Skeleton className="h-60 w-full" />
+          <Skeleton className="h-60 w-full" />
+        </div>
       </div>
     );
   }
@@ -107,36 +84,60 @@ export default function Invoices() {
         </TabsList>
         
         <TabsContent value={activeTab}>
-          <InvoiceTable
-            data={filteredInvoices}
-            onEdit={handleEditInvoice}
-            onDelete={confirmDelete}
-            onCreateInvoice={handleCreateInvoice}
-          />
+          {filteredInvoices.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredInvoices.map((invoice) => (
+                <Card 
+                  key={invoice.id} 
+                  className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleInvoiceClick(invoice)}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1 truncate">Invoice #{invoice.invoiceNumber}</h3>
+                        
+                        <div className="text-sm text-muted-foreground mb-2 truncate">
+                          {invoice.customerName}
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(invoice.date).toLocaleDateString()}
+                        </div>
+                        
+                        <div className="mt-4 flex items-center justify-between">
+                          <StatusBadge status={invoice.status} />
+                          
+                          <div className="text-right">
+                            <div className="font-medium">
+                              {formatCurrency(invoice.total)}
+                            </div>
+                            {invoice.amountPaid > 0 && invoice.amountPaid < invoice.total && (
+                              <div className="text-xs text-muted-foreground">
+                                {formatCurrency(invoice.amountPaid)} paid
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <h3 className="font-medium text-lg mb-2">No invoices found</h3>
+                <p className="text-muted-foreground mb-4">Create your first invoice to get started.</p>
+                <Button onClick={handleCreateInvoice}>
+                  <Plus className="mr-2 h-4 w-4" /> Create Invoice
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
-      
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the invoice 
-              {selectedInvoice && ` "${selectedInvoice.invoiceNumber}"`} 
-              and all of its associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteInvoice}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

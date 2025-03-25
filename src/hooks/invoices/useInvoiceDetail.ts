@@ -60,7 +60,7 @@ export function useInvoiceDetail() {
       // Convert from DB format to InvoiceWithDetails format
       const formattedLineItems = lineItems.map(item => ({
         id: item.id,
-        invoiceId: invoice.glide_row_id,
+        invoiceId: invoice.glide_row_id || '',
         productId: item.rowid_products || '',
         description: item.renamed_product_name || '',
         productName: item.renamed_product_name || '',
@@ -75,7 +75,7 @@ export function useInvoiceDetail() {
       
       const formattedPayments = payments.map(payment => ({
         id: payment.id,
-        invoiceId: invoice.glide_row_id,
+        invoiceId: invoice.glide_row_id || '',
         accountId: payment.rowid_accounts || '',
         date: payment.date_of_payment ? new Date(payment.date_of_payment) : new Date(payment.created_at),
         amount: Number(payment.payment_amount || 0),
@@ -91,7 +91,7 @@ export function useInvoiceDetail() {
       
       return {
         id: invoice.id,
-        glide_row_id: invoice.glide_row_id,
+        glide_row_id: invoice.glide_row_id || '',
         invoiceNumber: invoice.glide_row_id || invoice.id.substring(0, 8),
         customerId: invoice.rowid_accounts || '',
         customerName: customerName,
