@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from 'react';
-import { GlAccount } from '@/types/account';
-import { supabase } from '@/integrations/supabase/client';
+import { Account } from '@/types/accountNew';
+import { fetchAccountById, fetchAccountRelatedData } from '@/services/accountService';
 import { useToast } from '@/hooks/use-toast';
 
 export function useAccount(id: string) {
-  const [account, setAccount] = useState<GlAccount | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [relatedData, setRelatedData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -21,17 +22,18 @@ export function useAccount(id: string) {
       setError(null);
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('gl_accounts')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (fetchError) {
-          throw fetchError;
+        // Fetch account details
+        const accountData = await fetchAccountById(id);
+        
+        if (!accountData) {
+          throw new Error('Account not found');
         }
         
-        setAccount(data);
+        setAccount(accountData);
+        
+        // Fetch related data
+        const related = await fetchAccountRelatedData(id);
+        setRelatedData(related);
       } catch (err: any) {
         const errorMessage = err?.message || 'Failed to fetch account';
         setError(errorMessage);
@@ -51,5 +53,5 @@ export function useAccount(id: string) {
     loadAccount();
   }, [id, toast]);
 
-  return { account, isLoading, error };
+  return { account, relatedData, isLoading, error };
 }
