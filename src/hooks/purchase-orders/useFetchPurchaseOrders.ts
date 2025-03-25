@@ -68,20 +68,22 @@ export function useFetchPurchaseOrders() {
       
       // Format the data to match PurchaseOrderWithVendor interface
       const formattedData: PurchaseOrderWithVendor[] = (data || []).map((row: any) => {
-        // Instead of casting to PurchaseOrderRow, work with raw response
+        // Treat row as our PurchaseOrderRow type
+        const poRow = row as PurchaseOrderRow;
+        
         return {
-          id: row.glide_row_id || '',
-          number: row.purchase_order_uid || row.glide_row_id || '',
-          date: asDate(row.po_date) || asDate(row.created_at) || new Date(),
-          status: (row.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
-          vendorId: row.vendor_id ? String(row.vendor_id) : '',
-          vendorName: row.vendor_name || 'Unknown Vendor',
-          total: asNumber(row.total_amount),
-          balance: asNumber(row.balance),
+          id: poRow.glide_row_id || '',
+          number: poRow.purchase_order_uid || poRow.glide_row_id || '',
+          date: asDate(poRow.po_date) || asDate(poRow.created_at) || new Date(),
+          status: (poRow.payment_status || 'draft') as PurchaseOrderWithVendor['status'],
+          vendorId: poRow.rowid_accounts ? String(poRow.rowid_accounts) : '',
+          vendorName: row.vendor_name || 'Unknown Vendor',  // From materialized view
+          total: asNumber(poRow.total_amount),
+          balance: asNumber(poRow.balance),
           productCount: asNumber(row.product_count) || asNumber(row.product_count_calc) || 0,
-          totalPaid: asNumber(row.total_paid),
-          createdAt: asDate(row.created_at) || new Date(),
-          updatedAt: asDate(row.updated_at) || asDate(row.created_at) || new Date()
+          totalPaid: asNumber(poRow.total_paid),
+          createdAt: asDate(poRow.created_at) || new Date(),
+          updatedAt: asDate(poRow.updated_at) || asDate(poRow.created_at) || new Date()
         };
       });
       

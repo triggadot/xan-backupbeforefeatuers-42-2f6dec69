@@ -7,40 +7,10 @@ import {
   asNumber,
   asBoolean,
   asDate,
-  isJsonRecord
+  isJsonRecord,
+  ProductViewRow,
+  ProductRow
 } from '@/types/supabase';
-
-// Type for raw data returned from Supabase
-type ProductViewRow = {
-  id?: string | number;
-  product_id?: string;
-  glide_row_id?: string;
-  display_name?: string;
-  new_product_name?: string;
-  vendor_product_name?: string;
-  cost?: number | string;
-  total_qty_purchased?: number | string;
-  category?: string;
-  product_image1?: string;
-  purchase_notes?: string;
-  rowid_accounts?: string;
-  product_purchase_date?: string;
-  po_po_date?: string;
-  samples?: boolean;
-  fronted?: boolean;
-  samples_or_fronted?: boolean;
-  miscellaneous_items?: boolean;
-  terms_for_fronted_product?: string;
-  total_units_behind_sample?: number | string;
-  vendor_name?: string;
-  vendor_id?: string;
-  vendor_uid?: string;
-  vendor_glide_id?: string;
-  product_glide_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: unknown;
-};
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,29 +36,30 @@ export function useProducts() {
       
       if (error) throw error;
       
-      const mappedProducts = (data || []).map((row: ProductViewRow): Product => {
+      const mappedProducts = (data || []).map((row: any): Product => {
+        const viewRow = row as ProductViewRow;
         return {
-          id: String(row.id || row.glide_row_id || ''),
-          name: String(row.display_name || row.new_product_name || row.vendor_product_name || 'Unnamed Product'),
-          sku: String(row.glide_row_id || ''),
-          description: String(row.purchase_notes || ''), 
+          id: String(viewRow.id || viewRow.glide_row_id || ''),
+          name: String(viewRow.display_name || viewRow.new_product_name || viewRow.vendor_product_name || 'Unnamed Product'),
+          sku: String(viewRow.glide_row_id || ''),
+          description: String(viewRow.purchase_notes || ''), 
           price: 0, // Would need to be calculated from invoice lines
-          cost: asNumber(row.cost || 0),
-          quantity: asNumber(row.total_qty_purchased || 0),
-          category: String(row.category || ''),
+          cost: asNumber(viewRow.cost || 0),
+          quantity: asNumber(viewRow.total_qty_purchased || 0),
+          category: String(viewRow.category || ''),
           status: 'active',
-          imageUrl: String(row.product_image1 || ''),
-          vendorName: String(row.vendor_name || ''),
-          vendorId: String(row.vendor_glide_id || row.rowid_accounts || ''),
-          createdAt: asDate(row.created_at) || new Date(),
-          updatedAt: asDate(row.updated_at) || new Date(),
+          imageUrl: String(viewRow.product_image1 || ''),
+          vendorName: String(viewRow.vendor_name || ''),
+          vendorId: String(viewRow.vendor_glide_id || viewRow.rowid_accounts || ''),
+          createdAt: asDate(viewRow.created_at) || new Date(),
+          updatedAt: asDate(viewRow.updated_at) || new Date(),
           // Additional fields from the database
-          isSample: asBoolean(row.samples || false),
-          isFronted: asBoolean(row.fronted || false),
-          isMiscellaneous: asBoolean(row.miscellaneous_items || false),
-          purchaseDate: asDate(row.product_purchase_date),
-          frontedTerms: String(row.terms_for_fronted_product || ''),
-          totalUnitsBehindSample: asNumber(row.total_units_behind_sample || 0),
+          isSample: asBoolean(viewRow.samples || false),
+          isFronted: asBoolean(viewRow.fronted || false),
+          isMiscellaneous: asBoolean(viewRow.miscellaneous_items || false),
+          purchaseDate: asDate(viewRow.product_purchase_date),
+          frontedTerms: String(viewRow.terms_for_fronted_product || ''),
+          totalUnitsBehindSample: asNumber(viewRow.total_units_behind_sample || 0),
           rawData: row
         };
       });
@@ -139,8 +110,12 @@ export function useProducts() {
         let vendorUid = '';
         
         if (vendorData && isJsonRecord(vendorData)) {
-          vendorName = 'account_name' in vendorData ? String(vendorData.account_name || '') : '';
-          vendorUid = 'accounts_uid' in vendorData ? String(vendorData.accounts_uid || '') : '';
+          if ('account_name' in vendorData) {
+            vendorName = String(vendorData.account_name || '');
+          }
+          if ('accounts_uid' in vendorData) {
+            vendorUid = String(vendorData.accounts_uid || '');
+          }
         }
         
         return {
@@ -178,27 +153,32 @@ export function useProducts() {
         
       if (detailsError) throw detailsError;
       
+      // Safely access properties that may not exist
+      const viewRow = mvData as ProductViewRow;
+      const productId = viewRow.id || viewRow.product_id;
+      const productGlideId = viewRow.glide_row_id || viewRow.product_glide_id;
+      
       // Map from materialized view data
       return {
-        id: String(mvData.product_id || mvData.id || ''),
-        name: String(mvData.display_name || mvData.new_product_name || mvData.vendor_product_name || 'Unnamed Product'),
-        sku: String(mvData.product_glide_id || mvData.glide_row_id || ''),
+        id: String(productId || ''),
+        name: String(viewRow.display_name || viewRow.new_product_name || viewRow.vendor_product_name || 'Unnamed Product'),
+        sku: String(productGlideId || ''),
         description: String(detailsData?.purchase_notes || ''),
         price: 0, // Would need to be calculated from invoice lines
-        cost: asNumber(mvData.cost || 0),
-        quantity: asNumber(mvData.total_qty_purchased || 0),
-        category: String(mvData.category || ''),
+        cost: asNumber(viewRow.cost || 0),
+        quantity: asNumber(viewRow.total_qty_purchased || 0),
+        category: String(viewRow.category || ''),
         status: 'active',
-        imageUrl: String(mvData.product_image1 || ''),
-        vendorName: String(mvData.vendor_name || ''),
-        vendorId: String(mvData.vendor_glide_id || mvData.rowid_accounts || ''),
+        imageUrl: String(viewRow.product_image1 || ''),
+        vendorName: String(viewRow.vendor_name || ''),
+        vendorId: String(viewRow.vendor_glide_id || viewRow.rowid_accounts || ''),
         createdAt: asDate(detailsData?.created_at) || new Date(),
         updatedAt: asDate(detailsData?.updated_at) || new Date(),
         // Add additional fields
-        isSample: asBoolean(mvData.samples || false),
-        isFronted: asBoolean(mvData.fronted || false),
-        isMiscellaneous: asBoolean(mvData.miscellaneous_items || false),
-        purchaseDate: asDate(mvData.product_purchase_date),
+        isSample: asBoolean(viewRow.samples || false),
+        isFronted: asBoolean(viewRow.fronted || false),
+        isMiscellaneous: asBoolean(viewRow.miscellaneous_items || false),
+        purchaseDate: asDate(viewRow.product_purchase_date),
         frontedTerms: String(detailsData?.terms_for_fronted_product || ''),
         totalUnitsBehindSample: asNumber(detailsData?.total_units_behind_sample || 0),
         rawData: { ...mvData, ...detailsData }

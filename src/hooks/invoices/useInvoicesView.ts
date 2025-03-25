@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceFilters, InvoiceWithCustomer, InvoiceListItem } from '@/types/invoice';
-import { hasProperty, isJsonRecord } from '@/types/supabase';
+import { hasProperty, isJsonRecord, InvoiceRow } from '@/types/supabase';
 import { useInvoiceLineItems } from './useInvoiceLineItems';
 import { useInvoicePayments } from './useInvoicePayments';
 import { useInvoiceDetail } from './useInvoiceDetail';
@@ -70,42 +70,43 @@ export function useInvoicesView() {
       if (!data) return [];
       
       // Map to InvoiceListItem directly
-      return data.map(invoice => {
+      return data.map((invoice: any) => {
+        const invoiceRow = invoice as InvoiceRow;
         // Safely get customer name with null checks
         let customerName = 'Unknown Customer';
         
-        if (invoice.customer && 
-            invoice.customer !== null &&
-            isJsonRecord(invoice.customer)) {
-          if (hasProperty(invoice.customer, 'account_name')) {
-            customerName = String(invoice.customer.account_name) || 'Unknown Customer';
+        if (invoiceRow.customer && 
+            invoiceRow.customer !== null &&
+            isJsonRecord(invoiceRow.customer)) {
+          if (hasProperty(invoiceRow.customer, 'account_name')) {
+            customerName = String(invoiceRow.customer.account_name || '') || 'Unknown Customer';
           }
         }
         
         // Use invoice_order_date to calculate due date since due_date doesn't exist
-        const invoiceDate = invoice.invoice_order_date 
-          ? new Date(invoice.invoice_order_date) 
-          : new Date(invoice.created_at);
+        const invoiceDate = invoiceRow.invoice_order_date 
+          ? new Date(invoiceRow.invoice_order_date) 
+          : new Date(invoiceRow.created_at || Date.now());
         
         // Add 30 days to invoice date as default due date
         const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
         
         // Create an invoice list item with all the required properties
         return {
-          id: invoice.glide_row_id,
-          invoiceNumber: invoice.glide_row_id,
-          glideRowId: invoice.glide_row_id,
-          customerId: invoice.rowid_accounts || '',
+          id: invoiceRow.glide_row_id || '',
+          invoiceNumber: invoiceRow.glide_row_id || '',
+          glideRowId: invoiceRow.glide_row_id || '',
+          customerId: invoiceRow.rowid_accounts || '',
           customerName: customerName,
           date: invoiceDate,
           dueDate: dueDate,
-          status: invoice.payment_status || 'draft',
-          total: Number(invoice.total_amount || 0),
-          amountPaid: Number(invoice.total_paid || 0),
-          balance: Number(invoice.balance || 0),
+          status: invoiceRow.payment_status || 'draft',
+          total: Number(invoiceRow.total_amount || 0),
+          amountPaid: Number(invoiceRow.total_paid || 0),
+          balance: Number(invoiceRow.balance || 0),
           lineItemsCount: 0, // This would need to be fetched separately if needed
-          createdAt: new Date(invoice.created_at),
-          updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined,
+          createdAt: new Date(invoiceRow.created_at || Date.now()),
+          updatedAt: invoiceRow.updated_at ? new Date(invoiceRow.updated_at) : undefined,
           notes: invoice.notes
         };
       });
