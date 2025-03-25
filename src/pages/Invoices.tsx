@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useInvoicesView } from '@/hooks/invoices/useInvoicesView';
 import { formatCurrency } from '@/utils/format-utils';
-import { InvoiceListItem } from '@/types/invoiceView';
+import { InvoiceListItem } from '@/types/invoice';
 import { StatusBadge } from '@/components/invoices/shared/StatusBadge';
 import { InvoiceFilterBar } from '@/components/invoices/list/InvoiceFilters';
 import { InvoiceFilters } from '@/types/invoice';

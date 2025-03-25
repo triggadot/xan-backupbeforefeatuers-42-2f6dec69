@@ -100,7 +100,8 @@ export function usePurchaseOrderDetail() {
         glide_row_id: purchaseOrder.glide_row_id,
         total_amount: Number(purchaseOrder.total_amount || 0),
         created_at: purchaseOrder.created_at,
-        updated_at: purchaseOrder.updated_at
+        updated_at: purchaseOrder.updated_at,
+        notes: purchaseOrder.notes || '' // Add default value for notes
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase order';

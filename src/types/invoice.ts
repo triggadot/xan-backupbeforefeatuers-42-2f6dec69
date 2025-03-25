@@ -1,3 +1,4 @@
+
 import { EntityBase, EntityStatus, EntityWithAccount, EntityWithAmount, EntityWithStatus } from './common';
 import { GlAccount } from './accounts';
 
@@ -75,6 +76,11 @@ export interface InvoiceWithCustomer {
   createdAt: Date;
   updatedAt?: Date;
   customer?: GlAccount;
+  customerId: string;
+  glideRowId: string;
+  date: Date;
+  total: number;
+  lineItemsCount: number;
 }
 
 export interface InvoiceFilters {

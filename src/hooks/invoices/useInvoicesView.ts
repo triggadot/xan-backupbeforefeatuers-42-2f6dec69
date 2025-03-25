@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { InvoiceFilters, InvoiceWithCustomer } from '@/types/invoice';
+import { InvoiceFilters, InvoiceWithCustomer, InvoiceListItem } from '@/types/invoice';
 import { hasProperty } from '@/types/supabase';
 import { useInvoiceLineItems } from './useInvoiceLineItems';
 import { useInvoicePayments } from './useInvoicePayments';
@@ -20,7 +20,7 @@ export function useInvoicesView() {
   const detailHook = useInvoiceDetail();
   const deletionHook = useInvoiceDeletion();
   
-  const fetchInvoices = useCallback(async (filters?: InvoiceFilters): Promise<InvoiceWithCustomer[]> => {
+  const fetchInvoices = useCallback(async (filters?: InvoiceFilters): Promise<InvoiceListItem[]> => {
     setIsLoading(true);
     setError(null);
     
@@ -69,6 +69,7 @@ export function useInvoicesView() {
       
       if (!data) return [];
       
+      // Map to InvoiceListItem directly
       return data.map(invoice => {
         // Safely get customer name with null checks
         let customerName = 'Unknown Customer';
@@ -89,19 +90,23 @@ export function useInvoicesView() {
         // Add 30 days to invoice date as default due date
         const dueDate = new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
         
+        // Create an invoice list item with all the required properties
         return {
           id: invoice.glide_row_id,
           invoiceNumber: invoice.glide_row_id,
+          glideRowId: invoice.glide_row_id,
+          customerId: invoice.rowid_accounts || '',
           customerName: customerName,
-          invoiceDate: invoiceDate,
-          dueDate: dueDate, // Using calculated due date
+          date: invoiceDate,
+          dueDate: dueDate,
           status: invoice.payment_status || 'draft',
-          amount: Number(invoice.total_amount || 0),
+          total: Number(invoice.total_amount || 0),
           amountPaid: Number(invoice.total_paid || 0),
           balance: Number(invoice.balance || 0),
+          lineItemsCount: 0, // This would need to be fetched separately if needed
           createdAt: new Date(invoice.created_at),
           updatedAt: invoice.updated_at ? new Date(invoice.updated_at) : undefined,
-          customer: invoice.customer
+          notes: invoice.notes
         };
       });
     } catch (err) {
