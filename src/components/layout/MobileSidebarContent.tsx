@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { navigationConfig } from './navigationConfig';
@@ -18,6 +19,7 @@ import {
   Circle,
   ClipboardList
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface MobileSidebarContentProps {
   onClose?: () => void;
@@ -25,6 +27,7 @@ interface MobileSidebarContentProps {
 
 const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) => {
   const location = useLocation();
+  const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Function to render a Lucide icon by name
   const renderIcon = (iconName: string) => {
@@ -59,27 +62,68 @@ const MobileSidebarContent: React.FC<MobileSidebarContentProps> = ({ onClose }) 
   
   // Create a flat list of navigation items from all sections
   const allNavItems = navigationConfig.sidebarNav.flatMap(section => section.items);
+
+  // Scroll active item into view
+  useEffect(() => {
+    const activeItem = sidebarRef.current?.querySelector('[data-active="true"]');
+    if (activeItem) {
+      activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [location.pathname]);
+  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.05,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 24 }
+    }
+  };
   
   return (
-    <div className="px-3 py-2">
-      <div className="space-y-1">
-        {allNavItems.map((item) => (
-          <Link
-            key={item.href}
-            to={item.href}
-            onClick={handleItemClick}
-            className={cn(
-              "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-              isActive(item.href)
-                ? "bg-primary text-white"
-                : "text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {renderIcon(item.icon)}
-            <span className="truncate">{item.title}</span>
-          </Link>
-        ))}
-      </div>
+    <div className="px-3 py-2 overflow-y-auto max-h-[calc(100vh-80px)]" ref={sidebarRef}>
+      <motion.div 
+        className="space-y-1" 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {allNavItems.map((item) => {
+          const isActiveItem = isActive(item.href);
+          
+          return (
+            <motion.div key={item.href} variants={itemVariants}>
+              <Link
+                to={item.href}
+                onClick={handleItemClick}
+                className={cn(
+                  "flex items-center px-3 py-3 text-sm font-medium rounded-md transition-all touch-manipulation",
+                  isActiveItem
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted active:scale-95"
+                )}
+                data-active={isActiveItem ? "true" : "false"}
+              >
+                <span className="flex items-center">
+                  {renderIcon(item.icon)}
+                  <span className="truncate">{item.title}</span>
+                </span>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </motion.div>
     </div>
   );
 };

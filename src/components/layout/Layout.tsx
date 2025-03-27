@@ -5,9 +5,10 @@ import { AppSidebar } from "./AppSidebar";
 import Navbar from "./Navbar";
 import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { SidebarContent, SidebarProvider } from "@/components/ui/sidebar";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -18,15 +19,23 @@ const Layout = () => {
         <AppSidebar />
         <SidebarContent className="flex-1 overflow-auto bg-background">
           {isMobile ? <MobileHeader /> : <Navbar />}
-          <main className="container py-4 md:py-6 lg:py-8">
+          <motion.main 
+            className="container py-4 md:py-6 lg:py-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
             <Suspense fallback={
               <div className="flex justify-center items-center h-64">
                 <Spinner size="lg" />
               </div>
             }>
-              <Outlet />
+              <AnimatePresence mode="wait">
+                <Outlet />
+              </AnimatePresence>
             </Suspense>
-          </main>
+          </motion.main>
         </SidebarContent>
       </div>
       <Toaster />

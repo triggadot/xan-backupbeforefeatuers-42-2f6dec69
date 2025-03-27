@@ -837,6 +837,268 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          analyzed_content: Json | null
+          caption: string | null
+          chat_id: number
+          chat_title: string | null
+          chat_type: string
+          content_disposition: string | null
+          correlation_id: string | null
+          created_at: string
+          deleted_from_telegram: boolean
+          duplicate_reference_id: string | null
+          duration: number | null
+          edit_count: number | null
+          edit_history: Json[] | null
+          error_code: string | null
+          error_message: string | null
+          file_id: string
+          file_size: number | null
+          file_unique_id: string
+          forward_info: Json | null
+          group_caption_synced: boolean | null
+          height: number | null
+          id: string
+          is_channel_post: boolean
+          is_duplicate: boolean
+          is_edited: boolean
+          is_forward: boolean | null
+          is_original_caption: boolean | null
+          media_group_id: string | null
+          media_type: string | null
+          message_caption_id: string | null
+          mime_type: string
+          mime_type_original: string | null
+          mime_type_verified: boolean | null
+          needs_redownload: boolean | null
+          old_analyzed_content: Json[] | null
+          processing_completed_at: string | null
+          processing_flow: Json | null
+          processing_started_at: string | null
+          processing_state:
+            | Database["public"]["Enums"]["message_processing_state"]
+            | null
+          public_url: string | null
+          raw_caption: string | null
+          redownload_reason: string | null
+          storage_exists: boolean | null
+          storage_path: string | null
+          storage_path_standardized: boolean | null
+          telegram_data: Json
+          telegram_message_id: number
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          chat_id: number
+          chat_title?: string | null
+          chat_type: string
+          content_disposition?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean
+          duplicate_reference_id?: string | null
+          duration?: number | null
+          edit_count?: number | null
+          edit_history?: Json[] | null
+          error_code?: string | null
+          error_message?: string | null
+          file_id: string
+          file_size?: number | null
+          file_unique_id: string
+          forward_info?: Json | null
+          group_caption_synced?: boolean | null
+          height?: number | null
+          id?: string
+          is_channel_post?: boolean
+          is_duplicate?: boolean
+          is_edited?: boolean
+          is_forward?: boolean | null
+          is_original_caption?: boolean | null
+          media_group_id?: string | null
+          media_type?: string | null
+          message_caption_id?: string | null
+          mime_type: string
+          mime_type_original?: string | null
+          mime_type_verified?: boolean | null
+          needs_redownload?: boolean | null
+          old_analyzed_content?: Json[] | null
+          processing_completed_at?: string | null
+          processing_flow?: Json | null
+          processing_started_at?: string | null
+          processing_state?:
+            | Database["public"]["Enums"]["message_processing_state"]
+            | null
+          public_url?: string | null
+          raw_caption?: string | null
+          redownload_reason?: string | null
+          storage_exists?: boolean | null
+          storage_path?: string | null
+          storage_path_standardized?: boolean | null
+          telegram_data: Json
+          telegram_message_id: number
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          chat_id?: number
+          chat_title?: string | null
+          chat_type?: string
+          content_disposition?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean
+          duplicate_reference_id?: string | null
+          duration?: number | null
+          edit_count?: number | null
+          edit_history?: Json[] | null
+          error_code?: string | null
+          error_message?: string | null
+          file_id?: string
+          file_size?: number | null
+          file_unique_id?: string
+          forward_info?: Json | null
+          group_caption_synced?: boolean | null
+          height?: number | null
+          id?: string
+          is_channel_post?: boolean
+          is_duplicate?: boolean
+          is_edited?: boolean
+          is_forward?: boolean | null
+          is_original_caption?: boolean | null
+          media_group_id?: string | null
+          media_type?: string | null
+          message_caption_id?: string | null
+          mime_type?: string
+          mime_type_original?: string | null
+          mime_type_verified?: boolean | null
+          needs_redownload?: boolean | null
+          old_analyzed_content?: Json[] | null
+          processing_completed_at?: string | null
+          processing_flow?: Json | null
+          processing_started_at?: string | null
+          processing_state?:
+            | Database["public"]["Enums"]["message_processing_state"]
+            | null
+          public_url?: string | null
+          raw_caption?: string | null
+          redownload_reason?: string | null
+          storage_exists?: boolean | null
+          storage_path?: string | null
+          storage_path_standardized?: boolean | null
+          telegram_data?: Json
+          telegram_message_id?: number
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_message_caption_id"
+            columns: ["message_caption_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      other_messages: {
+        Row: {
+          analyzed_content: Json | null
+          chat_id: number
+          chat_title: string | null
+          chat_type: string
+          content: string | null
+          correlation_id: string | null
+          created_at: string
+          deleted_from_telegram: boolean
+          edit_count: number | null
+          edit_history: Json[] | null
+          forward_info: Json | null
+          group_caption_synced: boolean | null
+          id: string
+          is_channel_post: boolean
+          is_edited: boolean
+          is_forward: boolean | null
+          message_caption_id: string | null
+          message_text: string | null
+          message_type: string
+          processing_completed_at: string | null
+          processing_started_at: string | null
+          processing_state: string | null
+          telegram_data: Json
+          telegram_message_id: number
+          updated_at: string
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          chat_id: number
+          chat_title?: string | null
+          chat_type: string
+          content?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean
+          edit_count?: number | null
+          edit_history?: Json[] | null
+          forward_info?: Json | null
+          group_caption_synced?: boolean | null
+          id?: string
+          is_channel_post?: boolean
+          is_edited?: boolean
+          is_forward?: boolean | null
+          message_caption_id?: string | null
+          message_text?: string | null
+          message_type: string
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          processing_state?: string | null
+          telegram_data: Json
+          telegram_message_id: number
+          updated_at?: string
+        }
+        Update: {
+          analyzed_content?: Json | null
+          chat_id?: number
+          chat_title?: string | null
+          chat_type?: string
+          content?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean
+          edit_count?: number | null
+          edit_history?: Json[] | null
+          forward_info?: Json | null
+          group_caption_synced?: boolean | null
+          id?: string
+          is_channel_post?: boolean
+          is_edited?: boolean
+          is_forward?: boolean | null
+          message_caption_id?: string | null
+          message_text?: string | null
+          message_type?: string
+          processing_completed_at?: string | null
+          processing_started_at?: string | null
+          processing_state?: string | null
+          telegram_data?: Json
+          telegram_message_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_other_message_caption_id"
+            columns: ["message_caption_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processing_locks: {
         Row: {
           entity_id: string
@@ -882,6 +1144,87 @@ export type Database = {
           id?: string
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      unified_audit_logs: {
+        Row: {
+          chat_id: number | null
+          correlation_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          event_timestamp: string
+          event_type: string
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          new_state: Json | null
+          previous_state: Json | null
+          telegram_message_id: number | null
+        }
+        Insert: {
+          chat_id?: number | null
+          correlation_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_timestamp?: string
+          event_type: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          new_state?: Json | null
+          previous_state?: Json | null
+          telegram_message_id?: number | null
+        }
+        Update: {
+          chat_id?: number | null
+          correlation_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          event_timestamp?: string
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          new_state?: Json | null
+          previous_state?: Json | null
+          telegram_message_id?: number | null
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          correlation_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          correlation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          correlation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -1160,8 +1503,50 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_processing_stats: {
+        Row: {
+          error_count: number | null
+          event_type: string | null
+          last_run: string | null
+          recent_metadata: Json[] | null
+          total_runs: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      debug_media_message_errors: {
+        Args: {
+          p_correlation_id?: string
+        }
+        Returns: {
+          error_message: string
+          event_timestamp: string
+          metadata: Json
+          telegram_message_id: number
+          chat_id: number
+          correlation_id: string
+        }[]
+      }
+      delete_message_by_id: {
+        Args: {
+          p_telegram_message_id: number
+          p_chat_id: number
+        }
+        Returns: Json
+      }
+      extract_forward_info: {
+        Args: {
+          message: Json
+        }
+        Returns: Json
+      }
+      force_resync_media_group: {
+        Args: {
+          p_media_group_id: string
+        }
+        Returns: Json
+      }
       generate_estimate_uid: {
         Args: {
           account_uid: string
@@ -1387,6 +1772,25 @@ export type Database = {
         }
         Returns: string
       }
+      handle_media_message: {
+        Args: {
+          p_telegram_message_id: number
+          p_chat_id: number
+          p_file_unique_id: string
+          p_media_data: Json
+        }
+        Returns: string
+      }
+      handle_telegram_webhook_standalone: {
+        Args: {
+          p_message: Json
+          p_correlation_id: string
+          p_is_edit?: boolean
+          p_is_channel_post?: boolean
+          p_is_forwarded?: boolean
+        }
+        Returns: Json
+      }
       is_customer: {
         Args: {
           account_type: string
@@ -1398,6 +1802,149 @@ export type Database = {
           account_type: string
         }
         Returns: boolean
+      }
+      mark_media_group_sync_completed: {
+        Args: {
+          p_media_group_id: string
+          p_source_message_id: string
+          p_correlation_id?: string
+        }
+        Returns: Json
+      }
+      md_check_media_group_content: {
+        Args: {
+          p_media_group_id: string
+          p_message_id: string
+          p_correlation_id: string
+        }
+        Returns: Json
+      }
+      md_create_pg_notify_listener: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      md_debug_media_message_handling: {
+        Args: {
+          p_telegram_message_id: number
+          p_chat_id: number
+          p_file_unique_id: string
+          p_media_data: Json
+        }
+        Returns: Json
+      }
+      md_delete_media_from_storage: {
+        Args: {
+          p_storage_path: string
+        }
+        Returns: boolean
+      }
+      md_delete_telegram_message: {
+        Args: {
+          p_telegram_message_id: number
+          p_chat_id: number
+        }
+        Returns: {
+          deleted_messages: number
+          deleted_other_messages: number
+          deleted_audit_logs: number
+          deleted_media_files: number
+        }[]
+      }
+      md_force_resync_media_group: {
+        Args: {
+          p_media_group_id: string
+        }
+        Returns: Json
+      }
+      md_get_media_group_sync_stats: {
+        Args: {
+          p_media_group_id: string
+        }
+        Returns: {
+          media_group_id: string
+          total_messages: number
+          synced_messages: number
+          unsynced_messages: number
+          messages_with_captions: number
+          has_valid_source: boolean
+        }[]
+      }
+      md_handle_duplicate_media_message: {
+        Args: {
+          p_file_unique_id: string
+          p_chat_id: number
+          p_telegram_message_id: number
+          p_media_data: Json
+        }
+        Returns: string
+      }
+      md_mark_media_group_sync_completed: {
+        Args: {
+          p_media_group_id: string
+          p_source_message_id: string
+          p_correlation_id?: string
+        }
+        Returns: Json
+      }
+      md_parse_caption_product_info: {
+        Args: {
+          p_caption: string
+        }
+        Returns: Json
+      }
+      md_process_message_caption: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
+      }
+      md_process_message_caption_by_id: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
+      }
+      md_sync_delayed_media_groups: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          synced_count: number
+          error_count: number
+          details: Json
+        }[]
+      }
+      md_sync_media_group: {
+        Args: {
+          p_media_group_id: string
+          p_correlation_id?: string
+        }
+        Returns: Json
+      }
+      md_sync_media_group_content: {
+        Args: {
+          p_media_group_id: string
+          p_source_message_id?: string
+          p_correlation_id?: string
+        }
+        Returns: Json
+      }
+      parse_caption_product_info: {
+        Args: {
+          p_caption: string
+        }
+        Returns: Json
+      }
+      process_message_caption: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
+      }
+      process_unprocessed_captions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          error_count: number
+        }[]
       }
       process_webhook_event: {
         Args: {
@@ -1421,6 +1968,35 @@ export type Database = {
         }
         Returns: undefined
       }
+      reprocess_all_captions: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      reprocess_all_message_captions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          error_count: number
+        }[]
+      }
+      sync_delayed_media_groups: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      sync_media_group_simple: {
+        Args: {
+          p_media_group_id: string
+        }
+        Returns: Json
+      }
+      sync_media_group_with_source: {
+        Args: {
+          p_media_group_id: string
+          p_source_message_id: string
+          p_correlation_id: string
+        }
+        Returns: Json
+      }
       update_estimate_totals: {
         Args: {
           estimate_id: string
@@ -1433,32 +2009,35 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_message_download_status: {
+        Args: {
+          p_message_id: string
+          p_status: string
+          p_needs_redownload?: boolean
+          p_error_message?: string
+          p_storage_path?: string
+          p_public_url?: string
+          p_storage_exists?: boolean
+          p_mime_type_verified?: boolean
+        }
+        Returns: boolean
+      }
       update_po_totals: {
         Args: {
           po_id: string
         }
         Returns: undefined
       }
-      xdelo_log_message_operation: {
-        Args: {
-          p_operation: string
-          p_message_id: string
-          p_metadata?: Json
-          p_error_message?: string
-        }
-        Returns: string
-      }
-      xdelo_sync_media_group_content: {
-        Args: {
-          p_source_message_id: string
-          p_media_group_id: string
-          p_correlation_id?: string
-        }
-        Returns: undefined
-      }
     }
     Enums: {
       account_type: "Customer" | "Vendor" | "Customer & Vendor"
+      message_processing_state:
+        | "pending"
+        | "extracting"
+        | "parsing"
+        | "syncing"
+        | "completed"
+        | "error"
       processing_state_type:
         | "initialized"
         | "pending"

@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import SyncContainer from '@/components/sync/SyncContainer';
-import SyncDashboard from '@/components/sync/SyncDashboard';
-import ConnectionsManager from '@/components/sync/ConnectionsManager';
-import MappingsManager from '@/components/sync/MappingsManager';
-import SyncLogs from '@/components/sync/SyncLogs';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Spinner } from '@/components/ui/spinner';
+
+// Lazy load the components for better performance 
+const SyncDashboard = lazy(() => import('@/components/sync/SyncDashboard'));
+const ConnectionsManager = lazy(() => import('@/components/sync/ConnectionsManager'));
+const MappingsManager = lazy(() => import('@/components/sync/MappingsManager'));
+const SyncLogs = lazy(() => import('@/components/sync/SyncLogs'));
 
 // Valid tab values for sync
 const VALID_TABS = ['dashboard', 'connections', 'mappings', 'logs'];
@@ -14,6 +19,7 @@ const Sync = () => {
   const location = useLocation();
   const { tab } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Redirect if needed, but prevent infinite loops
@@ -44,6 +50,16 @@ const Sync = () => {
     }
   }, [isRedirecting]);
 
+  // Simulate loading for a smoother transition
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [tab]);
+
   const renderContent = () => {
     // If we're on the base route and not redirecting yet, show dashboard
     if ((location.pathname === '/sync' || location.pathname === '/sync/') && !tab) {
@@ -53,23 +69,50 @@ const Sync = () => {
     // Use tab parameter to determine which component to render
     const currentTab = tab && VALID_TABS.includes(tab) ? tab : 'dashboard';
     
-    switch (currentTab) {
-      case 'connections':
-        return <ConnectionsManager />;
-      case 'mappings':
-        return <MappingsManager />;
-      case 'logs':
-        return <SyncLogs />;
-      case 'dashboard':
-      default:
-        return <SyncDashboard />;
-    }
+    // Exit animation when switching tabs
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Suspense fallback={
+            <div className="flex justify-center items-center h-64">
+              <Spinner size="lg" />
+            </div>
+          }>
+            {(() => {
+              switch (currentTab) {
+                case 'connections':
+                  return <ConnectionsManager />;
+                case 'mappings':
+                  return <MappingsManager />;
+                case 'logs':
+                  return <SyncLogs />;
+                case 'dashboard':
+                default:
+                  return <SyncDashboard />;
+              }
+            })()}
+          </Suspense>
+        </motion.div>
+      </AnimatePresence>
+    );
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto px-4 py-6">
       <SyncContainer>
-        {renderContent()}
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <Spinner size="lg" />
+          </div>
+        ) : (
+          renderContent()
+        )}
       </SyncContainer>
     </div>
   );
