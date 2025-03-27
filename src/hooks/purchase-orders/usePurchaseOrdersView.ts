@@ -23,10 +23,7 @@ export function usePurchaseOrdersView() {
       // Build query with filters
       let query = supabase
         .from('gl_purchase_orders')
-        .select(`
-          *,
-          vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)
-        `);
+        .select('*, vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)');
       
       // Apply filters if provided
       if (filters) {
@@ -35,6 +32,7 @@ export function usePurchaseOrdersView() {
         }
         
         if (filters.vendorId) {
+          // Use vendor_id for filtering with new schema
           query = query.eq('vendor_id', filters.vendorId);
         }
         
@@ -68,7 +66,7 @@ export function usePurchaseOrdersView() {
       if (!data) return [];
       
       // Map to PurchaseOrderWithVendor format
-      return data.map(po => mapPurchaseOrderData(po));
+      return data.map((po: Record<string, any>) => mapPurchaseOrderData(po));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase orders';
       setError(errorMessage);
@@ -93,7 +91,7 @@ export function usePurchaseOrdersView() {
   };
 }
 
-const mapPurchaseOrderData = (po: any): PurchaseOrderWithVendor => {
+const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor => {
   // Safely get vendor name with null checks
   let vendorName = 'Unknown Vendor';
   

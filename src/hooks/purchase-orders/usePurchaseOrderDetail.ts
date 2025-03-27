@@ -3,13 +3,11 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderLineItem, VendorPayment } from '@/types/purchaseOrder';
 import { 
-  PurchaseOrderRow, 
-  ProductRow,
-  hasProperty, 
   asNumber, 
   asDate, 
   parseJsonIfString,
-  asString
+  asString,
+  hasProperty
 } from '@/types/supabase';
 
 export function usePurchaseOrderDetail() {
@@ -39,7 +37,7 @@ export function usePurchaseOrderDetail() {
         throw new Error(`Purchase order with ID ${id} not found`);
       }
 
-      const po = purchaseOrder as PurchaseOrderRow;
+      const po = purchaseOrder as Record<string, any>;
       
       // Safely get vendor data
       let vendorName = 'Unknown Vendor';
@@ -62,7 +60,7 @@ export function usePurchaseOrderDetail() {
       }
       
       // Get products for this PO - using the new UUID-based foreign key relationship
-      let productsData;
+      let productsData: Record<string, any>[] = [];
       const { data: productsWithUuid, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
@@ -77,13 +75,13 @@ export function usePurchaseOrderDetail() {
           .eq('glide_po_id', po.glide_row_id);
           
         if (fallbackError) throw fallbackError;
-        productsData = fallbackProducts || [];
+        productsData = (fallbackProducts || []) as Record<string, any>[];
       } else {
-        productsData = productsWithUuid || [];
+        productsData = (productsWithUuid || []) as Record<string, any>[];
       }
       
       // Get payments for this PO
-      let paymentsData;
+      let paymentsData: Record<string, any>[] = [];
       const { data: paymentsWithUuid, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
@@ -98,13 +96,13 @@ export function usePurchaseOrderDetail() {
           .eq('rowid_purchase_orders', po.glide_row_id);
           
         if (fallbackError) throw fallbackError;
-        paymentsData = fallbackPayments || [];
+        paymentsData = (fallbackPayments || []) as Record<string, any>[];
       } else {
-        paymentsData = paymentsWithUuid || [];
+        paymentsData = (paymentsWithUuid || []) as Record<string, any>[];
       }
       
       // Format products
-      const lineItems: PurchaseOrderLineItem[] = productsData.map((product: ProductRow) => ({
+      const lineItems: PurchaseOrderLineItem[] = productsData.map((product) => ({
         id: String(product.id || ''),
         quantity: asNumber(product.quantity || product.total_qty_purchased || 0),
         unitPrice: asNumber(product.cost || 0),
