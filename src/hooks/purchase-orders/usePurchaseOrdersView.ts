@@ -25,7 +25,7 @@ export function usePurchaseOrdersView() {
         .from('gl_purchase_orders')
         .select(`
           *,
-          vendor:gl_accounts!sb_accounts_id(*)
+          vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)
         `);
       
       // Apply filters if provided
@@ -35,7 +35,7 @@ export function usePurchaseOrdersView() {
         }
         
         if (filters.vendorId) {
-          query = query.eq('vendor_id', filters.vendorId).eq('sb_accounts_id', filters.vendorId);
+          query = query.eq('vendor_id', filters.vendorId);
         }
         
         if (filters.fromDate) {
@@ -68,7 +68,7 @@ export function usePurchaseOrdersView() {
       if (!data) return [];
       
       // Map to PurchaseOrderWithVendor format
-      return data.map(mapPurchaseOrderData);
+      return data.map(po => mapPurchaseOrderData(po));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase orders';
       setError(errorMessage);
@@ -93,7 +93,7 @@ export function usePurchaseOrdersView() {
   };
 }
 
-const mapPurchaseOrderData = (po) => {
+const mapPurchaseOrderData = (po: any): PurchaseOrderWithVendor => {
   // Safely get vendor name with null checks
   let vendorName = 'Unknown Vendor';
   

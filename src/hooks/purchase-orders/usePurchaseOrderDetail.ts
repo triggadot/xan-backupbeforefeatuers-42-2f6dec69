@@ -62,7 +62,8 @@ export function usePurchaseOrderDetail() {
       }
       
       // Get products for this PO - using the new UUID-based foreign key relationship
-      const { data: products, error: productsError } = await supabase
+      let productsData;
+      const { data: productsWithUuid, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
         .eq('po_id', po.id);
@@ -76,11 +77,14 @@ export function usePurchaseOrderDetail() {
           .eq('glide_po_id', po.glide_row_id);
           
         if (fallbackError) throw fallbackError;
-        products = fallbackProducts;
+        productsData = fallbackProducts || [];
+      } else {
+        productsData = productsWithUuid || [];
       }
       
       // Get payments for this PO
-      const { data: payments, error: paymentsError } = await supabase
+      let paymentsData;
+      const { data: paymentsWithUuid, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
         .eq('sb_purchase_orders_id', po.id);
@@ -94,11 +98,13 @@ export function usePurchaseOrderDetail() {
           .eq('rowid_purchase_orders', po.glide_row_id);
           
         if (fallbackError) throw fallbackError;
-        payments = fallbackPayments;
+        paymentsData = fallbackPayments || [];
+      } else {
+        paymentsData = paymentsWithUuid || [];
       }
       
       // Format products
-      const lineItems: PurchaseOrderLineItem[] = products.map((product: ProductRow) => ({
+      const lineItems: PurchaseOrderLineItem[] = productsData.map((product: ProductRow) => ({
         id: String(product.id || ''),
         quantity: asNumber(product.quantity || product.total_qty_purchased || 0),
         unitPrice: asNumber(product.cost || 0),
@@ -112,9 +118,9 @@ export function usePurchaseOrderDetail() {
       }));
       
       // Format payments
-      const vendorPayments: VendorPayment[] = payments.map(payment => ({
+      const vendorPayments: VendorPayment[] = paymentsData.map(payment => ({
         id: String(payment.id || ''),
-        amount: asNumber(payment.amount || payment.payment_amount || 0),
+        amount: asNumber(payment.payment_amount || 0),
         date: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
         method: 'Payment',
         notes: String(payment.vendor_purchase_note || ''),
