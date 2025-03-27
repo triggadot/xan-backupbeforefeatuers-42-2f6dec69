@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { glSyncApi } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

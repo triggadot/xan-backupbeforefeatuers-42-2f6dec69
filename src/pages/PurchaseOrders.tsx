@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -62,7 +61,7 @@ const PurchaseOrders: React.FC = () => {
             <Card>
               <CardContent className="p-6 text-center">
                 <h2 className="text-xl font-semibold mb-2">Error Loading Purchase Orders</h2>
-                <p className="text-muted-foreground">{error}</p>
+                <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
               </CardContent>
             </Card>
           ) : (

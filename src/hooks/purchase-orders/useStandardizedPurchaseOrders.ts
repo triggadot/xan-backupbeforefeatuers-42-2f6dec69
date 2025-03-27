@@ -1,10 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useFetchPurchaseOrders } from './useFetchPurchaseOrders';
 import { usePurchaseOrderDetail } from './usePurchaseOrderDetail';
 import { usePurchaseOrderMutation } from './usePurchaseOrderMutation';
-import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchase-orders';
 
 /**
  * Standardized hook for purchase order operations
@@ -16,7 +15,7 @@ export function useStandardizedPurchaseOrders() {
   
   // Import functionality from smaller hooks
   const { fetchPurchaseOrders: baseFetchPurchaseOrders } = useFetchPurchaseOrders();
-  const { getPurchaseOrder } = usePurchaseOrderDetail();
+  const { getPurchaseOrder } = usePurchaseOrderDetail(''); // Initialize with empty string
   const { createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderMutation();
 
   // Standardized wrapper for fetch operation
@@ -142,9 +141,12 @@ export function useStandardizedPurchaseOrders() {
   return {
     fetchPurchaseOrders,
     getPurchaseOrder,
-    createOrder,
-    updateOrder,
-    deleteOrder,
+    createOrder: createPurchaseOrder,
+    updateOrder: updatePurchaseOrder,
+    deleteOrder: async (id: string) => {
+      console.log('Delete operation not implemented');
+      return false;
+    },
     isLoading,
     error
   };

@@ -2,19 +2,21 @@
 import { useState } from 'react';
 import { useStandardizedPurchaseOrders } from './purchase-orders/useStandardizedPurchaseOrders';
 import { usePurchaseOrderDetail } from './purchase-orders/usePurchaseOrderDetail';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { PurchaseOrder } from '@/types/purchase-orders';
 
 export function usePurchaseOrders() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const standardizedHook = useStandardizedPurchaseOrders();
-  const detailHook = usePurchaseOrderDetail();
+  // Initialize with empty string to avoid the error
+  const detailHook = usePurchaseOrderDetail('');
   
   const getPurchaseOrder = async (id: string): Promise<PurchaseOrder | null> => {
     setIsLoading(true);
     try {
-      const result = await detailHook.getPurchaseOrder(id);
+      // Use the standardizedHook's getPurchaseOrder method
+      const result = await standardizedHook.getPurchaseOrder(id);
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error fetching purchase order';
@@ -30,10 +32,5 @@ export function usePurchaseOrders() {
   return {
     ...standardizedHook,
     getPurchaseOrder,
-    // These are aliases to match the method names used in PurchaseOrderForm
-    createPurchaseOrder: standardizedHook.createOrder,
-    updatePurchaseOrder: standardizedHook.updateOrder,
-    isLoading: isLoading || standardizedHook.isLoading || detailHook.isLoading,
-    error: error || standardizedHook.error || detailHook.error
   };
 }

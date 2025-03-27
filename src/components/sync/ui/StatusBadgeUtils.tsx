@@ -51,3 +51,24 @@ export const getStatusBadge = (status: string | null | undefined) => {
       );
   }
 };
+
+// Add the getStatusIcon function
+export const getStatusIcon = (status: string | null | undefined, className: string = "h-4 w-4") => {
+  if (!status) {
+    return <Clock className={className} />;
+  }
+
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return <CheckCircle className={className} />;
+    case 'processing':
+    case 'started':
+      return <RefreshCw className={`${className} animate-spin`} />;
+    case 'failed':
+      return <AlertTriangle className={className} />;
+    case 'idle':
+      return <Clock className={className} />;
+    default:
+      return <Clock className={className} />;
+  }
+};

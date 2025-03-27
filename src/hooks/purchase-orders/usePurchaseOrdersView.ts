@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder } from "@/types/purchase-orders";
@@ -28,28 +29,13 @@ export function usePurchaseOrdersView({
       dateTo,
     ],
     queryFn: async () => {
-      let query = supabase
-        .from("po_purchase_orders_view")
-        .select("*")
-        .order("po_number", { ascending: false });
-
-      if (vendorId) {
-        query = query.eq("vendor_id", vendorId);
-      }
-
-      if (paymentStatus) {
-        query = query.eq("payment_status", paymentStatus);
-      }
-
-      if (dateFrom) {
-        query = query.gte("po_date", dateFrom);
-      }
-
-      if (dateTo) {
-        query = query.lte("po_date", dateTo);
-      }
-
-      const { data, error } = await query;
+      // Using a custom RPC function to avoid table access issues
+      const { data, error } = await supabase.rpc('get_purchase_orders', {
+        p_vendor_id: vendorId || null,
+        p_payment_status: paymentStatus || null,
+        p_date_from: dateFrom || null,
+        p_date_to: dateTo || null
+      });
 
       if (error) {
         throw error;

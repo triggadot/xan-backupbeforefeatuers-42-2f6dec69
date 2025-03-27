@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 import { GlConnection } from '@/types/glsync';
 import ConnectionForm from './connections/ConnectionForm';
 import ConnectionCard from './connections/ConnectionCard';

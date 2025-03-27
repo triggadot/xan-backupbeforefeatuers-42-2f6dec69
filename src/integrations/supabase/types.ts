@@ -2611,6 +2611,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      md_debug_caption_extraction: {
+        Args: {
+          p_telegram_data: Json
+        }
+        Returns: Json
+      }
       md_debug_media_message_handling: {
         Args: {
           p_telegram_message_id: number
@@ -2637,6 +2643,12 @@ export type Database = {
           deleted_audit_logs: number
           deleted_media_files: number
         }[]
+      }
+      md_extract_caption_from_telegram_data: {
+        Args: {
+          p_telegram_data: Json
+        }
+        Returns: string
       }
       md_force_resync_media_group: {
         Args: {
@@ -2704,6 +2716,12 @@ export type Database = {
           processed_count: number
           error_count: number
         }[]
+      }
+      md_sync_caption_from_telegram_data: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
       }
       md_sync_delayed_media_groups: {
         Args: Record<PropertyKey, never>

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -187,13 +186,10 @@ export const glSyncApi = {
    */
   async getSupabaseTableColumns(tableName: string): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('information_schema.columns')
-        .select('column_name, data_type')
-        .eq('table_schema', 'public')
-        .eq('table_name', tableName)
-        .order('column_name');
-
+      const { data, error } = await supabase.rpc('get_table_columns', {
+        p_table_name: tableName
+      });
+      
       if (error) {
         console.error('Error fetching table columns:', error);
         return [];
@@ -221,7 +217,10 @@ export const glSyncApi = {
         return [];
       }
 
-      return data || [];
+      return (data || []).map(conn => ({
+        ...conn,
+        settings: conn.settings as unknown as Record<string, any>
+      })) as GlConnection[];
     } catch (err) {
       console.error('Error fetching connections:', err);
       return [];
@@ -242,7 +241,10 @@ export const glSyncApi = {
       throw new Error(`Error creating connection: ${error.message}`);
     }
 
-    return data;
+    return {
+      ...data,
+      settings: data.settings as unknown as Record<string, any>
+    } as GlConnection;
   },
 
   /**
@@ -260,7 +262,10 @@ export const glSyncApi = {
       throw new Error(`Error updating connection: ${error.message}`);
     }
 
-    return data;
+    return {
+      ...data,
+      settings: data.settings as unknown as Record<string, any>
+    } as GlConnection;
   },
 
   /**
