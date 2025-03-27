@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   GlConnection, 
@@ -399,8 +398,7 @@ export const glSyncApi = {
   async mapAllRelationships(): Promise<{ success: boolean; result?: any; error?: string }> {
     console.log('Mapping relationships across all tables');
     try {
-      const { data, error } = await supabase
-        .rpc('glsync_map_all_relationships');
+      const { data, error } = await supabase.rpc('glsync_map_all_relationships');
       
       if (error) {
         console.error('RPC error:', error);

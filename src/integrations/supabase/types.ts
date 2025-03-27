@@ -2819,6 +2819,16 @@ export type Database = {
         | "syncing"
         | "completed"
         | "error"
+        | "processing"
+        | "initalized"
+      processing_state:
+        | "initialized"
+        | "pending"
+        | "processing"
+        | "syncing"
+        | "completed"
+        | "error"
+        | "no caption"
       processing_state_type:
         | "initialized"
         | "pending"

@@ -20,12 +20,11 @@ export function usePurchaseOrdersView() {
     setError(null);
     
     try {
-      // Use a simpler query builder approach to avoid excessive type instantiation
-      let query = supabase.from('gl_purchase_orders');
-      
-      // Start with a simple string query instead of complex builder
+      // Build the query string directly to avoid type issues
       const queryStr = '*, vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)';
-      query = query.select(queryStr);
+      
+      // Create the query
+      let query = supabase.from('gl_purchase_orders').select(queryStr);
       
       // Apply filters if provided
       if (filters) {
@@ -110,7 +109,6 @@ const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor 
     if (hasProperty(po.vendor, 'name')) {
       vendorName = po.vendor.name || 'Unknown Vendor';
     } else if (hasProperty(po.vendor, 'account_name')) {
-      // Fallback to old column name if name is not found
       vendorName = po.vendor.account_name || 'Unknown Vendor';
     }
     

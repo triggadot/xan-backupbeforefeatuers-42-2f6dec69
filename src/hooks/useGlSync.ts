@@ -209,6 +209,39 @@ export function useGlSync() {
     }
   }, [toast]);
 
+  // Function to map relationships across all tables
+  const mapAllRelationships = useCallback(async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await glSyncApi.mapAllRelationships();
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to map relationships');
+      }
+
+      toast({
+        title: 'Relationships Mapped',
+        description: `Successfully mapped ${response.result?.total_mapped || 0} relationships across all tables.`,
+      });
+      
+      console.log('All relationships mapping result:', response.result);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred while mapping relationships';
+      setError(message);
+      toast({
+        title: 'Mapping Error',
+        description: message,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
   return {
     isLoading,
     glideTables,
@@ -216,6 +249,7 @@ export function useGlSync() {
     syncData,
     retryFailedSync,
     mapRelationships,
+    mapAllRelationships,
     error
   };
 }

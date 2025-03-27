@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
@@ -114,11 +113,37 @@ Deno.serve(async (req) => {
       return await syncData(supabase, connectionId, mappingId);
     }
     else if (action === 'mapRelationships') {
-      if (!mappingId) {
-        throw new Error('Mapping ID is required');
+      if (!payload.mappingId) {
+        return errorResponse('Missing mappingId parameter');
       }
       
-      return await mapRelationships(supabase, mappingId);
+      try {
+        // Get mapping details
+        const { data: mappingData, error: mappingError } = await supabase
+          .from('gl_mappings')
+          .select('*')
+          .eq('id', payload.mappingId)
+          .single();
+          
+        if (mappingError) throw new Error(mappingError.message);
+        if (!mappingData) throw new Error('Mapping not found');
+        
+        // Map relationships for the target table
+        const { data: mapResult, error: mapError } = await supabase
+          .rpc('glsync_map_relationships', { p_table_name: mappingData.supabase_table });
+        
+        if (mapError) throw new Error(mapError.message);
+        
+        console.log('Relationship mapping result:', mapResult);
+        
+        return jsonResponse({
+          success: true,
+          result: mapResult
+        });
+      } catch (error) {
+        console.error('Error mapping relationships:', error);
+        return errorResponse(`Failed to map relationships: ${error.message}`);
+      }
     }
     else {
       throw new Error(`Unknown action: ${action}`);
@@ -653,4 +678,27 @@ function transformValue(value: any, dataType: string): any {
     default:
       return String(value);
   }
+}
+
+function errorResponse(message: string) {
+  return new Response(
+    JSON.stringify({ 
+      success: false, 
+      error: message 
+    }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400
+    }
+  );
+}
+
+function jsonResponse(data: any) {
+  return new Response(
+    JSON.stringify(data),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
+    }
+  );
 }
