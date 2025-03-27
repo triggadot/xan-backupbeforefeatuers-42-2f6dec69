@@ -349,6 +349,26 @@ export const glSyncApi = {
     }
   },
 
+  // New method to map relationships between tables
+  async mapRelationships(mappingId: string): Promise<{ success: boolean; result?: any; error?: string }> {
+    console.log(`Mapping relationships for mapping ${mappingId}`);
+    try {
+      const result = await this.callSyncFunction({
+        action: 'mapRelationships',
+        mappingId,
+      });
+      
+      console.log('Relationship mapping result:', result);
+      return { 
+        success: result.success ?? true, 
+        result: result.result
+      };
+    } catch (error) {
+      console.error('Error mapping relationships:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
   async getSyncErrors(mappingId: string): Promise<GlSyncRecord[]> {
     console.log(`Fetching sync errors for mapping ${mappingId}`);
     try {
@@ -372,6 +392,29 @@ export const glSyncApi = {
     } catch (error) {
       console.error('Error fetching sync errors:', error);
       return [];
+    }
+  },
+  
+  // New method to run relationship mapping across all tables
+  async mapAllRelationships(): Promise<{ success: boolean; result?: any; error?: string }> {
+    console.log('Mapping relationships across all tables');
+    try {
+      const { data, error } = await supabase
+        .rpc('glsync_map_all_relationships');
+      
+      if (error) {
+        console.error('RPC error:', error);
+        throw new Error(error.message);
+      }
+      
+      console.log('All relationships mapping result:', data);
+      return { 
+        success: true, 
+        result: data
+      };
+    } catch (error) {
+      console.error('Error mapping all relationships:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 };

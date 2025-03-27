@@ -34,8 +34,8 @@ export function usePurchaseOrdersView() {
         }
         
         if (filters.vendorId) {
-          // Use vendor_id for filtering with new schema
-          query = query.eq('vendor_id', filters.vendorId);
+          // Try to use sb_accounts_id first, fallback to vendor_id and rowid_accounts
+          query = query.or(`sb_accounts_id.eq.${filters.vendorId},vendor_id.eq.${filters.vendorId},rowid_accounts.eq.${filters.vendorId}`);
         }
         
         if (filters.fromDate) {
@@ -102,6 +102,7 @@ export function usePurchaseOrdersView() {
 const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor => {
   // Safely get vendor name with null checks
   let vendorName = 'Unknown Vendor';
+  let vendorId = '';
   
   if (po.vendor && 
       typeof po.vendor === 'object' && 
@@ -112,6 +113,18 @@ const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor 
       // Fallback to old column name if name is not found
       vendorName = po.vendor.account_name || 'Unknown Vendor';
     }
+    
+    // Get vendor ID, try different possible field names
+    if (hasProperty(po.vendor, 'id')) {
+      vendorId = String(po.vendor.id || '');
+    } else if (hasProperty(po.vendor, 'glide_row_id')) {
+      vendorId = String(po.vendor.glide_row_id || '');
+    }
+  }
+  
+  // If no vendor ID yet, try from the purchase order record
+  if (!vendorId) {
+    vendorId = String(po.sb_accounts_id || po.vendor_id || po.rowid_accounts || '');
   }
   
   return {
@@ -119,7 +132,7 @@ const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor 
     number: String(po.uid || (po.id ? po.id.substring(0, 8) : '') || ''),
     date: po.date ? new Date(po.date) : new Date(po.created_at),
     status: String(po.payment_status || 'draft'),
-    vendorId: String(po.vendor_id || po.sb_accounts_id || ''),
+    vendorId: vendorId,
     vendorName: String(vendorName),
     total: Number(po.total_amount || 0),
     balance: Number(po.balance || 0),

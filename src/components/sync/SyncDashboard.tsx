@@ -1,262 +1,282 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, RefreshCw, AlertTriangle, Database } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import SyncMetricsCard from './SyncMetricsCard';
-import { formatTimestamp } from '@/utils/glsync-transformers';
+import { Plus, RefreshCw, Settings, PanelTop, Layers } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { getStatusIcon } from './ui/StatusBadgeUtils';
-import { ActiveMappingCard } from './overview/ActiveMappingCard';
+import { GlSyncStats, GlRecentLog } from '@/types/glsync';
+import { RecentSyncList } from './overview/RecentSyncList';
+import { RelationshipMapper } from './RelationshipMapper';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+// Helper function to format date for chart
+const formatDateForChart = (dateString: string) => {
+  const date = new Date(dateString);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
 
 const SyncDashboard = () => {
-  // State declarations
-  const [mappings, setMappings] = useState([]);
-  const [isLoadingMappings, setIsLoadingMappings] = useState(true);
-  const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
-  
-  // Hooks
-  const { syncData } = useGlSync();
+  const [syncStats, setSyncStats] = useState<GlSyncStats[]>([]);
+  const [recentLogs, setRecentLogs] = useState<GlRecentLog[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const { mapAllRelationships, isLoading: isMappingRelationships } = useGlSync();
   const { toast } = useToast();
-  const { 
-    allSyncStatuses,
-    recentLogs,
-    syncStats,
-    isLoading,
-    hasError,
-    errorMessage,
-    refreshData
-  } = useGlSyncStatus();
+  const navigate = useNavigate();
 
-  // Event handlers and callbacks
-  const fetchMappings = useCallback(async () => {
-    setIsLoadingMappings(true);
-    try {
-      const { data, error } = await supabase
-        .from('gl_mapping_status')
-        .select('*')
-        .order('last_sync_started_at', { ascending: false });
-      
-      if (error) throw new Error(error.message);
-      setMappings(data || []);
-    } catch (error) {
-      console.error('Error fetching mappings:', error);
-      toast({
-        title: 'Error fetching mappings',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoadingMappings(false);
-    }
-  }, [toast]);
-
-  const handleSync = async (connectionId: string, mappingId: string) => {
-    setIsSyncing(prev => ({ ...prev, [mappingId]: true }));
-    
-    try {
-      const result = await syncData(connectionId, mappingId);
-      
-      if (result.success) {
-        toast({
-          title: 'Sync started',
-          description: 'The synchronization process has been initiated.',
-        });
-        
-        setTimeout(() => {
-          fetchMappings();
-          refreshData();
-        }, 2000);
-      } else {
-        toast({
-          title: 'Sync failed',
-          description: result.error || 'An unknown error occurred',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSyncing(prev => ({ ...prev, [mappingId]: false }));
-    }
-  };
-
-  const refreshAll = () => {
-    fetchMappings();
-    refreshData();
-  };
-
-  // Effects
   useEffect(() => {
-    fetchMappings();
-    refreshData();
-    
-    // Set up realtime subscription for mappings
-    const mappingsChannel = supabase
-      .channel('gl_mappings_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status' }, 
-        () => {
-          fetchMappings();
-        }
-      )
+    fetchData();
+
+    // Subscribe to realtime updates for sync logs
+    const channel = supabase
+      .channel('sync-logs-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gl_sync_logs' }, () => {
+        fetchData();
+      })
       .subscribe();
-    
+
     return () => {
-      supabase.removeChannel(mappingsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [fetchMappings, refreshData]);
+  }, []);
 
-  // Render helpers
-  const renderError = () => (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center space-y-4">
-            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
-            <h3 className="text-lg font-medium">Unable to load synchronization dashboard</h3>
-            <p className="text-muted-foreground">
-              {errorMessage || 'There was an error connecting to the database. Please ensure the database tables have been created.'}
-            </p>
-            <Button onClick={refreshAll}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const fetchData = async () => {
+    setIsLoadingStats(true);
+    try {
+      // Fetch sync stats
+      const { data: statsData, error: statsError } = await supabase
+        .from('gl_sync_stats')
+        .select('*')
+        .order('sync_date', { ascending: false })
+        .limit(14);
 
-  const renderMappingsSection = () => (
-    <div className="md:col-span-2">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-semibold">Active Mappings</h2>
-        <Button variant="outline" size="sm" onClick={refreshAll}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+      if (statsError) throw statsError;
+      setSyncStats(statsData as GlSyncStats[]);
 
-      {isLoadingMappings ? (
-        <div className="grid grid-cols-1 gap-4">
-          {[1, 2].map((i) => (
-            <Card key={i} className="p-6">
-              <Skeleton className="h-6 w-1/2 mb-4" />
-              <Skeleton className="h-4 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2 mb-6" />
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-9 w-24" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : mappings.length === 0 ? (
-        <Card className="p-6 text-center">
-          <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-muted-foreground">No active mappings found.</p>
-          <p className="mt-2">
-            Create a connection and set up table mappings to start synchronizing data.
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {mappings
-            .filter(status => status.enabled)
-            .map((status) => (
-              <div key={status.mapping_id} className="col-span-1">
-                <ActiveMappingCard 
-                  status={status} 
-                  onSync={handleSync} 
-                  isSyncing={isSyncing[status.mapping_id] || false} 
-                />
-              </div>
-            ))}
-        </div>
-      )}
-    </div>
-  );
+      // Fetch recent logs
+      const { data: logsData, error: logsError } = await supabase
+        .from('gl_recent_logs')
+        .select('*')
+        .order('started_at', { ascending: false })
+        .limit(10);
 
-  const renderRecentActivity = () => (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Recent Activity</h2>
-      
-      {isLoading ? (
-        <Card>
-          <div className="p-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center py-3 border-b last:border-b-0">
-                <Skeleton className="h-8 w-8 rounded-full mr-4" />
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-3/4 mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : recentLogs.length === 0 ? (
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">No recent activity found.</p>
-        </Card>
-      ) : (
-        <Card>
-          <div className="p-4">
-            {recentLogs.map((log) => (
-              <div key={log.id} className="flex items-start py-3 border-b last:border-b-0">
-                <div className="mr-4 mt-1">
-                  {getStatusIcon(log.status)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">
-                        {log.app_name || 'Unnamed App'}: {log.glide_table_display_name || log.glide_table || 'Unknown'} → {log.supabase_table || 'Unknown'}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {log.message || `Status: ${log.status}`}
-                        {log.records_processed ? ` (${log.records_processed} records)` : ''}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                      {formatTimestamp(log.started_at)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-    </div>
-  );
-
-  // Return/render component
-  if (hasError) {
-    return renderError();
-  }
+      if (logsError) throw logsError;
+      setRecentLogs(logsData as GlRecentLog[]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {renderMappingsSection()}
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
-          <SyncMetricsCard 
-            syncStats={syncStats} 
-            isLoading={isLoading} 
-          />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-semibold">Sync Dashboard</h2>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={fetchData} disabled={isLoadingStats}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingStats ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => navigate('/sync/mappings/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Mapping
+          </Button>
         </div>
       </div>
-      {renderRecentActivity()}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="overview" className="flex-1">
+            <PanelTop className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="flex-1">
+            <Settings className="h-4 w-4 mr-2" />
+            Tools
+          </TabsTrigger>
+          <TabsTrigger value="database" className="flex-1">
+            <Layers className="h-4 w-4 mr-2" />
+            Database
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Sync Activity Chart */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Sync Activity</CardTitle>
+                <CardDescription>
+                  Records processed over the last 14 days
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={[...syncStats].reverse().map(stat => ({
+                        date: formatDateForChart(stat.sync_date),
+                        records: stat.total_records_processed,
+                        syncs: stat.syncs
+                      }))}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorRecords" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Area
+                        type="monotone"
+                        dataKey="records"
+                        stroke="#8884d8"
+                        fillOpacity={1}
+                        fill="url(#colorRecords)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Common sync operations</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate('/sync/connections')}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Manage Connections
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate('/sync/mappings')}
+                >
+                  <Layers className="mr-2 h-4 w-4" />
+                  Configure Mappings
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate('/sync/logs')}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  View Sync Logs
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Syncs */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Recent Syncs</CardTitle>
+              <CardDescription>Latest synchronization operations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentSyncList logs={recentLogs} isLoading={isLoadingStats} />
+            </CardContent>
+            <CardFooter>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => navigate('/sync/logs')}
+              >
+                View All Logs
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tools">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <RelationshipMapper />
+            
+            {/* Additional tools could be added here */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sync Health Check</CardTitle>
+                <CardDescription>
+                  Validate your sync configuration and data integrity
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  The health check tool verifies your mappings, table structures, and data integrity.
+                  Use this tool to identify potential issues with your sync configuration.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full" disabled>
+                  Coming Soon
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="database">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Information</CardTitle>
+                <CardDescription>
+                  View database tables and their relationships
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  The database structure for Glide sync includes:
+                </p>
+                <ul className="list-disc pl-5 space-y-2 text-sm">
+                  <li><strong>gl_connections</strong> - Stores Glide API connection credentials</li>
+                  <li><strong>gl_mappings</strong> - Defines mapping between Glide and Supabase tables</li>
+                  <li><strong>gl_sync_logs</strong> - Records sync operations and their results</li>
+                  <li><strong>gl_sync_errors</strong> - Stores detailed error information</li>
+                  <li><strong>gl_*</strong> - Domain-specific tables (products, accounts, etc.)</li>
+                </ul>
+                <p className="text-sm text-muted-foreground mt-4">
+                  Relationships between tables use both rowid_* columns (Glide row IDs) and sb_* columns (Supabase UUIDs).
+                </p>
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open('/docs/SYNC_ARCHITECTURE.md', '_blank')}
+                >
+                  View Architecture Docs
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

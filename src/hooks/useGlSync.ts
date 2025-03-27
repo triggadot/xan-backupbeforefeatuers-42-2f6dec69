@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { glSyncApi } from '@/services/glsync';
@@ -66,6 +67,25 @@ export function useGlSync() {
         result = data as ProductSyncResult;
       }
       
+      // After sync, explicitly call the relationship mapping function
+      try {
+        const { data: mapResult, error: mapError } = await supabase.functions.invoke('glsync', {
+          body: {
+            action: 'mapRelationships',
+            mappingId,
+          },
+        });
+        
+        if (mapError) {
+          console.warn('Warning: Relationship mapping had errors:', mapError);
+        } else {
+          console.log('Relationship mapping result:', mapResult);
+        }
+      } catch (mapError) {
+        console.warn('Warning: Failed to map relationships:', mapError);
+        // Don't fail the sync if relationship mapping fails
+      }
+      
       if (!result.success) {
         const errorMessage = result.error || 'An unknown error occurred during sync';
         setError(errorMessage);
@@ -114,6 +134,25 @@ export function useGlSync() {
 
       if (error) throw new Error(error.message);
       
+      // After retry, explicitly call the relationship mapping function
+      try {
+        const { data: mapResult, error: mapError } = await supabase.functions.invoke('glsync', {
+          body: {
+            action: 'mapRelationships',
+            mappingId,
+          },
+        });
+        
+        if (mapError) {
+          console.warn('Warning: Relationship mapping had errors:', mapError);
+        } else {
+          console.log('Relationship mapping result:', mapResult);
+        }
+      } catch (mapError) {
+        console.warn('Warning: Failed to map relationships:', mapError);
+        // Don't fail the retry if relationship mapping fails
+      }
+      
       toast({
         title: 'Retry initiated',
         description: 'Retry of failed synchronization has been initiated.',
@@ -134,12 +173,49 @@ export function useGlSync() {
     }
   }, [toast]);
 
+  // New function to explicitly map relationships for a mapping
+  const mapRelationships = useCallback(async (mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'mapRelationships',
+          mappingId,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      
+      toast({
+        title: 'Relationships Mapped',
+        description: 'Relationships have been mapped successfully.',
+      });
+      
+      console.log('Relationship mapping result:', data);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred during relationship mapping';
+      setError(message);
+      toast({
+        title: 'Mapping Error',
+        description: message,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
   return {
     isLoading,
     glideTables,
     fetchGlideTables,
     syncData,
     retryFailedSync,
+    mapRelationships,
     error
   };
 }

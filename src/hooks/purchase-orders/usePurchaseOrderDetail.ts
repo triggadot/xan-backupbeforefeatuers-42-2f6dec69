@@ -60,58 +60,74 @@ export function usePurchaseOrderDetail() {
         vendorName = asString(po.vendor_name);
       }
       
-      // Get products for this PO - using explicit type casting for query results
+      // Get products for this PO - prefer sb_purchase_orders_id first
       let productsData: Record<string, any>[] = [];
       
-      // Use a more direct query to avoid deep type instantiation
-      const productsQuery = supabase
-        .from('gl_products')
-        .select('*')
-        .eq('po_id', po.id);
-        
-      const { data: productsWithUuid, error: productsError } = await productsQuery;
-        
-      if (productsError) {
-        console.error('Error fetching products with po_id:', productsError);
-        // Fallback to glide_row_id if UUID foreign key fails
-        const fallbackQuery = supabase
+      try {
+        // Try UUID relation first (sb_purchase_orders_id)
+        const { data: productsWithUuid, error: productsUuidError } = await supabase
           .from('gl_products')
           .select('*')
-          .eq('glide_po_id', po.glide_row_id);
+          .eq('sb_purchase_orders_id', po.id);
           
-        const { data: fallbackProducts, error: fallbackError } = await fallbackQuery;
+        if (productsUuidError) throw productsUuidError;
+        
+        if (productsWithUuid && productsWithUuid.length > 0) {
+          productsData = productsWithUuid as Record<string, any>[];
+        } else {
+          // Fall back to po_id if available
+          const { data: productsWithPoId, error: productsPoIdError } = await supabase
+            .from('gl_products')
+            .select('*')
+            .eq('po_id', po.id);
+            
+          if (productsPoIdError) throw productsPoIdError;
           
-        if (fallbackError) throw fallbackError;
-        productsData = (fallbackProducts || []) as Record<string, any>[];
-      } else {
-        productsData = (productsWithUuid || []) as Record<string, any>[];
+          if (productsWithPoId && productsWithPoId.length > 0) {
+            productsData = productsWithPoId as Record<string, any>[];
+          } else {
+            // Final fallback to glide_po_id
+            const { data: fallbackProducts, error: fallbackError } = await supabase
+              .from('gl_products')
+              .select('*')
+              .eq('rowid_purchase_orders', po.glide_row_id);
+              
+            if (fallbackError) throw fallbackError;
+            productsData = (fallbackProducts || []) as Record<string, any>[];
+          }
+        }
+      } catch (productsError) {
+        console.error('Error fetching products:', productsError);
+        productsData = [];
       }
       
-      // Get payments for this PO - using explicit type casting for query results
+      // Get payments for this PO - prefer sb_purchase_orders_id first
       let paymentsData: Record<string, any>[] = [];
       
-      // Use a more direct query to avoid deep type instantiation
-      const paymentsQuery = supabase
-        .from('gl_vendor_payments')
-        .select('*')
-        .eq('sb_purchase_orders_id', po.id);
-        
-      const { data: paymentsWithUuid, error: paymentsError } = await paymentsQuery;
-        
-      if (paymentsError) {
-        console.error('Error fetching payments with sb_purchase_orders_id:', paymentsError);
-        // Fallback to rowid_purchase_orders if UUID foreign key fails
-        const fallbackQuery = supabase
+      try {
+        // Try UUID relation first (sb_purchase_orders_id)
+        const { data: paymentsWithUuid, error: paymentsUuidError } = await supabase
           .from('gl_vendor_payments')
           .select('*')
-          .eq('rowid_purchase_orders', po.glide_row_id);
+          .eq('sb_purchase_orders_id', po.id);
           
-        const { data: fallbackPayments, error: fallbackError } = await fallbackQuery;
-          
-        if (fallbackError) throw fallbackError;
-        paymentsData = (fallbackPayments || []) as Record<string, any>[];
-      } else {
-        paymentsData = (paymentsWithUuid || []) as Record<string, any>[];
+        if (paymentsUuidError) throw paymentsUuidError;
+        
+        if (paymentsWithUuid && paymentsWithUuid.length > 0) {
+          paymentsData = paymentsWithUuid as Record<string, any>[];
+        } else {
+          // Fallback to rowid_purchase_orders
+          const { data: fallbackPayments, error: fallbackError } = await supabase
+            .from('gl_vendor_payments')
+            .select('*')
+            .eq('rowid_purchase_orders', po.glide_row_id);
+            
+          if (fallbackError) throw fallbackError;
+          paymentsData = (fallbackPayments || []) as Record<string, any>[];
+        }
+      } catch (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+        paymentsData = [];
       }
       
       // Format products
