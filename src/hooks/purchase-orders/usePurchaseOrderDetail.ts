@@ -51,39 +51,62 @@ export function usePurchaseOrderDetail() {
           
         vendorData = vendorObj;
         
-        if (vendorObj && hasProperty(vendorObj, 'account_name')) {
+        if (vendorObj && hasProperty(vendorObj, 'name')) {
+          vendorName = asString(vendorObj.name) || 'Unknown Vendor';
+        } else if (vendorObj && hasProperty(vendorObj, 'account_name')) {
+          // Fallback to old column name
           vendorName = asString(vendorObj.account_name) || 'Unknown Vendor';
         }
       } else if (po.vendor_name) {
         vendorName = asString(po.vendor_name);
       }
       
-      // Get products for this PO
+      // Get products for this PO - using the new UUID-based foreign key relationship
       const { data: products, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
-        .eq('rowid_purchase_orders', po.glide_row_id);
+        .eq('po_id', po.id);
         
-      if (productsError) throw productsError;
+      if (productsError) {
+        console.error('Error fetching products with po_id:', productsError);
+        // Fallback to glide_row_id if UUID foreign key fails
+        const { data: fallbackProducts, error: fallbackError } = await supabase
+          .from('gl_products')
+          .select('*')
+          .eq('glide_po_id', po.glide_row_id);
+          
+        if (fallbackError) throw fallbackError;
+        products = fallbackProducts;
+      }
       
       // Get payments for this PO
       const { data: payments, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
-        .eq('rowid_purchase_orders', po.glide_row_id);
+        .eq('sb_purchase_orders_id', po.id);
         
-      if (paymentsError) throw paymentsError;
+      if (paymentsError) {
+        console.error('Error fetching payments with sb_purchase_orders_id:', paymentsError);
+        // Fallback to rowid_purchase_orders if UUID foreign key fails
+        const { data: fallbackPayments, error: fallbackError } = await supabase
+          .from('gl_vendor_payments')
+          .select('*')
+          .eq('rowid_purchase_orders', po.glide_row_id);
+          
+        if (fallbackError) throw fallbackError;
+        payments = fallbackPayments;
+      }
       
       // Format products
       const lineItems: PurchaseOrderLineItem[] = products.map((product: ProductRow) => ({
         id: String(product.id || ''),
-        quantity: asNumber(product.total_qty_purchased || 0),
+        quantity: asNumber(product.quantity || product.total_qty_purchased || 0),
         unitPrice: asNumber(product.cost || 0),
-        total: asNumber(product.total_qty_purchased || 0) * asNumber(product.cost || 0),
-        description: String(product.display_name) || 'Unnamed Product',
+        total: asNumber(product.quantity || product.total_qty_purchased || 0) * asNumber(product.cost || 0),
+        description: String(product.display_name || product.vendor_name || product.new_product_name || ''),
         productId: String(product.glide_row_id || product.id || ''),
         productDetails: product,
-        product_name: String(product.display_name) || 'Unnamed Product',
+        product_name: String(product.display_name || product.vendor_name || product.new_product_name || ''),
         unit_price: asNumber(product.cost || 0),
         notes: String(product.purchase_notes || '')
       }));
@@ -91,20 +114,20 @@ export function usePurchaseOrderDetail() {
       // Format payments
       const vendorPayments: VendorPayment[] = payments.map(payment => ({
         id: String(payment.id || ''),
-        amount: asNumber(payment.payment_amount || 0),
+        amount: asNumber(payment.amount || payment.payment_amount || 0),
         date: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
         method: 'Payment',
         notes: String(payment.vendor_purchase_note || ''),
-        vendorId: String(po.rowid_accounts || '')
+        vendorId: String(po.vendor_id || po.sb_accounts_id || po.rowid_accounts || '')
       }));
       
       // Return the purchase order
       return {
         id: String(po.glide_row_id || ''),
-        number: String(po.purchase_order_uid || po.glide_row_id || ''),
-        date: asDate(po.po_date) || asDate(po.created_at) || new Date(),
+        number: String(po.uid || po.purchase_order_uid || po.glide_row_id || ''),
+        date: asDate(po.date || po.po_date) || asDate(po.created_at) || new Date(),
         status: String(po.payment_status || 'draft'),
-        vendorId: String(po.rowid_accounts || ''),
+        vendorId: String(po.vendor_id || po.sb_accounts_id || po.rowid_accounts || ''),
         vendorName: vendorName,
         vendor: vendorData,
         lineItems: lineItems,
@@ -116,7 +139,7 @@ export function usePurchaseOrderDetail() {
         balance: asNumber(po.balance || 0),
         total: asNumber(po.total_amount || 0),
         total_paid: asNumber(po.total_paid || 0),
-        rowid_accounts: String(po.rowid_accounts || ''),
+        rowid_accounts: String(po.rowid_accounts || po.sb_accounts_id || ''),
         glide_row_id: String(po.glide_row_id || ''),
         total_amount: asNumber(po.total_amount || 0),
         created_at: String(po.created_at || ''),

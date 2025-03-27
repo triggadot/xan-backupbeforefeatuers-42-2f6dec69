@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseOrderDetail } from './usePurchaseOrderDetail';
@@ -24,7 +25,7 @@ export function usePurchaseOrdersView() {
         .from('gl_purchase_orders')
         .select(`
           *,
-          vendor:rowid_accounts(*)
+          vendor:gl_accounts!sb_accounts_id(*)
         `);
       
       // Apply filters if provided
@@ -34,26 +35,26 @@ export function usePurchaseOrdersView() {
         }
         
         if (filters.vendorId) {
-          query = query.eq('rowid_accounts', filters.vendorId);
+          query = query.eq('vendor_id', filters.vendorId).eq('sb_accounts_id', filters.vendorId);
         }
         
         if (filters.fromDate) {
           const fromDate = filters.fromDate instanceof Date 
             ? filters.fromDate.toISOString()
             : new Date(filters.fromDate).toISOString();
-          query = query.gte('po_date', fromDate);
+          query = query.gte('date', fromDate);
         }
         
         if (filters.toDate) {
           const toDate = filters.toDate instanceof Date 
             ? filters.toDate.toISOString()
             : new Date(filters.toDate).toISOString();
-          query = query.lte('po_date', toDate);
+          query = query.lte('date', toDate);
         }
         
         if (filters.search) {
           // Simple search by PO number or vendor name via join
-          query = query.or(`purchase_order_uid.ilike.%${filters.search}%`);
+          query = query.or(`uid.ilike.%${filters.search}%`);
         }
       }
       
@@ -99,17 +100,20 @@ const mapPurchaseOrderData = (po) => {
   if (po.vendor && 
       typeof po.vendor === 'object' && 
       po.vendor !== null) {
-    if (hasProperty(po.vendor, 'account_name')) {
+    if (hasProperty(po.vendor, 'name')) {
+      vendorName = po.vendor.name || 'Unknown Vendor';
+    } else if (hasProperty(po.vendor, 'account_name')) {
+      // Fallback to old column name if name is not found
       vendorName = po.vendor.account_name || 'Unknown Vendor';
     }
   }
   
   return {
     id: po.glide_row_id,
-    number: po.purchase_order_uid || po.id.substring(0, 8),
-    date: po.po_date ? new Date(po.po_date) : new Date(po.created_at),
+    number: po.uid || po.id.substring(0, 8),
+    date: po.date ? new Date(po.date) : new Date(po.created_at),
     status: po.payment_status || 'draft',
-    vendorId: po.rowid_accounts || '',
+    vendorId: po.vendor_id || po.sb_accounts_id || '',
     vendorName: vendorName,
     total: Number(po.total_amount || 0),
     balance: Number(po.balance || 0),
