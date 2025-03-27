@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -7,12 +8,12 @@ import { Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PurchaseOrderWithVendor } from '@/types/purchaseOrder';
-import { usePurchaseOrdersView } from '@/hooks/purchase-orders/usePurchaseOrdersView';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import PurchaseOrderList from '@/components/purchase-orders/list/PurchaseOrderList';
 
 const PurchaseOrders: React.FC = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderWithVendor[]>([]);
-  const { fetchPurchaseOrders, isLoading, error } = usePurchaseOrdersView();
+  const { fetchPurchaseOrders, isLoading, error } = usePurchaseOrders();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,7 +62,7 @@ const PurchaseOrders: React.FC = () => {
             <Card>
               <CardContent className="p-6 text-center">
                 <h2 className="text-xl font-semibold mb-2">Error Loading Purchase Orders</h2>
-                <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
+                <p className="text-muted-foreground">{String(error)}</p>
               </CardContent>
             </Card>
           ) : (

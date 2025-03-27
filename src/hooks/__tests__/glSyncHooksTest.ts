@@ -1,217 +1,112 @@
+
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useGlSync } from '../useGlSync';
-import { useSyncData } from '../useSyncData';
-import { useGlSyncValidation } from '../useGlSyncValidation';
-import { useColumnMappingValidation } from '../useColumnMappingValidation';
-import { supabase } from '@/integrations/supabase/client';
+import { useGlSyncStatus } from '../useGlSyncStatus';
+import { useGlSyncErrors } from '../useGlSyncErrors';
 import { glSyncApi } from '@/services/glSyncApi';
 
-// Mock dependencies
-jest.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    functions: {
-      invoke: jest.fn()
-    },
-    rpc: jest.fn()
-  }
-}));
-
+// Mock the glSyncApi
 jest.mock('@/services/glSyncApi', () => ({
   glSyncApi: {
+    testConnection: jest.fn(),
     listGlideTables: jest.fn(),
     syncData: jest.fn(),
-    callSyncFunction: jest.fn()
+    mapAllRelationships: jest.fn(),
+    fetchGlideTables: jest.fn(),
+    glideTables: [],
+    retryFailedSync: jest.fn()
   }
 }));
 
+// Mock supabase
+jest.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        order: jest.fn(() => ({
+          data: [],
+          error: null
+        }))
+      })),
+      on: jest.fn(() => ({
+        subscribe: jest.fn()
+      }))
+    })),
+    removeChannel: jest.fn(),
+    channel: jest.fn(() => ({
+      on: jest.fn(() => ({
+        subscribe: jest.fn()
+      }))
+    }))
+  }
+}));
+
+// Mock useToast
 jest.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: jest.fn()
   })
 }));
 
-describe('Hook Consolidation Tests', () => {
+describe('useGlSync', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('useGlSync and useSyncData', () => {
-    const mockConnectionId = 'conn-123';
-    const mockMappingId = 'map-123';
-    const mockSuccessResponse = {
-      success: true,
-      recordsProcessed: 10,
-      failedRecords: 0
-    };
-
-    test('useGlSync direct API call', async () => {
-      // Setup mock
-      (glSyncApi.syncData as jest.Mock).mockResolvedValue(mockSuccessResponse);
-
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useGlSync());
-
-      // Execute function with default useDirect=true
-      let syncResult;
-      await act(async () => {
-        syncResult = await result.current.syncData(mockConnectionId, mockMappingId);
-        await waitForNextUpdate();
-      });
-
-      // Verify the direct API was called
-      expect(glSyncApi.syncData).toHaveBeenCalledWith(mockConnectionId, mockMappingId);
-      expect(syncResult).toEqual(mockSuccessResponse);
+  it('testConnection should call api and return result', async () => {
+    // Setup
+    const expectedResult = true;
+    (glSyncApi.testConnection as jest.Mock).mockResolvedValue(expectedResult);
+    
+    // Execute
+    const { result } = renderHook(() => useGlSync());
+    let actualResult;
+    
+    await act(async () => {
+      actualResult = await result.current.testConnection('test-connection-id');
     });
-
-    test('useGlSync Supabase function call', async () => {
-      // Setup mock
-      (supabase.functions.invoke as jest.Mock).mockResolvedValue({ 
-        data: mockSuccessResponse,
-        error: null
-      });
-
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useGlSync());
-
-      // Execute function with useDirect=false
-      let syncResult;
-      await act(async () => {
-        syncResult = await result.current.syncData(mockConnectionId, mockMappingId, false);
-        await waitForNextUpdate();
-      });
-
-      // Verify Supabase function was called directly
-      expect(supabase.functions.invoke).toHaveBeenCalledWith('glsync', {
-        body: {
-          action: 'syncData',
-          connectionId: mockConnectionId,
-          mappingId: mockMappingId,
-        },
-      });
-      expect(syncResult).toEqual(mockSuccessResponse);
-    });
-
-    test('useSyncData adapter uses Supabase function call', async () => {
-      // Setup mock
-      (supabase.functions.invoke as jest.Mock).mockResolvedValue({ 
-        data: mockSuccessResponse,
-        error: null
-      });
-
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useSyncData());
-
-      // Execute function
-      let syncResult;
-      await act(async () => {
-        syncResult = await result.current.syncData(mockConnectionId, mockMappingId);
-        await waitForNextUpdate();
-      });
-
-      // Verify Supabase function was called directly
-      expect(supabase.functions.invoke).toHaveBeenCalledWith('glsync', {
-        body: {
-          action: 'syncData',
-          connectionId: mockConnectionId,
-          mappingId: mockMappingId,
-        },
-      });
-      expect(syncResult).toEqual(mockSuccessResponse);
-    });
+    
+    // Verify
+    expect(glSyncApi.testConnection).toHaveBeenCalledWith('test-connection-id');
+    expect(actualResult).toBe(expectedResult);
   });
 
-  describe('useGlSyncValidation and useColumnMappingValidation', () => {
-    const mockMappingId = 'map-123';
-    const mockValidationResult = {
-      is_valid: true,
-      validation_message: 'Validation successful'
-    };
-    const mockMapping = {
-      supabase_table: 'gl_products',
-      column_mappings: {
-        '$rowID': {
-          glide_column_name: '$rowID',
-          supabase_column_name: 'glide_row_id',
-          data_type: 'string'
-        }
-      }
-    };
-
-    test('useGlSyncValidation validateMappingConfig', async () => {
-      // Setup mock
-      (supabase.rpc as jest.Mock).mockResolvedValue({
-        data: [mockValidationResult],
-        error: null
-      });
-
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useGlSyncValidation());
-
-      // Execute function
-      let isValid;
-      await act(async () => {
-        isValid = await result.current.validateMappingConfig(mockMappingId);
-        await waitForNextUpdate();
-      });
-
-      // Verify RPC was called correctly
-      expect(supabase.rpc).toHaveBeenCalledWith('gl_validate_column_mapping', {
-        p_mapping_id: mockMappingId
-      });
-      expect(isValid).toBe(true);
-      expect(result.current.validation).toEqual({
-        isValid: true,
-        message: 'Validation successful'
-      });
+  it('syncData should call api and return result', async () => {
+    // Setup
+    const expectedResult = { success: true, recordsProcessed: 10 };
+    (glSyncApi.syncData as jest.Mock).mockResolvedValue(expectedResult);
+    
+    // Execute
+    const { result } = renderHook(() => useGlSync());
+    let actualResult;
+    
+    await act(async () => {
+      actualResult = await result.current.syncData('test-connection-id', 'test-mapping-id');
     });
+    
+    // Verify
+    expect(glSyncApi.syncData).toHaveBeenCalledWith('test-connection-id', 'test-mapping-id');
+    expect(actualResult).toBe(expectedResult);
+  });
+});
 
-    test('useGlSyncValidation validateMapping', async () => {
-      // Setup mock
-      (supabase.rpc as jest.Mock).mockResolvedValue({
-        data: [mockValidationResult],
-        error: null
-      });
+describe('useGlSyncStatus', () => {
+  it('should initialize with default values', () => {
+    const { result } = renderHook(() => useGlSyncStatus());
+    
+    expect(result.current.syncStatus).toBeNull();
+    expect(result.current.allSyncStatuses).toEqual([]);
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.hasError).toBe(false);
+  });
+});
 
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useGlSyncValidation());
-
-      // Execute function
-      let validationResult;
-      await act(async () => {
-        validationResult = await result.current.validateMapping(mockMapping);
-        await waitForNextUpdate();
-      });
-
-      // Verify RPC was called with serialized mapping
-      expect(supabase.rpc).toHaveBeenCalledWith('gl_validate_mapping_data', {
-        p_mapping: expect.any(Object)
-      });
-      expect(validationResult).toEqual(mockValidationResult);
-    });
-
-    test('useColumnMappingValidation adapter uses enhanced hook', async () => {
-      // Setup mock
-      (supabase.rpc as jest.Mock).mockResolvedValue({
-        data: [mockValidationResult],
-        error: null
-      });
-
-      // Render hook
-      const { result, waitForNextUpdate } = renderHook(() => useColumnMappingValidation());
-
-      // Execute function
-      let validationResult;
-      await act(async () => {
-        validationResult = await result.current.validateMapping(mockMapping);
-        await waitForNextUpdate();
-      });
-
-      // Verify RPC was called through the enhanced hook
-      expect(supabase.rpc).toHaveBeenCalledWith('gl_validate_mapping_data', {
-        p_mapping: expect.any(Object)
-      });
-      expect(validationResult).toEqual(mockValidationResult);
-      expect(result.current.validationResult).toEqual(mockValidationResult);
-    });
+describe('useGlSyncErrors', () => {
+  it('should initialize with default values', () => {
+    const { result } = renderHook(() => useGlSyncErrors());
+    
+    expect(result.current.syncErrors).toEqual([]);
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.includeResolved).toBe(false);
   });
 });

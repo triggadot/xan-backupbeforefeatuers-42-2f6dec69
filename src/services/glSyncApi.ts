@@ -1,49 +1,45 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  GlConnection, 
-  GlideTable, 
-  MappingToValidate, 
-  ColumnMappingSuggestion, 
-  ProductSyncResult 
-} from '@/types/glsync';
+import { GlConnection, GlideTable, ProductSyncResult } from '@/types/glsync';
 
 /**
- * API service for Glide Sync related operations
+ * GlSync API Service
+ * Provides methods for interacting with the Glide sync API
  */
 export const glSyncApi = {
   /**
    * Tests a connection to Glide
    */
-  async testConnection(connectionId: string): Promise<{ success: boolean; error?: string }> {
+  async testConnection(connectionId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'testConnection',
-          connectionId: connectionId
+          connectionId
         }
       });
 
       if (error) {
         console.error('Error testing connection:', error);
-        return { success: false, error: error.message };
+        return false;
       }
 
-      return { success: data?.success || false, error: data?.error };
+      return data?.success || false;
     } catch (err) {
-      console.error('Error calling test connection function:', err);
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      console.error('Exception in testConnection:', err);
+      return false;
     }
   },
 
   /**
-   * Lists the tables in a Glide connection
+   * Lists tables in a Glide app
    */
-  async listGlideTables(connectionId: string): Promise<{ success: boolean; tables?: GlideTable[]; error?: string }> {
+  async listGlideTables(connectionId: string): Promise<{ success: boolean, tables?: GlideTable[], error?: string }> {
     try {
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'listGlideTables',
-          connectionId: connectionId
+          connectionId
         }
       });
 
@@ -52,23 +48,27 @@ export const glSyncApi = {
         return { success: false, error: error.message };
       }
 
-      return { success: true, tables: data?.tables || [] };
+      return {
+        success: data?.success || false,
+        tables: data?.tables as GlideTable[] || [],
+        error: data?.error
+      };
     } catch (err) {
-      console.error('Error calling list Glide tables function:', err);
+      console.error('Exception in listGlideTables:', err);
       return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
     }
   },
 
   /**
-   * Syncs data between Glide and Supabase
+   * Synchronizes data using a specific mapping
    */
   async syncData(connectionId: string, mappingId: string): Promise<ProductSyncResult | null> {
     try {
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'syncData',
-          connectionId: connectionId,
-          mappingId: mappingId
+          connectionId,
+          mappingId
         }
       });
 
@@ -77,23 +77,23 @@ export const glSyncApi = {
         return null;
       }
 
-      return data as ProductSyncResult || null;
+      return data as ProductSyncResult;
     } catch (err) {
-      console.error('Error calling sync data function:', err);
+      console.error('Exception in syncData:', err);
       return null;
     }
   },
 
   /**
-   * Retries a failed sync operation
+   * Retries failed sync operations
    */
   async retryFailedSync(connectionId: string, mappingId: string): Promise<boolean> {
     try {
       const { data, error } = await supabase.functions.invoke('glsync', {
         body: {
           action: 'retryFailedSync',
-          connectionId: connectionId,
-          mappingId: mappingId
+          connectionId,
+          mappingId
         }
       });
 
@@ -104,106 +104,13 @@ export const glSyncApi = {
 
       return data?.success || false;
     } catch (err) {
-      console.error('Error calling retry failed sync function:', err);
+      console.error('Exception in retryFailedSync:', err);
       return false;
     }
   },
 
   /**
-   * Gets column mappings for a given table in Glide
-   */
-  async getColumnMappings(connectionId: string, tableId: string): Promise<ColumnMappingSuggestion[]> {
-    try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'getColumnMappings',
-          connectionId: connectionId,
-          tableId: tableId
-        }
-      });
-
-      if (error) {
-        console.error('Error getting column mappings:', error);
-        return [];
-      }
-
-      return data?.columnMappings || [];
-    } catch (err) {
-      console.error('Error calling get column mappings function:', err);
-      return [];
-    }
-  },
-
-  /**
-   * Validates a mapping
-   */
-  async validateMapping(mapping: MappingToValidate): Promise<boolean> {
-    try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'validateMapping',
-          mapping: mapping
-        }
-      });
-
-      if (error) {
-        console.error('Error validating mapping:', error);
-        return false;
-      }
-
-      return data?.isValid || false;
-    } catch (err) {
-      console.error('Error calling validate mapping function:', err);
-      return false;
-    }
-  },
-
-  /**
-   * Maps all relationships across gl tables to link rowid_ columns to sb_ columns
-   */
-  async mapAllRelationships(): Promise<{ success: boolean; result?: any; error?: string }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'mapRelationships'
-        }
-      });
-
-      if (error) {
-        console.error('Error mapping relationships:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: data?.success || false, result: data?.result || null };
-    } catch (err) {
-      console.error('Error calling relationship mapping function:', err);
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
-    }
-  },
-
-  /**
-   * Gets Supabase table columns
-   */
-  async getSupabaseTableColumns(tableName: string): Promise<any[]> {
-    try {
-      const { data, error } = await supabase.rpc('get_table_columns', {
-        p_table_name: tableName
-      });
-      
-      if (error) {
-        console.error('Error fetching table columns:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching table columns:', err);
-      return [];
-    }
-  },
-
-  /**
-   * Gets connections
+   * Gets all connections
    */
   async getConnections(): Promise<GlConnection[]> {
     try {
@@ -217,68 +124,96 @@ export const glSyncApi = {
         return [];
       }
 
-      return (data || []).map(conn => ({
-        ...conn,
-        settings: conn.settings as unknown as Record<string, any>
-      })) as GlConnection[];
+      return data as GlConnection[];
     } catch (err) {
-      console.error('Error fetching connections:', err);
+      console.error('Exception in getConnections:', err);
       return [];
     }
   },
 
   /**
-   * Adds a connection
+   * Gets a specific connection
    */
-  async addConnection(connection: Omit<GlConnection, 'id' | 'created_at'>): Promise<GlConnection> {
-    const { data, error } = await supabase
-      .from('gl_connections')
-      .insert(connection)
-      .select()
-      .single();
+  async getConnection(id: string): Promise<GlConnection | null> {
+    try {
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) {
-      throw new Error(`Error creating connection: ${error.message}`);
+      if (error) {
+        console.error('Error fetching connection:', error);
+        return null;
+      }
+
+      return data as GlConnection;
+    } catch (err) {
+      console.error('Exception in getConnection:', err);
+      return null;
     }
-
-    return {
-      ...data,
-      settings: data.settings as unknown as Record<string, any>
-    } as GlConnection;
   },
 
   /**
-   * Updates a connection
+   * Creates a new connection
    */
-  async updateConnection(id: string, connection: Partial<GlConnection>): Promise<GlConnection> {
-    const { data, error } = await supabase
-      .from('gl_connections')
-      .update(connection)
-      .eq('id', id)
-      .select()
-      .single();
+  async createConnection(connection: Partial<GlConnection>): Promise<GlConnection | null> {
+    try {
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .insert([connection])
+        .select()
+        .single();
 
-    if (error) {
-      throw new Error(`Error updating connection: ${error.message}`);
+      if (error) {
+        console.error('Error creating connection:', error);
+        return null;
+      }
+
+      return data as GlConnection;
+    } catch (err) {
+      console.error('Exception in createConnection:', err);
+      return null;
     }
-
-    return {
-      ...data,
-      settings: data.settings as unknown as Record<string, any>
-    } as GlConnection;
   },
 
   /**
-   * Deletes a connection
+   * Gets information about Supabase tables
    */
-  async deleteConnection(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('gl_connections')
-      .delete()
-      .eq('id', id);
+  async getSupabaseTables(): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_tables');
 
-    if (error) {
-      throw new Error(`Error deleting connection: ${error.message}`);
+      if (error) {
+        console.error('Error fetching Supabase tables:', error);
+        return [];
+      }
+
+      return data as string[];
+    } catch (err) {
+      console.error('Exception in getSupabaseTables:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Gets columns for a specific table
+   */
+  async getTableColumns(tableName: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_table_columns', { table_name: tableName });
+
+      if (error) {
+        console.error(`Error fetching columns for table ${tableName}:`, error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Exception in getTableColumns:', err);
+      return [];
     }
   }
 };

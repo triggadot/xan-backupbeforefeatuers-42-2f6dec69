@@ -11,32 +11,7 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         throw new Error('Purchase order ID is required');
       }
 
-      // Then use this type in the select statement
-      const selectColumns = [
-        "id",
-        "created_at",
-        "updated_at",
-        "po_number",
-        "vendor_name",
-        "vendor_email",
-        "vendor_phone",
-        "shipping_address",
-        "billing_address",
-        "po_date",
-        "delivery_date",
-        "payment_terms",
-        "notes",
-        "created_by",
-        "updated_by",
-        "payment_status",
-        "shipping_status",
-        "total_amount",
-        "discount",
-        "shipping_cost",
-        "tax_amount"
-      ].join(',');
-
-      // Using a raw query to avoid the typing issues
+      // Using a custom RPC function to get purchase order details
       const { data, error } = await supabase
         .rpc('get_purchase_order_by_id', { p_id: purchaseOrderId });
 

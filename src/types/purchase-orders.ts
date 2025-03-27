@@ -16,3 +16,5 @@ export type {
   PurchaseOrderWithVendor,
   PurchaseOrderFilters
 };
+
+// Add any additional types specific to the purchase-orders module if needed
