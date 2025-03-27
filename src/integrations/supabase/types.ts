@@ -2638,6 +2638,16 @@ export type Database = {
           deleted_media_files: number
         }[]
       }
+      md_extract_caption_from_telegram_data: {
+        Args: {
+          p_telegram_data: Json
+        }
+        Returns: {
+          caption: string
+          found: boolean
+          source: string
+        }[]
+      }
       md_force_resync_media_group: {
         Args: {
           p_media_group_id: string
@@ -2692,6 +2702,19 @@ export type Database = {
         }
         Returns: Json
       }
+      md_process_message_caption_flow: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
+      }
+      md_process_unprocessed_captions_with_flow: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          error_count: number
+        }[]
+      }
       md_sync_delayed_media_groups: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2727,12 +2750,22 @@ export type Database = {
         }
         Returns: Json
       }
+      process_message_caption_with_flow: {
+        Args: {
+          p_message_id: string
+        }
+        Returns: Json
+      }
       process_unprocessed_captions: {
         Args: Record<PropertyKey, never>
         Returns: {
           processed_count: number
           error_count: number
         }[]
+      }
+      process_unprocessed_captions_with_flow: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       process_webhook_event: {
         Args: {
@@ -2773,6 +2806,10 @@ export type Database = {
           relationship_type: string
           updated_count: number
         }[]
+      }
+      sync_captions_from_telegram_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       sync_delayed_media_groups: {
         Args: Record<PropertyKey, never>

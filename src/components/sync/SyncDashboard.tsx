@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SyncMetricsCard from './overview/SyncMetricsCard';
 import { RecentActivity } from './overview/RecentActivity';
@@ -12,12 +13,14 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { GlSyncStatus } from '@/types/glsync';
+import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 
 export default function SyncDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const { mapAllRelationships, isLoading } = useGlSync();
   const { toast } = useToast();
   const [isMappingAll, setIsMappingAll] = useState(false);
+  const { syncStats, isLoading: statsLoading } = useGlSyncStatus();
 
   const handleMapAllRelationships = async () => {
     setIsMappingAll(true);
@@ -75,7 +78,7 @@ export default function SyncDashboard() {
               <RecentActivity />
             </div>
             <div>
-              <SyncMetricsCard />
+              <SyncMetricsCard syncStats={syncStats || []} isLoading={statsLoading} />
             </div>
           </div>
         </TabsContent>

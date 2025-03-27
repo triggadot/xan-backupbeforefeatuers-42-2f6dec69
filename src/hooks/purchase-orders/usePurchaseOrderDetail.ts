@@ -46,7 +46,7 @@ export function usePurchaseOrderDetail() {
       
       if (po.vendor) {
         // If it's a string (JSON), parse it
-        const vendorObj = parseJsonIfString<Record<string, any>>(po.vendor);
+        const vendorObj = typeof po.vendor === 'string' ? JSON.parse(po.vendor) : po.vendor;
           
         vendorData = vendorObj;
         

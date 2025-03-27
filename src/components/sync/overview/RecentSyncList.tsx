@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
-import { GlRecentLog } from '@/types/glsync';
+import { GlRecentLog, SyncLog } from '@/types/glsync';
 import { Spinner } from '@/components/ui/spinner';
 import { getStatusBadge } from '../ui/StatusBadgeUtils';
 
@@ -29,8 +29,8 @@ export function RecentSyncList() {
 
   return (
     <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-      {syncLogs.map((log: GlRecentLog) => (
-        <SyncLogItem key={log.id} log={log} />
+      {syncLogs.map((log) => (
+        <SyncLogItem key={log.id} log={log as unknown as GlRecentLog} />
       ))}
     </div>
   );

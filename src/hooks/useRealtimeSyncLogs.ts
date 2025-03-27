@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SyncLog, SyncLogFilter } from '@/types/syncLog';
@@ -8,14 +9,6 @@ interface UseSyncLogsOptions {
   limit?: number;
   includeDetails?: boolean;
   onlyFailed?: boolean;
-}
-
-interface SyncLogsResult {
-  syncLogs: SyncLog[];
-  isLoading: boolean;
-  refreshLogs: () => Promise<void>;
-  filter: SyncLogFilter;
-  setFilter: (filter: SyncLogFilter) => void;
 }
 
 export function useRealtimeSyncLogs({ 

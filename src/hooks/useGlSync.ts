@@ -1,255 +1,147 @@
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glsync';
-import { supabase } from '@/integrations/supabase/client';
-import { GlideTable, ProductSyncResult } from '@/types/glsync';
+import { GlSyncStatus, SyncRequestPayload } from '@/types/glsync';
+import { testConnection, listGlideTables, syncData, mapAllRelationships } from '@/services/glsync';
 
 export function useGlSync() {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
+  const { toast } = useToast();
 
-  const fetchGlideTables = useCallback(async (connectionId: string): Promise<{tables?: GlideTable[], error?: string}> => {
+  const testGlideConnection = async (connectionId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      console.log(`Fetching Glide tables for connection ${connectionId}`);
-      const result = await glSyncApi.listGlideTables(connectionId);
-      
-      if ('error' in result) {
+      const success = await testConnection(connectionId);
+      if (!success) {
+        setError('Connection test failed');
         toast({
-          title: 'Error',
-          description: result.error,
+          title: 'Connection Failed',
+          description: 'Could not connect to Glide with the provided credentials.',
           variant: 'destructive',
         });
-        return { error: result.error };
       }
-      
-      console.log('Fetched Glide tables:', result.tables);
-      setGlideTables(result.tables);
-      return { tables: result.tables };
-    } catch (error) {
-      console.error('Error fetching Glide tables:', error);
+      return success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error testing connection';
+      setError(errorMessage);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch Glide tables',
+        title: 'Connection Error',
+        description: errorMessage,
         variant: 'destructive',
       });
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
+      return false;
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  };
 
-  // Enhanced syncData function that supports both direct API calls and supabase function calls
-  const syncData = useCallback(async (connectionId: string, mappingId: string, useDirect: boolean = true): Promise<ProductSyncResult> => {
+  const getTables = async (connectionId: string): Promise<any[]> => {
     setIsLoading(true);
     setError(null);
-
+    
     try {
-      let result;
-      
-      if (useDirect) {
-        // Use the direct API method from glSyncApi
-        result = await glSyncApi.syncData(connectionId, mappingId);
-      } else {
-        // Use the Supabase function invocation directly (previously in useSyncData)
-        const { data, error: invokeError } = await supabase.functions.invoke('glsync', {
-          body: {
-            action: 'syncData',
-            connectionId,
-            mappingId,
-          },
-        });
-        
-        if (invokeError) throw new Error(invokeError.message);
-        result = data as ProductSyncResult;
-      }
-      
-      // After sync, explicitly call the relationship mapping function
-      try {
-        const { data: mapResult, error: mapError } = await supabase.functions.invoke('glsync', {
-          body: {
-            action: 'mapRelationships',
-            mappingId,
-          },
-        });
-        
-        if (mapError) {
-          console.warn('Warning: Relationship mapping had errors:', mapError);
-        } else {
-          console.log('Relationship mapping result:', mapResult);
-        }
-      } catch (mapError) {
-        console.warn('Warning: Failed to map relationships:', mapError);
-        // Don't fail the sync if relationship mapping fails
-      }
-      
-      if (!result.success) {
-        const errorMessage = result.error || 'An unknown error occurred during sync';
-        setError(errorMessage);
+      const tables = await listGlideTables(connectionId);
+      if (!tables || tables.length === 0) {
+        setError('No tables found');
         toast({
-          title: 'Sync Error',
-          description: errorMessage,
+          title: 'No Tables Found',
+          description: 'No tables were found in the Glide application.',
           variant: 'destructive',
         });
       }
-
-      return {
-        success: result.success,
-        error: result.error,
-        recordsProcessed: result.recordsProcessed || result.processed_records || 0,
-        failedRecords: result.failedRecords || result.failed_records || 0
-      };
+      return tables || [];
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred during sync';
-      setError(message);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching tables';
+      setError(errorMessage);
+      toast({
+        title: 'Error Fetching Tables',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const syncMapping = async (connectionId: string, mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await syncData(connectionId, mappingId);
+      if (!result) {
+        setError('Sync failed');
+        toast({
+          title: 'Sync Failed',
+          description: 'Failed to synchronize data.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Sync Successful',
+          description: 'Data synchronized successfully.',
+        });
+      }
+      return !!result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error during sync';
+      setError(errorMessage);
       toast({
         title: 'Sync Error',
-        description: message,
+        description: errorMessage,
         variant: 'destructive',
       });
-      return {
-        success: false,
-        error: message,
-        recordsProcessed: 0,
-        failedRecords: 0
-      };
+      return false;
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  };
 
-  const retryFailedSync = useCallback(async (connectionId: string, mappingId: string): Promise<boolean> => {
+  // Add the new mapAllRelationships function
+  const mapRelationships = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
-
+    
     try {
-      const { data, error } = await glSyncApi.callSyncFunction({
-        action: "syncData",
-        connectionId,
-        mappingId,
-      });
-
-      if (error) throw new Error(error.message);
-      
-      // After retry, explicitly call the relationship mapping function
-      try {
-        const { data: mapResult, error: mapError } = await supabase.functions.invoke('glsync', {
-          body: {
-            action: 'mapRelationships',
-            mappingId,
-          },
+      const success = await mapAllRelationships();
+      if (!success) {
+        setError('Relationship mapping failed');
+        toast({
+          title: 'Mapping Failed',
+          description: 'Failed to map relationships between tables.',
+          variant: 'destructive',
         });
-        
-        if (mapError) {
-          console.warn('Warning: Relationship mapping had errors:', mapError);
-        } else {
-          console.log('Relationship mapping result:', mapResult);
-        }
-      } catch (mapError) {
-        console.warn('Warning: Failed to map relationships:', mapError);
-        // Don't fail the retry if relationship mapping fails
+      } else {
+        toast({
+          title: 'Mapping Successful',
+          description: 'Relationships mapped successfully.',
+        });
       }
-      
-      toast({
-        title: 'Retry initiated',
-        description: 'Retry of failed synchronization has been initiated.',
-      });
-      
-      return true;
+      return success;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred during retry';
-      setError(message);
-      toast({
-        title: 'Retry Error',
-        description: message,
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  // New function to explicitly map relationships for a mapping
-  const mapRelationships = useCallback(async (mappingId: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'mapRelationships',
-          mappingId,
-        },
-      });
-
-      if (error) throw new Error(error.message);
-      
-      toast({
-        title: 'Relationships Mapped',
-        description: 'Relationships have been mapped successfully.',
-      });
-      
-      console.log('Relationship mapping result:', data);
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred during relationship mapping';
-      setError(message);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
+      setError(errorMessage);
       toast({
         title: 'Mapping Error',
-        description: message,
+        description: errorMessage,
         variant: 'destructive',
       });
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
-
-  // Function to map relationships across all tables
-  const mapAllRelationships = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await glSyncApi.mapAllRelationships();
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to map relationships');
-      }
-
-      toast({
-        title: 'Relationships Mapped',
-        description: `Successfully mapped ${response.result?.total_mapped || 0} relationships across all tables.`,
-      });
-      
-      console.log('All relationships mapping result:', response.result);
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred while mapping relationships';
-      setError(message);
-      toast({
-        title: 'Mapping Error',
-        description: message,
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
+  };
+  
   return {
+    testConnection: testGlideConnection,
+    listTables: getTables,
+    syncData: syncMapping,
+    mapAllRelationships: mapRelationships,
     isLoading,
-    glideTables,
-    fetchGlideTables,
-    syncData,
-    retryFailedSync,
-    mapRelationships,
-    mapAllRelationships,
     error
   };
 }
