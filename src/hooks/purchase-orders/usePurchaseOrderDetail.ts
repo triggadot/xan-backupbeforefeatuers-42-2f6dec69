@@ -60,8 +60,9 @@ export function usePurchaseOrderDetail() {
         vendorName = asString(po.vendor_name);
       }
       
-      // Get products for this PO - using the new UUID-based foreign key relationship
+      // Get products for this PO - using explicit type casting for query results
       let productsData: Record<string, any>[] = [];
+      
       const { data: productsWithUuid, error: productsError } = await supabase
         .from('gl_products')
         .select('*')
@@ -81,8 +82,9 @@ export function usePurchaseOrderDetail() {
         productsData = (productsWithUuid || []) as Record<string, any>[];
       }
       
-      // Get payments for this PO
+      // Get payments for this PO - using explicit type casting for query results
       let paymentsData: Record<string, any>[] = [];
+      
       const { data: paymentsWithUuid, error: paymentsError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
@@ -134,7 +136,11 @@ export function usePurchaseOrderDetail() {
         status: String(po.payment_status || 'draft'),
         vendorId: String(po.vendor_id || po.sb_accounts_id || po.rowid_accounts || ''),
         vendorName: vendorName,
-        vendor: vendorData,
+        vendor: vendorData ? { 
+          id: String(vendorData.id || vendorData.glide_row_id || ''), 
+          account_name: asString(vendorData.name || vendorData.account_name || ''),
+          ...vendorData 
+        } : undefined,
         lineItems: lineItems,
         vendorPayments: vendorPayments,
         subtotal: asNumber(po.total_amount || 0),

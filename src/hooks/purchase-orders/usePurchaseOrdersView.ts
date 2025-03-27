@@ -107,12 +107,12 @@ const mapPurchaseOrderData = (po: Record<string, any>): PurchaseOrderWithVendor 
   }
   
   return {
-    id: po.glide_row_id,
-    number: po.uid || po.id?.substring(0, 8) || '',
+    id: String(po.glide_row_id || ''),
+    number: String(po.uid || (po.id ? po.id.substring(0, 8) : '') || ''),
     date: po.date ? new Date(po.date) : new Date(po.created_at),
-    status: po.payment_status || 'draft',
-    vendorId: po.vendor_id || po.sb_accounts_id || '',
-    vendorName: vendorName,
+    status: String(po.payment_status || 'draft'),
+    vendorId: String(po.vendor_id || po.sb_accounts_id || ''),
+    vendorName: String(vendorName),
     total: Number(po.total_amount || 0),
     balance: Number(po.balance || 0),
     totalPaid: Number(po.total_paid || 0),
