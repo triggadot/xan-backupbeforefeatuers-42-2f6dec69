@@ -398,17 +398,19 @@ export const glSyncApi = {
   async mapAllRelationships(): Promise<{ success: boolean; result?: any; error?: string }> {
     console.log('Mapping relationships across all tables');
     try {
-      const { data, error } = await supabase.rpc('glsync_map_all_relationships');
+      const response = await this.callSyncFunction({
+        action: 'mapRelationships',
+        mappingId: null,
+      });
       
-      if (error) {
-        console.error('RPC error:', error);
-        throw new Error(error.message);
+      if ('error' in response) {
+        throw new Error(response.error);
       }
       
-      console.log('All relationships mapping result:', data);
+      console.log('All relationships mapping result:', response);
       return { 
         success: true, 
-        result: data
+        result: response
       };
     } catch (error) {
       console.error('Error mapping all relationships:', error);

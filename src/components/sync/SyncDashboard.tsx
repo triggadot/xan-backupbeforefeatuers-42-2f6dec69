@@ -1,9 +1,8 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SyncMetricsCard } from './overview/SyncMetricsCard';
+import SyncMetricsCard from './overview/SyncMetricsCard';
 import { RecentActivity } from './overview/RecentActivity';
 import { ActiveMappingCard } from './overview/ActiveMappingCard';
-import { SyncOverview } from './overview/SyncOverview';
+import SyncOverview from './overview/SyncOverview';
 import { SyncStats } from './overview/SyncStats';
 import { RelationshipMapper } from './RelationshipMapper';
 import { RecentSyncList } from './overview/RecentSyncList';
@@ -12,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { GlSyncStatus } from '@/types/glsync';
 
 export default function SyncDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -88,7 +88,26 @@ export default function SyncDashboard() {
         <TabsContent value="mappings">
           <h3 className="text-lg font-semibold mb-4">Active Mappings</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ActiveMappingCard />
+            <ActiveMappingCard 
+              status={{
+                mapping_id: '0',
+                connection_id: '0',
+                app_name: 'Loading...',
+                glide_table: 'Loading...',
+                glide_table_display_name: 'No active mappings',
+                supabase_table: 'Loading...',
+                sync_direction: 'to_supabase',
+                enabled: true,
+                current_status: 'idle',
+                last_sync_started_at: null,
+                last_sync_completed_at: null,
+                records_processed: 0,
+                error_count: 0,
+                total_records: 0
+              }}
+              onSync={(connectionId, mappingId) => Promise.resolve()}
+              isSyncing={false}
+            />
           </div>
         </TabsContent>
         

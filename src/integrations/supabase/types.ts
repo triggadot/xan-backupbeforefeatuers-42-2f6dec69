@@ -2492,6 +2492,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      glsync_create_relationship_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      glsync_map_all_relationships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      glsync_map_relationships: {
+        Args: {
+          p_table_name: string
+        }
+        Returns: Json
+      }
       glsync_retry_failed_sync: {
         Args: {
           p_mapping_id: string

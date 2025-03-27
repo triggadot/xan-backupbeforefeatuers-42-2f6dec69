@@ -1,15 +1,15 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
 import { GlRecentLog } from '@/types/glsync';
 import { Spinner } from '@/components/ui/spinner';
-import { StatusBadgeUtils } from '../ui/StatusBadgeUtils';
+import { getStatusBadge } from '../ui/StatusBadgeUtils';
 
 export function RecentSyncList() {
-  const { logs, isLoading } = useRealtimeSyncLogs();
+  const { syncLogs, isLoading } = useRealtimeSyncLogs();
 
   if (isLoading) {
     return (
@@ -19,7 +19,7 @@ export function RecentSyncList() {
     );
   }
 
-  if (!logs || logs.length === 0) {
+  if (!syncLogs || syncLogs.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-4">
         No recent sync activities found.
@@ -29,7 +29,7 @@ export function RecentSyncList() {
 
   return (
     <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-      {logs.map((log: GlRecentLog) => (
+      {syncLogs.map((log: GlRecentLog) => (
         <SyncLogItem key={log.id} log={log} />
       ))}
     </div>
@@ -53,7 +53,7 @@ function SyncLogItem({ log }: { log: GlRecentLog }) {
                 : timeAgo}
             </p>
           </div>
-          <StatusBadgeUtils status={log.status} />
+          {getStatusBadge(log.status)}
         </div>
       </CardContent>
     </Card>

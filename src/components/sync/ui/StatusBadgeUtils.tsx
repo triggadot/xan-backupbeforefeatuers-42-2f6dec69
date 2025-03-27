@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Check, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -49,4 +50,4 @@ export function getStatusColor(status: string | null): string {
   
   const normalizedStatus = status.toLowerCase();
   return statusColors[normalizedStatus as keyof typeof statusColors] || statusColors.unknown;
-} 
+}
