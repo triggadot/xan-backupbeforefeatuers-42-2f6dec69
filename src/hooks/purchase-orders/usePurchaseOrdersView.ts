@@ -20,44 +20,46 @@ export function usePurchaseOrdersView() {
     setError(null);
     
     try {
-      // Build query with string-based select to avoid type instantiation errors
-      const query = supabase
-        .from('gl_purchase_orders')
-        .select('*, vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)');
+      // Use a simpler query builder approach to avoid excessive type instantiation
+      let query = supabase.from('gl_purchase_orders');
+      
+      // Start with a simple string query instead of complex builder
+      const queryStr = '*, vendor:gl_accounts!gl_purchase_orders_sb_accounts_id_fkey(*)';
+      query = query.select(queryStr);
       
       // Apply filters if provided
       if (filters) {
         if (filters.status && filters.status !== 'all') {
-          query.eq('payment_status', filters.status);
+          query = query.eq('payment_status', filters.status);
         }
         
         if (filters.vendorId) {
           // Use vendor_id for filtering with new schema
-          query.eq('vendor_id', filters.vendorId);
+          query = query.eq('vendor_id', filters.vendorId);
         }
         
         if (filters.fromDate) {
           const fromDate = filters.fromDate instanceof Date 
             ? filters.fromDate.toISOString()
             : new Date(filters.fromDate).toISOString();
-          query.gte('date', fromDate);
+          query = query.gte('date', fromDate);
         }
         
         if (filters.toDate) {
           const toDate = filters.toDate instanceof Date 
             ? filters.toDate.toISOString()
             : new Date(filters.toDate).toISOString();
-          query.lte('date', toDate);
+          query = query.lte('date', toDate);
         }
         
         if (filters.search) {
           // Simple search by PO number or vendor name via join
-          query.or(`uid.ilike.%${filters.search}%`);
+          query = query.or(`uid.ilike.%${filters.search}%`);
         }
       }
       
       // Order by date descending
-      query.order('created_at', { ascending: false });
+      query = query.order('created_at', { ascending: false });
       
       const { data, error: fetchError } = await query;
       
@@ -65,8 +67,14 @@ export function usePurchaseOrdersView() {
       
       if (!data) return [];
       
-      // Map to PurchaseOrderWithVendor format with explicit typing
-      return data.map((po: Record<string, any>) => mapPurchaseOrderData(po));
+      // Map to PurchaseOrderWithVendor format - cast records for simpler processing
+      const results: PurchaseOrderWithVendor[] = [];
+      for (const item of data) {
+        const po = item as Record<string, any>;
+        results.push(mapPurchaseOrderData(po));
+      }
+      
+      return results;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching purchase orders';
       setError(errorMessage);

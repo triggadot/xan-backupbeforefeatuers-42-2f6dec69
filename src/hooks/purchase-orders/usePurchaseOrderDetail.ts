@@ -63,18 +63,23 @@ export function usePurchaseOrderDetail() {
       // Get products for this PO - using explicit type casting for query results
       let productsData: Record<string, any>[] = [];
       
-      const { data: productsWithUuid, error: productsError } = await supabase
+      // Use a more direct query to avoid deep type instantiation
+      const productsQuery = supabase
         .from('gl_products')
         .select('*')
         .eq('po_id', po.id);
         
+      const { data: productsWithUuid, error: productsError } = await productsQuery;
+        
       if (productsError) {
         console.error('Error fetching products with po_id:', productsError);
         // Fallback to glide_row_id if UUID foreign key fails
-        const { data: fallbackProducts, error: fallbackError } = await supabase
+        const fallbackQuery = supabase
           .from('gl_products')
           .select('*')
           .eq('glide_po_id', po.glide_row_id);
+          
+        const { data: fallbackProducts, error: fallbackError } = await fallbackQuery;
           
         if (fallbackError) throw fallbackError;
         productsData = (fallbackProducts || []) as Record<string, any>[];
@@ -85,18 +90,23 @@ export function usePurchaseOrderDetail() {
       // Get payments for this PO - using explicit type casting for query results
       let paymentsData: Record<string, any>[] = [];
       
-      const { data: paymentsWithUuid, error: paymentsError } = await supabase
+      // Use a more direct query to avoid deep type instantiation
+      const paymentsQuery = supabase
         .from('gl_vendor_payments')
         .select('*')
         .eq('sb_purchase_orders_id', po.id);
         
+      const { data: paymentsWithUuid, error: paymentsError } = await paymentsQuery;
+        
       if (paymentsError) {
         console.error('Error fetching payments with sb_purchase_orders_id:', paymentsError);
         // Fallback to rowid_purchase_orders if UUID foreign key fails
-        const { data: fallbackPayments, error: fallbackError } = await supabase
+        const fallbackQuery = supabase
           .from('gl_vendor_payments')
           .select('*')
           .eq('rowid_purchase_orders', po.glide_row_id);
+          
+        const { data: fallbackPayments, error: fallbackError } = await fallbackQuery;
           
         if (fallbackError) throw fallbackError;
         paymentsData = (fallbackPayments || []) as Record<string, any>[];
