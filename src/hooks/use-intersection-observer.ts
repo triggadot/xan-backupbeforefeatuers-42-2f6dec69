@@ -1,74 +1,51 @@
 
-import { useEffect, useState, useRef, RefObject } from 'react';
+import { useState, useEffect, useCallback, RefObject } from 'react';
 
 interface UseIntersectionObserverProps {
   threshold?: number;
-  root?: Element | null;
   rootMargin?: string;
   freezeOnceVisible?: boolean;
 }
 
 export function useIntersectionObserver({
   threshold = 0.1,
-  root = null,
   rootMargin = '0px',
   freezeOnceVisible = false,
-}: UseIntersectionObserverProps = {}) {
+}: UseIntersectionObserverProps = {}): [(node: Element) => void, boolean, boolean] {
+  const [ref, setRef] = useState<Element | null>(null);
   const [isIntersecting, setIsIntersecting] = useState(false);
   const [hasIntersected, setHasIntersected] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const elementRef = useRef<Element | null>(null);
 
-  const frozen = freezeOnceVisible && isIntersecting;
+  const setElement = useCallback((node: Element | null) => {
+    if (node !== null) {
+      setRef(node);
+    }
+  }, []);
 
   useEffect(() => {
-    // Skip if already observed and frozen
-    if (frozen) return;
+    if (!ref) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const isEntryIntersecting = entry.isIntersecting;
-        setIsIntersecting(isEntryIntersecting);
+        const isElementIntersecting = entry.isIntersecting;
+        setIsIntersecting(isElementIntersecting);
         
-        if (isEntryIntersecting && !hasIntersected) {
+        // Set hasIntersected to true if it's intersecting for the first time
+        if (isElementIntersecting && !hasIntersected) {
           setHasIntersected(true);
         }
+        
+        // Unobserve after it becomes visible if freezeOnceVisible is true
+        if (freezeOnceVisible && isElementIntersecting) {
+          observer.unobserve(entry.target);
+        }
       },
-      {
-        threshold,
-        root,
-        rootMargin,
-      }
+      { threshold, rootMargin }
     );
 
-    observerRef.current = observer;
+    observer.observe(ref);
+    return () => observer.disconnect();
+  }, [ref, threshold, rootMargin, freezeOnceVisible, hasIntersected]);
 
-    return () => {
-      observer.disconnect();
-    };
-  }, [threshold, root, rootMargin, frozen, hasIntersected]);
-
-  // Connect the observer to the element when the element changes
-  const observe = (element: Element | null) => {
-    if (observerRef.current && element) {
-      if (elementRef.current) {
-        // Disconnect from the previous element
-        observerRef.current.unobserve(elementRef.current);
-      }
-      
-      elementRef.current = element;
-      observerRef.current.observe(element);
-    }
-  };
-
-  // Cleanup when component is unmounted
-  useEffect(() => {
-    return () => {
-      if (observerRef.current && elementRef.current) {
-        observerRef.current.unobserve(elementRef.current);
-      }
-    };
-  }, []);
-
-  return [observe, isIntersecting, hasIntersected] as const;
+  return [setElement, isIntersecting, hasIntersected];
 }

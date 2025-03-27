@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import { InvoiceList } from '@/components/invoices/list/InvoiceList';
+import InvoiceList from '@/components/invoices/list/InvoiceList';
 import { ScrollAnimation } from '@/components/ui/scroll-animation';
 
 const Invoices: React.FC = () => {

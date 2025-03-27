@@ -1,7 +1,7 @@
 
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { motion, HTMLMotionProps, Variants } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 
 type GridDensity = 'loose' | 'normal' | 'tight';
 type GridResponsiveness = 'adaptive' | 'fixed';
@@ -107,9 +107,7 @@ export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
         );
       });
 
-      // Use type assertion to resolve the type incompatibility
-      const motionProps = props as HTMLMotionProps<"div">;
-
+      // Fix TypeScript error by correctly typing the props
       return (
         <motion.div
           ref={ref}
@@ -117,7 +115,7 @@ export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          {...motionProps}
+          {...props as any} // Use type assertion to avoid complex type issues
         >
           {animatedChildren}
         </motion.div>

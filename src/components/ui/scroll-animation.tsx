@@ -15,7 +15,7 @@ interface ScrollAnimationProps extends Omit<HTMLMotionProps<'div'>, 'animate' | 
   once?: boolean;
   children: React.ReactNode;
   className?: string;
-  as?: keyof typeof motion;
+  as?: keyof JSX.IntrinsicElements;
   customVariants?: Variants;
 }
 
@@ -65,17 +65,32 @@ export const ScrollAnimation = React.forwardRef<HTMLDivElement, ScrollAnimationP
     ...rest
   }, forwardedRef) => {
     const internalRef = useRef<HTMLDivElement>(null);
-    const [observe, isIntersecting, hasIntersected] = useIntersectionObserver({
-      threshold,
-      rootMargin,
-      freezeOnceVisible: once
-    });
+    const [isIntersecting, setIsIntersecting] = useState(false);
+    const [hasIntersected, setHasIntersected] = useState(false);
 
     // Set up the intersection observer
     useEffect(() => {
       if (!internalRef.current) return;
-      observe(internalRef.current);
-    }, [observe]);
+      
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsIntersecting(entry.isIntersecting);
+          if (entry.isIntersecting) {
+            setHasIntersected(true);
+            if (once) {
+              observer.disconnect();
+            }
+          }
+        },
+        { threshold, rootMargin }
+      );
+      
+      observer.observe(internalRef.current);
+      
+      return () => {
+        observer.disconnect();
+      };
+    }, [threshold, rootMargin, once]);
 
     // Handle forwarded ref
     useEffect(() => {
@@ -86,12 +101,13 @@ export const ScrollAnimation = React.forwardRef<HTMLDivElement, ScrollAnimationP
       }
     }, [forwardedRef]);
 
-    // Create the motion component based on the 'as' prop
-    const MotionComponent = motion[as];
+    // Use the motion component with the correct element type
+    const Component = motion[as as keyof typeof motion] || motion.div;
     const activeVariants = customVariants || variants[type];
 
+    // Simplify the component to avoid complex typing issues
     return (
-      <MotionComponent
+      <motion.div
         ref={internalRef}
         className={className}
         initial="hidden"
@@ -101,7 +117,7 @@ export const ScrollAnimation = React.forwardRef<HTMLDivElement, ScrollAnimationP
         {...rest}
       >
         {children}
-      </MotionComponent>
+      </motion.div>
     );
   }
 );

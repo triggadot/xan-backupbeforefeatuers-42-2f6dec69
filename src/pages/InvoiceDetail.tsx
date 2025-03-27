@@ -14,7 +14,7 @@ const InvoiceDetail: React.FC = () => {
         <title>Invoice Details | Glide Sync</title>
       </Helmet>
       <ScrollAnimation type="fade" className="w-full">
-        {id && <InvoiceDetailComponent invoiceId={id} />}
+        {id && <InvoiceDetailComponent />}
       </ScrollAnimation>
     </>
   );
