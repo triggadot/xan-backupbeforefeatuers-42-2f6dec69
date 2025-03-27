@@ -1,12 +1,12 @@
 
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion, HTMLMotionProps, Variants } from 'framer-motion';
 
 type GridDensity = 'loose' | 'normal' | 'tight';
 type GridResponsiveness = 'adaptive' | 'fixed';
 
-interface ResponsiveGridProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ResponsiveGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'animate'> {
   columns?: {
     xs?: number;
     sm?: number;
@@ -107,6 +107,9 @@ export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
         );
       });
 
+      // Use type assertion to resolve the type incompatibility
+      const motionProps = props as HTMLMotionProps<"div">;
+
       return (
         <motion.div
           ref={ref}
@@ -114,7 +117,7 @@ export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          {...props as HTMLMotionProps<"div">}
+          {...motionProps}
         >
           {animatedChildren}
         </motion.div>

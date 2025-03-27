@@ -15,7 +15,7 @@ interface ScrollAnimationProps extends Omit<HTMLMotionProps<'div'>, 'animate' | 
   once?: boolean;
   children: React.ReactNode;
   className?: string;
-  as?: React.ElementType;
+  as?: keyof typeof motion;
   customVariants?: Variants;
 }
 
@@ -64,32 +64,35 @@ export const ScrollAnimation = React.forwardRef<HTMLDivElement, ScrollAnimationP
     customVariants,
     ...rest
   }, forwardedRef) => {
-    const elementRef = useRef<HTMLDivElement>(null);
+    const internalRef = useRef<HTMLDivElement>(null);
     const [observe, isIntersecting, hasIntersected] = useIntersectionObserver({
       threshold,
       rootMargin,
       freezeOnceVisible: once
     });
 
-    // Merge refs
+    // Set up the intersection observer
     useEffect(() => {
-      if (!elementRef.current) return;
-      observe(elementRef.current);
-      
-      // Handle forwarded ref
-      if (typeof forwardedRef === 'function') {
-        forwardedRef(elementRef.current);
-      } else if (forwardedRef) {
-        forwardedRef.current = elementRef.current;
-      }
-    }, [observe, forwardedRef]);
+      if (!internalRef.current) return;
+      observe(internalRef.current);
+    }, [observe]);
 
-    const Component = motion[as as keyof typeof motion] || motion.div;
+    // Handle forwarded ref
+    useEffect(() => {
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(internalRef.current);
+      } else if (forwardedRef) {
+        forwardedRef.current = internalRef.current;
+      }
+    }, [forwardedRef]);
+
+    // Create the motion component based on the 'as' prop
+    const MotionComponent = motion[as];
     const activeVariants = customVariants || variants[type];
 
     return (
-      <Component
-        ref={elementRef}
+      <MotionComponent
+        ref={internalRef}
         className={className}
         initial="hidden"
         animate={isIntersecting || (once && hasIntersected) ? "visible" : "hidden"}
@@ -98,7 +101,7 @@ export const ScrollAnimation = React.forwardRef<HTMLDivElement, ScrollAnimationP
         {...rest}
       >
         {children}
-      </Component>
+      </MotionComponent>
     );
   }
 );
