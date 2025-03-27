@@ -37,15 +37,16 @@ export function usePurchaseOrderDetail() {
         throw new Error(`Purchase order with ID ${id} not found`);
       }
 
+      // Use explicit type to prevent deep instantiation
       const po = purchaseOrder as Record<string, any>;
       
       // Safely get vendor data
       let vendorName = 'Unknown Vendor';
-      let vendorData = undefined;
+      let vendorData: Record<string, any> | undefined = undefined;
       
       if (po.vendor) {
         // If it's a string (JSON), parse it
-        const vendorObj = parseJsonIfString<Record<string, unknown>>(po.vendor);
+        const vendorObj = parseJsonIfString<Record<string, any>>(po.vendor);
           
         vendorData = vendorObj;
         
@@ -116,7 +117,7 @@ export function usePurchaseOrderDetail() {
       }));
       
       // Format payments
-      const vendorPayments: VendorPayment[] = paymentsData.map(payment => ({
+      const vendorPayments: VendorPayment[] = paymentsData.map((payment) => ({
         id: String(payment.id || ''),
         amount: asNumber(payment.payment_amount || 0),
         date: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
