@@ -4,7 +4,7 @@ import { useSyncData } from '../useSyncData';
 import { useGlSyncValidation } from '../useGlSyncValidation';
 import { useColumnMappingValidation } from '../useColumnMappingValidation';
 import { supabase } from '@/integrations/supabase/client';
-import { glSyncApi } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 
 // Mock dependencies
 jest.mock('@/integrations/supabase/client', () => ({
@@ -16,7 +16,7 @@ jest.mock('@/integrations/supabase/client', () => ({
   }
 }));
 
-jest.mock('@/services/glsync', () => ({
+jest.mock('@/services/glSyncApi', () => ({
   glSyncApi: {
     listGlideTables: jest.fn(),
     syncData: jest.fn(),
@@ -214,4 +214,4 @@ describe('Hook Consolidation Tests', () => {
       expect(result.current.validationResult).toEqual(mockValidationResult);
     });
   });
-}); 
+});

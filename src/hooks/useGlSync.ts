@@ -1,12 +1,14 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { GlSyncStatus, SyncRequestPayload } from '@/types/glsync';
+import { GlSyncStatus, SyncRequestPayload, GlideTable, ProductSyncResult } from '@/types/glsync';
 import { testConnection, listGlideTables, syncData, mapAllRelationships } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
   const { toast } = useToast();
 
   const testGlideConnection = async (connectionId: string): Promise<boolean> => {
@@ -67,7 +69,7 @@ export function useGlSync() {
     }
   };
 
-  const syncMapping = async (connectionId: string, mappingId: string): Promise<boolean> => {
+  const syncMapping = async (connectionId: string, mappingId: string): Promise<ProductSyncResult | null> => {
     setIsLoading(true);
     setError(null);
     
@@ -86,7 +88,7 @@ export function useGlSync() {
           description: 'Data synchronized successfully.',
         });
       }
-      return !!result;
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error during sync';
       setError(errorMessage);
@@ -95,7 +97,7 @@ export function useGlSync() {
         description: errorMessage,
         variant: 'destructive',
       });
-      return false;
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -135,12 +137,69 @@ export function useGlSync() {
       setIsLoading(false);
     }
   };
+
+  const fetchGlideTables = async (connectionId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await glSyncApi.listGlideTables(connectionId);
+      if (response.success && response.tables) {
+        setGlideTables(response.tables);
+        return { tables: response.tables };
+      } else {
+        setError(response.error || 'Failed to fetch tables');
+        return { error: response.error || 'Failed to fetch tables' };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(errorMessage);
+      return { error: errorMessage };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const retryFailedSync = async (connectionId: string, mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await glSyncApi.retryFailedSync(connectionId, mappingId);
+      if (!result) {
+        setError('Retry failed');
+        toast({
+          title: 'Retry Failed',
+          description: 'Failed to retry the sync operation.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Retry Successful',
+          description: 'Sync operation retried successfully.',
+        });
+      }
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error during retry';
+      setError(errorMessage);
+      toast({
+        title: 'Retry Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return {
     testConnection: testGlideConnection,
     listTables: getTables,
     syncData: syncMapping,
     mapAllRelationships: mapRelationships,
+    fetchGlideTables,
+    glideTables,
+    retryFailedSync,
     isLoading,
     error
   };

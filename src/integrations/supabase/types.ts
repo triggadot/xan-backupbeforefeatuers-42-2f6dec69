@@ -2638,16 +2638,6 @@ export type Database = {
           deleted_media_files: number
         }[]
       }
-      md_extract_caption_from_telegram_data: {
-        Args: {
-          p_telegram_data: Json
-        }
-        Returns: {
-          caption: string
-          found: boolean
-          source: string
-        }[]
-      }
       md_force_resync_media_group: {
         Args: {
           p_media_group_id: string
