@@ -23,6 +23,8 @@ export function usePurchaseOrdersView() {
             product_count,
             purchase_order_uid,
             pdf_link,
+            created_at,
+            updated_at,
             gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
               id, glide_row_id, account_name
             )
@@ -50,7 +52,9 @@ export function usePurchaseOrdersView() {
           productCount: po.product_count || 0,
           createdAt: new Date(po.created_at),
           updatedAt: new Date(po.updated_at),
-          notes: '', // Add empty notes field as it doesn't exist in database
+          created_at: po.created_at,
+          updated_at: po.updated_at,
+          notes: '', // Add empty notes field as required by the type
           lineItems: [], // Add empty line items as required by the type
           vendorPayments: [] // Add empty vendor payments as required by the type
         }));
@@ -81,6 +85,8 @@ export function usePurchaseOrdersView() {
           product_count,
           purchase_order_uid,
           pdf_link,
+          created_at,
+          updated_at,
           gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
             id, glide_row_id, account_name
           )
@@ -108,7 +114,9 @@ export function usePurchaseOrdersView() {
         productCount: po.product_count || 0,
         createdAt: new Date(po.created_at),
         updatedAt: new Date(po.updated_at),
-        notes: '', // Add empty notes field as it doesn't exist in database
+        created_at: po.created_at,
+        updated_at: po.updated_at,
+        notes: '', // Add empty notes field as required by the type
         lineItems: [], // Add empty line items as required by the type
         vendorPayments: [] // Add empty vendor payments as required by the type
       }));

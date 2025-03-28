@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
 import { GlRecentLog } from '@/types/glsync';
 import { Spinner } from '@/components/ui/spinner';
-import { getStatusBadge } from '../ui/StatusBadgeUtils';
+import { StatusBadge } from '../ui/StatusBadgeUtils';
 
 export function RecentSyncList() {
   const { syncLogs, isLoading } = useRealtimeSyncLogs();
@@ -52,7 +52,7 @@ function SyncLogItem({ log }: { log: GlRecentLog }) {
                 : timeAgo}
             </p>
           </div>
-          {getStatusBadge(log.status)}
+          <StatusBadge status={log.status} />
         </div>
       </CardContent>
     </Card>

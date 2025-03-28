@@ -88,7 +88,32 @@ export function getStatusBadge(status: string): StatusBadge {
   };
 }
 
-export function StatusBadge({ status }: { status: string }) {
+// Add the getStatusIcon export function
+export function getStatusIcon(status: string | null): React.ReactNode {
+  if (!status) return <Clock className="h-4 w-4 text-gray-400" />;
+  
+  const lowercaseStatus = status.toLowerCase();
+  
+  if (lowercaseStatus === 'completed' || lowercaseStatus === 'success') {
+    return <Check className="h-4 w-4 text-green-500" />;
+  }
+  
+  if (lowercaseStatus === 'failed' || lowercaseStatus === 'error') {
+    return <XCircle className="h-4 w-4 text-red-500" />;
+  }
+  
+  if (lowercaseStatus === 'processing' || lowercaseStatus === 'syncing') {
+    return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+  }
+  
+  if (lowercaseStatus === 'pending') {
+    return <Clock className="h-4 w-4 text-yellow-500" />;
+  }
+  
+  return <Clock className="h-4 w-4 text-gray-400" />;
+}
+
+export function StatusBadge({ status }: { status: string }): React.ReactElement {
   const statusBadge = getStatusBadge(status);
   
   return (

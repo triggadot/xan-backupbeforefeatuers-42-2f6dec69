@@ -46,4 +46,10 @@ export interface PurchaseOrderWithVendor extends PurchaseOrder {
   updatedAt: Date;
   productCount: number;
   total: number;
+  poDate: string | null;
+  totalAmount: number;
+  lineItems: PurchaseOrderLineItem[];
+  vendorPayments: VendorPayment[];
+  created_at: string;
+  updated_at?: string;
 }

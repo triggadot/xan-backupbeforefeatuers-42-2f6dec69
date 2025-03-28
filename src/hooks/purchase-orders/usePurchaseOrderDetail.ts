@@ -1,19 +1,22 @@
-
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder } from '@/types/purchase-orders';
 
-export function usePurchaseOrderDetail(initialId?: string) {
-  const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);
+export function usePurchaseOrderDetail(id: string) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const getPurchaseOrder = async (id: string): Promise<PurchaseOrder | null> => {
+  const [error, setError] = useState<string | null>(null);
+  const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);
+  
+  const getPurchaseOrder = useCallback(async (purchaseOrderId: string): Promise<PurchaseOrder | null> => {
+    if (!purchaseOrderId) {
+      setError('No purchase order ID provided');
+      return null;
+    }
+    
     setIsLoading(true);
     setError(null);
     
     try {
-      // Fetch purchase order with related vendor info
       const { data, error } = await supabase
         .from('gl_purchase_orders')
         .select(`
@@ -22,29 +25,13 @@ export function usePurchaseOrderDetail(initialId?: string) {
             id, glide_row_id, account_name
           )
         `)
-        .eq('id', id)
+        .eq('id', purchaseOrderId)
         .single();
       
       if (error) throw error;
       
-      // Fetch line items
-      const { data: lineItemsData, error: lineItemsError } = await supabase
-        .from('gl_products')
-        .select('*')
-        .eq('rowid_purchase_orders', data.glide_row_id);
-      
-      if (lineItemsError) console.error('Error fetching line items:', lineItemsError);
-      
-      // Fetch payments
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('gl_vendor_payments')
-        .select('*')
-        .eq('rowid_purchase_orders', data.glide_row_id);
-      
-      if (paymentsError) console.error('Error fetching payments:', paymentsError);
-      
-      // Transform to PurchaseOrder format
-      const formattedPurchaseOrder: PurchaseOrder = {
+      // Map the data to match our PurchaseOrder interface
+      const mappedPurchaseOrder: PurchaseOrder = {
         id: data.id,
         glideRowId: data.glide_row_id,
         status: data.payment_status,
@@ -55,48 +42,33 @@ export function usePurchaseOrderDetail(initialId?: string) {
         balance: data.balance,
         vendorId: data.rowid_accounts,
         vendorName: data.gl_accounts?.[0]?.account_name || 'Unknown Vendor',
-        lineItems: (lineItemsData || []).map((item: any) => ({
-          id: item.id,
-          productId: item.id,
-          productName: item.vendor_product_name || item.new_product_name || 'Unknown Product',
-          quantity: item.total_qty_purchased || 1,
-          price: item.cost || 0,
-          notes: item.purchase_notes || ''
-        })),
-        vendorPayments: (paymentsData || []).map((payment: any) => ({
-          id: payment.id,
-          amount: payment.payment_amount || 0,
-          date: payment.date_of_payment,
-          paymentDate: payment.date_of_payment,
-          notes: payment.vendor_purchase_note || '',
-          vendorId: data.rowid_accounts
-        })),
-        purchaseOrderUid: data.purchase_order_uid,
-        pdfLink: data.pdf_link,
         number: data.purchase_order_uid || '',
-        dueDate: null,
-        notes: '',  // Default to empty string for notes that might not exist
+        pdfLink: data.pdf_link || '',
+        notes: '', // Add a default empty notes field
+        lineItems: [], // Add empty line items
+        vendorPayments: [], // Add empty vendor payments
         created_at: data.created_at,
-        updated_at: data.updated_at || data.created_at
+        updated_at: data.updated_at
       };
       
-      setPurchaseOrder(formattedPurchaseOrder);
-      return formattedPurchaseOrder;
+      setPurchaseOrder(mappedPurchaseOrder);
+      return mappedPurchaseOrder;
     } catch (err) {
-      console.error('Error fetching purchase order:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchase order details';
-      setError(new Error(errorMessage));
+      const errorMessage = err instanceof Error ? err.message : 'Error fetching purchase order';
+      setError(errorMessage);
+      console.error('Error in usePurchaseOrderDetail.getPurchaseOrder:', err);
       return null;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Initialize with provided ID
-  if (initialId && !purchaseOrder && !isLoading && !error) {
-    getPurchaseOrder(initialId);
-  }
-
+  }, []);
+  
+  useEffect(() => {
+    if (id) {
+      getPurchaseOrder(id);
+    }
+  }, [id, getPurchaseOrder]);
+  
   return {
     purchaseOrder,
     isLoading,

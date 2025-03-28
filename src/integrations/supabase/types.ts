@@ -2631,15 +2631,6 @@ export type Database = {
         }
         Returns: Json
       }
-      md_debug_media_message_handling: {
-        Args: {
-          p_telegram_message_id: number
-          p_chat_id: number
-          p_file_unique_id: string
-          p_media_data: Json
-        }
-        Returns: Json
-      }
       md_delete_media_from_storage: {
         Args: {
           p_storage_path: string
@@ -2683,11 +2674,21 @@ export type Database = {
           has_valid_source: boolean
         }[]
       }
-      md_handle_duplicate_media_message: {
+      md_get_processing_state_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          state: string
+          count: number
+          has_caption_count: number
+          has_analyzed_content_count: number
+          in_media_group_count: number
+        }[]
+      }
+      md_handle_media_message: {
         Args: {
-          p_file_unique_id: string
-          p_chat_id: number
           p_telegram_message_id: number
+          p_chat_id: number
+          p_file_unique_id: string
           p_media_data: Json
         }
         Returns: string
@@ -2731,6 +2732,14 @@ export type Database = {
           error_count: number
         }[]
       }
+      md_sync_all_media_groups: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          media_group_id: string
+          source_message_id: string
+          messages_synced: number
+        }[]
+      }
       md_sync_caption_from_telegram_data: {
         Args: {
           p_message_id: string
@@ -2763,12 +2772,6 @@ export type Database = {
       parse_caption_product_info: {
         Args: {
           p_caption: string
-        }
-        Returns: Json
-      }
-      process_message_caption: {
-        Args: {
-          p_message_id: string
         }
         Returns: Json
       }

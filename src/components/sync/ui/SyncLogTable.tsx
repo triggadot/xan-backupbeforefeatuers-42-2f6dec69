@@ -3,7 +3,7 @@ import React from 'react';
 import { SyncLog } from '@/types/syncLog';
 import { GlSyncLog } from '@/types/glsync';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getStatusBadge } from './StatusBadgeUtils';
+import { StatusBadge } from './StatusBadgeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTimeAgo, formatDateTime, formatDuration } from '@/utils/date-utils';
 
@@ -50,7 +50,9 @@ export function SyncLogTable({ logs, isLoading, showAppInfo = false }: SyncLogTa
       <TableBody>
         {logs.map(log => (
           <TableRow key={log.id}>
-            <TableCell>{getStatusBadge(log.status)}</TableCell>
+            <TableCell>
+              <StatusBadge status={log.status} />
+            </TableCell>
             {hasAppInfo && 'app_name' in log && (
               <TableCell>{log.app_name || '-'}</TableCell>
             )}

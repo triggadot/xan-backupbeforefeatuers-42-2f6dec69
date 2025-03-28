@@ -1,10 +1,11 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { formatTimestamp } from '@/utils/date-utils';
-import { getStatusBadge, getStatusIcon } from '../ui/StatusBadgeUtils';
+import { StatusBadge, getStatusIcon } from '../ui/StatusBadgeUtils';
 import { GlSyncStatus } from '@/types/glsync';
 import { ProgressIndicator } from '../ui/ProgressIndicator';
 
@@ -28,7 +29,7 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
             </div>
           </div>
           <div className="flex items-center">
-            {getStatusBadge(status.current_status)}
+            <StatusBadge status={status.current_status || 'pending'} />
           </div>
         </div>
       </CardHeader>
@@ -93,4 +94,4 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
       </CardContent>
     </Card>
   );
-} 
+}
