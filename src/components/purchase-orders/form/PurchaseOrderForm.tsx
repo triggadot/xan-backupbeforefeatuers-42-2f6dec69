@@ -57,11 +57,11 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="number">PO Number</Label>
+              <Label htmlFor="purchaseOrderUid">PO Number</Label>
               <Input
-                id="number"
-                name="number"
-                value={formData.number || ''}
+                id="purchaseOrderUid"
+                name="purchaseOrderUid"
+                value={formData.purchaseOrderUid || ''}
                 onChange={handleChange}
                 placeholder="PO-123"
               />
@@ -88,12 +88,12 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !formData.date && "text-muted-foreground"
+                      !formData.poDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? (
-                      format(new Date(formData.date), "PPP")
+                    {formData.poDate ? (
+                      format(new Date(formData.poDate), "PPP")
                     ) : (
                       <span>Pick a date</span>
                     )}
@@ -102,8 +102,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={formData.date ? new Date(formData.date) : undefined}
-                    onSelect={(date) => handleDateChange(date, 'date')}
+                    selected={formData.poDate ? new Date(formData.poDate) : undefined}
+                    onSelect={(date) => handleDateChange(date, 'poDate')}
                     initialFocus
                   />
                 </PopoverContent>
@@ -156,11 +156,11 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ purchaseOrder, on
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Total Amount</Label>
-              <div className="text-lg font-medium">${formData.total_amount || 0}</div>
+              <div className="text-lg font-medium">${formData.totalAmount || 0}</div>
             </div>
             <div className="space-y-2">
               <Label>Amount Paid</Label>
-              <div className="text-lg font-medium">${formData.total_paid || 0}</div>
+              <div className="text-lg font-medium">${formData.totalPaid || 0}</div>
             </div>
             <div className="space-y-2">
               <Label>Balance</Label>

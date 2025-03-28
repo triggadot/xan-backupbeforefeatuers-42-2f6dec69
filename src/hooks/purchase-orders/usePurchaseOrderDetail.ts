@@ -14,7 +14,12 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
       // Access gl_purchase_orders table directly instead of using RPC
       const { data, error } = await supabase
         .from('gl_purchase_orders')
-        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)')
+        .select(`
+          *,
+          gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
+            id, glide_row_id, account_name
+          )
+        `)
         .eq('glide_row_id', purchaseOrderId)
         .single();
 
@@ -36,7 +41,8 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         lineItems: [], // Would need another query to get line items
         vendorPayments: [], // Would need another query to get payments
         pdfLink: data.pdf_link,
-        purchaseOrderUid: data.purchase_order_uid
+        purchaseOrderUid: data.purchase_order_uid,
+        notes: data.notes
       };
 
       return purchaseOrder;
@@ -50,7 +56,12 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
       // Access gl_purchase_orders table directly
       const { data, error } = await supabase
         .from('gl_purchase_orders')
-        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)')
+        .select(`
+          *,
+          gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
+            id, glide_row_id, account_name
+          )
+        `)
         .eq('glide_row_id', id)
         .single();
 
@@ -72,7 +83,8 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         lineItems: [], // Would need another query to get line items
         vendorPayments: [], // Would need another query to get payments
         pdfLink: data.pdf_link,
-        purchaseOrderUid: data.purchase_order_uid
+        purchaseOrderUid: data.purchase_order_uid,
+        notes: data.notes
       };
 
       return purchaseOrder;

@@ -262,16 +262,17 @@ export const glSyncApi = {
    */
   async getSupabaseTables(): Promise<string[]> {
     try {
-      // Using the custom RPC function
+      // Using the custom SQL query instead of RPC function
       const { data, error } = await supabase
-        .rpc('gl_get_user_tables');
+        .from('gl_tables_view')
+        .select('table_name');
 
       if (error) {
         console.error('Error fetching Supabase tables:', error);
         return [];
       }
 
-      return data as string[];
+      return data.map(row => row.table_name) || [];
     } catch (err) {
       console.error('Exception in getSupabaseTables:', err);
       return [];

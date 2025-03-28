@@ -15,6 +15,11 @@ export interface PurchaseOrder {
   vendorPayments: VendorPayment[];
   purchaseOrderUid?: string;
   pdfLink?: string;
+  // Additional properties needed by PurchaseOrderForm
+  number?: string;
+  date?: string | Date;
+  dueDate?: string | Date;
+  notes?: string;
 }
 
 export interface PurchaseOrderLineItem {

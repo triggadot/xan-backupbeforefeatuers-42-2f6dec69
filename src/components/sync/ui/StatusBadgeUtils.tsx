@@ -82,3 +82,36 @@ export const getStatusColor = (status: string): string => {
       return 'text-slate-500';
   }
 };
+
+// Add the missing getStatusBadge function
+export const getStatusBadge = (status: string) => {
+  const statusLower = status?.toLowerCase();
+  let variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' = 'ghost';
+  
+  switch (statusLower) {
+    case 'completed':
+    case 'success':
+    case 'active':
+      variant = 'default';
+      break;
+    case 'failed':
+    case 'error':
+      variant = 'destructive';
+      break;
+    case 'disabled':
+    case 'inactive':
+      variant = 'outline';
+      break;
+    case 'pending':
+    case 'waiting':
+    case 'processing':
+    case 'started':
+      variant = 'secondary';
+      break;
+  }
+  
+  return {
+    variant,
+    icon: getStatusIcon(status)
+  };
+};

@@ -9,7 +9,12 @@ export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
     queryFn: async () => {
       let query = supabase
         .from('gl_purchase_orders')
-        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)');
+        .select(`
+          *,
+          gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
+            id, glide_row_id, account_name
+          )
+        `);
 
       // Apply filters if they exist
       if (filters) {
@@ -50,7 +55,8 @@ export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
         lineItems: [], // Would need to fetch these separately if needed
         vendorPayments: [], // Would need to fetch these separately if needed
         pdfLink: po.pdf_link,
-        purchaseOrderUid: po.purchase_order_uid
+        purchaseOrderUid: po.purchase_order_uid,
+        notes: po.notes
       }));
 
       return purchaseOrders;
@@ -62,7 +68,12 @@ export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
     try {
       let query = supabase
         .from('gl_purchase_orders')
-        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)');
+        .select(`
+          *,
+          gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
+            id, glide_row_id, account_name
+          )
+        `);
 
       // Apply filters if they exist
       if (queryFilters) {
@@ -103,7 +114,8 @@ export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
         lineItems: [], // Would need to fetch these separately if needed
         vendorPayments: [], // Would need to fetch these separately if needed
         pdfLink: po.pdf_link,
-        purchaseOrderUid: po.purchase_order_uid
+        purchaseOrderUid: po.purchase_order_uid,
+        notes: po.notes
       }));
 
       return purchaseOrders;
