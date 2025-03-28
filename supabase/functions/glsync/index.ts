@@ -112,9 +112,43 @@ Deno.serve(async (req) => {
       
       return await syncData(supabase, connectionId, mappingId);
     }
+    else if (action === 'syncMapping') {
+      if (!mappingId) {
+        throw new Error('Mapping ID is required');
+      }
+      
+      // Get mapping details
+      const { data: mapping, error: mappingError } = await supabase
+        .from('gl_mappings')
+        .select('*')
+        .eq('id', mappingId)
+        .single();
+      
+      if (mappingError) {
+        throw new Error(`Failed to fetch mapping: ${mappingError.message}`);
+      }
+      
+      if (!mapping) {
+        throw new Error('Mapping not found');
+      }
+      
+      // Sync data using the mapping's connection ID
+      return await syncData(supabase, mapping.connection_id, mappingId);
+    }
     else if (action === 'mapRelationships') {
-      if (!payload.mappingId) {
-        return errorResponse('Missing mappingId parameter');
+      const mappingId = requestBody.mappingId;
+      
+      if (!mappingId) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Missing mappingId parameter' 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          }
+        );
       }
       
       try {
@@ -122,7 +156,7 @@ Deno.serve(async (req) => {
         const { data: mappingData, error: mappingError } = await supabase
           .from('gl_mappings')
           .select('*')
-          .eq('id', payload.mappingId)
+          .eq('id', mappingId)
           .single();
           
         if (mappingError) throw new Error(mappingError.message);
@@ -136,13 +170,28 @@ Deno.serve(async (req) => {
         
         console.log('Relationship mapping result:', mapResult);
         
-        return jsonResponse({
-          success: true,
-          result: mapResult
-        });
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            result: mapResult
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
       } catch (error) {
         console.error('Error mapping relationships:', error);
-        return errorResponse(`Failed to map relationships: ${error.message}`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
       }
     }
     else {

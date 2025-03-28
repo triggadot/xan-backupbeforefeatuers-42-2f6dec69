@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { usePurchaseOrderDetail } from '@/hooks/purchase-orders/usePurchaseOrder
 import { PurchaseOrder } from '@/types/purchase-orders';
 import { formatCurrency } from '@/utils/formatters';
 import { format } from 'date-fns';
+import { SkeletonDetails } from '@/components/ui/skeleton';
 
 const PurchaseOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,26 +47,22 @@ const PurchaseOrderDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-12 w-12 animate-spin text-gray-400" />
-      </div>
+      <SkeletonDetails />
     );
   }
 
   if (error || !purchaseOrder) {
     return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center p-6 text-center">
-            <h3 className="text-lg font-semibold mb-2">Error Loading Purchase Order</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {error ? (typeof error === 'string' ? error : (error instanceof Error ? error.message : 'An unknown error occurred')) : 'Purchase order not found'}
-            </p>
-            <Button onClick={handleBack} variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Purchase Orders
-            </Button>
-          </div>
+        <CardContent className="py-8 text-center">
+          <h3 className="text-lg font-medium mb-4">Error Loading Purchase Order</h3>
+          <p className="text-muted-foreground mb-6">
+            {error instanceof Error ? error.message : 'Failed to load purchase order details'}
+          </p>
+          <Button onClick={handleBack} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Purchase Orders
+          </Button>
         </CardContent>
       </Card>
     );

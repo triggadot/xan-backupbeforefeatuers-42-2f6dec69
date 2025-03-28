@@ -216,6 +216,12 @@ export const glSyncApi = {
    */
   async createMapping(mapping: Partial<GlMapping>): Promise<GlMapping | null> {
     try {
+      // Ensure required fields are present
+      if (!mapping.connection_id || !mapping.glide_table || !mapping.glide_table_display_name || !mapping.supabase_table) {
+        console.error('Missing required mapping fields');
+        return null;
+      }
+      
       // Convert the column_mappings to a format Supabase can handle
       const mappingToInsert = {
         ...mapping,

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { GlSyncStatus, SyncRequestPayload, GlideTable, ProductSyncResult } from '@/types/glsync';
@@ -103,7 +102,58 @@ export function useGlSync() {
     }
   };
 
-  // Add the new mapAllRelationships function
+  const syncMappingById = async (mappingId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'syncMapping',
+          mappingId: mappingId
+        }
+      });
+      
+      if (error) {
+        setError(`Sync failed: ${error.message}`);
+        toast({
+          title: 'Sync Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      if (!data?.success) {
+        const errorMessage = data?.error || 'Unknown error during sync';
+        setError(errorMessage);
+        toast({
+          title: 'Sync Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      toast({
+        title: 'Sync Successful',
+        description: 'Data synchronized successfully.',
+      });
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error during sync';
+      setError(errorMessage);
+      toast({
+        title: 'Sync Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const mapRelationships = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -196,6 +246,7 @@ export function useGlSync() {
     testConnection: testGlideConnection,
     listTables: getTables,
     syncData: syncMapping,
+    syncMappingById,
     mapAllRelationships: mapRelationships,
     fetchGlideTables,
     glideTables,

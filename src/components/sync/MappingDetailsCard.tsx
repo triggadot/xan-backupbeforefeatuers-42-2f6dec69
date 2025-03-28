@@ -26,7 +26,7 @@ export function MappingDetailsCard({
   onEdit,
   onDelete
 }: MappingDetailsCardProps) {
-  const { syncData, isLoading: isSyncing, retryFailedSync } = useGlSync();
+  const { syncData, isLoading: isSyncing, retryFailedSync, syncMappingById } = useGlSync();
   const { validating, validation, validateMappingConfig } = useGlSyncValidation();
 
   useEffect(() => {
@@ -46,8 +46,11 @@ export function MappingDetailsCard({
 
   const handleSync = async () => {
     if (validation && !validation.isValid) return;
-    await syncData(mapping.connection_id, mapping.id);
-    if (onSyncComplete) {
+    
+    // Use the new syncMappingById function
+    const success = await syncMappingById(mapping.id);
+    
+    if (success && onSyncComplete) {
       onSyncComplete();
     }
   };
