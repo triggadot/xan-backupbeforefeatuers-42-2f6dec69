@@ -124,7 +124,7 @@ export const glSyncApi = {
         return [];
       }
 
-      return data as GlConnection[];
+      return data as unknown as GlConnection[];
     } catch (err) {
       console.error('Exception in getConnections:', err);
       return [];
@@ -147,7 +147,7 @@ export const glSyncApi = {
         return null;
       }
 
-      return data as GlConnection;
+      return data as unknown as GlConnection;
     } catch (err) {
       console.error('Exception in getConnection:', err);
       return null;
@@ -159,9 +159,20 @@ export const glSyncApi = {
    */
   async createConnection(connection: Partial<GlConnection>): Promise<GlConnection | null> {
     try {
+      // Extract only the valid fields from connection
+      const { app_id, api_key, app_name, status, settings } = connection;
+      
+      const validConnection = {
+        app_id: app_id as string,
+        api_key: api_key as string,
+        app_name,
+        status,
+        settings
+      };
+      
       const { data, error } = await supabase
         .from('gl_connections')
-        .insert([connection])
+        .insert([validConnection])
         .select()
         .single();
 
@@ -170,10 +181,79 @@ export const glSyncApi = {
         return null;
       }
 
-      return data as GlConnection;
+      return data as unknown as GlConnection;
     } catch (err) {
       console.error('Exception in createConnection:', err);
       return null;
+    }
+  },
+
+  /**
+   * Updates an existing connection
+   */
+  async updateConnection(id: string, updates: Partial<GlConnection>): Promise<GlConnection | null> {
+    try {
+      const { data, error } = await supabase
+        .from('gl_connections')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating connection:', error);
+        return null;
+      }
+
+      return data as unknown as GlConnection;
+    } catch (err) {
+      console.error('Exception in updateConnection:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Deletes an existing connection
+   */
+  async deleteConnection(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('gl_connections')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting connection:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Exception in deleteConnection:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Maps all relationships
+   */
+  async mapAllRelationships(): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.functions.invoke('glsync', {
+        body: {
+          action: 'mapRelationships'
+        }
+      });
+
+      if (error) {
+        console.error('Error mapping relationships:', error);
+        return false;
+      }
+
+      return data?.success || false;
+    } catch (err) {
+      console.error('Exception in mapAllRelationships:', err);
+      return false;
     }
   },
 
@@ -182,8 +262,9 @@ export const glSyncApi = {
    */
   async getSupabaseTables(): Promise<string[]> {
     try {
+      // Using the custom RPC function
       const { data, error } = await supabase
-        .rpc('get_user_tables');
+        .rpc('gl_get_user_tables');
 
       if (error) {
         console.error('Error fetching Supabase tables:', error);
@@ -203,7 +284,7 @@ export const glSyncApi = {
   async getTableColumns(tableName: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_table_columns', { table_name: tableName });
+        .rpc('gl_get_table_columns', { table_name: tableName });
 
       if (error) {
         console.error(`Error fetching columns for table ${tableName}:`, error);
@@ -215,5 +296,12 @@ export const glSyncApi = {
       console.error('Exception in getTableColumns:', err);
       return [];
     }
+  },
+  
+  /**
+   * Gets columns for a specific table
+   */
+  async getSupabaseTableColumns(tableName: string): Promise<any[]> {
+    return this.getTableColumns(tableName);
   }
 };

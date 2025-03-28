@@ -1,74 +1,84 @@
 
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  AlertCircle, 
+  CircleSlash, 
+  Clock, 
+  ArrowRightLeft, 
+  Loader2 
+} from 'lucide-react';
+import { ReactNode } from 'react';
 
-export const getStatusBadge = (status: string | null | undefined) => {
-  if (!status) {
-    return (
-      <Badge variant="outline" className="text-xs flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        Unknown
-      </Badge>
-    );
-  }
-
-  switch (status.toLowerCase()) {
+export const getStatusIcon = (status: string): ReactNode => {
+  switch (status?.toLowerCase()) {
     case 'completed':
-      return (
-        <Badge variant="default" className="bg-green-500 text-xs flex items-center gap-1">
-          <CheckCircle className="h-3 w-3" />
-          Completed
-        </Badge>
-      );
+    case 'success':
+    case 'active':
+      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    case 'failed':
+    case 'error':
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    case 'disabled':
+    case 'inactive':
+      return <CircleSlash className="h-4 w-4 text-slate-400" />;
+    case 'pending':
+    case 'waiting':
+      return <Clock className="h-4 w-4 text-amber-500" />;
     case 'processing':
     case 'started':
-      return (
-        <Badge variant="default" className="bg-blue-500 text-xs flex items-center gap-1">
-          <RefreshCw className="h-3 w-3 animate-spin" />
-          {status === 'processing' ? 'Processing' : 'Started'}
-        </Badge>
-      );
-    case 'failed':
-      return (
-        <Badge variant="destructive" className="text-xs flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          Failed
-        </Badge>
-      );
-    case 'idle':
-      return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Idle
-        </Badge>
-      );
+      return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+    case 'completed_with_errors':
+      return <AlertCircle className="h-4 w-4 text-amber-500" />;
+    case 'bidirectional':
+      return <ArrowRightLeft className="h-4 w-4 text-purple-500" />;
     default:
-      return (
-        <Badge variant="outline" className="text-xs flex items-center gap-1">
-          {status}
-        </Badge>
-      );
+      return <Clock className="h-4 w-4 text-slate-400" />;
   }
 };
 
-// Add the getStatusIcon function
-export const getStatusIcon = (status: string | null | undefined, className: string = "h-4 w-4") => {
-  if (!status) {
-    return <Clock className={className} />;
-  }
-
-  switch (status.toLowerCase()) {
+export const getStatusVariant = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' => {
+  switch (status?.toLowerCase()) {
     case 'completed':
-      return <CheckCircle className={className} />;
+    case 'success':
+    case 'active':
+      return 'default';
+    case 'failed':
+    case 'error':
+      return 'destructive';
+    case 'disabled':
+    case 'inactive':
+      return 'outline';
+    case 'pending':
+    case 'waiting':
     case 'processing':
     case 'started':
-      return <RefreshCw className={`${className} animate-spin`} />;
-    case 'failed':
-      return <AlertTriangle className={className} />;
-    case 'idle':
-      return <Clock className={className} />;
+      return 'secondary';
     default:
-      return <Clock className={className} />;
+      return 'ghost';
+  }
+};
+
+export const getStatusColor = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case 'completed':
+    case 'success':
+    case 'active':
+      return 'text-green-500';
+    case 'failed':
+    case 'error':
+      return 'text-red-500';
+    case 'disabled':
+    case 'inactive':
+      return 'text-slate-400';
+    case 'pending':
+    case 'waiting':
+      return 'text-amber-500';
+    case 'processing':
+    case 'started':
+      return 'text-blue-500';
+    case 'completed_with_errors':
+      return 'text-amber-500';
+    default:
+      return 'text-slate-500';
   }
 };

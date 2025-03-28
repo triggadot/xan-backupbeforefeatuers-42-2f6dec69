@@ -1,7 +1,7 @@
 
 -- Function to get purchase orders with filter options
 CREATE OR REPLACE FUNCTION get_purchase_orders(
-  p_vendor_id UUID DEFAULT NULL,
+  p_vendor_id TEXT DEFAULT NULL,
   p_payment_status TEXT DEFAULT NULL,
   p_date_from TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   p_date_to TIMESTAMP WITH TIME ZONE DEFAULT NULL
@@ -11,7 +11,7 @@ BEGIN
   RETURN QUERY
   SELECT po.*
   FROM gl_purchase_orders po
-  WHERE (p_vendor_id IS NULL OR po.rowid_accounts = p_vendor_id::TEXT)
+  WHERE (p_vendor_id IS NULL OR po.rowid_accounts = p_vendor_id)
     AND (p_payment_status IS NULL OR po.payment_status = p_payment_status)
     AND (p_date_from IS NULL OR po.po_date >= p_date_from)
     AND (p_date_to IS NULL OR po.po_date <= p_date_to)
@@ -31,7 +31,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get user-accessible tables
-CREATE OR REPLACE FUNCTION get_user_tables()
+CREATE OR REPLACE FUNCTION gl_get_user_tables()
 RETURNS SETOF TEXT AS $$
 BEGIN
   RETURN QUERY
@@ -45,7 +45,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get columns for a specific table
-CREATE OR REPLACE FUNCTION get_table_columns(table_name TEXT)
+CREATE OR REPLACE FUNCTION gl_get_table_columns(table_name TEXT)
 RETURNS TABLE(
   column_name TEXT,
   data_type TEXT,
@@ -65,3 +65,4 @@ BEGIN
   ORDER BY c.ordinal_position;
 END;
 $$ LANGUAGE plpgsql;
+

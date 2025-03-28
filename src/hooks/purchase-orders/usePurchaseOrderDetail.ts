@@ -11,15 +11,35 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         throw new Error('Purchase order ID is required');
       }
 
-      // Using a custom RPC function to get purchase order details
+      // Access gl_purchase_orders table directly instead of using RPC
       const { data, error } = await supabase
-        .rpc('get_purchase_order_by_id', { p_id: purchaseOrderId });
+        .from('gl_purchase_orders')
+        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)')
+        .eq('glide_row_id', purchaseOrderId)
+        .single();
 
       if (error) {
         throw error;
       }
 
-      return data as PurchaseOrder;
+      // Transform to match PurchaseOrder type
+      const purchaseOrder: PurchaseOrder = {
+        id: data.id,
+        glideRowId: data.glide_row_id,
+        status: data.payment_status,
+        poDate: data.po_date,
+        totalAmount: data.total_amount,
+        totalPaid: data.total_paid,
+        balance: data.balance,
+        vendorId: data.rowid_accounts,
+        vendorName: data.gl_accounts?.account_name || 'Unknown Vendor',
+        lineItems: [], // Would need another query to get line items
+        vendorPayments: [], // Would need another query to get payments
+        pdfLink: data.pdf_link,
+        purchaseOrderUid: data.purchase_order_uid
+      };
+
+      return purchaseOrder;
     },
     enabled: !!purchaseOrderId,
   });
@@ -27,14 +47,35 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
   // Define a helper function to get purchase order details
   const getPurchaseOrder = async (id: string): Promise<PurchaseOrder | null> => {
     try {
+      // Access gl_purchase_orders table directly
       const { data, error } = await supabase
-        .rpc('get_purchase_order_by_id', { p_id: id });
+        .from('gl_purchase_orders')
+        .select('*, gl_accounts!gl_purchase_orders_rowid_accounts_fkey(*)')
+        .eq('glide_row_id', id)
+        .single();
 
       if (error) {
         throw error;
       }
 
-      return data as PurchaseOrder;
+      // Transform to match PurchaseOrder type
+      const purchaseOrder: PurchaseOrder = {
+        id: data.id,
+        glideRowId: data.glide_row_id,
+        status: data.payment_status,
+        poDate: data.po_date,
+        totalAmount: data.total_amount,
+        totalPaid: data.total_paid,
+        balance: data.balance,
+        vendorId: data.rowid_accounts,
+        vendorName: data.gl_accounts?.account_name || 'Unknown Vendor',
+        lineItems: [], // Would need another query to get line items
+        vendorPayments: [], // Would need another query to get payments
+        pdfLink: data.pdf_link,
+        purchaseOrderUid: data.purchase_order_uid
+      };
+
+      return purchaseOrder;
     } catch (err) {
       console.error('Error fetching purchase order:', err);
       return null;

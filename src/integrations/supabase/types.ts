@@ -2120,6 +2120,20 @@ export type Database = {
         }
         Relationships: []
       }
+      media_group_stats: {
+        Row: {
+          analyzed_count: number | null
+          first_message_time: string | null
+          last_message_time: string | null
+          latest_processing_state:
+            | Database["public"]["Enums"]["message_processing_state"]
+            | null
+          media_group_id: string | null
+          synced_count: number | null
+          total_messages: number | null
+        }
+        Relationships: []
+      }
       mv_invoice_customer_details: {
         Row: {
           balance: number | null
@@ -2821,7 +2835,10 @@ export type Database = {
       }
       sync_delayed_media_groups: {
         Args: Record<PropertyKey, never>
-        Returns: Json
+        Returns: {
+          synced_groups: number
+          error_count: number
+        }[]
       }
       sync_media_group_simple: {
         Args: {

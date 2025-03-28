@@ -1,20 +1,38 @@
 
-// Import the existing PurchaseOrder interface from purchaseOrder.ts
-import {
-  PurchaseOrder as BasePurchaseOrder,
-  PurchaseOrderLineItem,
-  VendorPayment,
-  PurchaseOrderWithVendor,
-  PurchaseOrderFilters
-} from './purchaseOrder';
+import { VendorPayment } from './vendorPayment';
 
-// Re-export all the types
-export type {
-  BasePurchaseOrder as PurchaseOrder,
-  PurchaseOrderLineItem,
-  VendorPayment,
-  PurchaseOrderWithVendor,
-  PurchaseOrderFilters
-};
+export interface PurchaseOrder {
+  id: string;
+  glideRowId: string;
+  status: string;
+  poDate: string | null;
+  totalAmount: number;
+  totalPaid: number;
+  balance: number;
+  vendorId: string;
+  vendorName: string;
+  lineItems: PurchaseOrderLineItem[];
+  vendorPayments: VendorPayment[];
+  purchaseOrderUid?: string;
+  pdfLink?: string;
+}
 
-// Add any additional types specific to the purchase-orders module if needed
+export interface PurchaseOrderLineItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  notes?: string;
+}
+
+export interface PurchaseOrderFilters {
+  vendorId?: string;
+  status?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+export interface PurchaseOrderWithVendor extends PurchaseOrder {
+  vendorName: string;
+}
