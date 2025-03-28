@@ -85,9 +85,9 @@ export function useRelationshipMapping() {
       
       for (const table of tables) {
         try {
-          // Use a type-safe approach to query the table
+          // Use a more direct approach to query the table, avoiding type assertions
           const { count, error: countError } = await supabase
-            .from(asTable(table))
+            .from(table)
             .select('*', { count: 'exact', head: true });
           
           if (!countError && (count || 0) > 0) {
@@ -104,7 +104,7 @@ export function useRelationshipMapping() {
         validTables 
       };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error validating relationships';
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('Error validating relationships:', err);
       return { success: false, validTables: [], error: errorMessage };
     }
@@ -140,7 +140,7 @@ export function useRelationshipMapping() {
         return { success: true, result: data };
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
       toast({
         title: 'Mapping Error',

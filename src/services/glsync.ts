@@ -177,7 +177,7 @@ export const mapAllRelationships = async (options?: {
     console.log('Relationship mapping result:', data);
     return { success: true, result: data };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
+    const errorMessage = err instanceof Error ? err.message : String(err);
     console.error('Error calling relationship mapping function:', err);
     return { success: false, error: errorMessage };
   }
@@ -214,9 +214,9 @@ export const validateRelationships = async (): Promise<{
     
     for (const table of tables) {
       try {
-        // Type assertion to appease TypeScript - we'll handle errors properly
+        // Direct table query without type assertion
         const { count, error: countError } = await supabase
-          .from(table as any)
+          .from(table)
           .select('*', { count: 'exact', head: true });
         
         if (!countError && (count || 0) > 0) {
@@ -233,7 +233,7 @@ export const validateRelationships = async (): Promise<{
       validTables 
     };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error validating relationships';
+    const errorMessage = err instanceof Error ? err.message : String(err);
     console.error('Error validating relationships:', err);
     return { success: false, validTables: [], error: errorMessage };
   }
