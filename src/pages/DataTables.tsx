@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +21,7 @@ const DataTables: React.FC = () => {
     try {
       const result = await mapAllRelationships();
       
-      if (!result || !result.success) {
+      if (!result || result.success === false) {
         throw new Error(result?.error || 'Unknown error mapping relationships');
       }
       

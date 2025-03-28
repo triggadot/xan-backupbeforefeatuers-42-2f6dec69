@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlideTable, MappingToValidate, ColumnMappingSuggestion, ProductSyncResult, SyncRequestPayload } from '@/types/glsync';
+import { asTable } from '@/types/supabase';
 
 /**
  * Tests the connection to Glide
