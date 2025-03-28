@@ -2597,6 +2597,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      map_sb_products_relationships: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       map_sb_shipping_records_relationships: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2683,6 +2687,10 @@ export type Database = {
           has_analyzed_content_count: number
           in_media_group_count: number
         }[]
+      }
+      md_glsync_map_all_relationships: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       md_handle_media_message: {
         Args: {

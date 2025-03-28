@@ -141,18 +141,14 @@ export const validateMapping = async (mapping: MappingToValidate): Promise<boole
  */
 export const mapAllRelationships = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.functions.invoke('glsync', {
-      body: {
-        action: 'mapRelationships'
-      }
-    });
+    const { data, error } = await supabase.rpc('map_all_sb_relationships');
 
     if (error) {
       console.error('Error mapping relationships:', error);
       return false;
     }
 
-    return data?.success || false;
+    return true;
   } catch (err) {
     console.error('Error calling relationship mapping function:', err);
     return false;

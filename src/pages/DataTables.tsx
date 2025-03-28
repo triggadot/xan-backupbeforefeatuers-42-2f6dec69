@@ -8,26 +8,32 @@ import ProductsView from '@/components/products/ProductsView';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { RelationshipMapper } from '@/components/sync/RelationshipMapper';
 
 const DataTables: React.FC = () => {
   const [activeTab, setActiveTab] = useState('products');
   const [isMapping, setIsMapping] = useState(false);
+  const [mappingResults, setMappingResults] = useState<any>(null);
   const { toast } = useToast();
 
   const handleMapRelationships = async () => {
     setIsMapping(true);
+    setMappingResults(null);
     try {
-      // Call the PostgreSQL function to map relationships
-      const { data, error } = await supabase.rpc('md_glsync_map_all_relationships');
+      // Call the correct PostgreSQL function with the name that exists in our database
+      const { data, error } = await supabase.rpc('map_all_sb_relationships');
       
       if (error) {
         throw error;
       }
       
+      // Set the mapping results to display them
+      setMappingResults(data);
+      
       // Show success toast with information
       toast({
         title: 'Relationships Mapped',
-        description: `Mapped ${data.total_mapped} relationships across ${Object.keys(data.tables_processed).length} tables.`,
+        description: `Successfully mapped relationships across tables.`,
       });
       
       console.log('Mapping result:', data);
@@ -68,6 +74,17 @@ const DataTables: React.FC = () => {
         </Button>
       </div>
       
+      {mappingResults && (
+        <Card className="mb-6 bg-green-50 border-green-200">
+          <CardContent className="pt-6">
+            <h3 className="font-medium text-green-800 mb-2">Mapping Results</h3>
+            <pre className="text-xs overflow-auto bg-white p-4 rounded border max-h-48">
+              {JSON.stringify(mappingResults, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="products">Products</TabsTrigger>
@@ -105,6 +122,10 @@ const DataTables: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <div className="mt-8">
+        <RelationshipMapper />
+      </div>
     </motion.div>
   );
 };

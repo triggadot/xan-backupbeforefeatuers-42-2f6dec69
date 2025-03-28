@@ -160,21 +160,24 @@ export function useGlSync() {
     setError(null);
     
     try {
-      const success = await mapAllRelationships();
-      if (!success) {
-        setError('Relationship mapping failed');
+      const { data, error } = await supabase.rpc('map_all_sb_relationships');
+      
+      if (error) {
+        setError('Relationship mapping failed: ' + error.message);
         toast({
           title: 'Mapping Failed',
-          description: 'Failed to map relationships between tables.',
+          description: 'Failed to map relationships between tables: ' + error.message,
           variant: 'destructive',
         });
+        return false;
       } else {
         toast({
           title: 'Mapping Successful',
           description: 'Relationships mapped successfully.',
         });
+        console.log('Mapping result:', data);
+        return true;
       }
-      return success;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
       setError(errorMessage);

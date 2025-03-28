@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlideTable, ProductSyncResult, GlMapping } from '@/types/glsync';
 
@@ -309,18 +308,16 @@ export const glSyncApi = {
    */
   async mapAllRelationships(): Promise<boolean> {
     try {
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'mapRelationships'
-        }
-      });
+      // Use the correct function name that exists in our database
+      const { data, error } = await supabase.rpc('map_all_sb_relationships');
 
       if (error) {
         console.error('Error mapping relationships:', error);
         return false;
       }
 
-      return data?.success || false;
+      console.log('Relationship mapping result:', data);
+      return true;
     } catch (err) {
       console.error('Exception in mapAllRelationships:', err);
       return false;
