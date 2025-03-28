@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { List, Grid2x2, Table as TableIcon } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -19,7 +18,6 @@ import {
   Text,
   Metric,
   Grid,
-  Title,
   Badge,
   Divider,
   Flex,
@@ -28,7 +26,31 @@ import { Spinner } from '@/components/ui/spinner';
 import { formatCurrency } from '@/utils/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Product } from '@/types/product';
+
+// Updated Product interface to include glide_row_id
+interface Product {
+  id: string;
+  glide_row_id: string;
+  name: string;
+  sku: string;
+  description: string;
+  category: string;
+  price: number;
+  cost: number;
+  quantity: number;
+  status: 'active' | 'inactive' | 'discontinued';
+  vendorId: string;
+  vendorName: string;
+  imageUrl: string;
+  isSample: boolean;
+  isFronted: boolean;
+  isMiscellaneous: boolean;
+  purchaseDate: Date | null;
+  frontedTerms: string;
+  totalUnitsBehindSample: number;
+  created_at: string;
+  updated_at: string;
+}
 
 const ProductsView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,7 +67,7 @@ const ProductsView: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('gl_products')
-        .select('*')
+        .select('*, gl_accounts!gl_products_rowid_accounts(*)')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -55,16 +77,17 @@ const ProductsView: React.FC = () => {
       // Map the database response to our Product type
       const mappedProducts: Product[] = data.map((item) => ({
         id: item.id,
+        glide_row_id: item.glide_row_id || '',
         name: item.new_product_name || item.vendor_product_name || 'Unnamed Product',
-        sku: '',
+        sku: item.sku || '',
         description: item.purchase_notes || '',
         category: item.category || 'Uncategorized',
-        price: 0, // We don't have a selling price in the data
+        price: item.price || 0,
         cost: Number(item.cost) || 0,
         quantity: Number(item.total_qty_purchased) || 0,
         status: 'active', // Default status
         vendorId: item.rowid_accounts || '',
-        vendorName: '',
+        vendorName: item.gl_accounts?.name || '',
         imageUrl: item.product_image1 || '',
         isSample: item.samples || false,
         isFronted: item.fronted || false,

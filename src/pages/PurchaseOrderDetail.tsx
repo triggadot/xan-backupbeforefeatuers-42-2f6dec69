@@ -68,21 +68,13 @@ const PurchaseOrderDetail: React.FC = () => {
   }
 
   if (error) {
+    const errorMessage = error ? (typeof error === 'object' && 'message' in error ? error.message : String(error)) : 'Unknown error';
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <h3 className="text-lg font-medium mb-4">Error Loading Purchase Order</h3>
-          <p className="text-muted-foreground mb-6">
-            {typeof error === 'object' && error !== null && 'message' in error 
-              ? (error as Error).message 
-              : String(error || 'Unknown error')}
-          </p>
-          <Button onClick={handleBack} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Purchase Orders
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto py-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <p>Error loading purchase order: {errorMessage}</p>
+        </div>
+      </div>
     );
   }
 
