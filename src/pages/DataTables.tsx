@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,14 +18,14 @@ const DataTables: React.FC = () => {
   const handleMapRelationships = async () => {
     setMappingResults(null);
     try {
-      const { success, result, error } = await mapAllRelationships();
+      const result = await mapAllRelationships();
       
-      if (!success) {
-        throw new Error(error || 'Unknown error mapping relationships');
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Unknown error mapping relationships');
       }
       
       // Set the mapping results to display them
-      setMappingResults(result);
+      setMappingResults(result.result);
       
       // Show success toast with information
       toast({

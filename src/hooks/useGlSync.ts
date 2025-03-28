@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { GlSyncStatus, SyncRequestPayload, GlideTable, ProductSyncResult } from '@/types/glsync';
@@ -165,28 +164,32 @@ export function useGlSync() {
   const checkRelationshipStatus = useCallback(async (): Promise<void> => {
     try {
       // Get pending relationships count
-      const { data: pendingData, error: pendingError } = await supabase
+      const { data: pendingResult, error: pendingError } = await supabase
         .from('gl_relationship_mapping_log')
-        .select('count(*)', { count: 'exact' })
+        .select('count')
         .eq('status', 'pending');
       
       if (pendingError) throw pendingError;
       
       // Get mapped relationships count
-      const { data: mappedData, error: mappedError } = await supabase
+      const { data: mappedResult, error: mappedError } = await supabase
         .from('gl_relationship_mapping_log')
-        .select('count(*)', { count: 'exact' })
+        .select('count')
         .eq('status', 'completed');
         
       if (mappedError) throw mappedError;
+      
+      // Safely extract counts
+      const pendingCount = pendingResult && pendingResult.length > 0 ? (pendingResult[0]?.count ?? 0) : 0;
+      const mappedCount = mappedResult && mappedResult.length > 0 ? (mappedResult[0]?.count ?? 0) : 0;
       
       // Validate which tables have data
       const validation = await validateRelationships();
       
       setRelationshipStatus({
         tables: validation.validTables,
-        pendingCount: pendingData[0]?.count || 0,
-        mappedCount: mappedData[0]?.count || 0
+        pendingCount,
+        mappedCount
       });
       
     } catch (error) {
@@ -194,7 +197,11 @@ export function useGlSync() {
     }
   }, []);
 
-  const mapRelationships = async (tableFilter?: string): Promise<boolean> => {
+  const mapRelationships = async (tableFilter?: string): Promise<{
+    success: boolean;
+    result?: any;
+    error?: string;
+  }> => {
     setIsRelationshipMapping(true);
     setError(null);
     
@@ -210,7 +217,7 @@ export function useGlSync() {
           description: 'Failed to map relationships between tables: ' + result.error,
           variant: 'destructive',
         });
-        return false;
+        return result;
       } else {
         toast({
           title: 'Mapping Successful',
@@ -218,7 +225,7 @@ export function useGlSync() {
         });
         console.log('Mapping result:', result.result);
         await checkRelationshipStatus();
-        return true;
+        return result;
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
@@ -228,7 +235,7 @@ export function useGlSync() {
         description: errorMessage,
         variant: 'destructive',
       });
-      return false;
+      return { success: false, error: errorMessage };
     } finally {
       setIsRelationshipMapping(false);
     }

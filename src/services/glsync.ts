@@ -153,7 +153,7 @@ export const mapAllRelationships = async (options?: {
     // First check if there are any valid mappings to process
     const { data: validationData, error: validationError } = await supabase
       .from('gl_relationship_mapping_log')
-      .select('count(*)')
+      .select('count')
       .eq('status', 'pending');
     
     if (validationError) {
@@ -161,7 +161,8 @@ export const mapAllRelationships = async (options?: {
       return { success: false, error: validationError.message };
     }
 
-    console.log('Found pending relationships:', validationData[0]?.count || 0);
+    const pendingCount = validationData?.[0]?.count ?? 0;
+    console.log('Found pending relationships:', pendingCount);
     
     // Call the SQL function to map all relationships
     const { data, error } = await supabase.rpc('map_all_sb_relationships', {
@@ -212,12 +213,18 @@ export const validateRelationships = async (): Promise<{
     const validTables: string[] = [];
     
     for (const table of tables) {
-      const { count, error: countError } = await supabase
-        .from(table)
-        .select('*', { count: 'exact', head: true });
-      
-      if (!countError && (count || 0) > 0) {
-        validTables.push(table);
+      try {
+        // Type assertion to appease TypeScript - we'll handle errors properly
+        const { count, error: countError } = await supabase
+          .from(table as any)
+          .select('*', { count: 'exact', head: true });
+        
+        if (!countError && (count || 0) > 0) {
+          validTables.push(table);
+        }
+      } catch (e) {
+        console.warn(`Could not check table ${table}: `, e);
+        // Continue with other tables
       }
     }
 
