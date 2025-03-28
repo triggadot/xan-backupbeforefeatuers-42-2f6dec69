@@ -51,13 +51,32 @@ const PurchaseOrderDetail: React.FC = () => {
     );
   }
 
-  if (error || !purchaseOrder) {
+  if (error) {
     return (
       <Card>
         <CardContent className="py-8 text-center">
           <h3 className="text-lg font-medium mb-4">Error Loading Purchase Order</h3>
           <p className="text-muted-foreground mb-6">
-            {error ? error.message : 'Failed to load purchase order details'}
+            {typeof error === 'object' && error !== null && 'message' in error 
+              ? (error as Error).message 
+              : String(error)}
+          </p>
+          <Button onClick={handleBack} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Purchase Orders
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!purchaseOrder) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <h3 className="text-lg font-medium mb-4">Purchase Order Not Found</h3>
+          <p className="text-muted-foreground mb-6">
+            Failed to load purchase order details
           </p>
           <Button onClick={handleBack} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
