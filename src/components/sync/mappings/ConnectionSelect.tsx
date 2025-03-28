@@ -1,61 +1,49 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-
-interface Connection {
-  id: string;
-  app_name: string;
-  app_id: string;
-}
+import { GlConnection } from '@/types/glsync';
 
 interface ConnectionSelectProps {
-  connections: Connection[];
+  connections: GlConnection[];
   value: string;
   onValueChange: (value: string) => void;
-  isLoading: boolean;
-  disabled?: boolean;
+  isLoading?: boolean;
 }
 
-export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({
-  connections,
-  value,
-  onValueChange,
-  isLoading,
-  disabled = false
+export const ConnectionSelect: React.FC<ConnectionSelectProps> = ({ 
+  connections, 
+  value, 
+  onValueChange, 
+  isLoading = false 
 }) => {
   return (
-    <div className="grid gap-2">
-      <Label htmlFor="connection">Glide Connection</Label>
-      <Select
-        value={value}
-        onValueChange={onValueChange}
-        disabled={isLoading || disabled || connections.length === 0}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a connection" />
+    <div>
+      <Label htmlFor="connection_id">Glide Connection</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger id="connection_id">
+          <SelectValue placeholder="Select connection" />
         </SelectTrigger>
         <SelectContent>
-          {connections.map((connection) => (
-            <SelectItem key={connection.id} value={connection.id}>
-              {connection.app_name || connection.app_id}
-            </SelectItem>
-          ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center p-2">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Loading...
+            </div>
+          ) : connections.length === 0 ? (
+            <div className="p-2 text-center text-muted-foreground">
+              No connections found
+            </div>
+          ) : (
+            connections.map((connection) => (
+              <SelectItem key={connection.id} value={connection.id}>
+                {connection.app_name || connection.app_id}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
-      {isLoading && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-          Loading connections...
-        </div>
-      )}
     </div>
   );
 };

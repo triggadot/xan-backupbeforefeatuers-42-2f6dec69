@@ -37,12 +37,15 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         totalPaid: data.total_paid,
         balance: data.balance,
         vendorId: data.rowid_accounts,
-        vendorName: data.gl_accounts?.account_name || 'Unknown Vendor',
+        vendorName: data.gl_accounts?.[0]?.account_name || 'Unknown Vendor',
         lineItems: [], // Would need another query to get line items
         vendorPayments: [], // Would need another query to get payments
         pdfLink: data.pdf_link,
         purchaseOrderUid: data.purchase_order_uid,
-        notes: data.notes
+        notes: data.notes || '',
+        number: data.purchase_order_uid || '',
+        date: data.po_date,
+        dueDate: data.date_payment_date_mddyyyy || null
       };
 
       return purchaseOrder;
@@ -79,12 +82,15 @@ export function usePurchaseOrderDetail(purchaseOrderId?: string) {
         totalPaid: data.total_paid,
         balance: data.balance,
         vendorId: data.rowid_accounts,
-        vendorName: data.gl_accounts?.account_name || 'Unknown Vendor',
+        vendorName: data.gl_accounts?.[0]?.account_name || 'Unknown Vendor',
         lineItems: [], // Would need another query to get line items
         vendorPayments: [], // Would need another query to get payments
         pdfLink: data.pdf_link,
         purchaseOrderUid: data.purchase_order_uid,
-        notes: data.notes
+        notes: data.notes || '',
+        number: data.purchase_order_uid || '',
+        date: data.po_date,
+        dueDate: data.date_payment_date_mddyyyy || null
       };
 
       return purchaseOrder;

@@ -40,4 +40,8 @@ export interface PurchaseOrderFilters {
 
 export interface PurchaseOrderWithVendor extends PurchaseOrder {
   vendorName: string;
+  number: string;
+  createdAt: Date;
+  updatedAt: Date;
+  productCount: number;
 }

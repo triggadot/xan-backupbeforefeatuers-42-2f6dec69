@@ -1,59 +1,58 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
 
-interface SupabaseTable {
-  table_name: string;
-}
-
-interface SupabaseTableSelectProps {
-  tables: SupabaseTable[];
+export interface SupabaseTableSelectProps {
+  tables: string[];
   value: string;
   onValueChange: (value: string) => void;
-  isLoading: boolean;
-  disabled?: boolean;
+  isLoading?: boolean;
+  onOpen?: () => void;
 }
 
-export const SupabaseTableSelect: React.FC<SupabaseTableSelectProps> = ({
-  tables,
-  value,
-  onValueChange,
-  isLoading,
-  disabled = false
+export const SupabaseTableSelect: React.FC<SupabaseTableSelectProps> = ({ 
+  tables, 
+  value, 
+  onValueChange, 
+  isLoading = false,
+  onOpen
 }) => {
   return (
-    <div className="grid gap-2">
-      <Label htmlFor="supabaseTable">Supabase Table</Label>
-      <Select
-        value={value}
+    <div>
+      <Label htmlFor="supabase_table">Supabase Table</Label>
+      <Select 
+        value={value} 
         onValueChange={onValueChange}
-        disabled={isLoading || disabled || tables.length === 0}
+        onOpenChange={(open) => {
+          if (open && onOpen) {
+            onOpen();
+          }
+        }}
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a Supabase table" />
+        <SelectTrigger id="supabase_table">
+          <SelectValue placeholder="Select Supabase table" />
         </SelectTrigger>
         <SelectContent>
-          {tables.map((table) => (
-            <SelectItem key={table.table_name} value={table.table_name}>
-              {table.table_name}
-            </SelectItem>
-          ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center p-2">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Loading tables...
+            </div>
+          ) : tables.length === 0 ? (
+            <div className="p-2 text-center text-muted-foreground">
+              No tables found
+            </div>
+          ) : (
+            tables.map((table) => (
+              <SelectItem key={table} value={table}>
+                {table}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
-      {isLoading && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-          Loading Supabase tables...
-        </div>
-      )}
     </div>
   );
 };

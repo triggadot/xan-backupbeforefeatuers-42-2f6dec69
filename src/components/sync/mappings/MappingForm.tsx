@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,14 +8,14 @@ import { GlMapping } from '@/types/glsync';
 import React, { useState } from 'react';
 import { SyncDirectionSelect } from './SyncDirectionSelect';
 import { SupabaseTableSelect } from './SupabaseTableSelect';
-import { GlideTableSelector } from '../GlideTableSelector';
+import GlideTableSelector from '../GlideTableSelector';
 import { ConnectionSelect } from './ConnectionSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useConnections } from '@/hooks/useConnections';
 import { useGlSync } from '@/hooks/useGlSync';
-import { glSyncApi } from '@/services/glSyncApi';
 import { Loader2 } from 'lucide-react';
 import { ColumnMappingEditor } from '@/components/sync/ColumnMappingEditor';
+import { glSyncApi } from '@/services/glSyncApi';
 
 interface MappingFormProps {
   mapping?: GlMapping;
@@ -29,19 +30,20 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
       connection_id: '',
       supabase_table: '',
       glide_table: '',
-      sync_direction: 'supabase_to_glide',
+      sync_direction: 'to_supabase',
       column_mappings: {},
+      enabled: true,
+      glide_table_display_name: '',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      sync_interval: 3600,
-      is_active: true,
-      name: ''
+      updated_at: new Date().toISOString()
     }
   );
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { connections, isLoading: isLoadingConnections } = useConnections();
-  const { createMapping, updateMapping } = useGlSync();
+  const { syncData, testConnection } = useGlSync();
+  const [tables, setTables] = useState<any[]>([]);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,13 +60,14 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
 
     try {
       if (mapping.id) {
-        const updated = await updateMapping(mapping.id, mapping);
-        if (updated) {
+        // Update existing mapping
+        const result = await glSyncApi.updateMapping(mapping.id, mapping);
+        if (result) {
           toast({
             title: 'Mapping Updated',
             description: 'Mapping has been updated successfully.'
           });
-          onSuccess?.(updated);
+          if (onSuccess) await onSuccess(result);
         } else {
           toast({
             title: 'Error',
@@ -73,13 +76,14 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
           });
         }
       } else {
-        const created = await createMapping(mapping);
-        if (created) {
+        // Create new mapping
+        const result = await glSyncApi.createMapping(mapping);
+        if (result) {
           toast({
             title: 'Mapping Created',
             description: 'New mapping has been created successfully.'
           });
-          onSuccess?.(created);
+          if (onSuccess) await onSuccess(result);
         } else {
           toast({
             title: 'Error',
@@ -101,6 +105,18 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
     }
   };
 
+  const loadSupabaseTables = async () => {
+    setIsLoadingTables(true);
+    try {
+      const tablesList = await glSyncApi.getSupabaseTables();
+      setTables(tablesList);
+    } catch (error) {
+      console.error("Error loading tables:", error);
+    } finally {
+      setIsLoadingTables(false);
+    }
+  };
+
   return (
     <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
@@ -111,11 +127,11 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Mapping Name</Label>
+                <Label htmlFor="glide_table_display_name">Mapping Name</Label>
                 <Input
-                  id="name"
-                  name="name"
-                  value={mapping.name}
+                  id="glide_table_display_name"
+                  name="glide_table_display_name"
+                  value={mapping.glide_table_display_name}
                   onChange={handleInputChange}
                   placeholder="e.g., Products Sync"
                   required
@@ -130,13 +146,22 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <GlideTableSelector
-                connectionId={mapping.connection_id}
+                tables={[]}
                 value={mapping.glide_table}
-                onValueChange={(value) => handleSelectChange('glide_table', value)}
+                onTableChange={(tableId, displayName) => {
+                  setMapping(prev => ({
+                    ...prev,
+                    glide_table: tableId,
+                    glide_table_display_name: displayName
+                  }));
+                }}
               />
               <SupabaseTableSelect
+                tables={tables}
+                isLoading={isLoadingTables}
                 value={mapping.supabase_table}
                 onValueChange={(value) => handleSelectChange('supabase_table', value)}
+                onOpen={loadSupabaseTables}
               />
             </div>
             <div>
@@ -147,8 +172,8 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
             </div>
             <div>
               <ColumnMappingEditor
-                mappingId={mapping.id}
-                onUpdate={() => {}}
+                mapping={mapping}
+                onUpdate={(updatedMapping) => setMapping(updatedMapping)}
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -171,4 +196,4 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
       </Card>
     </DialogContent>
   );
-};
+}

@@ -8,6 +8,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import { ReactNode } from 'react';
+import { Badge } from "@/components/ui/badge";
 
 export const getStatusIcon = (status: string): ReactNode => {
   switch (status?.toLowerCase()) {
@@ -83,8 +84,8 @@ export const getStatusColor = (status: string): string => {
   }
 };
 
-// Add the missing getStatusBadge function
-export const getStatusBadge = (status: string) => {
+// Modify the getStatusBadge function to return a Badge component
+export const getStatusBadge = (status: string): ReactNode => {
   const statusLower = status?.toLowerCase();
   let variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' = 'ghost';
   
@@ -110,8 +111,12 @@ export const getStatusBadge = (status: string) => {
       break;
   }
   
-  return {
-    variant,
-    icon: getStatusIcon(status)
-  };
+  return (
+    <Badge variant={variant}>
+      <span className="flex items-center gap-1">
+        {getStatusIcon(status)}
+        <span>{status}</span>
+      </span>
+    </Badge>
+  );
 };

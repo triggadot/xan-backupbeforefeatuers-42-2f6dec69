@@ -1,68 +1,50 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Database } from 'lucide-react';
-import { SchemaSetupDialog } from './SchemaSetupDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useConnections } from '@/hooks/useConnections';
-import { useGlSync } from '@/hooks/useGlSync';
+import { PlusCircle } from 'lucide-react';
+import SchemaSetupDialog from './SchemaSetupDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreateSchemaButtonProps {
-  onMappingCreated: () => void;
+  connectionId: string;
+  onTableCreated?: () => void;
 }
 
-export function CreateSchemaButton({ onMappingCreated }: CreateSchemaButtonProps) {
+export const CreateSchemaButton: React.FC<CreateSchemaButtonProps> = ({ 
+  connectionId,
+  onTableCreated
+}) => {
   const [open, setOpen] = useState(false);
-  const [selectedConnection, setSelectedConnection] = useState('');
-  const { connections, isLoading: isLoadingConnections } = useConnections();
-  const { fetchGlideTables } = useGlSync();
+  const { toast } = useToast();
 
-  const handleConnectionChange = (connectionId: string) => {
-    setSelectedConnection(connectionId);
-    if (connectionId) {
-      fetchGlideTables(connectionId);
+  const handleSuccess = () => {
+    toast({
+      title: 'Success',
+      description: 'Table created successfully'
+    });
+    
+    if (onTableCreated) {
+      onTableCreated();
     }
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Select
-          value={selectedConnection}
-          onValueChange={handleConnectionChange}
-          disabled={isLoadingConnections}
-        >
-          <SelectTrigger className="w-[250px]">
-            <SelectValue placeholder="Select a Glide connection" />
-          </SelectTrigger>
-          <SelectContent>
-            {connections.map((connection) => (
-              <SelectItem key={connection.id} value={connection.id}>
-                {connection.app_name || connection.app_id}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen(true)}
-          disabled={!selectedConnection}
-          className="flex items-center gap-2"
-        >
-          <Database className="h-4 w-4" />
-          Create Schema & Mapping
-        </Button>
-      </div>
-
-      {selectedConnection && (
-        <SchemaSetupDialog
-          open={open}
-          onOpenChange={setOpen}
-          connectionId={selectedConnection}
-          onSuccess={onMappingCreated}
-        />
-      )}
-    </div>
+    <>
+      <Button 
+        variant="outline" 
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2"
+      >
+        <PlusCircle className="h-4 w-4" />
+        Create Table Schema
+      </Button>
+      
+      <SchemaSetupDialog 
+        open={open}
+        onOpenChange={setOpen}
+        connectionId={connectionId}
+        onSuccess={handleSuccess}
+      />
+    </>
   );
-} 
+};

@@ -1,126 +1,110 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchase-orders';
+import { PurchaseOrderWithVendor } from '@/types/purchase-orders';
 
-export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['purchase-orders', filters],
+export function usePurchaseOrdersView() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['purchase-orders-view'],
     queryFn: async () => {
-      let query = supabase
+      // Use the material view for purchase orders
+      const { data, error } = await supabase
         .from('gl_purchase_orders')
         .select(`
-          *,
+          id,
+          glide_row_id,
+          payment_status,
+          po_date,
+          total_amount,
+          total_paid,
+          balance,
+          rowid_accounts,
+          product_count,
+          purchase_order_uid,
+          pdf_link,
+          notes,
           gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
             id, glide_row_id, account_name
           )
-        `);
-
-      // Apply filters if they exist
-      if (filters) {
-        if (filters.vendorId) {
-          query = query.eq('rowid_accounts', filters.vendorId);
-        }
-        if (filters.status) {
-          query = query.eq('payment_status', filters.status);
-        }
-        if (filters.dateFrom) {
-          query = query.gte('po_date', filters.dateFrom.toISOString());
-        }
-        if (filters.dateTo) {
-          query = query.lte('po_date', filters.dateTo.toISOString());
-        }
-      }
-
-      // Order by date desc
-      query = query.order('po_date', { ascending: false });
-
-      const { data, error } = await query;
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      // Transform data to match PurchaseOrder type
-      const purchaseOrders: PurchaseOrder[] = data.map(po => ({
+      // Transform to match PurchaseOrderWithVendor
+      const purchaseOrders: PurchaseOrderWithVendor[] = data.map(po => ({
         id: po.id,
         glideRowId: po.glide_row_id,
+        number: po.purchase_order_uid || '',
+        date: po.po_date || null,
         status: po.payment_status,
-        poDate: po.po_date,
-        totalAmount: po.total_amount,
+        vendorId: po.rowid_accounts,
+        vendorName: po.gl_accounts?.[0]?.account_name || 'Unknown Vendor',
+        total: po.total_amount,
         totalPaid: po.total_paid,
         balance: po.balance,
-        vendorId: po.rowid_accounts,
-        vendorName: po.gl_accounts?.account_name || 'Unknown Vendor',
-        lineItems: [], // Would need to fetch these separately if needed
-        vendorPayments: [], // Would need to fetch these separately if needed
-        pdfLink: po.pdf_link,
-        purchaseOrderUid: po.purchase_order_uid,
-        notes: po.notes
+        productCount: po.product_count || 0,
+        createdAt: new Date(po.created_at),
+        updatedAt: new Date(po.updated_at),
+        notes: po.notes || ''
       }));
 
       return purchaseOrders;
-    },
+    }
   });
 
-  // Function to fetch purchase orders with the given filters
-  const fetchPurchaseOrders = async (queryFilters?: PurchaseOrderFilters): Promise<PurchaseOrder[]> => {
+  // Function to fetch purchase orders
+  const fetchPurchaseOrders = async (): Promise<PurchaseOrderWithVendor[]> => {
     try {
-      let query = supabase
+      // Use the material view for purchase orders
+      const { data, error } = await supabase
         .from('gl_purchase_orders')
         .select(`
-          *,
+          id,
+          glide_row_id,
+          payment_status,
+          po_date,
+          total_amount,
+          total_paid,
+          balance,
+          rowid_accounts,
+          product_count,
+          purchase_order_uid,
+          pdf_link,
+          notes,
           gl_accounts!gl_purchase_orders_rowid_accounts_fkey(
             id, glide_row_id, account_name
           )
-        `);
-
-      // Apply filters if they exist
-      if (queryFilters) {
-        if (queryFilters.vendorId) {
-          query = query.eq('rowid_accounts', queryFilters.vendorId);
-        }
-        if (queryFilters.status) {
-          query = query.eq('payment_status', queryFilters.status);
-        }
-        if (queryFilters.dateFrom) {
-          query = query.gte('po_date', queryFilters.dateFrom.toISOString());
-        }
-        if (queryFilters.dateTo) {
-          query = query.lte('po_date', queryFilters.dateTo.toISOString());
-        }
-      }
-
-      // Order by date desc
-      query = query.order('po_date', { ascending: false });
-
-      const { data, error } = await query;
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      // Transform data to match PurchaseOrder type
-      const purchaseOrders: PurchaseOrder[] = data.map(po => ({
+      // Transform to match PurchaseOrderWithVendor
+      const purchaseOrders: PurchaseOrderWithVendor[] = data.map(po => ({
         id: po.id,
         glideRowId: po.glide_row_id,
+        number: po.purchase_order_uid || '',
+        date: po.po_date || null,
         status: po.payment_status,
-        poDate: po.po_date,
-        totalAmount: po.total_amount,
+        vendorId: po.rowid_accounts,
+        vendorName: po.gl_accounts?.[0]?.account_name || 'Unknown Vendor',
+        total: po.total_amount,
         totalPaid: po.total_paid,
         balance: po.balance,
-        vendorId: po.rowid_accounts,
-        vendorName: po.gl_accounts?.account_name || 'Unknown Vendor',
-        lineItems: [], // Would need to fetch these separately if needed
-        vendorPayments: [], // Would need to fetch these separately if needed
-        pdfLink: po.pdf_link,
-        purchaseOrderUid: po.purchase_order_uid,
-        notes: po.notes
+        productCount: po.product_count || 0,
+        createdAt: new Date(po.created_at),
+        updatedAt: new Date(po.updated_at),
+        notes: po.notes || ''
       }));
 
       return purchaseOrders;
-    } catch (err) {
-      console.error('Error fetching purchase orders:', err);
+    } catch (error) {
+      console.error('Error fetching purchase orders:', error);
       return [];
     }
   };
@@ -129,6 +113,7 @@ export function usePurchaseOrdersView(filters?: PurchaseOrderFilters) {
     purchaseOrders: data || [],
     isLoading,
     error,
+    refetch,
     fetchPurchaseOrders
   };
 }
