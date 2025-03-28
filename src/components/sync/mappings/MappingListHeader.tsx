@@ -12,7 +12,9 @@ export const MappingListHeader: React.FC<MappingListHeaderProps> = ({ onMappingC
     <div className="flex justify-between items-center">
       <h2 className="text-2xl font-bold">Table Mappings</h2>
       <div className="flex items-center space-x-2">
-        <CreateSchemaButton onMappingCreated={onMappingCreated} />
+        <CreateSchemaButton 
+          onMappingCreated={onMappingCreated} 
+        />
         <AddMappingButton onSuccess={onMappingCreated} />
       </div>
     </div>

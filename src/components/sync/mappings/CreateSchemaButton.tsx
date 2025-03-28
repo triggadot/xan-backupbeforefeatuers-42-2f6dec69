@@ -6,18 +6,20 @@ import SchemaSetupDialog from './SchemaSetupDialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreateSchemaButtonProps {
-  connectionId: string;
+  connectionId?: string;
   onTableCreated?: () => void;
+  onMappingCreated?: () => Promise<void>;
 }
 
 export const CreateSchemaButton: React.FC<CreateSchemaButtonProps> = ({ 
   connectionId,
-  onTableCreated
+  onTableCreated,
+  onMappingCreated
 }) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     toast({
       title: 'Success',
       description: 'Table created successfully'
@@ -25,6 +27,10 @@ export const CreateSchemaButton: React.FC<CreateSchemaButtonProps> = ({
     
     if (onTableCreated) {
       onTableCreated();
+    }
+    
+    if (onMappingCreated) {
+      await onMappingCreated();
     }
   };
 

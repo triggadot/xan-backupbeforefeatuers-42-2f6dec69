@@ -4,8 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 
+export interface SupabaseTable {
+  table_name: string;
+  [key: string]: any;
+}
+
 export interface SupabaseTableSelectProps {
-  tables: string[];
+  tables: string[] | SupabaseTable[];
   value: string;
   onValueChange: (value: string) => void;
   isLoading?: boolean;
@@ -45,11 +50,14 @@ export const SupabaseTableSelect: React.FC<SupabaseTableSelectProps> = ({
               No tables found
             </div>
           ) : (
-            tables.map((table) => (
-              <SelectItem key={table} value={table}>
-                {table}
-              </SelectItem>
-            ))
+            tables.map((table) => {
+              const tableName = typeof table === 'string' ? table : table.table_name;
+              return (
+                <SelectItem key={tableName} value={tableName}>
+                  {tableName}
+                </SelectItem>
+              );
+            })
           )}
         </SelectContent>
       </Select>

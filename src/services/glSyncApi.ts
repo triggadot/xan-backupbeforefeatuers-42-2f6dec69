@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlideTable, ProductSyncResult, GlMapping } from '@/types/glsync';
 
@@ -217,9 +216,15 @@ export const glSyncApi = {
    */
   async createMapping(mapping: Partial<GlMapping>): Promise<GlMapping | null> {
     try {
+      // Convert the column_mappings to a format Supabase can handle
+      const mappingToInsert = {
+        ...mapping,
+        column_mappings: mapping.column_mappings ? JSON.stringify(mapping.column_mappings) : '{}'
+      };
+      
       const { data, error } = await supabase
         .from('gl_mappings')
-        .insert([mapping])
+        .insert([mappingToInsert])
         .select()
         .single();
 
@@ -240,9 +245,15 @@ export const glSyncApi = {
    */
   async updateMapping(id: string, updates: Partial<GlMapping>): Promise<GlMapping | null> {
     try {
+      // Convert the column_mappings to a format Supabase can handle
+      const updatesToApply = {
+        ...updates,
+        column_mappings: updates.column_mappings ? JSON.stringify(updates.column_mappings) : undefined
+      };
+      
       const { data, error } = await supabase
         .from('gl_mappings')
-        .update(updates)
+        .update(updatesToApply)
         .eq('id', id)
         .select()
         .single();
@@ -320,7 +331,7 @@ export const glSyncApi = {
       }
 
       // Safely convert to string array
-      return data.map(row => String(row.table_name)) || [];
+      return data.map(row => String(row.table_name));
     } catch (err) {
       console.error('Exception in getSupabaseTables:', err);
       return [];

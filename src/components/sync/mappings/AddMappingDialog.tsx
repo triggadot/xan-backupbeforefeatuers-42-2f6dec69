@@ -16,6 +16,7 @@ import { useConnections } from '@/hooks/useConnections';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import { useGlSync } from '@/hooks/useGlSync';
 import { useAddMapping } from '@/hooks/useAddMapping';
+import { GlConnection } from '@/types/glsync';
 
 interface AddMappingDialogProps {
   open: boolean;
@@ -82,8 +83,8 @@ const AddMappingDialog: React.FC<AddMappingDialogProps> = ({
     setSelectedSupabaseTable(value);
   };
   
-  const handleSyncDirectionChange = (value: 'to_supabase' | 'to_glide' | 'both') => {
-    setSyncDirection(value);
+  const handleSyncDirectionChange = (value: string) => {
+    setSyncDirection(value as 'to_supabase' | 'to_glide' | 'both');
   };
 
   const isFormValid = () => {

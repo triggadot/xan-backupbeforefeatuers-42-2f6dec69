@@ -1,41 +1,53 @@
 
 /**
- * Format a number as currency
+ * Formats a number as currency
  */
-export const formatCurrency = (amount?: number): string => {
-  if (amount === undefined || amount === null) {
-    return '$0.00';
-  }
+export const formatCurrency = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined) return '$0.00';
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return '$0.00';
   
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(amount);
+  }).format(numValue);
 };
 
 /**
- * Format a number with commas
+ * Formats a date string to a localized format
  */
-export const formatNumber = (num?: number): string => {
-  if (num === undefined || num === null) {
-    return '0';
-  }
-  
-  return new Intl.NumberFormat('en-US').format(num);
-};
-
-/**
- * Format a date as a string
- */
-export const formatDate = (date?: Date | string | null): string => {
+export const formatDate = (date: string | Date | null | undefined): string => {
   if (!date) return '';
   
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('en-US', {
+  return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
   });
+};
+
+/**
+ * Formats a number with commas
+ */
+export const formatNumber = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined) return '0';
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return '0';
+  
+  return new Intl.NumberFormat('en-US').format(numValue);
+};
+
+/**
+ * Truncates text to a specific length and adds ellipsis
+ */
+export const truncateText = (text: string, maxLength: number = 50): string => {
+  if (!text || text.length <= maxLength) return text || '';
+  
+  return `${text.substring(0, maxLength)}...`;
 };

@@ -6,6 +6,8 @@ export interface PurchaseOrder {
   glideRowId: string;
   status: string;
   poDate: string | null;
+  date?: string | Date | null;
+  dueDate?: string | Date | null;
   totalAmount: number;
   totalPaid: number;
   balance: number;
@@ -17,9 +19,9 @@ export interface PurchaseOrder {
   pdfLink?: string;
   // Additional properties needed by PurchaseOrderForm
   number?: string;
-  date?: string | Date;
-  dueDate?: string | Date;
   notes?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface PurchaseOrderLineItem {
@@ -39,9 +41,9 @@ export interface PurchaseOrderFilters {
 }
 
 export interface PurchaseOrderWithVendor extends PurchaseOrder {
-  vendorName: string;
   number: string;
   createdAt: Date;
   updatedAt: Date;
   productCount: number;
+  total: number;
 }
