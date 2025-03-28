@@ -8,7 +8,25 @@ import { usePurchaseOrderDetail } from '@/hooks/purchase-orders/usePurchaseOrder
 import { PurchaseOrder } from '@/types/purchase-orders';
 import { formatCurrency } from '@/utils/formatters';
 import { format } from 'date-fns';
-import { SkeletonDetails } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const SkeletonDetails = () => {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-9 w-24" />
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const PurchaseOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +39,7 @@ const PurchaseOrderDetail: React.FC = () => {
     if (id) {
       getPurchaseOrder(id);
     }
-  }, [id]);
+  }, [id, getPurchaseOrder]);
 
   const handleBack = () => {
     navigate('/purchase-orders');
@@ -32,11 +50,9 @@ const PurchaseOrderDetail: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // Handle save logic here
     setIsSubmitting(true);
     
     try {
-      // Handle update logic here
       setIsEditMode(false);
     } catch (error) {
       console.error('Error updating purchase order:', error);
@@ -59,7 +75,7 @@ const PurchaseOrderDetail: React.FC = () => {
           <p className="text-muted-foreground mb-6">
             {typeof error === 'object' && error !== null && 'message' in error 
               ? (error as Error).message 
-              : String(error)}
+              : String(error || 'Unknown error')}
           </p>
           <Button onClick={handleBack} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />

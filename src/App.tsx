@@ -20,6 +20,7 @@ import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
 import Estimates from '@/pages/Estimates';
 import EstimateDetail from '@/pages/EstimateDetail';
 import DataManagement from '@/pages/DataManagement';
+import DataTables from '@/pages/DataTables';
 import Index from '@/pages/Index';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Products />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="data-tables" 
+            element={
+              <ProtectedRoute>
+                <DataTables />
               </ProtectedRoute>
             } 
           />
