@@ -1,14 +1,21 @@
-import { useState } from 'react';
+
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { GlSyncStatus, SyncRequestPayload, GlideTable, ProductSyncResult } from '@/types/glsync';
-import { testConnection, listGlideTables, syncData, mapAllRelationships } from '@/services/glsync';
+import { testConnection, listGlideTables, syncData, mapAllRelationships, validateRelationships } from '@/services/glsync';
 import { glSyncApi } from '@/services/glSyncApi';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRelationshipMapping, setIsRelationshipMapping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
+  const [relationshipStatus, setRelationshipStatus] = useState<{
+    tables: string[];
+    pendingCount: number;
+    mappedCount: number;
+  } | null>(null);
   const { toast } = useToast();
 
   const testGlideConnection = async (connectionId: string): Promise<boolean> => {
@@ -155,18 +162,52 @@ export function useGlSync() {
     }
   };
 
-  const mapRelationships = async (): Promise<boolean> => {
-    setIsLoading(true);
+  const checkRelationshipStatus = useCallback(async (): Promise<void> => {
+    try {
+      // Get pending relationships count
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('gl_relationship_mapping_log')
+        .select('count(*)', { count: 'exact' })
+        .eq('status', 'pending');
+      
+      if (pendingError) throw pendingError;
+      
+      // Get mapped relationships count
+      const { data: mappedData, error: mappedError } = await supabase
+        .from('gl_relationship_mapping_log')
+        .select('count(*)', { count: 'exact' })
+        .eq('status', 'completed');
+        
+      if (mappedError) throw mappedError;
+      
+      // Validate which tables have data
+      const validation = await validateRelationships();
+      
+      setRelationshipStatus({
+        tables: validation.validTables,
+        pendingCount: pendingData[0]?.count || 0,
+        mappedCount: mappedData[0]?.count || 0
+      });
+      
+    } catch (error) {
+      console.error('Error checking relationship status:', error);
+    }
+  }, []);
+
+  const mapRelationships = async (tableFilter?: string): Promise<boolean> => {
+    setIsRelationshipMapping(true);
     setError(null);
     
     try {
-      const { data, error } = await supabase.rpc('map_all_sb_relationships');
+      await checkRelationshipStatus();
       
-      if (error) {
-        setError('Relationship mapping failed: ' + error.message);
+      const result = await mapAllRelationships({ tableFilter });
+      
+      if (!result.success) {
+        setError('Relationship mapping failed: ' + result.error);
         toast({
           title: 'Mapping Failed',
-          description: 'Failed to map relationships between tables: ' + error.message,
+          description: 'Failed to map relationships between tables: ' + result.error,
           variant: 'destructive',
         });
         return false;
@@ -175,7 +216,8 @@ export function useGlSync() {
           title: 'Mapping Successful',
           description: 'Relationships mapped successfully.',
         });
-        console.log('Mapping result:', data);
+        console.log('Mapping result:', result.result);
+        await checkRelationshipStatus();
         return true;
       }
     } catch (err) {
@@ -188,7 +230,7 @@ export function useGlSync() {
       });
       return false;
     } finally {
-      setIsLoading(false);
+      setIsRelationshipMapping(false);
     }
   };
 
@@ -255,7 +297,10 @@ export function useGlSync() {
     fetchGlideTables,
     glideTables,
     retryFailedSync,
+    checkRelationshipStatus,
+    relationshipStatus,
     isLoading,
+    isRelationshipMapping,
     error
   };
 }

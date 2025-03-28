@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlideTable, MappingToValidate, ColumnMappingSuggestion, ProductSyncResult, SyncRequestPayload } from '@/types/glsync';
 
@@ -137,20 +138,96 @@ export const validateMapping = async (mapping: MappingToValidate): Promise<boole
 
 /**
  * Maps all relationships across gl tables to link rowid_ columns to sb_ columns
- * @returns A promise that resolves to a success flag
+ * @param options Optional parameters for relationship mapping
+ * @returns A promise that resolves to a mapping result object
  */
-export const mapAllRelationships = async (): Promise<boolean> => {
+export const mapAllRelationships = async (options?: {
+  retryCount?: number;
+  tableFilter?: string;
+}): Promise<{
+  success: boolean;
+  result?: any;
+  error?: string;
+}> => {
   try {
-    const { data, error } = await supabase.rpc('map_all_sb_relationships');
+    // First check if there are any valid mappings to process
+    const { data: validationData, error: validationError } = await supabase
+      .from('gl_relationship_mapping_log')
+      .select('count(*)')
+      .eq('status', 'pending');
+    
+    if (validationError) {
+      console.error('Error validating pending relationships:', validationError);
+      return { success: false, error: validationError.message };
+    }
+
+    console.log('Found pending relationships:', validationData[0]?.count || 0);
+    
+    // Call the SQL function to map all relationships
+    const { data, error } = await supabase.rpc('map_all_sb_relationships', {
+      p_table_filter: options?.tableFilter || null
+    });
 
     if (error) {
       console.error('Error mapping relationships:', error);
-      return false;
+      return { success: false, error: error.message };
     }
 
-    return true;
+    console.log('Relationship mapping result:', data);
+    return { success: true, result: data };
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error during relationship mapping';
     console.error('Error calling relationship mapping function:', err);
-    return false;
+    return { success: false, error: errorMessage };
+  }
+};
+
+/**
+ * Validates relationships to ensure data exists before mapping
+ * @returns A promise that resolves to a validation result object
+ */
+export const validateRelationships = async (): Promise<{
+  success: boolean;
+  validTables: string[];
+  error?: string;
+}> => {
+  try {
+    // Get a list of tables with pending relationships
+    const { data, error } = await supabase
+      .from('gl_relationship_mappings')
+      .select('supabase_table, target_table')
+      .eq('enabled', true);
+    
+    if (error) {
+      console.error('Error fetching relationship mappings:', error);
+      return { success: false, validTables: [], error: error.message };
+    }
+
+    const tables = [...new Set([
+      ...(data?.map(d => d.supabase_table) || []),
+      ...(data?.map(d => d.target_table) || [])
+    ])];
+
+    // Check if tables have data
+    const validTables: string[] = [];
+    
+    for (const table of tables) {
+      const { count, error: countError } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      
+      if (!countError && (count || 0) > 0) {
+        validTables.push(table);
+      }
+    }
+
+    return { 
+      success: true, 
+      validTables 
+    };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error validating relationships';
+    console.error('Error validating relationships:', err);
+    return { success: false, validTables: [], error: errorMessage };
   }
 };

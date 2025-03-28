@@ -1,34 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link2, RefreshCw } from 'lucide-react';
 import ProductsView from '@/components/products/ProductsView';
 import { motion } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RelationshipMapper } from '@/components/sync/RelationshipMapper';
+import { useGlSync } from '@/hooks/useGlSync';
 
 const DataTables: React.FC = () => {
   const [activeTab, setActiveTab] = useState('products');
-  const [isMapping, setIsMapping] = useState(false);
   const [mappingResults, setMappingResults] = useState<any>(null);
+  const { mapAllRelationships, isRelationshipMapping } = useGlSync();
   const { toast } = useToast();
 
   const handleMapRelationships = async () => {
-    setIsMapping(true);
     setMappingResults(null);
     try {
-      // Call the correct PostgreSQL function with the name that exists in our database
-      const { data, error } = await supabase.rpc('map_all_sb_relationships');
+      const { success, result, error } = await mapAllRelationships();
       
-      if (error) {
-        throw error;
+      if (!success) {
+        throw new Error(error || 'Unknown error mapping relationships');
       }
       
       // Set the mapping results to display them
-      setMappingResults(data);
+      setMappingResults(result);
       
       // Show success toast with information
       toast({
@@ -36,7 +34,7 @@ const DataTables: React.FC = () => {
         description: `Successfully mapped relationships across tables.`,
       });
       
-      console.log('Mapping result:', data);
+      console.log('Mapping result:', result);
     } catch (error) {
       console.error('Error mapping relationships:', error);
       toast({
@@ -44,8 +42,6 @@ const DataTables: React.FC = () => {
         description: 'Failed to map relationships: ' + (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
-    } finally {
-      setIsMapping(false);
     }
   };
 
@@ -61,11 +57,11 @@ const DataTables: React.FC = () => {
         <h1 className="text-2xl font-bold">Data Tables</h1>
         <Button 
           onClick={handleMapRelationships} 
-          disabled={isMapping}
+          disabled={isRelationshipMapping}
           variant="outline"
           className="flex items-center gap-2"
         >
-          {isMapping ? (
+          {isRelationshipMapping ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
           ) : (
             <Link2 className="h-4 w-4" />

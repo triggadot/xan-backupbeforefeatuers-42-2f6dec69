@@ -1,285 +1,231 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft } from 'lucide-react';
-import { DetailItem } from '@/components/common/DetailItem';
-import { usePurchaseOrderDetail } from '@/hooks/purchase-orders/usePurchaseOrderDetail';
-import { PurchaseOrder } from '@/types/purchase-orders';
-import { formatCurrency } from '@/utils/formatters';
-import { format } from 'date-fns';
+import { ArrowLeft, User, Calendar, DollarSign, Package } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
+import { formatCurrency } from '@/utils/format-utils';
+import { format } from 'date-fns';
 
-const SkeletonDetails = () => {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-9 w-24" />
-      </div>
-      <div className="space-y-4">
-        <Skeleton className="h-32 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      </div>
-    </div>
-  );
+type StatusBadgeProps = {
+  status: string;
+};
+
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+  let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
+  
+  switch (status?.toLowerCase()) {
+    case 'paid':
+      variant = "default";
+      break;
+    case 'partial':
+      variant = "secondary";
+      break;
+    case 'unpaid':
+      variant = "destructive";
+      break;
+    default:
+      variant = "outline";
+  }
+  
+  return <Badge variant={variant}>{status || 'Unknown'}</Badge>;
 };
 
 const PurchaseOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { purchaseOrder, isLoading, error, getPurchaseOrder } = usePurchaseOrderDetail(id);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { getPurchaseOrder } = usePurchaseOrders();
+  const [purchaseOrder, setPurchaseOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (id) {
-      getPurchaseOrder(id);
-    }
-  }, [id, getPurchaseOrder]);
+    const fetchPurchaseOrder = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const order = await getPurchaseOrder(id);
+        setPurchaseOrder(order);
+      } catch (err) {
+        console.error("Error fetching purchase order:", err);
+        setError(err instanceof Error ? err : new Error('Unknown error fetching purchase order'));
+        toast({
+          title: "Error",
+          description: "Failed to load purchase order details",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleBack = () => {
-    navigate('/purchase-orders');
-  };
+    fetchPurchaseOrder();
+  }, [id, getPurchaseOrder, toast]);
 
-  const handleEditToggle = () => {
-    setIsEditMode(!isEditMode);
-  };
-
-  const handleSave = async () => {
-    setIsSubmitting(true);
-    
-    try {
-      setIsEditMode(false);
-    } catch (error) {
-      console.error('Error updating purchase order:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <SkeletonDetails />
+      <div className="container mx-auto py-6 max-w-4xl">
+        <Skeleton className="h-10 w-1/3 mb-6" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-1/4 mb-2" />
+            <Skeleton className="h-4 w-1/3" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (error) {
-    const errorMessage = error ? (typeof error === 'object' && 'message' in error ? error.message : String(error)) : 'Unknown error';
     return (
-      <div className="container mx-auto py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          <p>Error loading purchase order: {errorMessage}</p>
-        </div>
+      <div className="container mx-auto py-6 max-w-4xl">
+        <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <h2 className="text-xl font-medium mb-2">Failed to load purchase order</h2>
+            <p className="text-muted-foreground mb-6">{error && error.message}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (!purchaseOrder) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <h3 className="text-lg font-medium mb-4">Purchase Order Not Found</h3>
-          <p className="text-muted-foreground mb-6">
-            Failed to load purchase order details
-          </p>
-          <Button onClick={handleBack} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Purchase Orders
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto py-6 max-w-4xl">
+        <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <h2 className="text-xl font-medium mb-2">Purchase Order Not Found</h2>
+            <p className="text-muted-foreground mb-6">The requested purchase order doesn't exist or has been deleted.</p>
+            <Button onClick={() => navigate('/purchase-orders')}>View All Purchase Orders</Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Purchase Order Details</h1>
-        <Button onClick={handleBack} variant="outline" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+    <div className="container mx-auto py-6 max-w-4xl">
+      <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+      </Button>
+      
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">
+              Purchase Order: {purchaseOrder.purchase_order_uid || purchaseOrder.id}
+            </CardTitle>
+            <p className="text-muted-foreground mt-1">
+              Status: <StatusBadge status={purchaseOrder.payment_status} />
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {purchaseOrder.pdf_link && (
+              <Button variant="outline" onClick={() => window.open(purchaseOrder.pdf_link, '_blank')}>
+                View PDF
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Order Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">PO Date:</span>
+              </div>
+              <div className="text-sm">
+                {purchaseOrder.po_date
+                  ? format(new Date(purchaseOrder.po_date), 'MMM d, yyyy')
+                  : 'Not specified'}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Total Amount:</span>
+              </div>
+              <div className="text-sm">
+                {formatCurrency(purchaseOrder.total_amount || 0)}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Amount Paid:</span>
+              </div>
+              <div className="text-sm">
+                {formatCurrency(purchaseOrder.total_paid || 0)}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Balance:</span>
+              </div>
+              <div className="text-sm">
+                {formatCurrency(purchaseOrder.balance || 0)}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Products:</span>
+              </div>
+              <div className="text-sm">
+                {purchaseOrder.product_count || 0} items
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Vendor Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-gray-100 p-3 rounded-full">
+                <User className="h-6 w-6 text-gray-500" />
+              </div>
+              <div>
+                <p className="font-medium">{purchaseOrder.vendor_name || 'Unknown Vendor'}</p>
+                <p className="text-sm text-muted-foreground">{purchaseOrder.vendor_email || ''}</p>
+              </div>
+            </div>
+            
+            {purchaseOrder.vendor_address && (
+              <div className="text-sm border-t pt-4">
+                <p className="font-medium mb-1">Address:</p>
+                <p className="text-muted-foreground whitespace-pre-line">{purchaseOrder.vendor_address}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle>PO #{purchaseOrder.purchaseOrderUid || 'N/A'}</CardTitle>
-            <div className="flex space-x-2">
-              {isEditMode ? (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleEditToggle}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleSave}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving
-                      </>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleEditToggle}
-                >
-                  Edit
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <DetailItem label="Vendor" value={purchaseOrder.vendorName} />
-              <DetailItem 
-                label="Date" 
-                value={purchaseOrder.poDate ? format(new Date(purchaseOrder.poDate), 'PPP') : 'N/A'} 
-              />
-              <DetailItem label="Status" value={purchaseOrder.status} />
-            </div>
-            <div className="space-y-4">
-              <DetailItem 
-                label="Total Amount" 
-                value={formatCurrency(purchaseOrder.totalAmount)} 
-              />
-              <DetailItem 
-                label="Amount Paid" 
-                value={formatCurrency(purchaseOrder.totalPaid)} 
-              />
-              <DetailItem 
-                label="Balance" 
-                value={formatCurrency(purchaseOrder.balance)} 
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Line Items Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {purchaseOrder.lineItems && purchaseOrder.lineItems.length > 0 ? (
-            <div className="border rounded-md">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Product
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {purchaseOrder.lineItems.map((item, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {item.productName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {item.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatCurrency(item.price)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatCurrency(item.quantity * item.price)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              No line items found for this purchase order.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Payments Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0 ? (
-            <div className="border rounded-md">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {purchaseOrder.vendorPayments.map((payment, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {payment.paymentDate ? format(new Date(payment.paymentDate), 'PPP') : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatCurrency(payment.amount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {payment.method || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {payment.notes || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              No payments recorded for this purchase order.
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
