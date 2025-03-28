@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { GlConnection, GlideTable, ProductSyncResult, GlMapping } from '@/types/glsync';
 
@@ -224,7 +225,12 @@ export const glSyncApi = {
       
       // Convert the column_mappings to a format Supabase can handle
       const mappingToInsert = {
-        ...mapping,
+        connection_id: mapping.connection_id,
+        glide_table: mapping.glide_table,
+        glide_table_display_name: mapping.glide_table_display_name,
+        supabase_table: mapping.supabase_table,
+        sync_direction: mapping.sync_direction || 'to_supabase',
+        enabled: mapping.enabled !== undefined ? mapping.enabled : true,
         column_mappings: mapping.column_mappings ? JSON.stringify(mapping.column_mappings) : '{}'
       };
       

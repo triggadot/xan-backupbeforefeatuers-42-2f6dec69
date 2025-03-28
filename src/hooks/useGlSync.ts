@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { GlSyncStatus, SyncRequestPayload, GlideTable, ProductSyncResult } from '@/types/glsync';
 import { testConnection, listGlideTables, syncData, mapAllRelationships } from '@/services/glsync';
 import { glSyncApi } from '@/services/glSyncApi';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useGlSync() {
   const [isLoading, setIsLoading] = useState(false);

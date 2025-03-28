@@ -57,7 +57,7 @@ const PurchaseOrderDetail: React.FC = () => {
         <CardContent className="py-8 text-center">
           <h3 className="text-lg font-medium mb-4">Error Loading Purchase Order</h3>
           <p className="text-muted-foreground mb-6">
-            {error instanceof Error ? error.message : 'Failed to load purchase order details'}
+            {error ? error.message : 'Failed to load purchase order details'}
           </p>
           <Button onClick={handleBack} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
