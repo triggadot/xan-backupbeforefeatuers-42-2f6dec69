@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Printer, Download, Share2, Edit, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Printer, Download, Share2, Edit, RefreshCw, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PurchaseOrderDetailViewProps {
   purchaseOrder: PurchaseOrder | null;
@@ -21,6 +23,18 @@ const PurchaseOrderDetailView = ({
   onRefresh,
 }: PurchaseOrderDetailViewProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (purchaseOrder?.lineItems) {
+      console.log('Line items in detail view:', purchaseOrder.lineItems);
+      // Log each line item individually to check vendor_product_name
+      purchaseOrder.lineItems.forEach((item, index) => {
+        console.log(`Line item ${index}:`, item);
+        console.log(`Line item ${index} vendor_product_name:`, item.vendor_product_name);
+      });
+    }
+  }, [purchaseOrder]);
 
   const handleGoBack = () => {
     navigate('/purchase-orders');
@@ -29,6 +43,79 @@ const PurchaseOrderDetailView = ({
   const handleEdit = () => {
     if (purchaseOrder) {
       navigate(`/purchase-orders/edit/${purchaseOrder.id}`);
+    }
+  };
+
+  // Debug function to check database for this specific purchase order
+  const checkDatabase = async () => {
+    if (!purchaseOrder) return;
+    
+    try {
+      // Fetch the purchase order
+      const { data: poData, error: poError } = await supabase
+        .from('gl_purchase_orders')
+        .select('*')
+        .eq('id', purchaseOrder.id)
+        .single();
+      
+      if (poError) {
+        console.error('Error fetching purchase order:', poError);
+        toast({
+          title: 'Error',
+          description: 'Error fetching purchase order: ' + poError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('Purchase order from DB:', poData);
+      
+      // Fetch products linked to this purchase order
+      const { data: productsData, error: productsError } = await supabase
+        .from('gl_products')
+        .select('*')
+        .eq('rowid_purchase_orders', poData.glide_row_id);
+      
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        toast({
+          title: 'Error',
+          description: 'Error fetching products: ' + productsError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('Products from DB:', productsData);
+      
+      // Check vendor_product_name specifically
+      if (productsData && productsData.length > 0) {
+        productsData.forEach((product, index) => {
+          console.log(`Product ${index} full data:`, product);
+          console.log(`Product ${index} vendor_product_name:`, product.vendor_product_name);
+          
+          // List all fields in the product object to see what's available
+          console.log(`Product ${index} available fields:`, Object.keys(product));
+        });
+        
+        toast({
+          title: 'Database Check',
+          description: `Found ${productsData.length} products. Check console for details.`,
+        });
+      } else {
+        toast({
+          title: 'No Products',
+          description: 'No products found for this purchase order.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('Error checking database:', err);
+      toast({
+        title: 'Error',
+        description: 'An error occurred while checking the database.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -78,6 +165,15 @@ const PurchaseOrderDetailView = ({
     );
   }
 
+  // Safely access vendor properties
+  const getVendorProperty = (property: string): string => {
+    if (!purchaseOrder.vendor) return '';
+    
+    // Use any type to bypass TypeScript's type checking
+    const vendor = purchaseOrder.vendor as any;
+    return vendor[property] || '';
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col space-y-6">
@@ -93,6 +189,10 @@ const PurchaseOrderDetailView = ({
                 Refresh
               </Button>
             )}
+            <Button onClick={checkDatabase} variant="outline" size="sm">
+              <Database className="h-4 w-4 mr-2" />
+              Check Database
+            </Button>
             <Button onClick={handleEdit} variant="outline" size="sm">
               <Edit className="h-4 w-4 mr-2" />
               Edit
@@ -169,10 +269,10 @@ const PurchaseOrderDetailView = ({
             <CardContent>
               {purchaseOrder.vendor ? (
                 <div className="space-y-2">
-                  <p className="font-semibold">{purchaseOrder.vendor.account_name || 'No name provided'}</p>
-                  <p>{purchaseOrder.vendor.email || purchaseOrder.vendor.account_email || 'No email provided'}</p>
-                  <p>{purchaseOrder.vendor.phone || purchaseOrder.vendor.account_phone || 'No phone provided'}</p>
-                  <p>{purchaseOrder.vendor.address || purchaseOrder.vendor.account_address || 'No address provided'}</p>
+                  <p className="font-semibold">{getVendorProperty('account_name') || 'No name provided'}</p>
+                  <p>{getVendorProperty('email') || getVendorProperty('account_email') || 'No email provided'}</p>
+                  <p>{getVendorProperty('phone') || getVendorProperty('account_phone') || 'No phone provided'}</p>
+                  <p>{getVendorProperty('address') || getVendorProperty('account_address') || 'No address provided'}</p>
                 </div>
               ) : (
                 <p className="text-gray-500">No vendor information available</p>
@@ -202,9 +302,11 @@ const PurchaseOrderDetailView = ({
                     {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => (
                       <tr key={item.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4">
-                          <div className="font-medium">{item.product_name || 'Unnamed Product'}</div>
-                          {item.vendor_product_name && (
+                          <div className="font-medium">{item.new_product_name || item.product_name || 'Unnamed Product'}</div>
+                          {item.vendor_product_name ? (
                             <div className="text-xs text-gray-500">{item.vendor_product_name}</div>
+                          ) : (
+                            <div className="text-xs text-gray-500">No vendor product name</div>
                           )}
                           {item.notes && <div className="text-xs text-gray-500 mt-1">{item.notes}</div>}
                           {(item.samples || item.fronted) && (
@@ -265,18 +367,22 @@ const PurchaseOrderDetailView = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {purchaseOrder.vendorPayments.map((payment) => (
-                      <tr key={payment.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          {payment.date ? formatDate(new Date(payment.date)) : 'N/A'}
-                        </td>
-                        <td className="py-3 px-4">{payment.method || 'N/A'}</td>
-                        <td className="py-3 px-4 text-right font-medium">
-                          {formatCurrency(payment.amount || 0)}
-                        </td>
-                        <td className="py-3 px-4">{payment.notes || ''}</td>
-                      </tr>
-                    ))}
+                    {purchaseOrder.vendorPayments.map((payment) => {
+                      // Use any type to safely access properties
+                      const paymentAny = payment as any;
+                      return (
+                        <tr key={payment.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            {payment.date ? formatDate(new Date(payment.date)) : 'N/A'}
+                          </td>
+                          <td className="py-3 px-4">{payment.method || 'N/A'}</td>
+                          <td className="py-3 px-4 text-right font-medium">
+                            {formatCurrency(payment.amount || paymentAny.payment_amount || 0)}
+                          </td>
+                          <td className="py-3 px-4">{payment.notes || paymentAny.vendor_purchase_note || ''}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50">

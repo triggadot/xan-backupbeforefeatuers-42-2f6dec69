@@ -12,7 +12,7 @@ import {
   DollarSign,
   BarChart2
 } from 'lucide-react';
-import { BusinessMetrics } from '@/types/business';
+import { BusinessMetrics } from '@/hooks/useBusinessMetrics';
 
 interface BusinessMetricsCardProps {
   metrics: BusinessMetrics | null;

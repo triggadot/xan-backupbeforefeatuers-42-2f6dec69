@@ -92,7 +92,7 @@ export interface GlProduct {
   rowid_accounts?: string;
   rowid_vendor_payments?: string;
   rowid_purchase_orders?: string;
-  po_poui_dfrom_add_prod?: string;
+  purchase_order_uid?: string;
   po_po_date?: string | null;
   vendor_product_name?: string;
   new_product_name?: string;

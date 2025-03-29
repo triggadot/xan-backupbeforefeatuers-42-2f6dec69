@@ -1,7 +1,7 @@
-import { EntityStatus, EntityWithAmount } from './common';
+import { EntityBase, EntityStatus, EntityWithAmount } from './common';
 import { GlAccount } from './accounts';
 
-export interface PurchaseOrder {
+export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   id: string;
   number?: string;
   date?: Date | string;
@@ -43,8 +43,9 @@ export interface PurchaseOrderLineItem {
   product_name?: string;
   unit_price?: number;
   notes?: string; // Added notes field
-  // New fields from gl_products
+  // Fields from gl_products
   vendor_product_name?: string;
+  new_product_name?: string; // Added new_product_name field
   display_name?: string;
   samples?: boolean;
   fronted?: boolean;
@@ -65,7 +66,7 @@ export interface PurchaseOrderWithVendor {
   id: string;
   number: string;
   date: Date | string;
-  status: string; // Changed from EntityStatus to string
+  status: EntityStatus;
   vendorId: string;
   vendorName: string;
   total: number;

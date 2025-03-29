@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { useStandardizedPurchaseOrders } from './purchase-orders/useStandardizedPurchaseOrders';
-import { usePurchaseOrderDetail } from './purchase-orders/usePurchaseOrderDetail';
+import { usePurchaseOrderDetail } from './usePurchaseOrderDetail';
 import { PurchaseOrder } from '@/types/purchase-orders';
 
 export function usePurchaseOrders() {

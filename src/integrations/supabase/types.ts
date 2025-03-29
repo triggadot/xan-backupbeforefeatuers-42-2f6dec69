@@ -862,7 +862,7 @@ export type Database = {
           miscellaneous_items: boolean | null
           new_product_name: string | null
           po_po_date: string | null
-          po_poui_dfrom_add_prod: string | null
+          purchase_order_uid: string | null
           product_image1: string | null
           product_purchase_date: string | null
           purchase_notes: string | null
@@ -893,7 +893,7 @@ export type Database = {
           miscellaneous_items?: boolean | null
           new_product_name?: string | null
           po_po_date?: string | null
-          po_poui_dfrom_add_prod?: string | null
+          purchase_order_uid?: string | null
           product_image1?: string | null
           product_purchase_date?: string | null
           purchase_notes?: string | null
@@ -924,7 +924,7 @@ export type Database = {
           miscellaneous_items?: boolean | null
           new_product_name?: string | null
           po_po_date?: string | null
-          po_poui_dfrom_add_prod?: string | null
+          purchase_order_uid?: string | null
           product_image1?: string | null
           product_purchase_date?: string | null
           purchase_notes?: string | null
@@ -2100,7 +2100,7 @@ export type Database = {
           miscellaneous_items: boolean | null
           new_product_name: string | null
           po_po_date: string | null
-          po_poui_dfrom_add_prod: string | null
+          purchase_order_uid: string | null
           product_image1: string | null
           product_purchase_date: string | null
           purchase_notes: string | null
@@ -2181,7 +2181,7 @@ export type Database = {
           po_date: string | null
           po_number: string | null
           po_po_date: string | null
-          po_poui_dfrom_add_prod: string | null
+          purchase_order_uid: string | null
           po_status: string | null
           product_image1: string | null
           product_purchase_date: string | null

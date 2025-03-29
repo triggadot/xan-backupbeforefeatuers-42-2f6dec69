@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -226,6 +225,95 @@ const PurchaseOrderDetail: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Products</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {purchaseOrder.products && purchaseOrder.products.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium">Product</th>
+                    <th className="text-right py-2 px-2 font-medium">Quantity</th>
+                    <th className="text-right py-2 px-2 font-medium">Unit Price</th>
+                    <th className="text-right py-2 px-2 font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchaseOrder.products.map((product: any) => (
+                    <tr key={product.id} className="border-b">
+                      <td className="py-3 px-2">
+                        <div className="font-medium">
+                          {product.new_product_name || product.display_name || 'Unnamed Product'}
+                        </div>
+                        {product.vendor_product_name && (
+                          <div className="text-sm text-muted-foreground italic">
+                            Original Name: {product.vendor_product_name}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        {product.total_qty_purchased || 0}
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        {formatCurrency(product.cost || 0)}
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        {formatCurrency((product.total_qty_purchased || 0) * (product.cost || 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t">
+                    <td colSpan={2} className="py-3 px-2 font-medium">Total</td>
+                    <td className="py-3 px-2 text-right font-medium">
+                      {purchaseOrder.products.reduce((sum: number, p: any) => sum + (p.total_qty_purchased || 0), 0)} units
+                    </td>
+                    <td className="py-3 px-2 text-right font-medium">
+                      {formatCurrency(purchaseOrder.products.reduce(
+                        (sum: number, p: any) => sum + ((p.total_qty_purchased || 0) * (p.cost || 0)), 
+                        0
+                      ))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              No products found for this purchase order.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Payment Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Status: <StatusBadge status={purchaseOrder.payment_status} /></p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {purchaseOrder.payment_status === 'paid' 
+                  ? 'This purchase order has been fully paid.' 
+                  : purchaseOrder.payment_status === 'partial' 
+                    ? 'This purchase order has been partially paid.' 
+                    : 'This purchase order has not been paid yet.'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-medium">Balance Due:</p>
+              <p className="text-xl font-bold">{formatCurrency(purchaseOrder.balance || 0)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

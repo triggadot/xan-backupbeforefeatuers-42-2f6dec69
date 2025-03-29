@@ -31,6 +31,14 @@ export interface GlAccount {
   client_type?: string;
   updated_at?: string;
   created_at?: string;
+  // Additional fields needed for vendor information display
+  account_email?: string;
+  email?: string; // Alternative field for email
+  account_phone?: string;
+  phone?: string; // Alternative field for phone
+  account_address?: string;
+  address?: string; // Alternative field for address
+  balance?: number;
 }
 
 // Product details type for use in line items
