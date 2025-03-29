@@ -1,11 +1,25 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface SupabaseTable {
   table_name: string;
 }
+
+// Define core Glide tables
+const CORE_GL_TABLES: SupabaseTable[] = [
+  { table_name: 'gl_accounts' },
+  { table_name: 'gl_customer_credits' },
+  { table_name: 'gl_customer_payments' },
+  { table_name: 'gl_estimate_lines' },
+  { table_name: 'gl_estimates' },
+  { table_name: 'gl_expenses' },
+  { table_name: 'gl_invoice_lines' },
+  { table_name: 'gl_invoices' },
+  { table_name: 'gl_products' },
+  { table_name: 'gl_purchase_orders' },
+  { table_name: 'gl_shipping_records' },
+  { table_name: 'gl_vendor_payments' }
+];
 
 export function useSupabaseTables() {
   const [tables, setTables] = useState<SupabaseTable[]>([]);
@@ -17,27 +31,23 @@ export function useSupabaseTables() {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('gl_tables_view')
-        .select('table_name');
-      
-      if (error) throw error;
-      
-      // Cast each table_name to string to ensure type safety
-      const typedData: SupabaseTable[] = (data || []).map(item => ({
-        table_name: String(item.table_name)
-      }));
-      
-      setTables(typedData);
-      return typedData;
+      // Use hardcoded tables for reliability
+      console.log('Using predefined core tables');
+      setTables(CORE_GL_TABLES);
+      return CORE_GL_TABLES;
     } catch (error) {
-      console.error('Error fetching Supabase tables:', error);
+      console.error('Error in useSupabaseTables:', error);
+      
+      // Fallback to hardcoded core tables if any error occurs
+      setTables(CORE_GL_TABLES);
+      
       toast({
-        title: 'Error',
-        description: 'Failed to load Supabase tables',
-        variant: 'destructive',
+        title: 'Notice',
+        description: 'Using default table list',
+        variant: 'default',
       });
-      return [];
+      
+      return CORE_GL_TABLES;
     } finally {
       setIsLoading(false);
     }

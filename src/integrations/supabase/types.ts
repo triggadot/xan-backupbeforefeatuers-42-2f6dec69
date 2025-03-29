@@ -306,7 +306,7 @@ export type Database = {
           line_total: number | null
           product_sale_note: string | null
           qty_sold: number | null
-          rowid_estimate_lines: string | null
+          rowid_estimates: string | null
           rowid_products: string | null
           sale_product_name: string | null
           sb_estimates_id: string | null
@@ -324,7 +324,7 @@ export type Database = {
           line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
-          rowid_estimate_lines?: string | null
+          rowid_estimates?: string | null
           rowid_products?: string | null
           sale_product_name?: string | null
           sb_estimates_id?: string | null
@@ -342,7 +342,7 @@ export type Database = {
           line_total?: number | null
           product_sale_note?: string | null
           qty_sold?: number | null
-          rowid_estimate_lines?: string | null
+          rowid_estimates?: string | null
           rowid_products?: string | null
           sale_product_name?: string | null
           sb_estimates_id?: string | null

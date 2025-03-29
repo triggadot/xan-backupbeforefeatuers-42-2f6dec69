@@ -84,7 +84,7 @@ export async function fetchEstimateLines(estimateGlideId: string) {
   const { data: lines, error } = await supabase
     .from('gl_estimate_lines')
     .select('*')
-    .eq('rowid_estimate_lines', estimateGlideId);
+    .eq('rowid_estimates', estimateGlideId);
   
   if (error) throw error;
   if (!lines || lines.length === 0) return [];
@@ -210,7 +210,7 @@ export async function deleteEstimateRecord(id: string) {
   await supabase
     .from('gl_estimate_lines')
     .delete()
-    .eq('rowid_estimate_lines', estimate.glide_row_id);
+    .eq('rowid_estimates', estimate.glide_row_id);
   
   await supabase
     .from('gl_customer_credits')
@@ -234,7 +234,7 @@ export async function addEstimateLine(estimateGlideId: string, lineData: Partial
   
   const newLine = {
     ...cleanedData,
-    rowid_estimate_lines: estimateGlideId,
+    rowid_estimates: estimateGlideId,
     glide_row_id: `EL-${Date.now()}`,
     line_total: (lineData.qty_sold || 0) * (lineData.selling_price || 0)
   };

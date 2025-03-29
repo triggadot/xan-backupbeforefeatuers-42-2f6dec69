@@ -3,7 +3,7 @@ import { GlAccount } from './index';
 export interface EstimateLine {
   id: string;
   glide_row_id: string;
-  rowid_estimate_lines?: string;
+  rowid_estimates?: string;
   rowid_products?: string;
   sale_product_name?: string;
   qty_sold: number;

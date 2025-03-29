@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the valid table names
-type TableName = 
+export type TableName = 
   | 'gl_accounts' 
   | 'gl_connections' 
   | 'gl_customer_credits' 

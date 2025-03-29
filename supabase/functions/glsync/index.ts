@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
         throw new Error('Connection ID is required');
       }
       
-      return await testGlideConnection(supabase, connectionId);
+      return await testGlideConnectionHandler(supabase, connectionId);
     } 
     else if (action === 'getTableNames') {
       // Return existing Glide tables from gl_mappings
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function testGlideConnection(supabase, connectionId: string) {
+async function testGlideConnectionHandler(supabase, connectionId: string) {
   console.log(`Testing connection with ID: ${connectionId}`);
   
   try {
@@ -160,7 +160,12 @@ async function testGlideConnection(supabase, connectionId: string) {
       },
       body: JSON.stringify({
         appID: connection.app_id,
-        queries: []
+        queries: [
+          { 
+            tableName: connection.glide_table,
+            limit: 10000
+          }
+        ]
       })
     });
     
@@ -337,7 +342,7 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         queries: [
           { 
             tableName: mapping.glide_table,
-            limit: 1000  // Just get a batch for this demo
+            limit: 10000
           }
         ]
       })
@@ -376,7 +381,13 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
     // Process and transform the data for Supabase
     const columnMappings = mapping.column_mappings;
     const transformedRows = [];
-    const errors = [];
+    const errors: Array<{
+      type: string;
+      message: string;
+      record?: any;
+      batch_index?: number;
+      retryable: boolean;
+    }> = [];
     
     for (const glideRow of tableData.rows) {
       try {
@@ -442,13 +453,45 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
       for (let i = 0; i < transformedRows.length; i += batchSize) {
         const batch = transformedRows.slice(i, i + batchSize);
         
-        // Perform upsert operation
-        const { error: upsertError } = await supabase
-          .from(mapping.supabase_table)
-          .upsert(batch, { 
-            onConflict: 'glide_row_id',
-            ignoreDuplicates: false
-          });
+        let upsertError: Error | null = null;
+        
+        // Special handling for gl_estimate_lines table to use our custom glsync function
+        if (mapping.supabase_table === 'gl_estimate_lines') {
+          console.log('Using permission-safe glsync function for estimate lines');
+          
+          try {
+            // Use our permission-safe sync function for estimate lines
+            const { data: syncResult, error: syncError } = await supabase.rpc('glsync_estimate_lines_safe', {
+              data: batch
+            });
+            
+            if (syncError) {
+              throw syncError;
+            }
+            
+            // Log sync results
+            if (syncResult) {
+              console.log(`Estimate lines sync results: Inserted ${syncResult.inserted?.length || 0}, Updated ${syncResult.updated?.length || 0}, Errors ${syncResult.errors?.length || 0}`);
+              
+              // If there were errors, log them but continue processing
+              if (syncResult.errors && syncResult.errors.length > 0) {
+                console.warn('Some estimate lines had errors:', syncResult.errors);
+              }
+            }
+          } catch (err) {
+            upsertError = err as Error;
+          }
+        } else {
+          // Standard upsert for other tables
+          const { error } = await supabase
+            .from(mapping.supabase_table)
+            .upsert(batch, { 
+              onConflict: 'glide_row_id',
+              ignoreDuplicates: false
+            });
+          
+          upsertError = error;
+        }
         
         if (upsertError) {
           console.error('Error upserting data:', upsertError);
@@ -457,14 +500,18 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
           await supabase.rpc('gl_record_sync_error', {
             p_mapping_id: mappingId,
             p_error_type: 'DATABASE_ERROR',
-            p_error_message: upsertError.message,
+            p_error_message: typeof upsertError === 'object' && upsertError !== null && 'message' in upsertError 
+              ? String(upsertError.message) 
+              : String(upsertError),
             p_record_data: { batch_index: i, batch_size: batch.length },
             p_retryable: true
           });
           
           errors.push({
             type: 'DATABASE_ERROR',
-            message: upsertError.message,
+            message: typeof upsertError === 'object' && upsertError !== null && 'message' in upsertError 
+              ? String(upsertError.message) 
+              : String(upsertError),
             batch_index: i,
             retryable: true
           });

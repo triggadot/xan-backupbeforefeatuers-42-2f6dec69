@@ -185,7 +185,7 @@ BEGIN
         rowid_products,
         date_of_sale
     FROM gl_estimate_lines
-    WHERE rowid_estimate_lines = estimate_id;
+    WHERE rowid_estimates = estimate_id;
     
     -- Mark estimate as converted
     UPDATE gl_estimates

@@ -28,3 +28,4 @@ package-lock.json
 package-lock.json
 /.git_disabled
 docs/frontendcopy.md
+supabase/.temp/cli-latest

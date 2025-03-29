@@ -25,7 +25,7 @@ export interface EstimateFromView {
 export interface EstimateLineFromDB {
   id: string;
   glide_row_id: string;
-  rowid_estimate_lines: string;
+  rowid_estimates: string;
   rowid_products?: string;
   sale_product_name?: string;
   qty_sold: number;
@@ -57,7 +57,7 @@ export interface CustomerCreditFromDB {
 export interface EstimateLine {
   id: string;
   glide_row_id: string;
-  rowid_estimate_lines: string;
+  rowid_estimates: string;
   sale_product_name?: string;
   qty_sold: number;
   selling_price: number;

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useTableData } from "@/hooks/useTableData";
+import { useEffect, useMemo, useRef, useState, useCallback, KeyboardEvent } from "react";
+import { useTableData, TableName } from "@/hooks/useTableData";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -38,6 +38,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -71,7 +73,10 @@ import {
   ListFilter,
   PlusCircle,
   RefreshCw,
+  Save,
   Trash,
+  Check,
+  X,
 } from "lucide-react";
 import TableRecordDialog from "./TableRecordDialog";
 
@@ -84,9 +89,198 @@ interface SupabaseTableViewProps {
   description?: string;
 }
 
+// EditableCell component for inline editing
+interface EditableCellProps {
+  value: any;
+  row: Row<TableRecord>;
+  column: string;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (value: any) => void;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+}
+
+function EditableCell({
+  value,
+  row,
+  column,
+  isEditing,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onKeyDown,
+}: EditableCellProps) {
+  const [editValue, setEditValue] = useState<any>(value);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const isBoolean = typeof value === "boolean";
+  const isLongText = typeof value === "string" && value.length > 100;
+  const isDate = 
+    typeof value === "string" && 
+    (column.includes("date") || column.includes("created_at") || column.includes("updated_at") || column.includes("timestamp"));
+  
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  // Reset edit value when value changes
+  useEffect(() => {
+    setEditValue(value);
+  }, [value]);
+
+  // Handle save
+  const handleSave = () => {
+    onSaveEdit(editValue);
+  };
+
+  // Render view mode (non-editing)
+  if (!isEditing) {
+    return (
+      <div 
+        className="py-2 px-1 -mx-1 rounded hover:bg-muted/50 cursor-pointer min-h-[36px] flex items-center"
+        onClick={onStartEdit}
+      >
+        {renderCellValue(value, column)}
+      </div>
+    );
+  }
+
+  // Render edit mode
+  return (
+    <div className="flex items-center gap-1">
+      {isBoolean ? (
+        <Select
+          value={editValue?.toString()}
+          onValueChange={(val) => setEditValue(val === "true")}
+        >
+          <SelectTrigger className="h-8 w-[120px]" autoFocus>
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">Yes</SelectItem>
+            <SelectItem value="false">No</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : isLongText ? (
+        <Textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          value={editValue || ""}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="h-24 min-w-[200px]"
+          onKeyDown={onKeyDown}
+        />
+      ) : isDate ? (
+        <Input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type="datetime-local"
+          value={formatDateForInput(editValue)}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="h-8"
+          onKeyDown={onKeyDown}
+        />
+      ) : (
+        <Input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type={typeof value === "number" ? "number" : "text"}
+          value={editValue || ""}
+          onChange={(e) => {
+            const val = e.target.type === "number" 
+              ? e.target.value ? Number(e.target.value) : null
+              : e.target.value;
+            setEditValue(val);
+          }}
+          className="h-8"
+          onKeyDown={onKeyDown}
+        />
+      )}
+      <div className="flex items-center">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={handleSave}
+        >
+          <Check className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={onCancelEdit}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Helper function to format date for datetime-local input
+function formatDateForInput(dateString: string): string {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    
+    // Format: YYYY-MM-DDThh:mm
+    return date.toISOString().slice(0, 16);
+  } catch {
+    return "";
+  }
+}
+
+// Helper function to render cell value based on type
+function renderCellValue(value: any, column: string) {
+  if (value === null || value === undefined) return "--";
+
+  // Format dates
+  if (
+    typeof value === "string" &&
+    (column.includes("date") || column.includes("created_at") || column.includes("updated_at") || column.includes("timestamp"))
+  ) {
+    try {
+      return new Date(value as string).toLocaleString();
+    } catch {
+      return value;
+    }
+  }
+
+  // Format boolean values
+  if (typeof value === "boolean") {
+    return (
+      <Badge variant={value ? "default" : "outline"}>
+        {value ? "Yes" : "No"}
+      </Badge>
+    );
+  }
+
+  // Truncate long text
+  if (typeof value === "string" && value.length > 50) {
+    return (
+      <div title={value as string}>
+        {(value as string).substring(0, 47)}...
+      </div>
+    );
+  }
+
+  // Handle JSON objects
+  if (typeof value === "object" && value !== null) {
+    return (
+      <div className="max-w-xs truncate" title={JSON.stringify(value)}>
+        {JSON.stringify(value).substring(0, 30)}...
+      </div>
+    );
+  }
+
+  return String(value);
+}
+
 export default function SupabaseTableView({ tableName, displayName, description }: SupabaseTableViewProps) {
   const { data, isLoading, error, fetchData, createRecord, updateRecord, deleteRecord } = useTableData<TableRecord>(
-    tableName as 'gl_accounts' | 'gl_mappings' | 'gl_products' | 'gl_tables_view'
+    tableName as TableName
   );
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -102,6 +296,10 @@ export default function SupabaseTableView({ tableName, displayName, description 
   const [currentRecord, setCurrentRecord] = useState<TableRecord | null>(null);
   const [globalFilter, setGlobalFilter] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // State for inline editing
+  const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({});
 
   // Fetch data on mount
   useEffect(() => {
@@ -113,6 +311,69 @@ export default function SupabaseTableView({ tableName, displayName, description 
     setCurrentRecord(record);
     setIsEditDialogOpen(true);
   }, []);
+
+  // Handle cell edit start
+  const handleCellEditStart = useCallback((rowId: string, columnId: string) => {
+    // Don't allow editing special columns
+    if (
+      columnId === "id" ||
+      columnId === "glide_row_id" ||
+      columnId === "created_at" ||
+      columnId === "updated_at" ||
+      columnId === "select" ||
+      columnId === "actions"
+    ) {
+      return;
+    }
+    
+    setEditingCell({ rowId, columnId });
+  }, []);
+
+  // Handle cell edit cancel
+  const handleCellEditCancel = useCallback(() => {
+    setEditingCell(null);
+  }, []);
+
+  // Handle cell edit save
+  const handleCellEditSave = useCallback((rowId: string, columnId: string, value: any) => {
+    // Update pending changes
+    setPendingChanges(prev => ({
+      ...prev,
+      [rowId]: {
+        ...(prev[rowId] || {}),
+        [columnId]: value
+      }
+    }));
+    
+    // Save changes immediately
+    const row = data.find(item => item.id === rowId);
+    if (row) {
+      updateRecord(rowId, { [columnId]: value });
+    }
+    
+    // Exit edit mode
+    setEditingCell(null);
+  }, [data, updateRecord]);
+
+  // Handle keyboard navigation
+  const handleCellKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, rowId: string, columnId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const row = data.find(item => item.id === rowId);
+      if (row) {
+        const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+        handleCellEditSave(rowId, columnId, target.value);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCellEditCancel();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      // Handle tab navigation between cells
+      // This would require more complex logic to determine the next editable cell
+      handleCellEditCancel();
+    }
+  }, [data, handleCellEditCancel, handleCellEditSave]);
 
   // Create a memoized row actions component to avoid dependency issues
   const rowActionsCell = useCallback(({ row }: { row: Row<TableRecord> }) => {
@@ -199,48 +460,34 @@ export default function SupabaseTableView({ tableName, displayName, description 
       accessorKey: key,
       cell: ({ row }) => {
         const value = row.getValue(key);
-        if (!value) return "--";
-
-        // Format dates
+        const rowId = row.original.id;
+        const isEditing = 
+          editingCell !== null && 
+          editingCell.rowId === rowId && 
+          editingCell.columnId === key;
+        
+        // Special handling for read-only columns
         if (
-          typeof value === "string" &&
-          (key.includes("date") || key.includes("created_at") || key.includes("updated_at") || key.includes("timestamp"))
+          key === "id" ||
+          key === "glide_row_id" ||
+          key === "created_at" ||
+          key === "updated_at"
         ) {
-          try {
-            return new Date(value as string).toLocaleString();
-          } catch {
-            return value;
-          }
+          return renderCellValue(value, key);
         }
-
-        // Format boolean values
-        if (typeof value === "boolean") {
-          return (
-            <Badge variant={value ? "default" : "outline"}>
-              {value ? "Yes" : "No"}
-            </Badge>
-          );
-        }
-
-        // Truncate long text
-        if (typeof value === "string" && value.length > 50) {
-          return (
-            <div title={value as string}>
-              {(value as string).substring(0, 47)}...
-            </div>
-          );
-        }
-
-        // Handle JSON objects
-        if (typeof value === "object" && value !== null) {
-          return (
-            <div className="max-w-xs truncate" title={JSON.stringify(value)}>
-              {JSON.stringify(value).substring(0, 30)}...
-            </div>
-          );
-        }
-
-        return String(value);
+        
+        return (
+          <EditableCell
+            value={value}
+            row={row}
+            column={key}
+            isEditing={isEditing}
+            onStartEdit={() => handleCellEditStart(rowId, key)}
+            onCancelEdit={handleCellEditCancel}
+            onSaveEdit={(newValue) => handleCellEditSave(rowId, key, newValue)}
+            onKeyDown={(e) => handleCellKeyDown(e, rowId, key)}
+          />
+        );
       },
     }));
 
@@ -279,7 +526,7 @@ export default function SupabaseTableView({ tableName, displayName, description 
         enableHiding: false,
       },
     ];
-  }, [data, rowActionsCell]);
+  }, [data, rowActionsCell, editingCell, handleCellEditStart, handleCellEditCancel, handleCellEditSave, handleCellKeyDown]);
 
   // React Table instance
   const table = useReactTable({

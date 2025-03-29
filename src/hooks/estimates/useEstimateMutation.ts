@@ -233,7 +233,7 @@ export function useEstimateMutation() {
         const { data: estimateLines, error: linesError } = await supabase
           .from('gl_estimate_lines')
           .select('*')
-          .eq('rowid_estimate_lines', estimate.glide_row_id);
+          .eq('rowid_estimate', estimate.glide_row_id);
           
         if (linesError) throw linesError;
         
