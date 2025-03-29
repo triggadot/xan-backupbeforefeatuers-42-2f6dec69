@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
-import { GlAccount, GlProduct } from '@/types';
+import { GlAccount } from '@/types';
 
 export function usePurchaseOrderDetail(id: string) {
   const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);
@@ -17,6 +17,7 @@ export function usePurchaseOrderDetail(id: string) {
   const fetchPurchaseOrderDetail = async (purchaseOrderId: string) => {
     setIsLoading(true);
     setError(null);
+    console.log('Fetching purchase order detail for ID:', purchaseOrderId);
 
     try {
       // Fetch purchase order
@@ -26,6 +27,7 @@ export function usePurchaseOrderDetail(id: string) {
         .eq('id', purchaseOrderId)
         .single();
 
+      console.log('Purchase order data from DB:', purchaseOrderData);
       if (purchaseOrderError) throw purchaseOrderError;
 
       if (!purchaseOrderData) {
@@ -39,39 +41,25 @@ export function usePurchaseOrderDetail(id: string) {
         .from('gl_accounts')
         .select('*');
 
+      console.log('Account data from DB:', accountData);
       if (accountError) throw accountError;
 
-      // Fetch purchase order line items - using gl_po_lines instead of gl_purchase_order_lines
-      const { data: lineItemData, error: lineItemError } = await supabase
-        .from('gl_po_lines')
-        .select('*')
-        .eq('rowid_po', purchaseOrderData.glide_row_id);
-
-      if (lineItemError) throw lineItemError;
-
-      // Fetch products
-      const productIds: string[] = [];
-      if (lineItemData) {
-        lineItemData.forEach((lineItem: any) => {
-          if (lineItem.rowid_products) {
-            productIds.push(lineItem.rowid_products);
-          }
-        });
-      }
-
+      // Fetch products that serve as purchase order line items
       const { data: productData, error: productError } = await supabase
         .from('gl_products')
         .select('*')
-        .in('glide_row_id', productIds);
+        .eq('rowid_purchase_orders', purchaseOrderData.glide_row_id);
 
+      console.log('Product data from DB:', productData);
       if (productError) throw productError;
 
       // Fetch vendor payments
       const { data: paymentData, error: paymentError } = await supabase
         .from('gl_vendor_payments')
         .select('*')
-        .eq('rowid_po', purchaseOrderData.glide_row_id);
+        .eq('rowid_purchase_orders', purchaseOrderData.glide_row_id);
 
+      console.log('Payment data from DB:', paymentData);
       if (paymentError) throw paymentError;
 
       // Create lookup maps for related data
@@ -81,32 +69,33 @@ export function usePurchaseOrderDetail(id: string) {
           accountMap.set(account.glide_row_id, account);
         });
       }
+      console.log('Account map created with keys:', Array.from(accountMap.keys()));
 
-      const productMap = new Map();
-      if (productData) {
-        productData.forEach((product: GlProduct) => {
-          productMap.set(product.glide_row_id, product);
-        });
-      }
-
-      // Process line items
+      // Process line items (products)
       const lineItems: PurchaseOrderLineItem[] = [];
-      if (lineItemData) {
-        lineItemData.forEach((lineItem: any) => {
-          const product = lineItem.rowid_products ? productMap.get(lineItem.rowid_products) : null;
+      if (productData) {
+        productData.forEach((product: any) => {
+          console.log('Processing product:', product);
           lineItems.push({
-            id: lineItem.id,
-            quantity: lineItem.qty || 0,
-            unitPrice: lineItem.price || 0,
-            total: lineItem.line_total || 0,
-            description: lineItem.notes || '',
-            productId: lineItem.rowid_products,
-            product_name: product?.display_name || 'Unnamed Product',
-            unit_price: lineItem.price || 0,
-            notes: lineItem.notes || ''
+            id: product.id,
+            quantity: product.total_qty_purchased || 0,
+            unitPrice: product.cost || 0,
+            total: (product.total_qty_purchased || 0) * (product.cost || 0),
+            description: product.purchase_notes || '',
+            productId: product.glide_row_id,
+            product_name: product.new_product_name || 'Unnamed Product',
+            vendor_product_name: product.vendor_product_name || '',
+            display_name: product.display_name || product.new_product_name || product.vendor_product_name || 'Unnamed Product',
+            unit_price: product.cost || 0,
+            notes: product.purchase_notes || '',
+            samples: product.samples || false,
+            fronted: product.fronted || false,
+            category: product.category || '',
+            total_units: product.total_qty_purchased || 0
           });
         });
       }
+      console.log('Processed line items:', lineItems);
 
       // Process payments
       const payments = paymentData ? paymentData.map((payment: any) => ({
@@ -114,24 +103,30 @@ export function usePurchaseOrderDetail(id: string) {
         amount: payment.payment_amount || 0,
         date: payment.date_of_payment,
         method: payment.payment_method || '',
-        notes: payment.notes || ''
+        notes: payment.vendor_purchase_note || ''
       })) : [];
+      console.log('Processed payments:', payments);
+
+      // Calculate totals
+      const totalUnits = lineItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      const totalCost = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
 
       // Combine data
       const purchaseOrderWithDetails: PurchaseOrder = {
         ...purchaseOrderData,
         id: purchaseOrderData.id,
         glide_row_id: purchaseOrderData.glide_row_id,
-        number: purchaseOrderData.po_number,
+        number: purchaseOrderData.purchase_order_uid,
         date: purchaseOrderData.po_date,
         status: purchaseOrderData.payment_status || 'draft',
-        total_amount: purchaseOrderData.total_amount || 0,
+        total_amount: purchaseOrderData.total_amount || totalCost || 0,
         total_paid: purchaseOrderData.total_paid || 0,
-        balance: purchaseOrderData.balance || 0,
-        notes: purchaseOrderData.notes,
+        balance: purchaseOrderData.balance || (purchaseOrderData.total_amount - purchaseOrderData.total_paid) || 0,
         lineItems,
         vendorPayments: payments,
-        created_at: purchaseOrderData.created_at
+        created_at: purchaseOrderData.created_at,
+        totalUnits,
+        totalCost
       };
 
       // Add vendor information
@@ -140,9 +135,13 @@ export function usePurchaseOrderDetail(id: string) {
         if (vendor) {
           purchaseOrderWithDetails.vendor = vendor;
           purchaseOrderWithDetails.vendorName = vendor.account_name;
+          console.log('Vendor found for purchase order:', vendor.account_name);
+        } else {
+          console.log('No vendor found for rowid_accounts:', purchaseOrderData.rowid_accounts);
         }
       }
 
+      console.log('Final purchase order with details:', purchaseOrderWithDetails);
       setPurchaseOrder(purchaseOrderWithDetails);
     } catch (err) {
       console.error('Error fetching purchase order details:', err);

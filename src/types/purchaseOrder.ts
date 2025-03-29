@@ -1,4 +1,3 @@
-
 import { EntityStatus, EntityWithAmount } from './common';
 import { GlAccount } from './accounts';
 
@@ -28,6 +27,9 @@ export interface PurchaseOrder {
   total_amount: number;
   created_at: string; // Required for database compatibility
   updated_at?: string; // Optional for future compatibility
+  // New fields
+  totalUnits?: number;
+  totalCost?: number;
 }
 
 export interface PurchaseOrderLineItem {
@@ -41,6 +43,13 @@ export interface PurchaseOrderLineItem {
   product_name?: string;
   unit_price?: number;
   notes?: string; // Added notes field
+  // New fields from gl_products
+  vendor_product_name?: string;
+  display_name?: string;
+  samples?: boolean;
+  fronted?: boolean;
+  category?: string;
+  total_units?: number;
 }
 
 export interface VendorPayment {

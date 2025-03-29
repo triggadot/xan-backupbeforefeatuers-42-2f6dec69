@@ -1,2 +1,5 @@
 
 project_id = "swrfsullhirscyxqneay"
+
+[functions.glsync]
+verify_jwt = false

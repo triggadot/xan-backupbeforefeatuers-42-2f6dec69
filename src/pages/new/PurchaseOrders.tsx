@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePurchaseOrdersNew } from '@/hooks/usePurchaseOrdersNew';
 import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
-import { PurchaseOrderList, PurchaseOrderStats } from '@/components/new/purchase-orders';
+import PurchaseOrderList from '@/components/new/purchase-orders/purchase-order-list';
+import PurchaseOrderStats from '@/components/new/purchase-orders/purchase-order-stats';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, RefreshCw } from 'lucide-react';
@@ -47,13 +48,13 @@ const PurchaseOrders = () => {
       if (getError) throw getError;
       if (!purchaseOrder) throw new Error('Purchase order not found');
       
-      // Delete purchase order lines first
-      const { error: linesError } = await supabase
-        .from('gl_purchase_order_lines')
+      // Delete products associated with the purchase order (they serve as line items)
+      const { error: productsError } = await supabase
+        .from('gl_products')
         .delete()
         .eq('rowid_purchase_orders', purchaseOrder.glide_row_id);
       
-      if (linesError) throw linesError;
+      if (productsError) throw productsError;
       
       // Delete payments associated with the purchase order
       const { error: paymentsError } = await supabase
@@ -88,13 +89,80 @@ const PurchaseOrders = () => {
     }
   };
 
+  // Debug function to check database tables
+  const checkDatabase = async () => {
+    try {
+      // Check purchase orders table
+      const { data: purchaseOrdersData, error: purchaseOrdersError } = await supabase
+        .from('gl_purchase_orders')
+        .select('*')
+        .limit(10);
+      
+      console.log('Purchase Orders in DB:', purchaseOrdersData);
+      
+      if (purchaseOrdersError) {
+        console.error('Error fetching purchase orders:', purchaseOrdersError);
+        toast({
+          title: 'Database Error',
+          description: 'Error fetching purchase orders: ' + purchaseOrdersError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (!purchaseOrdersData || purchaseOrdersData.length === 0) {
+        toast({
+          title: 'No Purchase Orders',
+          description: 'No purchase orders found in the database.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Check if we have any products linked to purchase orders
+      const { data: productsData, error: productsError } = await supabase
+        .from('gl_products')
+        .select('*')
+        .eq('rowid_purchase_orders', purchaseOrdersData[0].glide_row_id)
+        .limit(10);
+      
+      console.log('Products linked to first PO:', productsData);
+      
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+      }
+      
+      toast({
+        title: 'Database Check',
+        description: `Found ${purchaseOrdersData.length} purchase orders and ${productsData?.length || 0} linked products.`,
+      });
+    } catch (err) {
+      console.error('Error checking database:', err);
+      toast({
+        title: 'Error',
+        description: 'An error occurred while checking the database.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-        <Button onClick={handleCreatePurchaseOrder}>
-          <Plus className="mr-2 h-4 w-4" /> Create Purchase Order
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={checkDatabase} variant="outline" size="sm">
+            Check Database
+          </Button>
+          <Button onClick={fetchPurchaseOrders} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={handleCreatePurchaseOrder} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            New Purchase Order
+          </Button>
+        </div>
       </div>
       
       <PurchaseOrderStats purchaseOrders={purchaseOrders} isLoading={isLoading} />
@@ -109,17 +177,6 @@ const PurchaseOrders = () => {
             value={searchTerm}
             onChange={handleSearchChange}
           />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchPurchaseOrders()}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
         </div>
       </div>
       

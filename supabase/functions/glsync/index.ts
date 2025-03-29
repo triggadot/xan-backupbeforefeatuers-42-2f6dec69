@@ -112,88 +112,6 @@ Deno.serve(async (req) => {
       
       return await syncData(supabase, connectionId, mappingId);
     }
-    else if (action === 'syncMapping') {
-      if (!mappingId) {
-        throw new Error('Mapping ID is required');
-      }
-      
-      // Get mapping details
-      const { data: mapping, error: mappingError } = await supabase
-        .from('gl_mappings')
-        .select('*')
-        .eq('id', mappingId)
-        .single();
-      
-      if (mappingError) {
-        throw new Error(`Failed to fetch mapping: ${mappingError.message}`);
-      }
-      
-      if (!mapping) {
-        throw new Error('Mapping not found');
-      }
-      
-      // Sync data using the mapping's connection ID
-      return await syncData(supabase, mapping.connection_id, mappingId);
-    }
-    else if (action === 'mapRelationships') {
-      const mappingId = requestBody.mappingId;
-      
-      if (!mappingId) {
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'Missing mappingId parameter' 
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400
-          }
-        );
-      }
-      
-      try {
-        // Get mapping details
-        const { data: mappingData, error: mappingError } = await supabase
-          .from('gl_mappings')
-          .select('*')
-          .eq('id', mappingId)
-          .single();
-          
-        if (mappingError) throw new Error(mappingError.message);
-        if (!mappingData) throw new Error('Mapping not found');
-        
-        // Map relationships for the target table
-        const { data: mapResult, error: mapError } = await supabase
-          .rpc('glsync_map_relationships', { p_table_name: mappingData.supabase_table });
-        
-        if (mapError) throw new Error(mapError.message);
-        
-        console.log('Relationship mapping result:', mapResult);
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            result: mapResult
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200
-          }
-        );
-      } catch (error) {
-        console.error('Error mapping relationships:', error);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: error.message 
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200
-          }
-        );
-      }
-    }
     else {
       throw new Error(`Unknown action: ${action}`);
     }
@@ -562,28 +480,6 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
             .eq('id', logId);
         }
       }
-      
-      // After upserting all data, map relationships for the table
-      try {
-        console.log(`Mapping relationships for table: ${mapping.supabase_table}`);
-        const { data: mapResult, error: mapError } = await supabase
-          .rpc('glsync_map_relationships', {
-            p_table_name: mapping.supabase_table
-          });
-          
-        if (mapError) {
-          console.error('Error mapping relationships:', mapError);
-          errors.push({
-            type: 'RELATIONSHIP_MAPPING_ERROR',
-            message: mapError.message,
-            retryable: true
-          });
-        } else {
-          console.log('Relationship mapping result:', mapResult);
-        }
-      } catch (mapError) {
-        console.error('Error calling relationship mapping function:', mapError);
-      }
     }
     
     // Finalize sync log
@@ -643,63 +539,6 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
   }
 }
 
-// New function to explicitly map relationships for a specific table
-async function mapRelationships(supabase, mappingId: string) {
-  console.log(`Mapping relationships for mapping: ${mappingId}`);
-  
-  try {
-    // Get mapping details
-    const { data: mapping, error: mappingError } = await supabase
-      .from('gl_mappings')
-      .select('*')
-      .eq('id', mappingId)
-      .single();
-    
-    if (mappingError) {
-      throw mappingError;
-    }
-    
-    if (!mapping) {
-      throw new Error('Mapping not found');
-    }
-    
-    // Call the database function to map relationships
-    const { data: mapResult, error: mapError } = await supabase
-      .rpc('glsync_map_relationships', {
-        p_table_name: mapping.supabase_table
-      });
-      
-    if (mapError) {
-      throw mapError;
-    }
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        result: mapResult,
-        message: `Relationships mapped for table ${mapping.supabase_table}`
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-  } catch (error) {
-    console.error('Error mapping relationships:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    );
-  }
-}
-
 function transformValue(value: any, dataType: string): any {
   if (value === null || value === undefined) {
     return null;
@@ -727,27 +566,4 @@ function transformValue(value: any, dataType: string): any {
     default:
       return String(value);
   }
-}
-
-function errorResponse(message: string) {
-  return new Response(
-    JSON.stringify({ 
-      success: false, 
-      error: message 
-    }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400
-    }
-  );
-}
-
-function jsonResponse(data: any) {
-  return new Response(
-    JSON.stringify(data),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
-    }
-  );
 }

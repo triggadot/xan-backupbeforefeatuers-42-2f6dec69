@@ -1,15 +1,15 @@
 import { useParams } from 'react-router-dom';
 import { usePurchaseOrderDetail } from '@/hooks/usePurchaseOrderDetail';
-import { PurchaseOrderDetailView } from '@/components/new/purchase-orders';
+import PurchaseOrderDetailView from '@/components/new/purchase-orders/purchase-order-detail-view';
 import { useToast } from '@/hooks/use-toast';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { purchaseOrder, isLoading, error, refreshPurchaseOrder } = usePurchaseOrderDetail(id);
+  const { purchaseOrder, isLoading, error, fetchPurchaseOrderDetail } = usePurchaseOrderDetail(id || '');
 
   const handleRefresh = () => {
-    refreshPurchaseOrder();
+    fetchPurchaseOrderDetail(id || '');
     toast({
       title: 'Refreshed',
       description: 'Purchase order data has been refreshed.',
