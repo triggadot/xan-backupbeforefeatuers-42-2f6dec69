@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ChevronDown, MoreHorizontal } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,6 +35,8 @@ import { StatusBadge } from '../shared/StatusBadge';
 import { AmountDisplay } from '../shared/AmountDisplay';
 import { InvoiceListItem } from '@/types/invoiceView';
 import { formatDate } from '@/utils/format-utils';
+import { useToast } from '@/hooks/use-toast';
+import { generateAndStorePDF, generateInvoicePDF } from "@/lib/pdf-utils";
 
 interface InvoiceTableProps {
   data: InvoiceListItem[];
@@ -51,12 +52,103 @@ export const InvoiceTable = ({
   onCreateInvoice,
 }: InvoiceTableProps) => {
   const navigate = useNavigate();
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'date', desc: true },
-  ]);
+  const { toast } = useToast();
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+
+  const handleViewPdf = async (invoice: InvoiceListItem) => {
+    // Check if we have a direct link
+    if (invoice.supabase_pdf_url || invoice.pdf_link) {
+      const pdfUrl = invoice.supabase_pdf_url || invoice.pdf_link;
+      window.open(pdfUrl, '_blank');
+    } else {
+      // If no direct link, we need to generate the PDF
+      toast({
+        title: 'Generating PDF',
+        description: 'The PDF is being generated, please wait...',
+      });
+      
+      try {
+        // Generate and store the PDF
+        const pdfUrl = await generateAndStorePDF('invoice', invoice as any, false);
+        
+        if (pdfUrl) {
+          // Open the PDF in a new tab
+          window.open(pdfUrl, '_blank');
+          
+          toast({
+            title: 'PDF Generated',
+            description: 'Your invoice PDF has been generated and opened in a new tab.',
+          });
+        } else {
+          throw new Error('Failed to generate PDF');
+        }
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to generate PDF.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleDownloadPdf = async (invoice: InvoiceListItem) => {
+    // Check if we have a direct link
+    if (invoice.supabase_pdf_url || invoice.pdf_link) {
+      const pdfUrl = invoice.supabase_pdf_url || invoice.pdf_link;
+      // Create a temporary anchor element to trigger download
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // If no direct link, we need to generate the PDF
+      toast({
+        title: 'Generating PDF',
+        description: 'The PDF is being generated for download, please wait...',
+      });
+      
+      try {
+        // Generate the PDF
+        const doc = generateInvoicePDF(invoice as any);
+        
+        // Save the PDF locally
+        doc.save(`${invoice.invoiceNumber || 'invoice'}.pdf`);
+        
+        // Also store it in Supabase for future use
+        generateAndStorePDF('invoice', invoice as any, false)
+          .then(url => {
+            if (url) {
+              toast({
+                title: 'PDF Stored',
+                description: 'Your invoice PDF has been stored for future use.',
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error storing PDF:', error);
+          });
+        
+        toast({
+          title: 'PDF Downloaded',
+          description: 'Your invoice PDF has been generated and downloaded.',
+        });
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to generate PDF for download.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
   const columns: ColumnDef<InvoiceListItem>[] = [
     {
@@ -135,6 +227,19 @@ export const InvoiceTable = ({
               <DropdownMenuItem onClick={() => onEdit(invoice)}>
                 Edit Invoice
               </DropdownMenuItem>
+              {(invoice.supabase_pdf_url || invoice.pdf_link) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleViewPdf(invoice)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    View PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onDelete(invoice)}

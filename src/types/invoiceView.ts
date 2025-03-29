@@ -1,4 +1,3 @@
-
 export interface InvoiceListItem {
   id: string;
   invoiceNumber: string;
@@ -13,4 +12,6 @@ export interface InvoiceListItem {
   lineItemsCount: number;
   notes?: string;
   amountPaid: number;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }

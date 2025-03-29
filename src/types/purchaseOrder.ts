@@ -3,6 +3,7 @@ import { GlAccount } from './accounts';
 
 export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   id: string;
+  glide_row_id: string;
   number?: string;
   date?: Date | string;
   status: string;
@@ -23,8 +24,8 @@ export interface PurchaseOrder extends EntityBase, EntityWithAmount {
   total?: number;
   total_paid?: number;
   rowid_accounts?: string;
-  glide_row_id: string;
-  total_amount: number;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
   created_at: string; // Required for database compatibility
   updated_at?: string; // Optional for future compatibility
   // New fields
@@ -62,13 +63,15 @@ export interface VendorPayment {
   vendorId?: string; // Add vendorId to fix type errors
 }
 
-export interface PurchaseOrderWithVendor {
-  id: string;
+export interface PurchaseOrderWithVendor extends PurchaseOrder {
+  vendorName?: string;
+  vendorId?: string;
+  products?: any[];
+  pdfLink?: string; // Legacy field - Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
   number: string;
   date: Date | string;
   status: EntityStatus;
-  vendorId: string;
-  vendorName: string;
   total: number;
   balance: number;
   totalPaid: number;

@@ -1,4 +1,3 @@
-
 import { GlAccount } from './index';
 
 export interface EstimateLine {
@@ -45,8 +44,9 @@ export interface Estimate {
   total_amount: number;
   total_credits: number;
   balance: number;
-  glide_pdf_url?: string;
-  glide_pdf_url2?: string;
+  glide_pdf_url?: string; // Internal Glide use only
+  glide_pdf_url2?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
   valid_final_create_invoice_clicked?: boolean;
   date_invoice_created_date?: string; // Changed from string | Date to just string
   created_at: string; // Changed from string | Date to just string
@@ -56,7 +56,9 @@ export interface Estimate {
 export interface EstimateWithDetails extends Estimate {
   estimateLines?: EstimateLine[];
   credits?: CustomerCredit[];
-  account?: GlAccount; // Add this to support operations in the code
+  account?: GlAccount;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
 
 // Add the EstimateFilters interface
@@ -84,4 +86,6 @@ export interface PurchaseOrder {
   vendorPayments: any[];
   products?: any[];
   payments?: any[];
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }

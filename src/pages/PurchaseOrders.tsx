@@ -13,11 +13,18 @@ import PurchaseOrderList from '@/components/purchase-orders/PurchaseOrderList';
 import PurchaseOrderCard from '@/components/purchase-orders/PurchaseOrderCard';
 import { Input } from '@/components/ui/input';
 
+// Extended interface to handle PDF links
+interface ExtendedPurchaseOrder extends PurchaseOrderWithVendor {
+  pdfLink?: string; // Legacy field - Internal Glide use only
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
+}
+
 function PurchaseOrders() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrderWithVendor | null>(null);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<ExtendedPurchaseOrder | null>(null);
   const [activeView, setActiveView] = useState<'table' | 'cards'>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<PurchaseOrderFilters>({});
@@ -57,7 +64,7 @@ function PurchaseOrders() {
     navigate(`/purchase-orders/edit/${id}`);
   };
 
-  const handleDeletePurchaseOrder = (purchaseOrder: PurchaseOrderWithVendor) => {
+  const handleDeletePurchaseOrder = (purchaseOrder: ExtendedPurchaseOrder) => {
     setSelectedPurchaseOrder(purchaseOrder);
     setIsDeleteDialogOpen(true);
   };
@@ -98,9 +105,11 @@ function PurchaseOrders() {
     fetchData();
   };
 
-  const handleViewPdf = (purchaseOrder: any) => {
-    if (purchaseOrder.pdf_link) {
-      window.open(purchaseOrder.pdf_link, '_blank');
+  const handleViewPdf = (purchaseOrder: ExtendedPurchaseOrder) => {
+    // Prioritize Supabase PDF URL, then fall back to legacy fields
+    const pdfUrl = purchaseOrder.supabase_pdf_url || purchaseOrder.pdfLink || purchaseOrder.pdf_link;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
     } else {
       toast({
         title: 'PDF Not Available',
@@ -110,11 +119,13 @@ function PurchaseOrders() {
     }
   };
 
-  const handleDownloadPdf = (purchaseOrder: any) => {
-    if (purchaseOrder.pdf_link) {
+  const handleDownloadPdf = (purchaseOrder: ExtendedPurchaseOrder) => {
+    // Prioritize Supabase PDF URL, then fall back to legacy fields
+    const pdfUrl = purchaseOrder.supabase_pdf_url || purchaseOrder.pdfLink || purchaseOrder.pdf_link;
+    if (pdfUrl) {
       // Create a temporary anchor element to trigger download
       const a = document.createElement('a');
-      a.href = purchaseOrder.pdf_link;
+      a.href = pdfUrl;
       a.download = `${purchaseOrder.number || 'purchase-order'}.pdf`;
       document.body.appendChild(a);
       a.click();
@@ -128,14 +139,8 @@ function PurchaseOrders() {
     }
   };
 
-  // Convert PurchaseOrderWithVendor to the format expected by EnhancedPurchaseOrderTable
-  const adaptedPurchaseOrders = purchaseOrders.map(po => ({
-    ...po,
-    glide_row_id: po.id,
-    total_amount: po.total || 0,
-    pdf_link: po.pdf_link || null,
-    lineItems: po.lineItems || []
-  }));
+  // Cast purchaseOrders to ExtendedPurchaseOrder[] to handle the type mismatch
+  const extendedPurchaseOrders = purchaseOrders as unknown as ExtendedPurchaseOrder[];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -153,17 +158,6 @@ function PurchaseOrders() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Input
-            placeholder="Search purchase orders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-64"
-          />
-        </div>
-      </div>
-
       <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'table' | 'cards')}>
         <TabsList>
           <TabsTrigger value="table">Table View</TabsTrigger>
@@ -172,10 +166,11 @@ function PurchaseOrders() {
         
         <TabsContent value="table" className="space-y-4">
           <EnhancedPurchaseOrderTable 
-            purchaseOrders={adaptedPurchaseOrders}
+            purchaseOrders={extendedPurchaseOrders}
             isLoading={isLoading}
             onViewPdf={handleViewPdf}
             onDownloadPdf={handleDownloadPdf}
+            onCreatePurchaseOrder={handleCreatePurchaseOrder}
           />
         </TabsContent>
         

@@ -49,7 +49,8 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   glide_row_id: string;
   total_amount: number;
   tax_rate?: number; // New field
-  tax_amount?: number; // New field
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
 
 export interface InvoiceWithDetails extends Invoice {
@@ -57,13 +58,15 @@ export interface InvoiceWithDetails extends Invoice {
   payments: InvoicePayment[];
   account?: GlAccount;
   notes?: string;
-  total: number; // Change to required
+  total: number;
   amountPaid: number;
   subtotal: number;
   createdAt?: Date;
   updatedAt?: Date;
   tax_rate?: number;
   tax_amount?: number;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
 
 export interface InvoiceWithCustomer {
@@ -84,6 +87,8 @@ export interface InvoiceWithCustomer {
   date: Date;
   total: number;
   lineItemsCount: number;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
 
 export interface InvoiceFilters {
@@ -134,4 +139,6 @@ export interface InvoiceListItem {
   lineItemsCount: number;
   notes?: string;
   amountPaid: number;
+  pdf_link?: string; // Internal Glide use only
+  supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
