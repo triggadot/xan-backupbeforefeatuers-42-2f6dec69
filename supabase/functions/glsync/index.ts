@@ -457,11 +457,11 @@ async function syncData(supabase, connectionId: string, mappingId: string) {
         
         // Special handling for gl_estimate_lines table to use our custom glsync function
         if (mapping.supabase_table === 'gl_estimate_lines') {
-          console.log('Using permission-safe glsync function for estimate lines');
+          console.log('Using complete self-contained glsync function for estimate lines');
           
           try {
-            // Use our permission-safe sync function for estimate lines
-            const { data: syncResult, error: syncError } = await supabase.rpc('glsync_estimate_lines_safe', {
+            // Use our comprehensive sync function for estimate lines that doesn't rely on triggers or session parameters
+            const { data: syncResult, error: syncError } = await supabase.rpc('glsync_estimate_lines_complete', {
               data: batch
             });
             
