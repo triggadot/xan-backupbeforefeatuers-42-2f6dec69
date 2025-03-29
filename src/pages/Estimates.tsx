@@ -1,44 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstimatesNew } from '@/hooks/useEstimatesNew';
-import { Estimate, EstimateWithDetails, EstimateLine, CustomerCredit } from '@/types/estimate';
-import EstimateList from '@/components/estimates/EstimateList';
-import EstimateDetail from '@/components/estimates/EstimateDetail';
-import EstimateForm from '@/components/estimates/EstimateForm';
-import { formatCurrency } from '@/utils/format-utils';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Estimate, EstimateWithDetails, EstimateFilters } from '@/types/estimate';
+import { EstimateList, EstimateStats } from '@/components/new/estimates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Plus, Search, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Eye, FileText, Plus, RefreshCw, Trash } from 'lucide-react';
+import { Edit, Eye, FileText, Trash, Convert } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import EstimateForm from '@/components/estimates/EstimateForm';
+import EstimateDetail from '@/components/estimates/EstimateDetail';
 
 const Estimates = () => {
   const navigate = useNavigate();
@@ -51,6 +32,7 @@ const Estimates = () => {
   const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [estimates, setEstimates] = useState<EstimateWithDetails[]>([]);
+  const [filters, setFilters] = useState<EstimateFilters>({});
 
   const {
     fetchEstimates,
@@ -100,218 +82,236 @@ const Estimates = () => {
     );
   }, [estimates, searchTerm]);
 
-  const handleViewEstimate = async (id: string) => {
-    try {
-      const details = await getEstimate(id);
-      if (details) {
-        setActiveEstimate(details);
-        setIsDetailsOpen(true);
-      } else {
+  const handleViewEstimate = (estimate: Estimate) => {
+    navigate(`/estimates/${estimate.id}`);
+  };
+
+  const handleCreateEstimate = () => {
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleEditEstimate = (id: string) => {
+    navigate(`/estimates/${id}/edit`);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setSelectedEstimateId(id);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedEstimateId) {
+      try {
+        await deleteEstimate(selectedEstimateId);
+        toast({
+          title: 'Estimate Deleted',
+          description: 'The estimate has been successfully deleted.',
+        });
+        loadEstimates();
+      } catch (error) {
         toast({
           title: 'Error',
-          description: 'Failed to load estimate details.',
+          description: 'Failed to delete the estimate.',
           variant: 'destructive',
         });
       }
-    } catch (err) {
-      console.error('Error loading estimate details:', err);
+    }
+    setIsDeleteAlertOpen(false);
+  };
+
+  const handleConvertToInvoice = async (estimateId: string) => {
+    try {
+      await convertToInvoice(estimateId);
+      toast({
+        title: 'Estimate Converted',
+        description: 'The estimate has been successfully converted to an invoice.',
+      });
+      loadEstimates();
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load estimate details.',
+        description: 'Failed to convert the estimate to an invoice.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleCreateEstimate = async (data: Partial<EstimateWithDetails>) => {
-    try {
-      await createEstimate.mutateAsync(data);
-      setIsCreateDialogOpen(false);
-      loadEstimates();
-      return null;
-    } catch (error) {
-      console.error('Error creating estimate:', error);
-      return null;
-    }
-  };
-
-  const handleUpdateEstimate = async (id: string, data: Partial<Estimate>): Promise<Estimate | null> => {
-    try {
-      const result = await updateEstimate.mutateAsync({ id, ...data });
-      if (activeEstimate && activeEstimate.id === id) {
-        const updatedEstimate = await getEstimate(id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      loadEstimates();
-      return result;
-    } catch (error) {
-      console.error('Error updating estimate:', error);
-      return null;
-    }
-  };
-
-  const handleDeleteEstimate = async (id: string): Promise<boolean> => {
-    try {
-      await deleteEstimate.mutateAsync(id);
-      if (isDetailsOpen && activeEstimate?.id === id) {
-        setIsDetailsOpen(false);
-        setActiveEstimate(null);
-      }
-      loadEstimates();
-      return true;
-    } catch (error) {
-      console.error('Error deleting estimate:', error);
-      return false;
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (selectedEstimateId) {
-      try {
-        await handleDeleteEstimate(selectedEstimateId);
-        setIsDeleteAlertOpen(false);
-        setSelectedEstimateId(null);
-      } catch (error) {
-        console.error('Error deleting estimate:', error);
-      }
-    }
-  };
-
-  const handleAddLine = async (estimateGlideId: string, data: Partial<EstimateLine>): Promise<EstimateLine | null> => {
-    try {
-      const result = await addEstimateLine.mutateAsync({ 
-        estimateGlideId, 
-        data
-      });
-      if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return result;
-    } catch (error) {
-      console.error('Error adding line item:', error);
-      return null;
-    }
-  };
-
-  const handleUpdateLine = async (lineId: string, data: Partial<EstimateLine>): Promise<EstimateLine | null> => {
-    try {
-      const result = await updateEstimateLine.mutateAsync({ 
-        lineId, 
-        data
-      });
-      if (activeEstimate) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return result;
-    } catch (error) {
-      console.error('Error updating line item:', error);
-      return null;
-    }
-  };
-
-  const handleDeleteLine = async (lineId: string): Promise<boolean> => {
-    try {
-      await deleteEstimateLine.mutateAsync(lineId);
-      if (activeEstimate) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return true;
-    } catch (error) {
-      console.error('Error deleting line item:', error);
-      return false;
-    }
-  };
-
-  const handleAddCredit = async (estimateGlideId: string, data: Partial<CustomerCredit>): Promise<CustomerCredit | null> => {
-    try {
-      const result = await addCustomerCredit.mutateAsync({ 
-        estimateGlideId, 
-        data
-      });
-      if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return result;
-    } catch (error) {
-      console.error('Error adding credit:', error);
-      return null;
-    }
-  };
-
-  const handleUpdateCredit = async (creditId: string, data: Partial<CustomerCredit>): Promise<CustomerCredit | null> => {
-    try {
-      const result = await updateCustomerCredit.mutateAsync({ 
-        creditId, 
-        data
-      });
-      if (activeEstimate) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return result;
-    } catch (error) {
-      console.error('Error updating credit:', error);
-      return null;
-    }
-  };
-
-  const handleDeleteCredit = async (creditId: string): Promise<boolean> => {
-    try {
-      await deleteCustomerCredit.mutateAsync(creditId);
-      if (activeEstimate) {
-        const updatedEstimate = await getEstimate(activeEstimate.id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return true;
-    } catch (error) {
-      console.error('Error deleting credit:', error);
-      return false;
-    }
-  };
-
-  const handleConvertToInvoice = async (id: string): Promise<any> => {
-    try {
-      const result = await convertToInvoice.mutateAsync(id);
-      if (activeEstimate && activeEstimate.id === id) {
-        const updatedEstimate = await getEstimate(id);
-        if (updatedEstimate) {
-          setActiveEstimate(updatedEstimate);
-        }
-      }
-      return result;
-    } catch (error) {
-      console.error('Error converting to invoice:', error);
-      return null;
-    }
-  };
-
-  const handleRefresh = () => {
+  const handleEstimateCreated = (newEstimate: Estimate) => {
+    setIsCreateDialogOpen(false);
     loadEstimates();
-    if (activeEstimate) {
-      handleViewEstimate(activeEstimate.id);
-    }
+    toast({
+      title: 'Estimate Created',
+      description: 'Your new estimate has been created successfully.',
+    });
   };
+
+  // Stats for the dashboard cards
+  const totalEstimates = estimates.length;
+  const pendingEstimates = estimates.filter(est => est.status === 'pending').length;
+  const convertedEstimates = estimates.filter(est => est.status === 'converted').length;
+  const totalValue = estimates.reduce((sum, est) => sum + (est.total_amount || 0), 0);
 
   return (
-    <div className="container py-6 max-w-7xl">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Estimates</h1>
+        <Button onClick={handleCreateEstimate}>
+          <Plus className="mr-2 h-4 w-4" /> Create Estimate
+        </Button>
+      </div>
+      
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Estimates</CardTitle>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              className="h-4 w-4 text-muted-foreground"
+            >
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEstimates}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              className="h-4 w-4 text-muted-foreground"
+            >
+              <rect width="20" height="14" x="2" y="5" rx="2" />
+              <path d="M2 10h20" />
+            </svg>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Estimates</CardTitle>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              className="h-4 w-4 text-muted-foreground"
+            >
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingEstimates}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              className="h-4 w-4 text-muted-foreground"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEstimates > 0 ? ((convertedEstimates / totalEstimates) * 100).toFixed(1) : 0}%</div>
+            <p className="text-xs text-muted-foreground">
+              {convertedEstimates} of {totalEstimates} converted to invoices
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            type="search"
+            placeholder="Search estimates..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadEstimates}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+      
+      {/* Use the new EstimateList component */}
+      <EstimateList 
+        estimates={filteredEstimates} 
+        isLoading={isLoading} 
+        onViewEstimate={handleViewEstimate}
+        onDelete={handleDeleteClick}
+        onConvertToInvoice={handleConvertToInvoice}
+      />
+      
+      {/* Create Estimate Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Estimate</DialogTitle>
+          </DialogHeader>
+          <EstimateForm onSubmit={handleEstimateCreated} onCancel={() => setIsCreateDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the estimate and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       {isDetailsOpen && activeEstimate ? (
         <EstimateDetail
           estimate={activeEstimate}
@@ -326,182 +326,118 @@ const Estimates = () => {
               setActiveEstimate(updatedEstimate);
             }
           }}
-          onUpdate={handleUpdateEstimate}
+          onUpdate={async (id: string, data: Partial<Estimate>) => {
+            try {
+              const result = await updateEstimate(id, data);
+              if (activeEstimate && activeEstimate.id === id) {
+                const updatedEstimate = await getEstimate(id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              loadEstimates();
+              return result;
+            } catch (error) {
+              console.error('Error updating estimate:', error);
+              return null;
+            }
+          }}
           onDelete={handleDeleteEstimate}
-          onAddLine={handleAddLine}
-          onUpdateLine={handleUpdateLine}
-          onDeleteLine={handleDeleteLine}
-          onAddCredit={handleAddCredit}
-          onUpdateCredit={handleUpdateCredit}
-          onDeleteCredit={handleDeleteCredit}
+          onAddLine={async (estimateGlideId: string, data: Partial<EstimateLine>) => {
+            try {
+              const result = await addEstimateLine(estimateGlideId, data);
+              if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return result;
+            } catch (error) {
+              console.error('Error adding line item:', error);
+              return null;
+            }
+          }}
+          onUpdateLine={async (lineId: string, data: Partial<EstimateLine>) => {
+            try {
+              const result = await updateEstimateLine(lineId, data);
+              if (activeEstimate) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return result;
+            } catch (error) {
+              console.error('Error updating line item:', error);
+              return null;
+            }
+          }}
+          onDeleteLine={async (lineId: string) => {
+            try {
+              await deleteEstimateLine(lineId);
+              if (activeEstimate) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return true;
+            } catch (error) {
+              console.error('Error deleting line item:', error);
+              return false;
+            }
+          }}
+          onAddCredit={async (estimateGlideId: string, data: Partial<CustomerCredit>) => {
+            try {
+              const result = await addCustomerCredit(estimateGlideId, data);
+              if (activeEstimate && activeEstimate.glide_row_id === estimateGlideId) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return result;
+            } catch (error) {
+              console.error('Error adding credit:', error);
+              return null;
+            }
+          }}
+          onUpdateCredit={async (creditId: string, data: Partial<CustomerCredit>) => {
+            try {
+              const result = await updateCustomerCredit(creditId, data);
+              if (activeEstimate) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return result;
+            } catch (error) {
+              console.error('Error updating credit:', error);
+              return null;
+            }
+          }}
+          onDeleteCredit={async (creditId: string) => {
+            try {
+              await deleteCustomerCredit(creditId);
+              if (activeEstimate) {
+                const updatedEstimate = await getEstimate(activeEstimate.id);
+                if (updatedEstimate) {
+                  setActiveEstimate(updatedEstimate);
+                }
+              }
+              return true;
+            } catch (error) {
+              console.error('Error deleting credit:', error);
+              return false;
+            }
+          }}
           onConvertToInvoice={handleConvertToInvoice}
         />
       ) : (
-        <>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-            <h1 className="text-3xl font-bold">Estimates</h1>
-            
-            <div className="flex w-full sm:w-auto gap-2">
-              <Input
-                placeholder="Search estimates..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full sm:w-64"
-              />
-              
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={handleRefresh}
-                disabled={isLoading}
-              >
-                <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-              </Button>
-              
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Estimate
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex justify-end mb-4">
-            <div className="flex space-x-1 bg-muted p-1 rounded-md">
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('cards')}
-                className="text-xs"
-              >
-                Cards
-              </Button>
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className="text-xs"
-              >
-                Table
-              </Button>
-            </div>
-          </div>
-
-          {viewMode === 'cards' ? (
-            <EstimateList 
-              estimates={filteredEstimates} 
-              isLoading={isLoading} 
-              error={error}
-              onViewEstimate={(estimate) => handleViewEstimate(estimate.id)}
-            />
-          ) : (
-            <Card>
-              <CardHeader className="px-6 py-4">
-                <CardTitle className="text-lg">Estimates</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Estimate #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            <div className="flex justify-center">
-                              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredEstimates.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No estimates found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredEstimates.map((estimate) => (
-                          <TableRow key={estimate.id}>
-                            <TableCell>#{estimate.glide_row_id?.substring(4, 10)}</TableCell>
-                            <TableCell>{estimate.accountName}</TableCell>
-                            <TableCell>{formatDate(estimate.estimate_date as string)}</TableCell>
-                            <TableCell>${estimate.total_amount?.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                estimate.status === 'converted' ? 'success' :
-                                estimate.status === 'pending' ? 'warning' : 'secondary'
-                              }>
-                                {estimate.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewEstimate(estimate.id)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              {estimate.status !== 'converted' && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteEstimate(estimate.id)}
-                                  >
-                                    <Trash className="h-4 w-4 mr-1" />
-                                    Delete
-                                  </Button>
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+        <></>
       )}
-
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Create New Estimate</DialogTitle>
-          </DialogHeader>
-          <EstimateForm
-            onSubmit={handleCreateEstimate}
-            onCancel={() => setIsCreateDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the estimate
-              and remove its data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedEstimateId(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

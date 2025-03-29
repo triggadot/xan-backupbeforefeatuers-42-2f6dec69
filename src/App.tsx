@@ -6,23 +6,44 @@ import Dashboard from '@/pages/Dashboard';
 import Products from '@/pages/Products';
 import TableDemo from '@/pages/TableDemo';
 import SidebarDemo from '@/pages/SidebarDemo';
-import Accounts from '@/pages/Accounts';
-import AccountDetail from '@/pages/AccountDetail';
+// Temporarily comment out imports for pages we'll rebuild
+// import Accounts from '@/pages/Accounts';
+// import AccountDetail from '@/pages/AccountDetail';
 import Sync from '@/pages/Sync';
 import Auth from '@/pages/Auth';
 import NotFound from '@/pages/NotFound';
 import MappingView from '@/pages/MappingView';
-import Invoices from '@/pages/Invoices';
-import InvoiceDetail from '@/pages/InvoiceDetail';
-import EditInvoice from '@/pages/EditInvoice';
-import PurchaseOrders from '@/pages/PurchaseOrders';
-import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
-import Estimates from '@/pages/Estimates';
-import EstimateDetail from '@/pages/EstimateDetail';
+// import Invoices from '@/pages/Invoices';
+// import InvoiceDetail from '@/pages/InvoiceDetail';
+// import EditInvoice from '@/pages/EditInvoice';
+// import PurchaseOrders from '@/pages/PurchaseOrders';
+// import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
+// import Estimates from '@/pages/Estimates';
+// import EstimateDetail from '@/pages/EstimateDetail';
 import DataManagement from '@/pages/DataManagement';
 import DataTables from '@/pages/DataTables';
 import Index from '@/pages/Index';
 import ErrorBoundary from '@/components/ErrorBoundary';
+
+// Import our new pages
+import NewInvoices from '@/pages/new/Invoices';
+import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
+import NewEstimates from '@/pages/new/Estimates';
+import EstimateDetailPage from '@/pages/new/EstimateDetail';
+import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
+import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
+import Accounts from '@/pages/Accounts';
+import AccountDetail from '@/pages/AccountDetail';
+
+// Temporary placeholder component until we rebuild the pages
+const PlaceholderPage = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="text-center">
+      <h2 className="text-2xl font-bold mb-4">Coming Soon</h2>
+      <p className="text-gray-500">This page is being redesigned with improved UI/UX.</p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
@@ -71,10 +92,18 @@ function App() {
             } 
           />
           <Route 
+            path="accounts/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <AccountDetail isEditing={true} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="invoices" 
             element={
               <ProtectedRoute>
-                <Invoices />
+                <NewInvoices />
               </ProtectedRoute>
             } 
           />
@@ -82,7 +111,7 @@ function App() {
             path="invoices/:id" 
             element={
               <ProtectedRoute>
-                <InvoiceDetail />
+                <InvoiceDetailPage />
               </ProtectedRoute>
             } 
           />
@@ -90,7 +119,7 @@ function App() {
             path="invoices/:id/edit" 
             element={
               <ProtectedRoute>
-                <EditInvoice />
+                <PlaceholderPage />
               </ProtectedRoute>
             } 
           />
@@ -98,7 +127,7 @@ function App() {
             path="purchase-orders" 
             element={
               <ProtectedRoute>
-                <PurchaseOrders />
+                <NewPurchaseOrders />
               </ProtectedRoute>
             } 
           />
@@ -106,7 +135,23 @@ function App() {
             path="purchase-orders/:id" 
             element={
               <ProtectedRoute>
-                <PurchaseOrderDetail />
+                <PurchaseOrderDetailPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="purchase-orders/new" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="purchase-orders/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
               </ProtectedRoute>
             } 
           />
@@ -114,7 +159,7 @@ function App() {
             path="estimates" 
             element={
               <ProtectedRoute>
-                <Estimates />
+                <NewEstimates />
               </ProtectedRoute>
             } 
           />
@@ -122,7 +167,23 @@ function App() {
             path="estimates/:id" 
             element={
               <ProtectedRoute>
-                <EstimateDetail />
+                <EstimateDetailPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="estimates/new" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="estimates/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
               </ProtectedRoute>
             } 
           />
