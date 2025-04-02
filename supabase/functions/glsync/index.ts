@@ -448,43 +448,15 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         
         let upsertError: Error | null = null;
         
-        // Special handling for gl_estimate_lines table to use our custom glsync function
-        if (mapping.supabase_table === 'gl_estimate_lines') {
-          console.log('Using complete self-contained glsync function for estimate lines');
-          
-          try {
-            // Use our comprehensive sync function for estimate lines that doesn't rely on triggers or session parameters
-            const { data: syncResult, error: syncError } = await supabase.rpc('glsync_estimate_lines_complete', {
-              data: batch
-            });
-            
-            if (syncError) {
-              throw syncError;
-            }
-            
-            // Log sync results
-            if (syncResult) {
-              console.log(`Estimate lines sync results: Inserted ${syncResult.inserted?.length || 0}, Updated ${syncResult.updated?.length || 0}, Errors ${syncResult.errors?.length || 0}`);
-              
-              // If there were errors, log them but continue processing
-              if (syncResult.errors && syncResult.errors.length > 0) {
-                console.warn('Some estimate lines had errors:', syncResult.errors);
-              }
-            }
-          } catch (err) {
-            upsertError = err as Error;
-          }
-        } else {
-          // Standard upsert for other tables
-          const { error } = await supabase
-            .from(mapping.supabase_table)
-            .upsert(batch, { 
-              onConflict: 'glide_row_id',
-              ignoreDuplicates: false
-            });
-          
-          upsertError = error;
-        }
+        // Standard upsert for all tables
+        const { error } = await supabase
+          .from(mapping.supabase_table)
+          .upsert(batch, { 
+            onConflict: 'glide_row_id',
+            ignoreDuplicates: false
+          });
+        
+        upsertError = error;
         
         if (upsertError) {
           console.error('Error upserting data:', upsertError);
