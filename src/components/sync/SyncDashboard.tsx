@@ -1,22 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, RefreshCw, AlertTriangle, Database, FileText, Activity } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import SyncMetricsCard from './overview/SyncMetricsCard';
-import { SyncStats } from './overview/SyncStats';
-import { RecentSyncList } from './overview/RecentSyncList';
-import { RecentActivity } from './overview/RecentActivity';
-import { ActiveMappingCard } from './overview/ActiveMappingCard';
-import { supabase } from '@/integrations/supabase/client';
-import SupabaseTableView from '@/components/data-management/SupabaseTableView';
+import { SyncOverview } from './overview/SyncOverview';
 import { SyncDock } from './SyncDock';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import SupabaseTableView from '../data-management/SupabaseTableView';
+import { useGlSync } from '@/hooks/useGlSync';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, RefreshCw, Loader2, Settings, Database, List, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
-// Define table display names and descriptions
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
   gl_accounts: {
     displayName: 'Accounts',
@@ -68,30 +65,68 @@ const TABLE_INFO: Record<string, { displayName: string; description: string }> =
   }
 };
 
-const SyncDashboard = () => {
-  // State declarations
-  const [activeTab, setActiveTab] = useState("overview");
+export function SyncDashboard() {
+  const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
+  const { mappingId } = useParams<{ mappingId: string }>();
+  const isMobile = useIsMobile();
+  const { syncData, isLoading: isSyncing } = useGlSync();
+  const { toast } = useToast();
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [mappings, setMappings] = useState([]);
   const [isLoadingMappings, setIsLoadingMappings] = useState(true);
-  const [isSyncing, setIsSyncing] = useState<Record<string, boolean>>({});
   const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(null);
   
-  // Hooks
-  const { syncData, isLoading: glSyncLoading } = useGlSync();
-  const { toast } = useToast();
-  const { 
-    syncStats, 
-    recentLogs,
-    allSyncStatuses,
-    isLoading: statusLoading, 
-    hasError,
-    errorMessage,
-    refreshData
-  } = useGlSyncStatus();
+  // Update last sync time from localStorage or set current time on first sync
+  useEffect(() => {
+    const storedTime = localStorage.getItem(`lastSync_${mappingId}`);
+    if (storedTime) {
+      setLastSyncTime(storedTime);
+    }
+  }, [mappingId]);
 
-  // Event handlers and callbacks
-  const fetchMappings = useCallback(async () => {
+  const handleSync = async () => {
+    if (!mappingId) return;
+    
+    try {
+      // Extract connection ID from mapping ID or use a default
+      const connectionId = localStorage.getItem(`connection_${mappingId}`) || 'default';
+      
+      await syncData(connectionId, mappingId);
+      
+      // Update last sync time
+      const now = new Date().toISOString();
+      localStorage.setItem(`lastSync_${mappingId}`, now);
+      setLastSyncTime(now);
+      
+      toast({
+        title: "Sync initiated",
+        description: "The sync process has been started successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatLastSyncTime = (isoTime: string | null) => {
+    if (!isoTime) return 'Never';
+    
+    const date = new Date(isoTime);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    }).format(date);
+  };
+
+  const fetchMappings = async () => {
     setIsLoadingMappings(true);
     try {
       const { data, error } = await supabase
@@ -111,9 +146,9 @@ const SyncDashboard = () => {
     } finally {
       setIsLoadingMappings(false);
     }
-  }, [toast]);
+  };
 
-  const fetchTables = useCallback(async () => {
+  const fetchTables = async () => {
     try {
       // Get all gl_ tables that are relevant for our application
       const glTables = Object.keys(TABLE_INFO).filter(table => table.startsWith('gl_'));
@@ -133,357 +168,184 @@ const SyncDashboard = () => {
         variant: 'destructive',
       });
     }
-  }, [toast, activeTable]);
-
-  const handleSync = async (connectionId: string, mappingId: string) => {
-    setIsSyncing(prev => ({ ...prev, [mappingId]: true }));
-    
-    try {
-      const result = await syncData(connectionId, mappingId);
-      
-      if (result) {
-        toast({
-          title: 'Sync started',
-          description: 'The synchronization process has been initiated.',
-        });
-        
-        // Refresh data after a short delay to allow sync to start
-        setTimeout(() => {
-          fetchMappings();
-          refreshData();
-        }, 2000);
-      } else {
-        toast({
-          title: 'Sync failed',
-          description: 'An unknown error occurred',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSyncing(prev => ({ ...prev, [mappingId]: false }));
-    }
   };
 
-  const refreshAll = () => {
-    fetchMappings();
-    fetchTables();
-    refreshData();
-  };
-
-  // Effects
   useEffect(() => {
     fetchMappings();
     fetchTables();
-    refreshData();
-    
-    // Set up realtime subscription for mappings
-    const mappingsChannel = supabase
-      .channel('gl_mappings_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'gl_mapping_status' }, 
-        () => {
-          fetchMappings();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(mappingsChannel);
-    };
-  }, [fetchMappings, fetchTables, refreshData]);
-
-  // Render helpers
-  const renderError = () => (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center space-y-4">
-            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
-            <h3 className="text-lg font-medium">Unable to load synchronization dashboard</h3>
-            <p className="text-muted-foreground">
-              {errorMessage || 'There was an error connecting to the database. Please ensure the database tables have been created.'}
-            </p>
-            <Button onClick={refreshAll}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderMappingsContent = () => (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Active Mappings</h3>
-        <Button variant="outline" size="sm" onClick={refreshAll}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      {isLoadingMappings ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6">
-              <Skeleton className="h-6 w-1/2 mb-4" />
-              <Skeleton className="h-4 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2 mb-6" />
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-9 w-24" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : mappings.length === 0 ? (
-        <Card className="p-6 text-center">
-          <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-muted-foreground">No active mappings found.</p>
-          <p className="mt-2">
-            Create a connection and set up table mappings to start synchronizing data.
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mappings
-            .filter(status => status.enabled)
-            .map((status) => (
-              <div key={status.mapping_id} className="col-span-1">
-                <ActiveMappingCard 
-                  status={status} 
-                  onSync={handleSync} 
-                  isSyncing={isSyncing[status.mapping_id] || false} 
-                />
-              </div>
-            ))}
-        </div>
-      )}
-    </>
-  );
-
-  const renderRecentActivityContent = () => (
-    <div className="space-y-6">
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            Recent Activity
-          </CardTitle>
-          <CardDescription>
-            Recent sync operations and system activity
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RecentActivity />
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderSyncLogsContent = () => (
-    <div className="space-y-6">
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Sync Logs
-          </CardTitle>
-          <CardDescription>
-            Detailed logs of recent synchronization operations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RecentSyncList />
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderTableContent = () => (
-    <div className="space-y-6">
-      {tables.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Tables Found</CardTitle>
-            <CardDescription>
-              No database tables were found in your mappings.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {tables.map(tableName => (
-                <Button
-                  key={tableName}
-                  variant={activeTable === tableName ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveTable(tableName)}
-                  className="whitespace-nowrap"
-                >
-                  {TABLE_INFO[tableName]?.displayName || tableName}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTable}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {activeTable && (
-                <Card className="shadow-md">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">
-                      {TABLE_INFO[activeTable]?.displayName || activeTable}
-                    </CardTitle>
-                    <CardDescription>
-                      {TABLE_INFO[activeTable]?.description || 'Table data'}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <SupabaseTableView 
-                      tableName={activeTable}
-                      displayName={TABLE_INFO[activeTable]?.displayName || activeTable}
-                      description={TABLE_INFO[activeTable]?.description || ''}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderSettingsContent = () => (
-    <div className="space-y-6">
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle>Sync Settings</CardTitle>
-          <CardDescription>
-            Configure synchronization settings and preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-8">
-            Settings functionality coming soon...
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  // Return/render component
-  if (hasError) {
-    return renderError();
-  }
+  }, []);
 
   return (
-    <Card className="shadow-lg border-0 w-full max-w-full overflow-hidden">
-      <CardHeader className="pb-4 px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl sm:text-2xl font-bold">Sync Dashboard</CardTitle>
-          <Button 
-            variant="outline" 
-            onClick={refreshAll}
-            disabled={statusLoading}
-            className="w-full sm:w-auto"
-          >
-            {statusLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            {statusLoading ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
+    <div className="flex flex-col space-y-6 pb-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Sync Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage and monitor your data synchronization
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="p-3 sm:p-4 md:p-6">
-        <SyncDock activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <AnimatePresence mode="wait">
+        {mappingId ? (
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/sync')}
+              className="h-9"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Overview
+            </Button>
+            
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="h-9"
+            >
+              {isSyncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Now
+                </>
+              )}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      
+      {/* Last sync time indicator (only when viewing a specific mapping) */}
+      {mappingId && (
+        <Card className="bg-muted/40 border-dashed">
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-medium">Last Synchronized</h3>
+              <p className="text-sm text-muted-foreground">
+                {formatLastSyncTime(lastSyncTime)}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/sync/settings/${mappingId}`)}
+              className="h-8"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Mapping Settings
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Main Content */}
+      <AnimatePresence mode="wait">
+        {mappingId ? (
+          // Specific mapping view
           <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            key="mapping-detail"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="min-h-[400px]"
           >
-            {activeTab === "overview" && (
-              <div className="space-y-4 sm:space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <Card className="shadow-md">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle>Sync Statistics</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6 pt-0">
-                      <SyncStats />
-                    </CardContent>
-                  </Card>
-                  <Card className="shadow-md">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle>Sync Metrics</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6 pt-0">
-                      <SyncMetricsCard syncStats={syncStats || []} isLoading={statusLoading} />
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <Card className="shadow-md">
-                  <CardHeader className="p-4 sm:p-6">
-                    <CardTitle>Recent Activity</CardTitle>
+            <Tabs
+              defaultValue="details"
+              className="w-full"
+              onValueChange={(value) => setActiveTab(value)}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <TabsList className="grid grid-cols-3 w-auto">
+                  <TabsTrigger value="details" className="flex items-center gap-1.5">
+                    <Database className="h-4 w-4" />
+                    <span className={cn(isMobile ? "sr-only" : "")}>Table Details</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="logs" className="flex items-center gap-1.5">
+                    <List className="h-4 w-4" />
+                    <span className={cn(isMobile ? "sr-only" : "")}>Sync Logs</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="flex items-center gap-1.5">
+                    <BarChart2 className="h-4 w-4" />
+                    <span className={cn(isMobile ? "sr-only" : "")}>Analytics</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="details" className="space-y-4">
+                <SupabaseTableView 
+                  tableName={activeTable || 'gl_invoices'} 
+                  displayName="Sync Data"
+                  description="View and manage synchronized data"
+                  showSyncOptions={true}
+                />
+              </TabsContent>
+              
+              <TabsContent value="logs">
+                {/* <SyncLogs mappingId={mappingId} /> */}
+              </TabsContent>
+              
+              <TabsContent value="analytics">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sync Analytics</CardTitle>
+                    <CardDescription>
+                      View performance metrics and sync statistics
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6 pt-0">
-                    <RecentActivity />
+                  <CardContent>
+                    <p className="text-muted-foreground text-center py-8">
+                      Analytics features coming soon
+                    </p>
                   </CardContent>
                 </Card>
-              </div>
-            )}
-            
-            {activeTab === "mappings" && (
-              <Card className="shadow-md">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle>Active Mappings</CardTitle>
-                  <CardDescription>
-                    View and manage your active data synchronization mappings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 pt-0">
-                  {renderMappingsContent()}
-                </CardContent>
-              </Card>
-            )}
-            
-            {activeTab === "tables" && renderTableContent()}
-            
-            {activeTab === "activity" && renderRecentActivityContent()}
-            
-            {activeTab === "logs" && renderSyncLogsContent()}
-            
-            {activeTab === "settings" && renderSettingsContent()}
+              </TabsContent>
+            </Tabs>
           </motion.div>
-        </AnimatePresence>
-      </CardContent>
-    </Card>
+        ) : (
+          // Overview dashboard
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SyncDock activeTab={activeTab} onTabChange={setActiveTab} />
+            
+            <div className="mt-6">
+              <TabsContent value="overview" className={activeTab === 'overview' ? 'block' : 'hidden'}>
+                <SyncOverview />
+              </TabsContent>
+              
+              {/* <TabsContent value="logs" className={activeTab === 'logs' ? 'block' : 'hidden'}>
+                <SyncLogs />
+              </TabsContent> */}
+              
+              <TabsContent value="settings" className={activeTab === 'settings' ? 'block' : 'hidden'}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Global Sync Settings</CardTitle>
+                    <CardDescription>
+                      Configure global synchronization settings and defaults
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-center py-8">
+                      Global settings features coming soon
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
-};
-
-export default SyncDashboard;
+}

@@ -315,6 +315,8 @@ export default function SupabaseTableView({
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
   const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({});
 
+  const { toast } = useToast();
+
   // Fetch data on mount
   useEffect(() => {
     fetchData();
@@ -639,7 +641,6 @@ export default function SupabaseTableView({
   // Function to sync the current table
   const handleSyncTable = async () => {
     if (!tableMapping) {
-      const { toast } = useToast();
       toast({
         title: "Sync Error",
         description: "No mapping found for this table. Please set up a mapping first.",
@@ -650,7 +651,6 @@ export default function SupabaseTableView({
     
     try {
       await syncData(tableMapping.connection_id, tableMapping.mapping_id);
-      const { toast } = useToast();
       toast({
         title: "Sync Started",
         description: `Synchronizing ${displayName || tableName}...`,
@@ -661,7 +661,6 @@ export default function SupabaseTableView({
         refreshSyncData();
       }, 2000);
     } catch (error) {
-      const { toast } = useToast();
       toast({
         title: "Sync Failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
