@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, RefreshCw, Loader2, Settings, Database, List, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
   gl_accounts: {
