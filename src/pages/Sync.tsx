@@ -1,9 +1,9 @@
-
 import { useEffect, useState, Suspense, lazy } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import SyncContainer from '@/components/sync/SyncContainer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spinner } from '@/components/ui/spinner';
+import { AlertCircle } from 'lucide-react';
 
 // Lazy load the components for better performance 
 const SyncDashboard = lazy(() => import('@/components/sync/SyncDashboard'));
@@ -20,6 +20,7 @@ const Sync = () => {
   const { tab } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   
   useEffect(() => {
     // Redirect if needed, but prevent infinite loops
@@ -37,6 +38,7 @@ const Sync = () => {
       }
     } catch (error) {
       console.error('Navigation error:', error);
+      setError(error instanceof Error ? error : new Error('Navigation error occurred'));
     }
   }, [location.pathname, tab, navigate, isRedirecting]);
 
@@ -60,10 +62,35 @@ const Sync = () => {
     return () => clearTimeout(timer);
   }, [tab]);
 
+  // Error boundary fallback component
+  const ErrorFallback = ({ error }: { error: Error }) => (
+    <div className="flex flex-col items-center justify-center p-6 bg-destructive/10 rounded-lg border border-destructive">
+      <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+      <h2 className="text-lg font-semibold mb-2">Something went wrong</h2>
+      <p className="text-sm text-muted-foreground mb-4 text-center">
+        {error.message || 'An unexpected error occurred while loading the sync interface.'}
+      </p>
+      <button 
+        className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+        onClick={() => window.location.reload()}
+      >
+        Reload Page
+      </button>
+    </div>
+  );
+
   const renderContent = () => {
     // If we're on the base route and not redirecting yet, show dashboard
     if ((location.pathname === '/sync' || location.pathname === '/sync/') && !tab) {
-      return <SyncDashboard />;
+      return (
+        <Suspense fallback={
+          <div className="flex justify-center items-center h-64">
+            <Spinner size="lg" />
+          </div>
+        }>
+          <SyncDashboard />
+        </Suspense>
+      );
     }
     
     // Use tab parameter to determine which component to render
@@ -85,16 +112,21 @@ const Sync = () => {
             </div>
           }>
             {(() => {
-              switch (currentTab) {
-                case 'connections':
-                  return <ConnectionsManager />;
-                case 'mappings':
-                  return <MappingsManager />;
-                case 'logs':
-                  return <SyncLogs />;
-                case 'dashboard':
-                default:
-                  return <SyncDashboard />;
+              try {
+                switch (currentTab) {
+                  case 'connections':
+                    return <ConnectionsManager />;
+                  case 'mappings':
+                    return <MappingsManager />;
+                  case 'logs':
+                    return <SyncLogs />;
+                  case 'dashboard':
+                  default:
+                    return <SyncDashboard />;
+                }
+              } catch (err) {
+                console.error('Error rendering tab content:', err);
+                return <ErrorFallback error={err instanceof Error ? err : new Error('Failed to load content')} />;
               }
             })()}
           </Suspense>
@@ -102,6 +134,17 @@ const Sync = () => {
       </AnimatePresence>
     );
   };
+
+  // If there's a top-level error, show it
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <SyncContainer>
+          <ErrorFallback error={error} />
+        </SyncContainer>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">

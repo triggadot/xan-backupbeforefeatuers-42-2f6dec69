@@ -13,6 +13,7 @@ import { ArrowLeft, RefreshCw, Loader2, Settings, Database, List, BarChart2 } fr
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { Spinner } from '@/components/ui/spinner';
 
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
   gl_accounts: {
@@ -65,7 +66,7 @@ const TABLE_INFO: Record<string, { displayName: string; description: string }> =
   }
 };
 
-export function SyncDashboard() {
+export default function SyncDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
   const { mappingId } = useParams<{ mappingId: string }>();
@@ -77,12 +78,17 @@ export function SyncDashboard() {
   const [isLoadingMappings, setIsLoadingMappings] = useState(true);
   const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Update last sync time from localStorage or set current time on first sync
   useEffect(() => {
-    const storedTime = localStorage.getItem(`lastSync_${mappingId}`);
-    if (storedTime) {
-      setLastSyncTime(storedTime);
+    try {
+      const storedTime = localStorage.getItem(`lastSync_${mappingId}`);
+      if (storedTime) {
+        setLastSyncTime(storedTime);
+      }
+    } catch (err) {
+      console.error("Error accessing localStorage:", err);
     }
   }, [mappingId]);
 
@@ -105,6 +111,7 @@ export function SyncDashboard() {
         description: "The sync process has been started successfully.",
       });
     } catch (error) {
+      console.error("Sync error:", error);
       toast({
         title: "Sync failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -116,18 +123,25 @@ export function SyncDashboard() {
   const formatLastSyncTime = (isoTime: string | null) => {
     if (!isoTime) return 'Never';
     
-    const date = new Date(isoTime);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    }).format(date);
+    try {
+      const date = new Date(isoTime);
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      }).format(date);
+    } catch (err) {
+      console.error("Error formatting date:", err);
+      return 'Invalid date';
+    }
   };
 
   const fetchMappings = async () => {
     setIsLoadingMappings(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from('gl_mapping_status')
@@ -138,6 +152,7 @@ export function SyncDashboard() {
       setMappings(data || []);
     } catch (error) {
       console.error('Error fetching mappings:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error fetching mappings');
       toast({
         title: 'Error fetching mappings',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -162,6 +177,7 @@ export function SyncDashboard() {
       }
     } catch (error) {
       console.error('Error setting up tables:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error setting up tables');
       toast({
         title: 'Error setting up tables',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -174,6 +190,32 @@ export function SyncDashboard() {
     fetchMappings();
     fetchTables();
   }, []);
+
+  // If there's an error, display it
+  if (error) {
+    return (
+      <div className="flex flex-col space-y-6 pb-10">
+        <Card className="bg-destructive/10 border-destructive">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-2">Error Loading Sync Dashboard</h2>
+            <p className="text-muted-foreground">{error}</p>
+            <Button 
+              onClick={() => {
+                setError(null);
+                fetchMappings();
+                fetchTables();
+              }}
+              className="mt-4"
+              variant="outline"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6 pb-10">
@@ -277,17 +319,35 @@ export function SyncDashboard() {
                 </TabsList>
               </div>
               
-              <TabsContent value="details" className="space-y-4">
-                <SupabaseTableView 
-                  tableName={activeTable || 'gl_invoices'} 
-                  displayName="Sync Data"
-                  description="View and manage synchronized data"
-                  showSyncOptions={true}
-                />
+              <TabsContent value="details">
+                {activeTable ? (
+                  <SupabaseTableView 
+                    tableName={activeTable} 
+                    displayName={TABLE_INFO[activeTable]?.displayName || "Sync Data"}
+                    description={TABLE_INFO[activeTable]?.description || "View and manage synchronized data"}
+                    showSyncOptions={true}
+                  />
+                ) : (
+                  <div className="flex justify-center items-center h-64">
+                    <Spinner size="lg" />
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="logs">
-                {/* <SyncLogs mappingId={mappingId} /> */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sync Logs</CardTitle>
+                    <CardDescription>
+                      View detailed sync operation logs
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-center py-8">
+                      Sync logs feature coming soon
+                    </p>
+                  </CardContent>
+                </Card>
               </TabsContent>
               
               <TabsContent value="analytics">
@@ -319,29 +379,91 @@ export function SyncDashboard() {
             <SyncDock activeTab={activeTab} onTabChange={setActiveTab} />
             
             <div className="mt-6">
-              <TabsContent value="overview" className={activeTab === 'overview' ? 'block' : 'hidden'}>
-                <SyncOverview />
-              </TabsContent>
-              
-              {/* <TabsContent value="logs" className={activeTab === 'logs' ? 'block' : 'hidden'}>
-                <SyncLogs />
-              </TabsContent> */}
-              
-              <TabsContent value="settings" className={activeTab === 'settings' ? 'block' : 'hidden'}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Global Sync Settings</CardTitle>
-                    <CardDescription>
-                      Configure global synchronization settings and defaults
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-center py-8">
-                      Global settings features coming soon
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsContent value="overview">
+                  <SyncOverview />
+                </TabsContent>
+                
+                <TabsContent value="settings">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Global Sync Settings</CardTitle>
+                      <CardDescription>
+                        Configure global synchronization settings and defaults
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-center py-8">
+                        Global settings features coming soon
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="mappings">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sync Mappings</CardTitle>
+                      <CardDescription>
+                        Manage table mappings between Glide and Supabase
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-center py-8">
+                        Mappings management coming soon
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="tables">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Table Management</CardTitle>
+                      <CardDescription>
+                        View and manage synchronized tables
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-center py-8">
+                        Table management features coming soon
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="activity">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sync Activity</CardTitle>
+                      <CardDescription>
+                        View recent sync activity and status
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-center py-8">
+                        Activity tracking features coming soon
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="logs">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sync Logs</CardTitle>
+                      <CardDescription>
+                        View detailed sync operation logs
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-center py-8">
+                        Sync logs feature coming soon
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </motion.div>
         )}

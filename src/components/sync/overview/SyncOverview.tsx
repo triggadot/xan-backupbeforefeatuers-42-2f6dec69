@@ -275,7 +275,7 @@ export function SyncOverview() {
                   <ActiveMappingCard
                     key={status.mapping_id}
                     status={status}
-                    onSync={(connectionId, mappingId) => handleSync(connectionId, mappingId, {} as React.MouseEvent)}
+                    onSync={(connectionId, mappingId, e) => handleSync(connectionId, mappingId, e)}
                     isSyncing={syncingItems[status.mapping_id] || false}
                   />
                 ))}

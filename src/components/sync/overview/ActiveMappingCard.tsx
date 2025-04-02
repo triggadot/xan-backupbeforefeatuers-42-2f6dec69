@@ -8,7 +8,7 @@ import { GlSyncStatus } from '@/types/glsync';
 
 interface ActiveMappingCardProps {
   status: GlSyncStatus;
-  onSync: (connectionId: string, mappingId: string) => void;
+  onSync: (connectionId: string, mappingId: string, e: React.MouseEvent) => void;
   isSyncing: boolean;
 }
 
@@ -16,8 +16,16 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleViewDetails = () => {
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     navigate(`/sync/mapping/${status.mapping_id}`);
+  };
+
+  const handleSync = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSync(status.connection_id, status.mapping_id, e);
   };
 
   const getStatusBadge = () => {
@@ -61,7 +69,12 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleString();
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch (err) {
+      console.error("Error formatting date:", err);
+      return 'Invalid date';
+    }
   };
 
   return (
@@ -110,7 +123,7 @@ export function ActiveMappingCard({ status, onSync, isSyncing }: ActiveMappingCa
           </Button>
           <Button 
             size="sm"
-            onClick={() => onSync(status.connection_id, status.mapping_id)}
+            onClick={handleSync}
             disabled={isSyncing || status.current_status === 'processing'}
             className="text-xs h-8"
           >
