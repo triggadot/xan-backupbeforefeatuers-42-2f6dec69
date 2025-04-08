@@ -3,6 +3,29 @@ import 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 
+// Extend jsPDF with autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: {
+      head?: Array<Array<string>>;
+      body?: Array<Array<string | number>>;
+      columns?: Array<{ header: string; dataKey: string }>;
+      startY?: number;
+      margin?: { top?: number; right?: number; bottom?: number; left?: number };
+      styles?: any;
+      headStyles?: any;
+      bodyStyles?: any;
+      theme?: string;
+      didDrawPage?: (data: any) => void;
+      didParseCell?: (data: any) => void;
+      willDrawCell?: (data: any) => void;
+      columnStyles?: any;
+      html?: string | HTMLElement;
+      data?: any;
+    }) => any;
+  }
+}
+
 // Define types for our PDF generation
 type Account = Database['public']['Tables']['gl_accounts']['Row'];
 type Invoice = Database['public']['Tables']['gl_invoices']['Row'] & {
@@ -16,7 +39,10 @@ type InvoiceLine = Database['public']['Tables']['gl_invoice_lines']['Row'] & {
 type Product = Database['public']['Tables']['gl_products']['Row'];
 type PurchaseOrder = Database['public']['Tables']['gl_purchase_orders']['Row'] & {
   gl_accounts?: Account;
-  products?: Product[];
+  lineItems?: LineItem[];
+};
+type LineItem = Database['public']['Tables']['gl_purchase_order_lines']['Row'] & {
+  gl_products?: Product;
 };
 type Estimate = Database['public']['Tables']['gl_estimates']['Row'] & {
   gl_accounts?: Account;
@@ -53,12 +79,33 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
-// Format date in MM/DD/YYYY format
-const formatShortDate = (dateString: string | null | undefined): string => {
+/**
+ * Format a date string to a short date format (MM/DD/YYYY)
+ * 
+ * @param dateString - The date string to format
+ * @returns Formatted date string or 'N/A' if date is invalid
+ * 
+ * @example
+ * formatShortDate('2023-01-15') // Returns '01/15/2023'
+ * formatShortDate('invalid') // Returns 'N/A'
+ */
+export function formatShortDate(dateString: string | null | undefined): string {
   if (!dateString) return 'N/A';
+  
   const date = new Date(dateString);
-  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-};
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    console.warn(`Invalid date string provided: ${dateString}`);
+    return 'N/A';
+  }
+  
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${month}/${day}/${year}`;
+}
 
 /**
  * Generate a PDF for an invoice
@@ -223,15 +270,15 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
   };
 
   // Map purchase order products to table rows
-  const rows = purchaseOrder.products?.map(product => {
-    const quantity = product.total_qty_purchased || 0;
-    const cost = product.cost || 0;
-    const total = quantity * cost;
+  const rows = purchaseOrder.lineItems?.map(item => {
+    const quantity = item.quantity || 0;
+    const unitPrice = item.unitPrice || 0;
+    const total = item.total || quantity * unitPrice;
     
     return [
-      product.vendor_product_name || product.new_product_name || 'N/A',
+      item.display_name || item.vendor_product_name || item.new_product_name || 'N/A',
       quantity,
-      formatCurrency(cost),
+      formatCurrency(unitPrice),
       formatCurrency(total)
     ];
   }) || [];
@@ -248,7 +295,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
   const finalY = (doc as any).autoTable.previous.finalY;
 
   // Calculate total items
-  const totalItems = purchaseOrder.products?.reduce((sum, product) => sum + (product.total_qty_purchased || 0), 0) || 0;
+  const totalItems = purchaseOrder.lineItems?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
 
   // Add totals section
   doc.setFontSize(11);
@@ -353,30 +400,161 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
 }
 
 /**
+ * Fetch purchase order line items from the database
+ * 
+ * @param purchaseOrderId - The unique identifier of the purchase order
+ * @returns Promise resolving to an array of line items with product details
+ * 
+ * @example
+ * // Fetch line items for a purchase order
+ * const lineItems = await fetchPurchaseOrderLineItems('123e4567-e89b-12d3-a456-426614174000');
+ * console.log(`Found ${lineItems.length} line items`);
+ * 
+ * @throws Will log errors but return an empty array rather than throwing to prevent UI disruption
+ */
+export async function fetchPurchaseOrderLineItems(purchaseOrderId: string): Promise<any[]> {
+  try {
+    console.log(`Fetching line items for purchase order ID: ${purchaseOrderId}`);
+    
+    // First, get the purchase order to get its glide_row_id
+    const { data: purchaseOrder, error: poError } = await supabase
+      .from('gl_purchase_orders')
+      .select('glide_row_id')
+      .eq('id', purchaseOrderId)
+      .single();
+    
+    if (poError) {
+      console.error('Error fetching purchase order:', poError);
+      return [];
+    }
+    
+    if (!purchaseOrder || !purchaseOrder.glide_row_id) {
+      console.error('Purchase order not found or missing glide_row_id:', purchaseOrderId);
+      return [];
+    }
+    
+    console.log(`Found purchase order with glide_row_id: ${purchaseOrder.glide_row_id}`);
+    
+    // Try to use a stored procedure first (if it exists)
+    try {
+      const { data: lineItems, error: rpcError } = await supabase
+        .rpc('fetch_purchase_order_lines', { 
+          po_id: purchaseOrder.glide_row_id 
+        });
+      
+      if (!rpcError && lineItems) {
+        console.log(`Successfully fetched ${lineItems.length} line items via RPC`);
+        return lineItems;
+      }
+    } catch (rpcError) {
+      console.log('RPC method not available, falling back to direct query');
+    }
+    
+    // Fallback to direct query
+    console.log('Fetching line items via direct query');
+    const { data: lineItems, error: lineItemsError } = await supabase
+      .from('gl_purchase_order_lines')
+      .select('*')
+      .eq('rowid_purchase_order', purchaseOrder.glide_row_id);
+    
+    if (lineItemsError) {
+      console.error('Error fetching line items via direct query:', lineItemsError);
+      return [];
+    }
+    
+    console.log(`Successfully fetched ${lineItems?.length || 0} line items via direct query`);
+    return lineItems || [];
+  } catch (error) {
+    console.error('Unexpected error in fetchPurchaseOrderLineItems:', error);
+    return [];
+  }
+}
+
+/**
+ * Map database line items to the format expected by the PDF generation function
+ * 
+ * @param lineItems - Raw line items from the database
+ * @returns Formatted line items ready for PDF generation
+ * 
+ * @example
+ * const formattedItems = mapPurchaseOrderLineItems(rawItems);
+ * // formattedItems will have the correct property names for PDF generation
+ */
+function mapPurchaseOrderLineItems(lineItems: any[]): any[] {
+  if (!lineItems || !Array.isArray(lineItems)) {
+    console.warn('Invalid line items provided to mapper:', lineItems);
+    return [];
+  }
+  
+  return lineItems.map(item => {
+    // Log the raw item for debugging
+    console.log('Mapping line item:', item);
+    
+    // Handle different property naming conventions
+    return {
+      display_name: item.product_name || item.vendor_product_name || 'N/A',
+      vendor_product_name: item.vendor_product_name || '',
+      new_product_name: item.new_product_name || '',
+      quantity: parseFloat(item.quantity) || 0,
+      unitPrice: parseFloat(item.unit_price || item.unitPrice || 0),
+      total: parseFloat(item.total) || (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || item.unitPrice || 0)),
+      notes: item.notes || ''
+    };
+  });
+}
+
+/**
+ * Generate, save locally, and upload a purchase order PDF to Supabase storage
+ * 
+ * @param purchaseOrder - The purchase order data
+ * @param saveLocally - Whether to also save the PDF locally
+ * @returns The URL of the uploaded file or null if upload failed
+ * 
+ * @deprecated Use generateAndStorePDF('purchaseOrder', purchaseOrder, saveLocally) instead
+ */
+export async function generateAndStorePurchaseOrderPDF(
+  purchaseOrder: PurchaseOrder, 
+  saveLocally: boolean = false
+): Promise<string | null> {
+  console.warn('generateAndStorePurchaseOrderPDF is deprecated. Use generateAndStorePDF for consistent behavior.');
+  return generateAndStorePDF('purchaseOrder', purchaseOrder, saveLocally);
+}
+
+/**
  * Generate a PDF based on document type and data
  * 
  * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
  * @param data - The document data
  * @returns The generated PDF document or null if generation failed
+ * 
+ * @example
+ * // Generate a PDF for a purchase order
+ * const doc = generatePDF('purchaseOrder', purchaseOrderData);
+ * if (doc) {
+ *   doc.save('purchase-order.pdf');
+ * }
  */
 export function generatePDF(
   type: 'invoice' | 'purchaseOrder' | 'estimate',
   data: Invoice | PurchaseOrder | Estimate
 ): jsPDF | null {
   try {
-    console.log(`Generating PDF for ${type} with ID: ${data.id}`);
-    
-    switch (type) {
-      case 'invoice':
-        return generateInvoicePDF(data as Invoice);
-      case 'purchaseOrder':
-        return generatePurchaseOrderPDF(data as PurchaseOrder);
-      case 'estimate':
-        return generateEstimatePDF(data as Estimate);
-      default:
-        console.error(`Unknown document type: ${type}`);
-        return null;
+    if (!data) {
+      console.error(`Cannot generate PDF: No ${type} data provided`);
+      return null;
     }
+    
+    // Generate PDF based on document type
+    if (type === 'invoice') {
+      return generateInvoicePDF(data as Invoice);
+    } else if (type === 'purchaseOrder') {
+      return generatePurchaseOrderPDF(data as PurchaseOrder);
+    } else if (type === 'estimate') {
+      return generateEstimatePDF(data as Estimate);
+    }
+    
+    console.error(`Unknown document type: ${type}`);
+    return null;
   } catch (error) {
     console.error(`Error generating ${type} PDF:`, error);
     return null;
@@ -465,12 +643,15 @@ export async function storePDFInSupabase(
  * @param folderName The folder to store the PDF in (Invoices, PurchaseOrders, or Estimates)
  * @param fileName The name of the file
  * @returns The URL of the uploaded file or null if upload failed
+ * 
+ * @deprecated Use storePDFInSupabase instead for consistent storage behavior
  */
 export async function uploadPDFToStorage(
   doc: jsPDF, 
   folderName: 'Invoices' | 'PurchaseOrders' | 'Estimates', 
   fileName: string
 ): Promise<string | null> {
+  console.warn('uploadPDFToStorage is deprecated. Use storePDFInSupabase for consistent storage behavior.');
   try {
     // Convert PDF to blob
     const pdfBlob = doc.output('blob');
@@ -502,51 +683,28 @@ export async function uploadPDFToStorage(
 }
 
 /**
+ * Fetch purchase order line items from the database
+ * @param purchaseOrderId The ID of the purchase order
+ * @returns Array of line items with product details
+ */
+/**
+ * Removing duplicate function - this is already defined above at line 401
+ */
+
+/**
  * Generate, save locally, and upload an invoice PDF to Supabase storage
  * @param invoice The invoice data
  * @param saveLocally Whether to also save the PDF locally
  * @returns The URL of the uploaded file or null if upload failed
+ * 
+ * @deprecated Use generateAndStorePDF('invoice', invoice, saveLocally) instead
  */
 export async function generateAndStoreInvoicePDF(
   invoice: Invoice, 
   saveLocally: boolean = false
 ): Promise<string | null> {
-  const doc = generateInvoicePDF(invoice);
-  
-  // Use the invoice UID directly for the filename if available
-  const fileName = invoice.invoice_uid 
-    ? `${invoice.invoice_uid}.pdf` 
-    : `INV-${invoice.glide_row_id || 'unknown'}.pdf`;
-  
-  if (saveLocally) {
-    doc.save(fileName);
-  }
-  
-  return await uploadPDFToStorage(doc, 'Invoices', fileName);
-}
-
-/**
- * Generate, save locally, and upload a purchase order PDF to Supabase storage
- * @param purchaseOrder The purchase order data
- * @param saveLocally Whether to also save the PDF locally
- * @returns The URL of the uploaded file or null if upload failed
- */
-export async function generateAndStorePurchaseOrderPDF(
-  purchaseOrder: PurchaseOrder, 
-  saveLocally: boolean = false
-): Promise<string | null> {
-  const doc = generatePurchaseOrderPDF(purchaseOrder);
-  
-  // Use the purchase order UID directly for the filename if available
-  const fileName = purchaseOrder.purchase_order_uid 
-    ? `${purchaseOrder.purchase_order_uid}.pdf` 
-    : `PO-${purchaseOrder.glide_row_id || 'unknown'}.pdf`;
-  
-  if (saveLocally) {
-    doc.save(fileName);
-  }
-  
-  return await uploadPDFToStorage(doc, 'PurchaseOrders', fileName);
+  console.warn('generateAndStoreInvoicePDF is deprecated. Use generateAndStorePDF for consistent behavior.');
+  return generateAndStorePDF('invoice', invoice, saveLocally);
 }
 
 /**
@@ -554,31 +712,27 @@ export async function generateAndStorePurchaseOrderPDF(
  * @param estimate The estimate data
  * @param saveLocally Whether to also save the PDF locally
  * @returns The URL of the uploaded file or null if upload failed
+ * 
+ * @deprecated Use generateAndStorePDF('estimate', estimate, saveLocally) instead
  */
 export async function generateAndStoreEstimatePDF(
   estimate: Estimate, 
   saveLocally: boolean = false
 ): Promise<string | null> {
-  const doc = generateEstimatePDF(estimate);
-  
-  // Use the estimate UID directly for the filename if available
-  const fileName = estimate.estimate_uid 
-    ? `${estimate.estimate_uid}.pdf` 
-    : `EST-${estimate.glide_row_id || 'unknown'}.pdf`;
-  
-  if (saveLocally) {
-    doc.save(fileName);
-  }
-  
-  return await uploadPDFToStorage(doc, 'Estimates', fileName);
+  console.warn('generateAndStoreEstimatePDF is deprecated. Use generateAndStorePDF for consistent behavior.');
+  return generateAndStorePDF('estimate', estimate, saveLocally);
 }
 
 /**
  * Update the PDF link in the database after uploading
- * @param table The table to update ('gl_invoices', 'gl_purchase_orders', or 'gl_estimates')
- * @param id The ID of the record to update
- * @param pdfUrl The URL of the uploaded PDF
+ * 
+ * @param table - The table to update ('gl_invoices', 'gl_purchase_orders', or 'gl_estimates')
+ * @param id - The ID of the record to update
+ * @param pdfUrl - The URL of the uploaded PDF
  * @returns Whether the update was successful
+ * 
+ * @example
+ * const success = await updatePDFLinkInDatabase('gl_invoices', '123', 'https://example.com/invoice.pdf');
  */
 export async function updatePDFLinkInDatabase(
   table: 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates',
@@ -586,20 +740,29 @@ export async function updatePDFLinkInDatabase(
   pdfUrl: string
 ): Promise<boolean> {
   try {
-    const fieldName = table === 'gl_purchase_orders' ? 'pdf_link' : 
-                      table === 'gl_invoices' ? 'doc_glideforeverlink' : 
-                      'glide_pdf_url';
-    
-    const { error } = await supabase
-      .from(table)
-      .update({ [fieldName]: pdfUrl })
-      .eq('id', id);
-    
-    if (error) {
-      console.error(`Error updating ${table}:`, error);
+    if (!id) {
+      console.error('Cannot update PDF link: Missing ID');
       return false;
     }
-    
+
+    if (!pdfUrl) {
+      console.error('Cannot update PDF link: Missing PDF URL');
+      return false;
+    }
+
+    // Determine the correct field name based on the table
+    // Always use supabase_pdf_url for consistency
+    const { data, error } = await supabase
+      .from(table)
+      .update({ supabase_pdf_url: pdfUrl })
+      .eq('id', id);
+
+    if (error) {
+      console.error(`Error updating PDF link in ${table}:`, error);
+      return false;
+    }
+
+    console.log(`Successfully updated PDF link in ${table} for ID ${id}`);
     return true;
   } catch (error) {
     console.error('Error in updatePDFLinkInDatabase:', error);
@@ -609,35 +772,158 @@ export async function updatePDFLinkInDatabase(
 
 /**
  * Complete workflow to generate, store, and update database with PDF link
- * @param type The type of document ('invoice', 'purchaseOrder', or 'estimate')
- * @param data The document data
- * @param saveLocally Whether to also save the PDF locally
+ * 
+ * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
+ * @param data - The document data
+ * @param saveLocally - Whether to also save the PDF locally
+ * @param download - Whether to trigger browser download (only works in browser context)
  * @returns The URL of the uploaded PDF or null if any step failed
+ * 
+ * @example
+ * // Generate and store a purchase order PDF
+ * const pdfUrl = await generateAndStorePDF('purchaseOrder', purchaseOrderData, true);
+ * if (pdfUrl) {
+ *   console.log('PDF generated and stored successfully:', pdfUrl);
+ * }
  */
 export async function generateAndStorePDF(
   type: 'invoice' | 'purchaseOrder' | 'estimate',
   data: Invoice | PurchaseOrder | Estimate,
-  saveLocally: boolean = false
+  saveLocally: boolean = false,
+  download: boolean = false
 ): Promise<string | null> {
-  let pdfUrl: string | null = null;
-  
-  // Generate and upload PDF
-  if (type === 'invoice') {
-    pdfUrl = await generateAndStoreInvoicePDF(data as Invoice, saveLocally);
-  } else if (type === 'purchaseOrder') {
-    pdfUrl = await generateAndStorePurchaseOrderPDF(data as PurchaseOrder, saveLocally);
-  } else if (type === 'estimate') {
-    pdfUrl = await generateAndStoreEstimatePDF(data as Estimate, saveLocally);
+  try {
+    if (!data) {
+      console.error(`Cannot generate PDF: No ${type} data provided`);
+      return null;
+    }
+
+    if (!data.id) {
+      console.error(`Cannot generate PDF: Missing ID for ${type}`);
+      return null;
+    }
+
+    // Prepare data if needed (e.g., fetch line items for purchase orders)
+    if (type === 'purchaseOrder') {
+      const purchaseOrder = data as PurchaseOrder;
+      if (!purchaseOrder.lineItems || purchaseOrder.lineItems.length === 0) {
+        console.log(`Fetching line items for purchase order: ${purchaseOrder.id}`);
+        const lineItems = await fetchPurchaseOrderLineItems(purchaseOrder.id);
+        
+        if (lineItems && lineItems.length > 0) {
+          purchaseOrder.lineItems = mapPurchaseOrderLineItems(lineItems);
+        } else {
+          console.warn(`No line items found for purchase order ${purchaseOrder.id}`);
+          purchaseOrder.lineItems = [];
+        }
+      }
+    }
+
+    // Generate the PDF document
+    const doc = generatePDF(type, data);
+    if (!doc) {
+      console.error(`Failed to generate ${type} PDF`);
+      return null;
+    }
+
+    // Generate an appropriate filename
+    let fileName: string;
+    let folderName: 'Invoices' | 'PurchaseOrders' | 'Estimates';
+    let tableName: 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates';
+
+    if (type === 'invoice') {
+      const invoice = data as Invoice;
+      fileName = invoice.invoice_uid 
+        ? `${invoice.invoice_uid}.pdf` 
+        : `INV-${invoice.glide_row_id || invoice.id}.pdf`;
+      folderName = 'Invoices';
+      tableName = 'gl_invoices';
+    } else if (type === 'purchaseOrder') {
+      const purchaseOrder = data as PurchaseOrder;
+      fileName = purchaseOrder.purchase_order_uid 
+        ? `${purchaseOrder.purchase_order_uid}.pdf` 
+        : `PO-${purchaseOrder.glide_row_id || purchaseOrder.id}.pdf`;
+      folderName = 'PurchaseOrders';
+      tableName = 'gl_purchase_orders';
+    } else { // estimate
+      const estimate = data as Estimate;
+      fileName = estimate.estimate_uid 
+        ? `${estimate.estimate_uid}.pdf` 
+        : `EST-${estimate.glide_row_id || estimate.id}.pdf`;
+      folderName = 'Estimates';
+      tableName = 'gl_estimates';
+    }
+
+    // Save locally if requested
+    if (saveLocally || download) {
+      doc.save(fileName);
+    }
+
+    // Upload to storage
+    const pdfUrl = await storePDFInSupabase(
+      doc, 
+      type === 'invoice' ? 'invoice' : type === 'purchaseOrder' ? 'purchase-order' : 'estimate',
+      data.id,
+      fileName
+    );
+
+    if (!pdfUrl) {
+      console.error(`Failed to upload ${type} PDF to storage`);
+      return null;
+    }
+
+    // Update the database with the PDF URL
+    const updated = await updatePDFLinkInDatabase(tableName, data.id, pdfUrl);
+    if (!updated) {
+      console.warn(`Generated and stored ${type} PDF, but failed to update database record`);
+      // Still return the URL even if database update failed
+    }
+
+    console.log(`Successfully generated and stored ${type} PDF: ${pdfUrl}`);
+    return pdfUrl;
+  } catch (error) {
+    console.error(`Error in generateAndStorePDF for ${type}:`, error);
+    return null;
   }
-  
-  if (!pdfUrl) return null;
-  
-  // Update database with PDF link
-  const table = type === 'invoice' ? 'gl_invoices' : 
-                type === 'purchaseOrder' ? 'gl_purchase_orders' : 
-                'gl_estimates';
-  
-  const success = await updatePDFLinkInDatabase(table, data.id, pdfUrl);
-  
-  return success ? pdfUrl : null;
+}
+
+/**
+ * Enum for PDF operation error types
+ */
+export enum PDFErrorType {
+  FETCH_ERROR = 'FETCH_ERROR',
+  GENERATION_ERROR = 'GENERATION_ERROR',
+  STORAGE_ERROR = 'STORAGE_ERROR',
+  DATABASE_ERROR = 'DATABASE_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR'
+}
+
+/**
+ * Interface for PDF operation errors
+ */
+export interface PDFOperationError {
+  type: PDFErrorType;
+  message: string;
+  details?: any;
+}
+
+/**
+ * Interface for PDF operation results
+ */
+export interface PDFOperationResult {
+  success: boolean;
+  url?: string;
+  error?: PDFOperationError;
+}
+
+/**
+ * Create a standardized error response
+ * 
+ * @param type - Type of error
+ * @param message - Human-readable error message
+ * @param details - Additional error details
+ * @returns Standardized error object
+ */
+function createPDFError(type: PDFErrorType, message: string, details?: any): PDFOperationError {
+  return { type, message, details };
 }
