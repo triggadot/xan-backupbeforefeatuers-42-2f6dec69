@@ -1,29 +1,31 @@
 /**
  * @function glsync_master_control
- * @description
- * Enables complete override mode for Glidebase sync operations by disabling all PostgreSQL
- * constraints and triggers. This function is called at the beginning of sync operations to
- * allow inconsistent data to be processed.
+ * @deprecated This function has been removed from the database. All tables now use the standard upsert pattern without special handling.
  * 
- * @sql
- * ```sql
- * CREATE OR REPLACE FUNCTION public.glsync_master_control()
- * RETURNS void
- * LANGUAGE plpgsql
- * SECURITY DEFINER
- * AS $$
- * BEGIN
- *   -- Completely disable all triggers during sync operations
- *   SET session_replication_role = 'replica';
- *   
- *   -- Set a session variable to indicate we're in glsync mode
- *   -- This can be checked by other functions/triggers if needed
- *   SET LOCAL "app.glsync_mode" = 'true';
- *   
- *   -- Log the start of sync mode
- *   RAISE NOTICE 'GLSYNC: Entering override mode - all constraints and triggers disabled';
- * END;
- * $$;
+ * @description
+ * [DEPRECATED] This function previously enabled complete override mode for Glidebase sync operations
+ * by disabling all PostgreSQL constraints and triggers. It has been removed as part of the 
+ * standardization to use the same upsert pattern for all tables.
+ * 
+ * According to the Glidebase pattern:
+ * - All tables use the same standard upsert method with no special handling for specific tables
+ * - Relationships use rowid_ fields referencing glide_row_id values without foreign key constraints
+ * - The sync process uses standard Supabase upsert functionality with consistent configuration
+ * 
+ * @migration
+ * If you encounter errors related to this function, apply the migration file:
+ * 20250407_fix_glsync_estimate_lines_references.sql
+ * 
+ * @replacementPattern
+ * Instead of using this specialized function, use the standard upsert pattern:
+ * ```typescript
+ * // Standard upsert for all tables
+ * const { error } = await supabase
+ *   .from(mapping.supabase_table)
+ *   .upsert(batch, { 
+ *     onConflict: 'glide_row_id',
+ *     ignoreDuplicates: false
+ *   });
  * ```
  * 
  * @returns {void} This function doesn't return any value
@@ -62,10 +64,11 @@
 
 /**
  * Type definition for the glsync_master_control function parameters and return value
+ * @deprecated This function has been removed. Use standard upsert pattern instead.
  */
 export interface GlsyncMasterControl {
   /**
-   * Call the glsync_master_control function to enable override mode
+   * [DEPRECATED] This function has been removed.
    * @returns A promise that resolves to void (no return value)
    */
   (): Promise<void>;

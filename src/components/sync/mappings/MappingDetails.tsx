@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { GlMapping } from '@/types/glsync';
 import { ColumnMappingsView } from './ColumnMappingsView';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { SyncErrorsView } from './SyncErrorsView';
 import { SyncLogsView } from './SyncLogsView';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { motion } from 'framer-motion';
+import { useGlSync } from '@/hooks/useGlSync';
 
 interface MappingDetailsProps {
   mapping?: GlMapping;
@@ -27,32 +27,42 @@ export const MappingDetails: React.FC<MappingDetailsProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { syncMappingById } = useGlSync();
 
-  const handleMappingUpdate = async () => {
+  const handleSync = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Set syncing state
+    setIsSyncing(true);
+    
     try {
-      setIsSyncing(true);
-      const { error } = await supabase.functions.invoke('glsync', {
-        body: {
-          action: 'syncMapping',
-          mappingId: mappingId,
-        },
-      });
-
-      if (error) throw error;
-
+      // Use the syncMappingById function from useGlSync hook
+      const success = await syncMappingById(mappingId);
+      
+      if (!success) {
+        throw new Error('Sync operation failed');
+      }
+      
       toast({
-        title: 'Mapping Synced',
-        description: 'Mapping has been synced successfully.',
+        title: 'Sync Successful',
+        description: 'Data synchronized successfully.',
       });
     } catch (err) {
+      console.error("Sync error:", err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to sync mapping';
       toast({
-        title: 'Error',
+        title: 'Sync Failed',
         description: errorMessage,
         variant: 'destructive',
       });
     } finally {
-      setIsSyncing(false);
+      // Clear syncing state after a short delay
+      setTimeout(() => {
+        setIsSyncing(false);
+      }, 2000);
     }
   };
   
@@ -103,11 +113,15 @@ export const MappingDetails: React.FC<MappingDetailsProps> = ({
               <Button 
                 variant="outline" 
                 size={isMobile ? "sm" : "default"}
-                onClick={handleMappingUpdate}
+                onClick={(e) => handleSync(e)}
                 disabled={isSyncing}
                 className="w-full sm:w-auto"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
                 {isSyncing ? 'Syncing...' : 'Sync Now'}
               </Button>
             </div>
@@ -118,7 +132,7 @@ export const MappingDetails: React.FC<MappingDetailsProps> = ({
                 glideTable={mapping.glide_table}
                 supabaseTable={mapping.supabase_table}
                 columnMappings={mapping.column_mappings}
-                onMappingUpdate={handleMappingUpdate}
+                onMappingUpdate={() => handleSync()}
               />
             </TabsContent>
             

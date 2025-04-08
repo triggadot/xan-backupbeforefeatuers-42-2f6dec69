@@ -29,3 +29,11 @@ package-lock.json
 /.git_disabled
 docs/frontendcopy.md
 supabase/.temp/cli-latest
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local

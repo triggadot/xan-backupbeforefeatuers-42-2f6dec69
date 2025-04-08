@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus, RefreshCcw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { glSyncApi } from '@/services/glSyncApi';
+import { glSyncService } from '@/services/glsync';
 
 export interface ColumnMappingEditorProps {
   mapping?: any;
@@ -32,7 +31,7 @@ export function ColumnMappingEditor({ mapping, onUpdate }: ColumnMappingEditorPr
 
     setIsLoading(true);
     try {
-      const columns = await glSyncApi.getSupabaseTableColumns(tableName);
+      const columns = await glSyncService.getSupabaseTableColumns(tableName);
       setSupabaseColumns(columns.map(col => col.column_name));
     } catch (error) {
       console.error('Error loading table columns:', error);

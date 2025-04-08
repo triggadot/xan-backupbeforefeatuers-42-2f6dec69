@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ interface MappingCardProps {
   onEdit: (mapping: GlMapping) => void;
   onDelete: (id: string) => void;
   onToggle: (mapping: GlMapping) => void;
-  onGoToProductSync?: (mapping: GlMapping) => void;
 }
 
 const MappingCard = ({
@@ -28,8 +26,7 @@ const MappingCard = ({
   connectionName,
   onEdit,
   onDelete,
-  onToggle,
-  onGoToProductSync
+  onToggle
 }: MappingCardProps) => {
   // Helper function to get sync direction icon
   const getSyncDirectionIcon = (direction: string) => {
@@ -80,17 +77,6 @@ const MappingCard = ({
         </div>
         
         <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-          {mapping.supabase_table === 'gl_products' && onGoToProductSync && (
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => onGoToProductSync(mapping)}
-            >
-              <Box className="h-4 w-4 mr-2" />
-              Sync Products
-            </Button>
-          )}
-        
           <Button 
             variant="outline" 
             size="sm"

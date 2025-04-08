@@ -77,15 +77,21 @@ import {
   Trash,
   Check,
   X,
+  Loader2,
+  AlertCircle,
+  Database,
+  ArrowDownUp,
 } from "lucide-react";
 import TableRecordDialog from "./TableRecordDialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 // Define type for general record with ID
 type TableRecord = Record<string, unknown> & { id: string };
 
 interface SupabaseTableViewProps {
   tableName: string;
-  displayName: string;
+  displayName?: string;
   description?: string;
 }
 
@@ -278,7 +284,11 @@ function renderCellValue(value: any, column: string) {
   return String(value);
 }
 
-export default function SupabaseTableView({ tableName, displayName, description }: SupabaseTableViewProps) {
+export default function SupabaseTableView({ 
+  tableName, 
+  displayName, 
+  description
+}: SupabaseTableViewProps) {
   const { data, isLoading, error, fetchData, createRecord, updateRecord, deleteRecord } = useTableData<TableRecord>(
     tableName as TableName
   );
@@ -300,6 +310,8 @@ export default function SupabaseTableView({ tableName, displayName, description 
   // State for inline editing
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
   const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({});
+
+  const { toast } = useToast();
 
   // Fetch data on mount
   useEffect(() => {
@@ -377,6 +389,11 @@ export default function SupabaseTableView({ tableName, displayName, description 
 
   // Create a memoized row actions component to avoid dependency issues
   const rowActionsCell = useCallback(({ row }: { row: Row<TableRecord> }) => {
+    // Safely access row data with null checks
+    if (!row || !row.original) {
+      return null;
+    }
+    
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -410,99 +427,12 @@ export default function SupabaseTableView({ tableName, displayName, description 
 
   // Dynamically build columns from data
   const columns = useMemo<ColumnDef<TableRecord>[]>(() => {
-    if (data.length === 0) {
-      return [
-        {
-          id: "select",
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() 
-                  ? true 
-                  : table.getIsSomePageRowsSelected() 
-                    ? "indeterminate" 
-                    : false
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          ),
-          enableSorting: false,
-          enableHiding: false,
-        },
-        {
-          id: "id",
-          header: "ID",
-          accessorKey: "id",
-        },
-        {
-          id: "empty",
-          header: "No Data",
-          accessorKey: "empty",
-        },
-      ];
-    }
-
-    const record = data[0];
-    const dynamicColumns: ColumnDef<TableRecord>[] = Object.keys(record).map((key) => ({
-      id: key,
-      header: key
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" "),
-      accessorKey: key,
-      cell: ({ row }) => {
-        const value = row.getValue(key);
-        const rowId = row.original.id;
-        const isEditing = 
-          editingCell !== null && 
-          editingCell.rowId === rowId && 
-          editingCell.columnId === key;
-        
-        // Special handling for read-only columns
-        if (
-          key === "id" ||
-          key === "glide_row_id" ||
-          key === "created_at" ||
-          key === "updated_at"
-        ) {
-          return renderCellValue(value, key);
-        }
-        
-        return (
-          <EditableCell
-            value={value}
-            row={row}
-            column={key}
-            isEditing={isEditing}
-            onStartEdit={() => handleCellEditStart(rowId, key)}
-            onCancelEdit={handleCellEditCancel}
-            onSaveEdit={(newValue) => handleCellEditSave(rowId, key, newValue)}
-            onKeyDown={(e) => handleCellKeyDown(e, rowId, key)}
-          />
-        );
-      },
-    }));
-
-    return [
+    const baseColumns: ColumnDef<TableRecord>[] = [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() 
-                ? true 
-                : table.getIsSomePageRowsSelected() 
-                  ? "indeterminate" 
-                  : false
-            }
+            checked={table.getIsAllPageRowsSelected()}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
           />
@@ -517,16 +447,54 @@ export default function SupabaseTableView({ tableName, displayName, description 
         enableSorting: false,
         enableHiding: false,
       },
-      ...dynamicColumns,
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        cell: rowActionsCell,
-        enableSorting: false,
-        enableHiding: false,
-      },
+      // Add other columns dynamically from data
+      ...Object.keys(data[0] || {})
+        .filter(key => key !== "id" && !key.startsWith("_"))
+        .map(key => ({
+          accessorKey: key,
+          header: ({ column }) => {
+            return (
+              <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              >
+                {key
+                  .split("_")
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(" ")}
+                <ArrowDownUp className="ml-2 h-4 w-4" />
+              </Button>
+            );
+          },
+          cell: ({ row }) => {
+            const isEditing = editingCell?.rowId === row.original.id && editingCell?.columnId === key;
+            return (
+              <EditableCell
+                value={row.getValue(key)}
+                row={row}
+                column={key}
+                isEditing={isEditing}
+                onStartEdit={() => handleCellEditStart(row.original.id, key)}
+                onCancelEdit={handleCellEditCancel}
+                onSaveEdit={(value) => handleCellEditSave(row.original.id, key, value)}
+                onKeyDown={(e) => handleCellKeyDown(e, row.original.id, key)}
+              />
+            );
+          },
+        })),
     ];
-  }, [data, rowActionsCell, editingCell, handleCellEditStart, handleCellEditCancel, handleCellEditSave, handleCellKeyDown]);
+    
+    // Only add actions column if showSyncOptions is true
+    baseColumns.push({
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: rowActionsCell,
+      enableSorting: false,
+      enableHiding: false,
+    });
+    
+    return baseColumns;
+  }, [data, editingCell, handleCellEditStart, handleCellEditCancel, handleCellEditSave, handleCellKeyDown, rowActionsCell]);
 
   // React Table instance
   const table = useReactTable({
@@ -601,132 +569,54 @@ export default function SupabaseTableView({ tableName, displayName, description 
   // Error state
   if (error) {
     return (
-      <div className="rounded-md bg-destructive/10 text-destructive p-4">
-        <h2 className="font-medium">Error loading {displayName}</h2>
-        <p className="text-sm mt-1">{error}</p>
-      </div>
+      <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 mb-4">
+        <CardContent className="p-4 flex items-start gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-red-800 dark:text-red-200">Error Loading Data</h4>
+            <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {/* Global filter */}
-          <div className="relative">
-            <Input
-              ref={inputRef}
-              placeholder="Search all columns..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className={cn("min-w-64 ps-9", Boolean(globalFilter) && "pe-9")}
-            />
-            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
-              <ListFilter size={16} strokeWidth={2} aria-hidden="true" />
-            </div>
-            {Boolean(globalFilter) && (
-              <button
-                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Clear filter"
-                onClick={() => {
-                  setGlobalFilter("");
-                  if (inputRef.current) {
-                    inputRef.current.focus();
-                  }
-                }}
-              >
-                <CircleX size={16} strokeWidth={2} aria-hidden="true" />
-              </button>
+      {/* Table Header with Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">{displayName || tableName}</h2>
+          {description && <p className="text-muted-foreground text-sm">{description}</p>}
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => fetchData()}
+            disabled={isLoading}
+            className="h-8 px-3 text-xs"
+          >
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
             )}
-          </div>
-
-          {/* Refresh data */}
-          <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-
-          {/* Toggle columns visibility */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Columns3 className="mr-2 h-4 w-4" />
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                      onSelect={(event) => event.preventDefault()}
-                    >
-                      {column.id
-                        .split("_")
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(" ")}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Selected rows actions */}
-          {table.getSelectedRowModel().rows.length > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive">
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                  <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
-                    {table.getSelectedRowModel().rows.length}
-                  </span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <div className="flex flex-col gap-2 max-sm:items-center sm:flex-row sm:gap-4">
-                  <div
-                    className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
-                    aria-hidden="true"
-                  >
-                    <CircleAlert className="opacity-80" size={16} strokeWidth={2} />
-                  </div>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete{" "}
-                      {table.getSelectedRowModel().rows.length} selected{" "}
-                      {table.getSelectedRowModel().rows.length === 1 ? "record" : "records"}.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                </div>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-
-          {/* Add new record button */}
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add {displayName}
+          
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="h-8 px-3 text-xs"
+          >
+            Add Row
           </Button>
         </div>
       </div>
-
+      
       {/* Table */}
       <div className="rounded-md border">
         <div className="overflow-x-auto">
@@ -881,12 +771,18 @@ export default function SupabaseTableView({ tableName, displayName, description 
         onOpenChange={setIsCreateDialogOpen}
         title={`Create New ${displayName}`}
         record={{}}
-        fields={columns.filter(col => col.id !== "select" && col.id !== "actions").map(col => ({
+        fields={columns.filter(col => 
+          col && col.id !== "select" && 
+          col.id !== "actions" && 
+          col.id !== undefined
+        ).map(col => ({
           id: col.id,
-          header: col.id
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
+          header: col.id 
+            ? col.id
+                .split("_")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")
+            : "Unknown",
           accessorKey: col.id
         }))}
         onSubmit={handleCreate}
@@ -898,16 +794,22 @@ export default function SupabaseTableView({ tableName, displayName, description 
         onOpenChange={setIsEditDialogOpen}
         title={`Edit ${displayName}`}
         record={currentRecord || {}}
-        fields={columns.filter(col => col.id !== "select" && col.id !== "actions").map(col => ({
+        fields={columns.filter(col => 
+          col && col.id !== "select" && 
+          col.id !== "actions" && 
+          col.id !== undefined
+        ).map(col => ({
           id: col.id,
-          header: col.id
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
+          header: col.id 
+            ? col.id
+                .split("_")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")
+            : "Unknown",
           accessorKey: col.id
         }))}
         onSubmit={handleUpdate}
       />
     </div>
   );
-} 
+}
