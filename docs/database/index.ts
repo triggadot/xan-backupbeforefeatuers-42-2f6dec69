@@ -7,6 +7,9 @@
  */
 
 // Import all type definitions from individual documentation files
+import { GlsyncMasterControl } from './glsync_master_control';
+import { GlsyncMasterCleanup } from './glsync_master_cleanup';
+import { GlsyncEstimateLines, EstimateLineData, GlsyncEstimateLinesResult, SyncError } from './glsync_estimate_lines';
 import { EstimateLine as TriggerEstimateLine, Product } from './set_estimate_line_display_name';
 import { EstimateLine, Estimate } from './update_estimate_total';
 import { EstimateLineWithProduct } from './v_estimate_lines_with_products';
@@ -14,12 +17,28 @@ import { EstimateLineWithProduct } from './v_estimate_lines_with_products';
 /**
  * Database Functions
  * 
- * The Glidebase sync system uses a standard approach for all tables:
- * - All tables use the same standard upsert method
- * - No special handling for specific tables
- * - Uses Supabase's built-in upsert functionality with consistent configuration
+ * The Glidebase sync system uses the following key database functions:
+ * 
+ * 1. glsync_master_control - Enables override mode by disabling all constraints and triggers
+ * 2. glsync_master_cleanup - Fixes inconsistent data and restores normal database operation
+ * 3. glsync_estimate_lines - Synchronizes estimate line data with proper relationship handling
  */
-export const DatabaseFunctions = {};
+export const DatabaseFunctions = {
+  /**
+   * @see ./glsync_master_control.ts for detailed documentation
+   */
+  glsync_master_control: {} as GlsyncMasterControl,
+  
+  /**
+   * @see ./glsync_master_cleanup.ts for detailed documentation
+   */
+  glsync_master_cleanup: {} as GlsyncMasterCleanup,
+  
+  /**
+   * @see ./glsync_estimate_lines.ts for detailed documentation
+   */
+  glsync_estimate_lines: {} as GlsyncEstimateLines
+};
 
 /**
  * Database Triggers
@@ -59,6 +78,14 @@ export const DatabaseViews = {
  * Re-export all type definitions for use in application code
  */
 export {
+  // Function parameter and return types
+  GlsyncMasterControl,
+  GlsyncMasterCleanup,
+  GlsyncEstimateLines,
+  EstimateLineData,
+  GlsyncEstimateLinesResult,
+  SyncError,
+  
   // Table and view types
   TriggerEstimateLine,
   Product,
@@ -98,22 +125,21 @@ export {
  * 
  * @example
  * ```typescript
- * // Example: Syncing data from Glide using standard approach
- * const { error } = await supabase
- *   .from('gl_estimate_lines')
- *   .upsert([
- *     {
- *       glide_row_id: "el_123",
- *       rowid_estimates: "est_456",
- *       rowid_products: "prod_789",
- *       sale_product_name: "Custom Widget",
- *       qty_sold: 5,
- *       selling_price: 19.99
- *     }
- *   ], { 
- *     onConflict: 'glide_row_id',
- *     ignoreDuplicates: false
- *   });
+ * // Example: Syncing estimate lines from Glide
+ * import { EstimateLineData } from './database';
+ * 
+ * const data: EstimateLineData[] = [
+ *   {
+ *     glide_row_id: "el_123",
+ *     rowid_estimates: "est_456",
+ *     rowid_products: "prod_789",
+ *     sale_product_name: "Custom Widget",
+ *     qty_sold: 5,
+ *     selling_price: 19.99
+ *   }
+ * ];
+ * 
+ * const { data: result, error } = await supabase.rpc('glsync_estimate_lines', { data });
  * ```
  * 
  * @example

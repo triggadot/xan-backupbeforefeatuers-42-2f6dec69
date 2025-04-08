@@ -128,6 +128,16 @@ export const MappingListItem: React.FC<MappingListItemProps> = ({
             ? 'Supabase → Glide'
             : 'Bidirectional'}
         </div>
+        {mapping.supabase_table === 'gl_products' && (
+          <Button
+            className="mt-4"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/sync/products/${mapping.id}`)}
+          >
+            Go to Product Sync
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

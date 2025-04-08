@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useSupabaseTables } from '@/hooks/useSupabaseTables';
 import SupabaseTableView from '@/components/data-management/SupabaseTableView';
-import { 
-  RefreshCw, 
-  Database, 
-  AlertCircle, 
-  Info 
-} from 'lucide-react';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 
 // This is needed to type the table_name property
 interface SupabaseTable {
@@ -14,66 +23,54 @@ interface SupabaseTable {
 }
 
 // Define table display names and descriptions
-const TABLE_INFO: Record<string, { displayName: string; description: string; icon?: string }> = {
+const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
   gl_accounts: {
     displayName: 'Accounts',
-    description: 'Customer and vendor accounts information',
-    icon: 'users'
+    description: 'Customer and vendor accounts information'
   },
   gl_invoices: {
     displayName: 'Invoices',
-    description: 'Customer invoices and orders',
-    icon: 'file-text'
+    description: 'Customer invoices and orders'
   },
   gl_invoice_lines: {
     displayName: 'Invoice Line Items',
-    description: 'Individual line items on invoices',
-    icon: 'list'
+    description: 'Individual line items on invoices'
   },
   gl_products: {
     displayName: 'Products',
-    description: 'Product catalog and inventory',
-    icon: 'package'
+    description: 'Product catalog and inventory'
   },
   gl_purchase_orders: {
     displayName: 'Purchase Orders',
-    description: 'Orders made to vendors',
-    icon: 'shopping-cart'
+    description: 'Orders made to vendors'
   },
   gl_estimates: {
     displayName: 'Estimates',
-    description: 'Customer estimates and quotes',
-    icon: 'clipboard'
+    description: 'Customer estimates and quotes'
   },
   gl_estimate_lines: {
     displayName: 'Estimate Line Items',
-    description: 'Individual line items on estimates',
-    icon: 'list-check'
+    description: 'Individual line items on estimates'
   },
   gl_customer_payments: {
     displayName: 'Customer Payments',
-    description: 'Payments received from customers',
-    icon: 'credit-card'
+    description: 'Payments received from customers'
   },
   gl_vendor_payments: {
     displayName: 'Vendor Payments',
-    description: 'Payments made to vendors',
-    icon: 'credit-card'
+    description: 'Payments made to vendors'
   },
   gl_expenses: {
     displayName: 'Expenses',
-    description: 'Business expenses and transactions',
-    icon: 'receipt'
+    description: 'Business expenses and transactions'
   },
   gl_shipping_records: {
     displayName: 'Shipping Records',
-    description: 'Shipping and delivery information',
-    icon: 'truck'
+    description: 'Shipping and delivery information'
   },
   gl_mappings: {
     displayName: 'Glide Mappings',
-    description: 'Table mapping configurations for Glide sync',
-    icon: 'git-merge'
+    description: 'Table mapping configurations for Glide sync'
   }
 };
 
@@ -110,134 +107,90 @@ export default function DataManagement() {
     };
   };
 
-  // Handle refresh of tables
-  const handleRefresh = () => {
-    fetchTables(true);
-  };
-
   if (isLoading) {
     return (
-      <div className="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-slate-900 dark:border-gray-700">
-          <div className="p-4 md:p-5">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Database Management
-              </h2>
-              <span className="text-sm text-gray-500">Loading available tables...</span>
+      <div className="container mx-auto py-10">
+        <Card>
+          <CardHeader>
+            <CardTitle>Database Management</CardTitle>
+            <CardDescription>Loading available tables...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-40 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-            <div className="flex items-center justify-center h-40">
-              <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-b-transparent"></div>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Header Section */}
+    <div className="container mx-auto py-10">
       <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Database Management</h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              View and manage data in your Supabase database tables with full CRUD operations.
-            </p>
-          </div>
-          <div className="mt-4 md:mt-0">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Tables
-            </button>
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Database Management</h1>
+        <p className="text-muted-foreground mt-2">
+          View and manage data in your Supabase database tables with full CRUD operations.
+        </p>
       </div>
 
-      {/* Alert Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-8 dark:bg-slate-800 dark:border-blue-800">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <Info className="h-5 w-5 text-blue-500" />
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-400">
-              Glide Data Sync
-            </h3>
-            <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              <p>
-                These tables contain data synchronized from your Glide app. Changes made here will be reflected in your 
-                application after the next sync cycle.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Alert className="mb-8">
+        <InfoIcon className="h-4 w-4" />
+        <AlertTitle>Glide Data Sync</AlertTitle>
+        <AlertDescription>
+          These tables contain data synchronized from your Glide app. Changes made here will be reflected in your 
+          application after the next sync cycle.
+        </AlertDescription>
+      </Alert>
 
       {filteredTables.length > 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-slate-900 dark:border-gray-700">
-          {/* Table Selection */}
-          <div className="border-b border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
-            <div className="flex flex-wrap gap-2">
-              {filteredTables.map((table) => (
-                <button
-                  key={table.table_name}
-                  onClick={() => setActiveTable(table.table_name)}
-                  className={`py-2 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg ${
-                    activeTable === table.table_name
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400'
-                      : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800'
-                  }`}
+        <Tabs 
+          value={activeTable || undefined} 
+          onValueChange={setActiveTable}
+          className="space-y-4"
+        >
+          <div className="border-b">
+            <TabsList className="w-full h-auto flex flex-wrap">
+              {filteredTables.map(table => (
+                <TabsTrigger 
+                  key={table.table_name} 
+                  value={table.table_name}
+                  className="py-2"
                 >
-                  <Database className="h-4 w-4" />
                   {getTableInfo(table.table_name).displayName}
-                </button>
+                </TabsTrigger>
               ))}
-            </div>
+            </TabsList>
           </div>
 
-          {/* Active Table View */}
-          <div className="p-4 md:p-5">
-            {activeTable && (
-              <div>
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                    {getTableInfo(activeTable).displayName}
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {getTableInfo(activeTable).description}
-                  </p>
-                </div>
-                <SupabaseTableView 
-                  tableName={activeTable}
-                  displayName={getTableInfo(activeTable).displayName}
-                  description={getTableInfo(activeTable).description}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+          {filteredTables.map(table => (
+            <TabsContent key={table.table_name} value={table.table_name} className="space-y-4">
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-2xl">{getTableInfo(table.table_name).displayName}</CardTitle>
+                  <CardDescription>{getTableInfo(table.table_name).description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <SupabaseTableView 
+                    tableName={table.table_name}
+                    displayName={getTableInfo(table.table_name).displayName}
+                    description={getTableInfo(table.table_name).description}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
+        </Tabs>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 dark:bg-slate-900 dark:border-gray-700">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-yellow-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-gray-800 dark:text-white">
-                No Tables Found
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                No database tables were found in your Supabase project.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>No Tables Found</CardTitle>
+            <CardDescription>
+              No database tables were found in your Supabase project.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       )}
     </div>
   );

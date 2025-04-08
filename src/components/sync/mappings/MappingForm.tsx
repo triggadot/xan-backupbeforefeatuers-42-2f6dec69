@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { useConnections } from '@/hooks/useConnections';
 import { useGlSync } from '@/hooks/useGlSync';
 import { Loader2 } from 'lucide-react';
 import { ColumnMappingEditor } from '@/components/sync/ColumnMappingEditor';
-import { glSyncService } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 
 interface MappingFormProps {
   mapping?: GlMapping;
@@ -60,7 +61,7 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
     try {
       if (mapping.id) {
         // Update existing mapping
-        const result = await glSyncService.updateMapping(mapping.id, mapping);
+        const result = await glSyncApi.updateMapping(mapping.id, mapping);
         if (result) {
           toast({
             title: 'Mapping Updated',
@@ -76,7 +77,7 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
         }
       } else {
         // Create new mapping
-        const result = await glSyncService.createMapping(mapping);
+        const result = await glSyncApi.createMapping(mapping);
         if (result) {
           toast({
             title: 'Mapping Created',
@@ -107,7 +108,7 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
   const loadSupabaseTables = async () => {
     setIsLoadingTables(true);
     try {
-      const tablesList = await glSyncService.getSupabaseTables();
+      const tablesList = await glSyncApi.getSupabaseTables();
       setTables(tablesList);
     } catch (error) {
       console.error("Error loading tables:", error);

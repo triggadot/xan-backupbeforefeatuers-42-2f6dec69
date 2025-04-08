@@ -1,6 +1,6 @@
 import React, { ReactNode, ErrorInfo } from 'react';
 import { GlMapping } from '@/types/glsync';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 
 interface SyncContainerProps {
@@ -8,8 +8,6 @@ interface SyncContainerProps {
   className?: string;
   mapping?: GlMapping;
   onSyncComplete?: () => void;
-  title?: string;
-  description?: string;
 }
 
 interface SyncContainerState {
@@ -44,7 +42,7 @@ class SyncContainer extends React.Component<SyncContainerProps, SyncContainerSta
   }
 
   render() {
-    const { children, className = '', mapping, onSyncComplete, title, description } = this.props;
+    const { children, className = '', mapping, onSyncComplete } = this.props;
     
     // If there was an error, show error UI
     if (this.state.hasError) {
@@ -64,21 +62,6 @@ class SyncContainer extends React.Component<SyncContainerProps, SyncContainerSta
             Try Again
           </button>
         </div>
-      );
-    }
-
-    // If title and description are provided, render them in a Card header
-    if (title) {
-      return (
-        <Card className={`${className}`}>
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            {description && <CardDescription>{description}</CardDescription>}
-          </CardHeader>
-          <CardContent>
-            {children}
-          </CardContent>
-        </Card>
       );
     }
 

@@ -78,39 +78,29 @@ export default function TableRecordDialog({
   };
   
   const renderFieldInput = (field: ColumnDef) => {
-    // Safely access the accessorKey with fallback
-    const fieldName = field && field.accessorKey ? field.accessorKey as string : '';
-    
-    // Skip rendering if no valid field name
-    if (!fieldName) {
-      console.warn('Field is missing accessorKey:', field);
-      return null;
-    }
-    
+    const fieldName = field.accessorKey as string;
     const fieldValue = formValues[fieldName];
     const fieldId = `field-${fieldName}`;
     
     // Format field label
     const fieldLabel = fieldName
-      ? fieldName
-          .split('_')
-          .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
-          .join(' ')
-      : "Unknown Field";
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
     
     // Determine field type based on field name and value
     let fieldType = 'text';
-    if (fieldName && (fieldName.includes('date') || fieldName.includes('_at'))) {
+    if (fieldName.includes('date') || fieldName.includes('_at')) {
       fieldType = 'datetime-local';
     } else if (typeof fieldValue === 'number') {
       fieldType = 'number';
     } else if (typeof fieldValue === 'boolean') {
       fieldType = 'checkbox';
-    } else if (fieldName && fieldName.includes('email')) {
+    } else if (fieldName.includes('email')) {
       fieldType = 'email';
-    } else if (fieldName && fieldName.includes('password')) {
+    } else if (fieldName.includes('password')) {
       fieldType = 'password';
-    } else if (fieldName && (fieldName.includes('url') || fieldName.includes('link'))) {
+    } else if (fieldName.includes('url') || fieldName.includes('link')) {
       fieldType = 'url';
     } else if (typeof fieldValue === 'string' && fieldValue.length > 100) {
       fieldType = 'textarea';
@@ -168,9 +158,7 @@ export default function TableRecordDialog({
         
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="grid gap-4 py-4">
-            {editableFields
-              .filter(field => field && field.accessorKey) // Filter out undefined fields
-              .map(renderFieldInput)}
+            {editableFields.map(renderFieldInput)}
           </div>
           
           <DialogFooter>

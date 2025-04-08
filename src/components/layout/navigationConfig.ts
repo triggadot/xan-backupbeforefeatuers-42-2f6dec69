@@ -1,3 +1,4 @@
+
 export interface NavigationItem {
   title: string;
   href: string;
@@ -120,11 +121,6 @@ export const navigationConfig: NavigationConfig = {
           title: "Reports",
           href: "/reports",
           icon: "barChart",
-        },
-        {
-          title: "Data Management",
-          href: "/data-management",
-          icon: "database",
         },
         {
           title: "Settings",

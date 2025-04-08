@@ -4,9 +4,9 @@ import SyncContainer from '@/components/sync/SyncContainer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spinner } from '@/components/ui/spinner';
 import { AlertCircle } from 'lucide-react';
-import { SyncDashboard } from '@/components/sync';
 
 // Lazy load the components for better performance 
+const SyncDashboard = lazy(() => import('@/components/sync/SyncDashboard'));
 const ConnectionsManager = lazy(() => import('@/components/sync/ConnectionsManager'));
 const MappingsManager = lazy(() => import('@/components/sync/MappingsManager'));
 const SyncLogs = lazy(() => import('@/components/sync/SyncLogs'));

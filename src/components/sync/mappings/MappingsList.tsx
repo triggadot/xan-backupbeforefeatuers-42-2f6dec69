@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { GlMapping } from '@/types/glsync';
 import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
 import { MappingListHeader } from './MappingListHeader';
@@ -53,7 +54,6 @@ export function MappingsList({ onEdit }: MappingsListProps) {
         ))
       )}
       
-      {/* Always render the AlertDialog, but control visibility with the open prop */}
       <AlertDialog open={isDeleting}>
         <MappingDeleteDialog isDeleting={isDeleting} />
       </AlertDialog>

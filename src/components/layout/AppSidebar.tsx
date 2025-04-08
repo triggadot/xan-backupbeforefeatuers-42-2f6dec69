@@ -14,8 +14,7 @@ import {
   Link as LinkIcon,
   Table,
   History,
-  ClipboardList,
-  Database
+  ClipboardList
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -54,8 +53,7 @@ export function AppSidebar() {
       link: LinkIcon,
       table: Table,
       history: History,
-      clipboardList: ClipboardList,
-      database: Database
+      clipboardList: ClipboardList
     };
     
     const IconComponent = iconMap[iconName] || AlertCircle;
@@ -128,7 +126,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-3">
         <div className="text-xs text-muted-foreground">
           {isExpanded && (
-            <p className="px-2"> 2023 Xchange. All rights reserved.</p>
+            <p className="px-2">© 2023 Xchange. All rights reserved.</p>
           )}
         </div>
       </SidebarFooter>

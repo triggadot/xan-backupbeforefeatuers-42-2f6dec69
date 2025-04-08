@@ -1,23 +1,20 @@
+
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useGlSync } from '../useGlSync';
 import { useGlSyncStatus } from '../useGlSyncStatus';
 import { useGlSyncErrors } from '../useGlSyncErrors';
-import { glSyncService } from '@/services/glsync';
+import { glSyncApi } from '@/services/glSyncApi';
 
-// Mock the glSyncService
-jest.mock('@/services/glsync', () => ({
-  glSyncService: {
+// Mock the glSyncApi
+jest.mock('@/services/glSyncApi', () => ({
+  glSyncApi: {
     testConnection: jest.fn(),
     listGlideTables: jest.fn(),
     syncData: jest.fn(),
     mapAllRelationships: jest.fn(),
-    validateRelationships: jest.fn(),
-    createMapping: jest.fn(),
-    updateMapping: jest.fn(),
-    deleteMapping: jest.fn(),
-    retryFailedSync: jest.fn(),
     fetchGlideTables: jest.fn(),
-    glideTables: []
+    glideTables: [],
+    retryFailedSync: jest.fn()
   }
 }));
 
@@ -59,7 +56,7 @@ describe('useGlSync', () => {
   it('testConnection should call api and return result', async () => {
     // Setup
     const expectedResult = true;
-    (glSyncService.testConnection as jest.Mock).mockResolvedValue(expectedResult);
+    (glSyncApi.testConnection as jest.Mock).mockResolvedValue(expectedResult);
     
     // Execute
     const { result } = renderHook(() => useGlSync());
@@ -70,14 +67,14 @@ describe('useGlSync', () => {
     });
     
     // Verify
-    expect(glSyncService.testConnection).toHaveBeenCalledWith('test-connection-id');
+    expect(glSyncApi.testConnection).toHaveBeenCalledWith('test-connection-id');
     expect(actualResult).toBe(expectedResult);
   });
 
   it('syncData should call api and return result', async () => {
     // Setup
     const expectedResult = { success: true, recordsProcessed: 10 };
-    (glSyncService.syncData as jest.Mock).mockResolvedValue(expectedResult);
+    (glSyncApi.syncData as jest.Mock).mockResolvedValue(expectedResult);
     
     // Execute
     const { result } = renderHook(() => useGlSync());
@@ -88,7 +85,7 @@ describe('useGlSync', () => {
     });
     
     // Verify
-    expect(glSyncService.syncData).toHaveBeenCalledWith('test-connection-id', 'test-mapping-id');
+    expect(glSyncApi.syncData).toHaveBeenCalledWith('test-connection-id', 'test-mapping-id');
     expect(actualResult).toBe(expectedResult);
   });
 });
