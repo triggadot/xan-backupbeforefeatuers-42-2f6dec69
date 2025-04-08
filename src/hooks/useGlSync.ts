@@ -19,7 +19,6 @@ export function useGlSync() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
   const [glideTables, setGlideTables] = useState<GlideTable[]>([]);
-  const [isRelationshipMapping, setIsRelationshipMapping] = useState(false);
   const { toast } = useToast();
 
   /**
@@ -99,10 +98,11 @@ export function useGlSync() {
     options: {
       retries?: number,
       showToast?: boolean,
-      logLevel?: 'minimal' | 'detailed'
+      logLevel?: 'minimal' | 'detailed',
+      onProgress?: (progress: number) => void
     } = {}
   ): Promise<SyncResult | null> => {
-    const { showToast = true, logLevel = 'detailed' } = options;
+    const { showToast = true, logLevel = 'detailed', onProgress } = options;
     setIsLoading(true);
     setError(null);
     setProgress(0);
@@ -288,11 +288,19 @@ export function useGlSync() {
   /**
    * Syncs multiple mappings in sequence
    * @param mappingIds Array of mapping IDs to sync
+   * @param options Additional options for the batch sync operation
    */
-  const batchSyncMappings = useCallback(async (mappingIds: string[]): Promise<{
+  const batchSyncMappings = useCallback(async (
+    mappingIds: string[],
+    options: {
+      logLevel?: 'minimal' | 'detailed',
+      onProgress?: (progress: number) => void
+    } = {}
+  ): Promise<{
     success: boolean;
     results: { mappingId: string; success: boolean; error?: string }[];
   }> => {
+    const { logLevel = 'minimal', onProgress } = options;
     setIsLoading(true);
     setError(null);
     
@@ -301,16 +309,22 @@ export function useGlSync() {
     
     try {
       logger.info(`Starting batch sync for ${mappingIds.length} mappings`, { 
-        data: { mappingIds } 
+        data: { mappingIds, options } 
       });
       
       for (let i = 0; i < mappingIds.length; i++) {
         const mappingId = mappingIds[i];
-        setProgress((i / mappingIds.length) * 100);
+        const progress = (i / mappingIds.length) * 100;
+        setProgress(progress);
+        
+        // Call the provided onProgress callback if available
+        if (onProgress) {
+          onProgress(progress);
+        }
         
         try {
           const success = await syncMappingById(mappingId, {
-            logLevel: 'minimal' // Use minimal logging for batch operations
+            logLevel
           });
           
           results.push({ mappingId, success });
@@ -326,6 +340,11 @@ export function useGlSync() {
       }
       
       setProgress(100);
+      
+      // Call the provided onProgress callback with 100% when done
+      if (onProgress) {
+        onProgress(100);
+      }
       
       const successCount = results.filter(r => r.success).length;
       
@@ -355,7 +374,10 @@ export function useGlSync() {
   }, [syncMappingById, toast]);
 
   /**
-   * Maps all relationships between tables
+   * @deprecated This function is deprecated and will be removed in a future version.
+   * Relationships are now handled automatically during the sync process using rowid_ fields.
+   * 
+   * Maps all relationships between tables - this is a stub that returns a deprecation notice
    * @param tableFilter Optional filter for specific tables
    */
   const mapAllRelationships = useCallback(async (tableFilter?: string): Promise<{
@@ -363,53 +385,24 @@ export function useGlSync() {
     result?: any;
     error?: string;
   }> => {
-    setIsLoading(true);
-    setIsRelationshipMapping(true);
-    setError(null);
+    const deprecationMessage = 'The relationship mapping functionality has been deprecated. Relationships are now handled automatically during the sync process using rowid_ fields that reference glide_row_id values in related tables.';
     
-    try {
-      logger.info('Starting relationship mapping', { data: { tableFilter } });
-      
-      const { data, error } = await supabase.rpc('map_relationships', {
-        p_table_filter: tableFilter || null
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      const success = data && !error;
-      
-      if (success) {
-        toast({
-          title: 'Relationship Mapping Completed',
-          description: 'Successfully mapped relationships between tables.',
-        });
-      } else {
-        toast({
-          title: 'Relationship Mapping Failed',
-          description: data?.error || 'Failed to map relationships. Check the logs for details.',
-          variant: 'destructive',
-        });
-      }
-      
-      return { success, result: data };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      logger.error(`Error in mapAllRelationships:`, { data: err });
-      setError(errorMessage);
-      
-      toast({
-        title: 'Relationship Mapping Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-      setIsRelationshipMapping(false);
-    }
+    logger.warn('Deprecated function called: mapAllRelationships', { 
+      data: { tableFilter, message: deprecationMessage } 
+    });
+    
+    toast({
+      title: 'Deprecated Feature',
+      description: deprecationMessage,
+      variant: 'destructive',
+      duration: 10000,
+    });
+    
+    return { 
+      success: false, 
+      error: deprecationMessage,
+      result: { deprecated: true }
+    };
   }, [toast]);
 
   return {
@@ -428,7 +421,7 @@ export function useGlSync() {
     retryFailedSync,
     batchSyncMappings,
     
-    // Relationship mapping
+    // Relationship mapping (deprecated)
     mapAllRelationships,
     
     // Direct service access for advanced operations
@@ -437,7 +430,6 @@ export function useGlSync() {
     // Status indicators
     isLoading,
     progress,
-    isRelationshipMapping,
     error
   };
 }

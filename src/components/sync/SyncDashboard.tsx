@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { AnimatePresence } from 'framer-motion';
 import { SyncDetailTable } from './SyncDetailTable';
 import { TableName } from '@/hooks/useTableData';
+import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 
 // Table metadata for display purposes
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {
@@ -83,14 +84,17 @@ export default function SyncDashboard() {
   const navigate = useNavigate();
   const { mappingId } = useParams<{ mappingId: string }>();
   const isMobile = useIsMobile();
-  const { syncMappingById, isLoading: isSyncing } = useGlSync();
+  const { syncMappingById, isLoading: isSyncing, batchSyncMappings } = useGlSync();
   const { toast } = useToast();
+  const { recentLogs, isLoading: isLoadingLogs, refreshData } = useGlSyncStatus();
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [tables, setTables] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [recordCount, setRecordCount] = useState<number | null>(null);
   const [isLoadingCount, setIsLoadingCount] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMappings, setSelectedMappings] = useState<string[]>([]);
+  const [isSyncingAll, setIsSyncing] = useState(false);
   
   // Update last sync time from localStorage or set current time on first sync
   useEffect(() => {
@@ -145,6 +149,57 @@ export default function SyncDashboard() {
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSyncAll = async () => {
+    if (selectedMappings.length === 0) {
+      toast({
+        title: "No mappings selected",
+        description: "Please select at least one mapping to sync.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    
+    try {
+      const result = await batchSyncMappings(selectedMappings, {
+        logLevel: 'detailed',
+        onProgress: (progress) => {
+          // Could use progress for a progress bar in the future
+          console.log(`Batch sync progress: ${progress}%`);
+        }
+      });
+      
+      if (result?.success) {
+        toast({
+          title: "Batch Sync Completed",
+          description: `Successfully synced ${result.results.filter(r => r.success).length} of ${selectedMappings.length} mappings.`,
+        });
+      } else {
+        const failedCount = result?.results?.filter(r => !r.success).length || 0;
+        toast({
+          title: "Batch Sync Completed with Errors",
+          description: `${failedCount} of ${selectedMappings.length} mappings failed to sync. Check the logs for details.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Batch sync error:', error);
+      toast({
+        title: "Sync Failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+      
+      // Refresh data after sync
+      setTimeout(() => {
+        refreshData();
+      }, 2000);
     }
   };
 
@@ -423,7 +478,9 @@ export default function SyncDashboard() {
                       </Button>
                     </CardHeader>
                     <CardContent>
-                      <MappingsList onEdit={handleEditMapping} />
+                      <MappingsList 
+                        onEdit={handleEditMapping} 
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -512,6 +569,24 @@ export default function SyncDashboard() {
                 </TabsContent>
               </Tabs>
             </div>
+            <Button 
+              variant="default" 
+              className="mt-4" 
+              onClick={handleSyncAll} 
+              disabled={isSyncingAll}
+            >
+              {isSyncingAll ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync All
+                </>
+              )}
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>
