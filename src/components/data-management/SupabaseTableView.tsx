@@ -83,8 +83,6 @@ import {
   ArrowDownUp,
 } from "lucide-react";
 import TableRecordDialog from "./TableRecordDialog";
-import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
@@ -95,7 +93,6 @@ interface SupabaseTableViewProps {
   tableName: string;
   displayName?: string;
   description?: string;
-  showSyncOptions?: boolean;
 }
 
 // EditableCell component for inline editing
@@ -290,8 +287,7 @@ function renderCellValue(value: any, column: string) {
 export default function SupabaseTableView({ 
   tableName, 
   displayName, 
-  description,
-  showSyncOptions = true 
+  description
 }: SupabaseTableViewProps) {
   const { data, isLoading, error, fetchData, createRecord, updateRecord, deleteRecord } = useTableData<TableRecord>(
     tableName as TableName
@@ -393,6 +389,11 @@ export default function SupabaseTableView({
 
   // Create a memoized row actions component to avoid dependency issues
   const rowActionsCell = useCallback(({ row }: { row: Row<TableRecord> }) => {
+    // Safely access row data with null checks
+    if (!row || !row.original) {
+      return null;
+    }
+    
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -426,99 +427,12 @@ export default function SupabaseTableView({
 
   // Dynamically build columns from data
   const columns = useMemo<ColumnDef<TableRecord>[]>(() => {
-    if (data.length === 0) {
-      return [
-        {
-          id: "select",
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() 
-                  ? true 
-                  : table.getIsSomePageRowsSelected() 
-                    ? "indeterminate" 
-                    : false
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          ),
-          enableSorting: false,
-          enableHiding: false,
-        },
-        {
-          id: "id",
-          header: "ID",
-          accessorKey: "id",
-        },
-        {
-          id: "empty",
-          header: "No Data",
-          accessorKey: "empty",
-        },
-      ];
-    }
-
-    const record = data[0];
-    const dynamicColumns: ColumnDef<TableRecord>[] = Object.keys(record).map((key) => ({
-      id: key,
-      header: key
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" "),
-      accessorKey: key,
-      cell: ({ row }) => {
-        const value = row.getValue(key);
-        const rowId = row.original.id;
-        const isEditing = 
-          editingCell !== null && 
-          editingCell.rowId === rowId && 
-          editingCell.columnId === key;
-        
-        // Special handling for read-only columns
-        if (
-          key === "id" ||
-          key === "glide_row_id" ||
-          key === "created_at" ||
-          key === "updated_at"
-        ) {
-          return renderCellValue(value, key);
-        }
-        
-        return (
-          <EditableCell
-            value={value}
-            row={row}
-            column={key}
-            isEditing={isEditing}
-            onStartEdit={() => handleCellEditStart(rowId, key)}
-            onCancelEdit={handleCellEditCancel}
-            onSaveEdit={(newValue) => handleCellEditSave(rowId, key, newValue)}
-            onKeyDown={(e) => handleCellKeyDown(e, rowId, key)}
-          />
-        );
-      },
-    }));
-
-    return [
+    const baseColumns: ColumnDef<TableRecord>[] = [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() 
-                ? true 
-                : table.getIsSomePageRowsSelected() 
-                  ? "indeterminate" 
-                  : false
-            }
+            checked={table.getIsAllPageRowsSelected()}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
           />
@@ -533,16 +447,54 @@ export default function SupabaseTableView({
         enableSorting: false,
         enableHiding: false,
       },
-      ...dynamicColumns,
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Actions</span>,
-        cell: rowActionsCell,
-        enableSorting: false,
-        enableHiding: false,
-      },
+      // Add other columns dynamically from data
+      ...Object.keys(data[0] || {})
+        .filter(key => key !== "id" && !key.startsWith("_"))
+        .map(key => ({
+          accessorKey: key,
+          header: ({ column }) => {
+            return (
+              <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              >
+                {key
+                  .split("_")
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(" ")}
+                <ArrowDownUp className="ml-2 h-4 w-4" />
+              </Button>
+            );
+          },
+          cell: ({ row }) => {
+            const isEditing = editingCell?.rowId === row.original.id && editingCell?.columnId === key;
+            return (
+              <EditableCell
+                value={row.getValue(key)}
+                row={row}
+                column={key}
+                isEditing={isEditing}
+                onStartEdit={() => handleCellEditStart(row.original.id, key)}
+                onCancelEdit={handleCellEditCancel}
+                onSaveEdit={(value) => handleCellEditSave(row.original.id, key, value)}
+                onKeyDown={(e) => handleCellKeyDown(e, row.original.id, key)}
+              />
+            );
+          },
+        })),
     ];
-  }, [data, rowActionsCell, editingCell, handleCellEditStart, handleCellEditCancel, handleCellEditSave, handleCellKeyDown]);
+    
+    // Only add actions column if showSyncOptions is true
+    baseColumns.push({
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: rowActionsCell,
+      enableSorting: false,
+      enableHiding: false,
+    });
+    
+    return baseColumns;
+  }, [data, editingCell, handleCellEditStart, handleCellEditCancel, handleCellEditSave, handleCellKeyDown, rowActionsCell]);
 
   // React Table instance
   const table = useReactTable({
@@ -629,46 +581,6 @@ export default function SupabaseTableView({
     );
   }
 
-  const { syncData, isLoading: syncLoading } = useGlSync();
-  const { allSyncStatuses, isLoading: statusLoading, refreshData: refreshSyncData } = useGlSyncStatus();
-
-  // Find the mapping for this table
-  const tableMapping = useMemo(() => {
-    if (!allSyncStatuses) return null;
-    return allSyncStatuses.find(status => status.supabase_table === tableName);
-  }, [allSyncStatuses, tableName]);
-
-  // Function to sync the current table
-  const handleSyncTable = async () => {
-    if (!tableMapping) {
-      toast({
-        title: "Sync Error",
-        description: "No mapping found for this table. Please set up a mapping first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      await syncData(tableMapping.connection_id, tableMapping.mapping_id);
-      toast({
-        title: "Sync Started",
-        description: `Synchronizing ${displayName || tableName}...`,
-      });
-      
-      // Refresh sync data after a delay
-      setTimeout(() => {
-        refreshSyncData();
-      }, 2000);
-    } catch (error) {
-      toast({
-        title: "Sync Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Table Header with Actions */}
@@ -679,28 +591,6 @@ export default function SupabaseTableView({
         </div>
         
         <div className="flex flex-wrap gap-2">
-          {showSyncOptions && tableMapping && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleSyncTable}
-              disabled={syncLoading || tableMapping?.current_status === 'processing'}
-              className="h-8 px-3 text-xs"
-            >
-              {syncLoading || tableMapping?.current_status === 'processing' ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  Syncing...
-                </>
-              ) : (
-                <>
-                  <ArrowDownUp className="h-3.5 w-3.5 mr-1.5" />
-                  Sync Table
-                </>
-              )}
-            </Button>
-          )}
-          
           <Button 
             variant="outline" 
             size="sm"
@@ -726,38 +616,6 @@ export default function SupabaseTableView({
           </Button>
         </div>
       </div>
-      
-      {/* Sync Status Banner */}
-      {showSyncOptions && tableMapping && (
-        <div className={cn(
-          "p-3 rounded-md mb-4 text-sm flex items-center justify-between",
-          tableMapping.current_status === 'processing' ? "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200" :
-          tableMapping.current_status === 'error' ? "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-200" :
-          "bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
-        )}>
-          <div className="flex items-center gap-2">
-            {tableMapping.current_status === 'processing' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : tableMapping.current_status === 'error' ? (
-              <AlertCircle className="h-4 w-4" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            <span>
-              {tableMapping.current_status === 'processing' ? 'Sync in progress...' :
-               tableMapping.current_status === 'error' ? 'Last sync failed' :
-               `Last synced: ${tableMapping.last_sync_completed_at ? new Date(tableMapping.last_sync_completed_at).toLocaleString() : 'Never'}`}
-            </span>
-          </div>
-          <div>
-            {tableMapping.total_records !== undefined && (
-              <span className="text-xs font-medium">
-                {tableMapping.total_records} records
-              </span>
-            )}
-          </div>
-        </div>
-      )}
       
       {/* Table */}
       <div className="rounded-md border">
@@ -913,12 +771,18 @@ export default function SupabaseTableView({
         onOpenChange={setIsCreateDialogOpen}
         title={`Create New ${displayName}`}
         record={{}}
-        fields={columns.filter(col => col.id !== "select" && col.id !== "actions").map(col => ({
+        fields={columns.filter(col => 
+          col && col.id !== "select" && 
+          col.id !== "actions" && 
+          col.id !== undefined
+        ).map(col => ({
           id: col.id,
-          header: col.id
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
+          header: col.id 
+            ? col.id
+                .split("_")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")
+            : "Unknown",
           accessorKey: col.id
         }))}
         onSubmit={handleCreate}
@@ -930,12 +794,18 @@ export default function SupabaseTableView({
         onOpenChange={setIsEditDialogOpen}
         title={`Edit ${displayName}`}
         record={currentRecord || {}}
-        fields={columns.filter(col => col.id !== "select" && col.id !== "actions").map(col => ({
+        fields={columns.filter(col => 
+          col && col.id !== "select" && 
+          col.id !== "actions" && 
+          col.id !== undefined
+        ).map(col => ({
           id: col.id,
-          header: col.id
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" "),
+          header: col.id 
+            ? col.id
+                .split("_")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")
+            : "Unknown",
           accessorKey: col.id
         }))}
         onSubmit={handleUpdate}

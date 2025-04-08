@@ -22,18 +22,17 @@ In functional components:
 
 ### Main Components
 
-- `SyncLayout.tsx` - Layout component providing navigation tabs for the sync feature
-- `SyncDashboard.tsx` - Dashboard showing active mappings, statistics, and recent activity
-- `MappingsManager.tsx` - Interface for managing table mappings between Glide and Supabase
-- `ConnectionsManager.tsx` - Interface for managing Glide API connections
-- `SyncLogs.tsx` - Display for synchronization logs
+- `dashboard/SyncDashboard.tsx` - Consolidated dashboard showing active mappings, statistics, and recent activity
+- `dashboard/SyncOverview.tsx` - Overview component showing sync status and active mappings
+- `dashboard/SyncDock.tsx` - Control panel for sync operations with last sync time display
+- `mappings/MappingsList.tsx` - Interface for managing table mappings between Glide and Supabase
+- `tables/SyncDetailTable.tsx` - Enhanced table component for viewing and managing sync data
 
 ### Supporting Components
 
-- `SyncContainer.tsx` - Container component for consistent layout of sync pages
-- `SyncMetricsCard.tsx` - Display for sync metrics and statistics
-- `SyncErrorDisplay.tsx` - Component for displaying and managing sync errors
-- `MappingDetailsCard.tsx` - Card component displaying mapping details and actions
+- `common/SyncContainer.tsx` - Container component for consistent layout of sync pages
+- `mappings/SyncErrorsView.tsx` - Component for displaying and managing sync errors
+- `mappings/SyncLogsView.tsx` - Display for synchronization logs
 
 ### UI Components (in the `ui` directory)
 
@@ -47,9 +46,11 @@ In functional components:
 
 ### Organization by Feature
 
-- **Mappings** - Components for table mapping functionality are in the `mappings/` subdirectory
-- **Connections** - Connection management components are in the `connections/` subdirectory
-- **Overview** - Dashboard components are in the `overview/` subdirectory
+- **dashboard/** - Main dashboard components including SyncDashboard, SyncOverview, and SyncDock
+- **mappings/** - Components for table mapping functionality
+- **tables/** - Table display and management components
+- **common/** - Shared components used across multiple features
+- **utils/** - Utility functions and helpers for sync operations
 
 ## Component Relationship
 
@@ -67,8 +68,11 @@ In functional components:
 
 ## Recent Improvements
 
-- Consolidated `SyncStatusDisplay` and `ValidationDisplay` into a unified `ui/StatusDisplay.tsx`
-- Consolidated `LoadingState` and `InvalidMapping` into a unified `ui/StateDisplay.tsx` with additional `EmptyState`
-- Removed product-specific components and pages in favor of the centralized sync architecture
-- Standardized component organization using the principles above
-- Improved component imports to reduce redundancy 
+- Consolidated duplicate dashboard components (`SyncDashboard` and `EnhancedSyncDashboard`) into a unified implementation
+- Created a new directory structure to better organize components by feature
+- Extracted common utility functions into a dedicated `syncUtils.ts` file
+- Created a central index file to export all components in a clean, organized way
+- Restored the SyncOverview component to ensure all functionality is preserved
+- Removed redundant components and imports to reduce code duplication
+- Added proper TypeScript typing and JSDoc documentation to utility functions
+- Ensured consistent styling and UI patterns across all sync components

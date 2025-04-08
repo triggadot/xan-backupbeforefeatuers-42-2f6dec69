@@ -1,4 +1,3 @@
-
 export interface GlConnection {
   id: string;
   app_id: string;
@@ -133,7 +132,12 @@ export interface GlSyncRecord {
   resolved_at?: string | null;
 }
 
-export interface ProductSyncResult {
+/**
+ * Result of a sync operation
+ * Contains information about the sync process including success status,
+ * number of records processed, and any errors that occurred
+ */
+export interface SyncResult {
   success: boolean;
   recordsProcessed?: number;
   failedRecords?: number;
@@ -143,7 +147,11 @@ export interface ProductSyncResult {
   processed_records?: number;
   failed_records?: number;
   error_records?: GlSyncRecord[];
+  syncTime?: number; // Duration of sync operation in milliseconds
 }
+
+// For backward compatibility
+export type ProductSyncResult = SyncResult;
 
 export interface GlideTable {
   id: string;
