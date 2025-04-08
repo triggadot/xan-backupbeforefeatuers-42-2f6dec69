@@ -13,6 +13,7 @@ This document provides comprehensive information about the PDF generation and ma
 7. [Examples](#examples)
 8. [Error Handling](#error-handling)
 9. [Troubleshooting](#troubleshooting)
+10. [PDF System Architecture](#pdf-system-architecture)
 
 ## Overview
 
@@ -171,6 +172,31 @@ interface PDFOperationResult {
   error?: PDFOperationError;
 }
 ```
+
+## PDF System Architecture
+
+The PDF system follows a Feature-Based Architecture pattern and consists of the following components:
+
+1. **Core PDF Utilities** - Functions for generating PDF documents for different entity types
+2. **Edge Function Storage** - Supabase edge function for storing PDFs in the media-bucket
+3. **React Hooks** - Custom hooks for PDF generation and operations
+4. **UI Components** - Reusable components for PDF actions, previews, and sharing
+
+### Storage Architecture
+
+PDFs are stored in Supabase storage using the following workflow:
+
+1. PDF is generated on the client-side using jsPDF
+2. The PDF blob is sent to the `store-pdf` edge function
+3. The edge function stores the PDF in the `media-bucket` storage bucket
+4. The edge function updates the database record with the PDF URL in the `supabase_pdf_url` field
+5. The URL is returned to the client for display or further actions
+
+This approach provides several benefits:
+- Secure storage with proper authentication
+- Consistent database updates
+- Reduced client-side code complexity
+- Better error handling and logging
 
 ## React Hooks
 

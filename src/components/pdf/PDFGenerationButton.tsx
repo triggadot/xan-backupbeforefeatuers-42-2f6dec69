@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { FileText, Download, Loader2 } from 'lucide-react';
-import { usePDFGeneration } from '@/hooks/pdf/usePDFGeneration';
+import { usePDFOperations, DocumentType } from '@/hooks/pdf/usePDFOperations';
 import { PDFPreviewModal } from './PDFPreviewModal';
 import { useToast } from '@/hooks/utils/use-toast';
-import { PDFErrorType } from '@/lib/pdf-utils';
+import { PDFErrorType } from '@/lib/pdf/common';
 
 interface PDFGenerationButtonProps extends Omit<ButtonProps, 'onClick'> {
   /**
    * The type of document to generate
    */
-  documentType: 'invoice' | 'purchaseOrder' | 'estimate';
+  documentType: DocumentType;
   
   /**
    * The ID of the document to generate
@@ -49,7 +49,7 @@ interface PDFGenerationButtonProps extends Omit<ButtonProps, 'onClick'> {
 }
 
 /**
- * Enhanced PDF generation button component using the usePDFGeneration hook
+ * Enhanced PDF generation button component using the usePDFOperations hook
  * 
  * @example
  * // Generate an invoice PDF with preview
@@ -75,43 +75,28 @@ export function PDFGenerationButton({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   
-  // Use our custom PDF generation hook
+  // Use our custom PDF operations hook
   const { 
-    isGenerating, 
-    lastResult,
-    generateInvoicePDF,
-    generatePurchaseOrderPDF,
-    generateEstimatePDF
-  } = usePDFGeneration();
+    generatePDF,
+    isGenerating,
+    isStoring
+  } = usePDFOperations();
 
   /**
    * Handle PDF generation based on document type
    */
   const handleGeneratePDF = async () => {
     try {
-      let result;
-      
-      // Call the appropriate generation function based on document type
-      if (documentType === 'invoice') {
-        result = await generateInvoicePDF(documentId, download);
-      } else if (documentType === 'purchaseOrder') {
-        result = await generatePurchaseOrderPDF(documentId, download);
-      } else if (documentType === 'estimate') {
-        result = await generateEstimatePDF(documentId, download);
-      } else {
-        throw new Error(`Unsupported document type: ${documentType}`);
-      }
+      // Call the generatePDF function with the document type and ID
+      const url = await generatePDF(
+        documentType, 
+        documentId, 
+        download
+      );
       
       // Handle the result
-      if (result.success && result.url) {
-        setPdfUrl(result.url);
-        
-        // Show success toast
-        toast({
-          title: 'PDF Generated',
-          description: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} PDF has been generated successfully.`,
-          variant: 'default',
-        });
+      if (url) {
+        setPdfUrl(url);
         
         // Show preview if requested
         if (showPreview) {
@@ -120,30 +105,19 @@ export function PDFGenerationButton({
         
         // Call success callback if provided
         if (onSuccess) {
-          onSuccess(result.url);
+          onSuccess(url);
         }
-      } else if (result.error) {
-        // Handle different error types
-        let errorMessage = 'Failed to generate PDF.';
-        
-        if (result.error.type === PDFErrorType.FETCH_ERROR) {
-          errorMessage = `Could not fetch ${documentType} data. Please try again.`;
-        } else if (result.error.type === PDFErrorType.GENERATION_ERROR) {
-          errorMessage = `Error generating ${documentType} PDF. Please try again.`;
-        } else if (result.error.type === PDFErrorType.STORAGE_ERROR) {
-          errorMessage = `PDF was generated but could not be stored. Please try again.`;
-        }
-        
+      } else {
         // Show error toast
         toast({
           title: 'PDF Generation Failed',
-          description: errorMessage,
+          description: `Could not generate ${documentType} PDF. Please try again.`,
           variant: 'destructive',
         });
         
         // Call error callback if provided
         if (onError) {
-          onError(result.error);
+          onError(new Error(`Failed to generate ${documentType} PDF`));
         }
       }
     } catch (error) {
@@ -152,7 +126,7 @@ export function PDFGenerationButton({
       // Show error toast
       toast({
         title: 'PDF Generation Failed',
-        description: 'An unexpected error occurred. Please try again.',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
       
@@ -167,10 +141,11 @@ export function PDFGenerationButton({
   const getButtonLabel = () => {
     if (!showLabel) return null;
     
-    const labels = {
+    const labels: Record<DocumentType, string> = {
       invoice: 'Generate Invoice PDF',
       purchaseOrder: 'Generate Purchase Order PDF',
-      estimate: 'Generate Estimate PDF'
+      estimate: 'Generate Estimate PDF',
+      product: 'Generate Product PDF'
     };
     
     return labels[documentType] || 'Generate PDF';
@@ -182,11 +157,11 @@ export function PDFGenerationButton({
         variant="outline"
         size="sm"
         onClick={handleGeneratePDF}
-        disabled={isGenerating}
+        disabled={isGenerating || isStoring}
         className={className}
         {...props}
       >
-        {isGenerating ? (
+        {(isGenerating || isStoring) ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : (
           <FileText className="h-4 w-4 mr-2" />

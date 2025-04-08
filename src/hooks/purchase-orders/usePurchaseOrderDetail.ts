@@ -53,13 +53,30 @@ export function usePurchaseOrderDetail(id: string) {
 
       console.log('Product data from DB (using rowid_purchase_orders):', productData1);
       
-      // Also try using purchase_order_uid
-      const { data: productData2, error: productError2 } = await supabase
+      // Check if purchase_order_uid column exists in the schema before querying
+      // Get a sample product to check schema
+      const { data: sampleProduct } = await supabase
         .from('gl_products')
         .select('*')
-        .eq('purchase_order_uid', purchaseOrderData.purchase_order_uid);
-        
-      console.log('Product data from DB (using purchase_order_uid):', productData2);
+        .limit(1)
+        .maybeSingle();
+      
+      let productData2 = null;
+      let productError2 = null;
+      
+      // Only try the purchase_order_uid query if the column exists in the schema
+      if (sampleProduct && 'purchase_order_uid' in sampleProduct && purchaseOrderData.purchase_order_uid) {
+        const result = await supabase
+          .from('gl_products')
+          .select('*')
+          .eq('purchase_order_uid', purchaseOrderData.purchase_order_uid);
+          
+        productData2 = result.data;
+        productError2 = result.error;
+        console.log('Product data from DB (using purchase_order_uid):', productData2);
+      } else {
+        console.log('Skipping purchase_order_uid query - column does not exist in schema or purchase_order_uid is null');
+      }
       
       // Combine results, removing duplicates
       let productData = [];

@@ -10,8 +10,13 @@ import {
   generateAndStorePDF
 } from '@/lib/pdf-utils';
 import { jsPDF } from 'jspdf';
+import { generateAndStoreInvoicePDF } from '@/lib/pdf/invoice-pdf';
+import { generateAndStoreEstimatePDF } from '@/lib/pdf/estimate-pdf';
+import { generateAndStorePurchaseOrderPDF } from '@/lib/pdf/purchase-order-pdf';
+import { generateAndStoreProductPDF } from '@/lib/pdf/product-pdf';
+import { PDFOperationResult } from '@/lib/pdf/common';
 
-export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate';
+export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate' | 'product';
 
 /**
  * Hook for PDF operations including generation, storage, and downloading
@@ -25,73 +30,45 @@ export const usePDFOperations = () => {
 
   /**
    * Generates a PDF document based on the document type and data
-   * @param documentType The type of document (invoice, purchaseOrder, estimate)
-   * @param document The document data to generate the PDF from
+   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * @param documentId The document ID to generate the PDF from
    * @param downloadAfterGeneration Whether to download the PDF after generation
    * @returns The URL of the generated PDF or null if generation failed
    */
   const generatePDF = async (
     documentType: DocumentType,
-    document: any,
+    documentId: string,
     downloadAfterGeneration: boolean = false
   ): Promise<string | null> => {
-    if (!document) {
-      console.error('No document provided for PDF generation');
+    if (!documentId) {
+      console.error('No document ID provided for PDF generation');
       return null;
     }
 
     setIsGenerating(true);
-    let pdfUrl = null;
-    let pdfDoc: jsPDF | null = null;
-    let filename = '';
+    let result: PDFOperationResult | null = null;
 
     try {
       // Generate the PDF based on document type
       switch (documentType) {
         case 'invoice':
-          pdfDoc = generateInvoicePDF(document);
-          filename = generateFilename(
-            'Invoice',
-            document.invoice_uid?.replace(/^INV#/, '') || document.id,
-            document.invoice_order_date || new Date()
-          );
+          result = await generateAndStoreInvoicePDF(documentId, downloadAfterGeneration);
           break;
         case 'purchaseOrder':
-          pdfDoc = generatePurchaseOrderPDF(document);
-          filename = generateFilename(
-            'PO',
-            document.purchase_order_uid?.replace(/^PO#/, '') || document.id,
-            document.po_date || new Date()
-          );
+          result = await generateAndStorePurchaseOrderPDF(documentId, downloadAfterGeneration);
           break;
         case 'estimate':
-          pdfDoc = generateEstimatePDF(document);
-          filename = generateFilename(
-            'Estimate',
-            document.estimate_uid || document.id,
-            document.created_at || new Date()
-          );
+          result = await generateAndStoreEstimatePDF(documentId, downloadAfterGeneration);
+          break;
+        case 'product':
+          result = await generateAndStoreProductPDF(documentId, downloadAfterGeneration);
           break;
         default:
           throw new Error(`Unsupported document type: ${documentType}`);
       }
 
-      if (!pdfDoc) {
-        throw new Error(`Failed to generate ${documentType} PDF`);
-      }
-
-      // Store the PDF in Supabase and get the URL
-      setIsStoring(true);
-      const entityType = documentType === 'purchaseOrder' ? 'purchase-order' : documentType;
-      pdfUrl = await generateAndStorePDF(documentType, document, downloadAfterGeneration);
-
-      if (!pdfUrl) {
-        throw new Error(`Failed to store ${documentType} PDF`);
-      }
-
-      // Download the PDF if requested
-      if (downloadAfterGeneration) {
-        await downloadPDF(pdfUrl, filename);
+      if (!result.success || !result.url) {
+        throw new Error(result.error?.message || `Failed to generate ${documentType} PDF`);
       }
 
       toast({
@@ -99,7 +76,7 @@ export const usePDFOperations = () => {
         description: 'The PDF has been successfully created.',
       });
 
-      return pdfUrl;
+      return result.url;
     } catch (error) {
       console.error(`Error generating ${documentType} PDF:`, error);
       toast({
