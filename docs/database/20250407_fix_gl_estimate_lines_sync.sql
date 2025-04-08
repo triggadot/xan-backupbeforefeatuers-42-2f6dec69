@@ -105,3 +105,21 @@ AND (field_mappings IS NULL OR field_mappings = '{}'::jsonb OR field_mappings::t
 
 -- Step 5: Add a comment to the table documenting the Glidebase pattern
 COMMENT ON TABLE gl_estimate_lines IS 'Estimate line items. Uses Glidebase pattern where relationships use rowid_ fields referencing glide_row_id values without foreign key constraints.';
+
+-- Step 6: Remove special sync function for gl_estimate_lines
+-- This ensures that gl_estimate_lines uses the standard Glidebase sync pattern
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_proc 
+        WHERE proname = 'glsync_estimate_lines_complete'
+    ) THEN
+        DROP FUNCTION IF EXISTS glsync_estimate_lines_complete(jsonb);
+        RAISE NOTICE 'Dropped special sync function: glsync_estimate_lines_complete';
+    END IF;
+END $$;
+
+-- Step 7: Ensure no special handling in edge functions for gl_estimate_lines
+-- Note: This is a reminder to check the edge function code separately
+-- as SQL migrations cannot modify edge function code directly
+COMMENT ON TABLE gl_estimate_lines IS 'Estimate line items. Uses standard Glidebase pattern for syncing with no special handling required.';
