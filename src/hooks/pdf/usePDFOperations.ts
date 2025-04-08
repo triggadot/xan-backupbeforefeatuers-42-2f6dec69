@@ -1,15 +1,6 @@
 import { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/utils/use-toast';
-import { 
-  generateInvoicePDF, 
-  generatePurchaseOrderPDF, 
-  generateEstimatePDF,
-  storePDFInSupabase,
-  generateFilename,
-  generateAndStorePDF
-} from '@/lib/pdf-utils';
-import { jsPDF } from 'jspdf';
 import { generateAndStoreInvoicePDF } from '@/lib/pdf/invoice-pdf';
 import { generateAndStoreEstimatePDF } from '@/lib/pdf/estimate-pdf';
 import { generateAndStorePurchaseOrderPDF } from '@/lib/pdf/purchase-order-pdf';
@@ -78,7 +69,11 @@ export const usePDFOperations = () => {
 
       return result.url;
     } catch (error) {
-      console.error(`Error generating ${documentType} PDF:`, error);
+      console.error(`Error generating ${documentType} PDF:`, 
+        error instanceof Error 
+          ? { message: error.message, stack: error.stack } 
+          : String(error)
+      );
       toast({
         title: 'PDF Generation Failed',
         description: error instanceof Error ? error.message : 'There was an error generating the PDF.',
@@ -98,17 +93,32 @@ export const usePDFOperations = () => {
    */
   const downloadPDF = async (url: string, fileName: string): Promise<void> => {
     try {
-      // Fetch the PDF data from the URL
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+      // Check if this is a blob URL (starts with blob:)
+      if (url.startsWith('blob:')) {
+        // For blob URLs, we need to fetch the blob and then save it
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Use FileSaver.js to save the file
+        saveAs(blob, fileName);
+      } else {
+        // For regular URLs (http/https), fetch and save
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Use FileSaver.js to save the file
+        saveAs(blob, fileName);
       }
-      
-      const blob = await response.blob();
-      
-      // Use FileSaver.js to save the file
-      saveAs(blob, fileName);
       
       toast({
         title: 'PDF Downloaded',
@@ -117,7 +127,11 @@ export const usePDFOperations = () => {
       
       console.log(`PDF downloaded successfully: ${fileName}`);
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('Error downloading PDF:', 
+        error instanceof Error 
+          ? { message: error.message, stack: error.stack } 
+          : String(error)
+      );
       toast({
         title: 'Download Failed',
         description: error instanceof Error ? error.message : 'There was an error downloading the PDF.',

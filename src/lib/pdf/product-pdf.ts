@@ -1,4 +1,5 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -13,7 +14,6 @@ import {
   createPDFError,
   createPDFSuccess
 } from './common';
-import { storePDF } from '../pdf-storage';
 import { saveAs } from 'file-saver'; // Import file-saver library
 
 // Type definitions
@@ -227,49 +227,47 @@ export async function fetchProductForPDF(productId: string): Promise<ProductDeta
 export function generateProductPDF(product: ProductDetail): jsPDF {
   const doc = new jsPDF();
   
-  // Add letterhead
-  addLetterhead(doc, 'PRODUCT SPECIFICATION');
+  // Set theme color - dark blue
+  const themeColor = [0, 51, 102]; // Dark blue RGB
   
-  // Add product details
+  // Add header
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text('PRODUCT DETAILS', 20, 30);
+  
+  // Add product ID directly below header
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'normal');
+  doc.text(`ID: ${product.product_uid || ''}`, 20, 40);
+  
+  // Add date on the same line as ID but right-aligned
+  const today = new Date();
+  doc.text(`Date: ${formatShortDate(today)}`, 190, 40, { align: 'right' });
+  
+  // Add horizontal line
+  doc.setDrawColor(...themeColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, 45, 190, 45);
+  
+  // Add product name and description
+  let yPos = 55;
   doc.setFontSize(14);
   doc.setFont(undefined, 'bold');
-  const productName = product.vendor_product_name || 
-                      product.main_new_product_name || 
-                      product.main_vendor_product_name || 
-                      'Unnamed Product';
-  doc.text(productName, 105, 45, { align: 'center' });
+  doc.text(product.vendor_product_name || product.main_new_product_name || product.main_vendor_product_name || 'Unnamed Product', 20, yPos);
   doc.setFont(undefined, 'normal');
   
-  // Add product ID and SKU
-  doc.setFontSize(11);
-  doc.text(`Product ID: ${product.product_uid || 'N/A'}`, 20, 55);
-  if (product.sku) {
-    doc.text(`SKU: ${product.sku}`, 150, 55, { align: 'right' });
-  }
-  
-  // Add vendor details if available
-  let yPos = 65;
-  if (product.vendor) {
-    yPos = addAccountDetails(doc, 'Vendor:', product.vendor, yPos);
-  }
-  
-  // Add purchase order details if available
-  if (product.purchaseOrder) {
-    doc.setFontSize(11);
-    doc.text(`Purchase Order: ${product.purchaseOrder.purchase_order_uid || 'N/A'}`, 20, yPos);
-    doc.text(`PO Date: ${formatShortDate(product.purchaseOrder.po_date)}`, 150, yPos, { align: 'right' });
+  // Add product description if available
+  if (product.product_description) {
+    yPos += 10;
+    doc.setFontSize(10);
+    const splitDescription = doc.splitTextToSize(product.product_description, 170);
+    doc.text(splitDescription, 20, yPos);
+    yPos += splitDescription.length * 5;
+  } else {
     yPos += 10;
   }
   
-  // Add product specifications
-  yPos += 10;
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text('Product Specifications', 20, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 10;
-  
-  // Create a table for product details
+  // Add product details table
   const detailsData = [
     ['Category', product.category || 'N/A'],
     ['Cost', formatCurrency(Number(product.cost) || 0)],
@@ -278,85 +276,105 @@ export function generateProductPDF(product: ProductDetail): jsPDF {
     ['Status', product.status || 'N/A']
   ];
   
-  // Add custom fields if they exist
-  if (product.color) detailsData.push(['Color', product.color]);
-  if (product.size) detailsData.push(['Size', product.size]);
-  if (product.weight) detailsData.push(['Weight', product.weight]);
-  if (product.dimensions) detailsData.push(['Dimensions', product.dimensions]);
+  // Add vendor information if available
+  if (product.vendor && product.vendor.name) {
+    detailsData.push(['Vendor', product.vendor.name]);
+  }
+  
+  // Add SKU if available
+  if (product.sku) {
+    detailsData.push(['SKU', product.sku]);
+  }
+  
+  // Add barcode if available
+  if (product.barcode) {
+    detailsData.push(['Barcode', product.barcode]);
+  }
+  
+  // Define the details table styles
+  const detailsTableStyles = {
+    headStyles: {
+      fillColor: themeColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'left'
+    },
+    bodyStyles: {
+      textColor: [50, 50, 50]
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', halign: 'left', cellWidth: 40 },
+      1: { halign: 'left' }
+    },
+    margin: { top: 10, right: 20, bottom: 10, left: 20 }
+  };
   
   // Add the details table
-  const tableStyles = createTableStyles();
-  (doc as any).autoTable({
-    head: [['Attribute', 'Value']],
+  autoTable(doc, {
     body: detailsData,
     startY: yPos,
-    ...tableStyles,
-    columnStyles: {
-      0: { cellWidth: 40 }
-    }
+    theme: 'grid',
+    ...detailsTableStyles
   });
   
-  // Get the final Y position of the table
-  let finalY = (doc as any).autoTable.previous.finalY + 10;
-  
-  // Add description if available
-  if (product.product_description) {
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Description', 20, finalY);
-    doc.setFont(undefined, 'normal');
-    finalY += 10;
-    
-    doc.setFontSize(10);
-    const splitDescription = doc.splitTextToSize(product.product_description, 170);
-    doc.text(splitDescription, 20, finalY);
-    finalY += splitDescription.length * 5 + 10;
-  }
-  
-  // Add purchase notes if available
-  if (product.purchase_notes) {
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Purchase Notes', 20, finalY);
-    doc.setFont(undefined, 'normal');
-    finalY += 10;
-    
-    doc.setFontSize(10);
-    const splitNotes = doc.splitTextToSize(product.purchase_notes, 170);
-    doc.text(splitNotes, 20, finalY);
-    finalY += splitNotes.length * 5 + 10;
-  }
+  // Get the final Y position of the details table
+  let currentY = doc.lastAutoTable.finalY + 15;
   
   // Add sales history if available
   if (product.invoiceLines && product.invoiceLines.length > 0) {
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setFont(undefined, 'bold');
-    doc.text('Sales History', 20, finalY);
+    doc.text('Sales History', 20, currentY);
     doc.setFont(undefined, 'normal');
-    finalY += 10;
+    currentY += 10;
+    
+    const salesTableStyles = {
+      headStyles: {
+        fillColor: themeColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'left'
+      },
+      bodyStyles: {
+        textColor: [50, 50, 50]
+      },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' }
+      },
+      margin: { top: 10, right: 20, bottom: 10, left: 20 }
+    };
     
     const salesRows = product.invoiceLines.map(line => [
-      line.invoice ? formatShortDate(line.invoice.invoice_order_date) : 'N/A',
-      line.invoice ? line.invoice.invoice_uid || 'N/A' : 'N/A',
+      formatShortDate(line.invoice ? line.invoice.invoice_order_date : 'N/A'),
       line.qty_sold?.toString() || '0',
       formatCurrency(Number(line.selling_price) || 0),
-      formatCurrency(Number(line.line_total) || 0)
+      line.invoice ? line.invoice.invoice_uid || 'N/A' : 'N/A'
     ]);
     
-    if (salesRows.length > 0) {
-      (doc as any).autoTable({
-        head: [['Date', 'Invoice #', 'Qty', 'Unit Price', 'Total']],
-        body: salesRows,
-        startY: finalY,
-        ...tableStyles,
-        headStyles: {
-          ...tableStyles.headStyles,
-          fillColor: [60, 120, 80] // Green for sales
-        }
-      });
-      
-      finalY = (doc as any).autoTable.previous.finalY + 10;
-    }
+    autoTable(doc, {
+      head: [['Date', 'Quantity', 'Price', 'Invoice']],
+      body: salesRows,
+      startY: currentY,
+      ...salesTableStyles
+    });
+  }
+  
+  // Add notes if available
+  if (product.purchase_notes) {
+    currentY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Notes', 20, currentY);
+    doc.setFont(undefined, 'normal');
+    currentY += 7;
+    doc.setFontSize(10);
+    
+    // Split notes into multiple lines if needed
+    const splitNotes = doc.splitTextToSize(product.purchase_notes, 170);
+    doc.text(splitNotes, 20, currentY);
   }
   
   // Add footer
@@ -417,47 +435,37 @@ export async function generateAndStoreProductPDF(
     });
     
     // Generate filename
-    const productName = product.vendor_product_name || 
-                        product.main_new_product_name || 
-                        product.main_vendor_product_name || 
-                        'Product';
     const filename = generateFilename(
-      'Product',
+      'PROD',
       product.product_uid?.replace(/^PROD#/, '') || product.id,
       new Date()
     );
     
-    // Store PDF using edge function
-    const storageResult = await storePDF(pdfBlob, 'product', product.id, filename);
-    
-    if (!storageResult.success) {
-      return createPDFError(
-        PDFErrorType.STORAGE_ERROR,
-        `Failed to store product PDF: ${storageResult.message}`
-      );
-    }
-    
-    // If download is requested and we have a URL, trigger download
-    if (download && storageResult.url) {
+    // If download is requested, trigger download directly
+    if (download) {
       try {
-        // Use file-saver library instead of creating a temporary link
-        const response = await fetch(storageResult.url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        saveAs(blob, filename);
+        saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
       } catch (downloadError) {
-        console.error('Error handling product PDF download:', downloadError);
+        console.error('Error handling product PDF download:', 
+          downloadError instanceof Error 
+            ? JSON.stringify({ message: downloadError.message, stack: downloadError.stack }, null, 2) 
+            : String(downloadError)
+        );
         // Continue even if download fails
       }
     }
     
-    return createPDFSuccess(storageResult.url!);
+    // Create a temporary URL for the blob
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    return createPDFSuccess(blobUrl);
   } catch (error) {
-    console.error('Error generating product PDF:', error);
+    console.error('Error generating product PDF:', 
+      error instanceof Error 
+        ? JSON.stringify({ message: error.message, stack: error.stack }, null, 2) 
+        : String(error)
+    );
     return createPDFError(
       PDFErrorType.GENERATION_ERROR,
       error instanceof Error ? error.message : 'Unknown error generating product PDF'

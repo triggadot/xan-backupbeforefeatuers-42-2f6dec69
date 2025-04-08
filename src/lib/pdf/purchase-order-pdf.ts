@@ -1,4 +1,5 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -13,7 +14,6 @@ import {
   createPDFError,
   createPDFSuccess
 } from './common';
-import { storePDF } from '../pdf-storage';
 import { saveAs } from 'file-saver'; // Import file-saver library
 
 // Type definitions
@@ -242,103 +242,177 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
  * const po = await fetchPurchaseOrderForPDF('123');
  * if (po) {
  *   const pdfDoc = generatePurchaseOrderPDF(po);
- *   pdfDoc.save('purchase-order.pdf');
  * }
  */
 export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrderWithDetails): jsPDF {
   const doc = new jsPDF();
   
-  // Add letterhead
-  addLetterhead(doc, 'PURCHASE ORDER');
+  // Set theme color - dark blue
+  const themeColor = [0, 51, 102]; // Dark blue RGB
   
-  // Add purchase order details
+  // Add header
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text('PURCHASE ORDER', 20, 30);
+  
+  // Add PO ID directly below header
   doc.setFontSize(12);
-  doc.text(`PO #: ${purchaseOrder.purchase_order_uid || 'N/A'}`, 20, 45);
-  doc.text(`Date: ${formatShortDate(purchaseOrder.po_date)}`, 150, 45, { align: 'right' });
+  doc.setFont(undefined, 'normal');
+  doc.text(`ID: ${purchaseOrder.purchase_order_uid || ''}`, 20, 40);
   
-  // Add vendor details
+  // Add date on the same line as ID but right-aligned
+  doc.text(`Date: ${formatShortDate(purchaseOrder.po_date || new Date())}`, 190, 40, { align: 'right' });
+  
+  // Add horizontal line
+  doc.setDrawColor(...themeColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, 45, 190, 45);
+  
+  // Add vendor details if available
+  let yPos = 55;
   if (purchaseOrder.vendor) {
-    addAccountDetails(doc, 'Vendor:', purchaseOrder.vendor, 60);
+    doc.setFontSize(11);
+    doc.text(purchaseOrder.vendor.account_name || 'N/A', 20, yPos);
+    yPos += 5;
+    
+    if (purchaseOrder.vendor.address_line_1) {
+      doc.setFontSize(10);
+      doc.text(purchaseOrder.vendor.address_line_1, 20, yPos);
+      yPos += 5;
+    }
+    
+    if (purchaseOrder.vendor.address_line_2) {
+      doc.text(purchaseOrder.vendor.address_line_2, 20, yPos);
+      yPos += 5;
+    }
+    
+    const cityStateZip = [
+      purchaseOrder.vendor.city,
+      purchaseOrder.vendor.state,
+      purchaseOrder.vendor.postal_code
+    ].filter(Boolean).join(', ');
+    
+    if (cityStateZip) {
+      doc.text(cityStateZip, 20, yPos);
+      yPos += 5;
+    }
+    
+    if (purchaseOrder.vendor.country) {
+      doc.text(purchaseOrder.vendor.country, 20, yPos);
+      yPos += 5;
+    }
   }
   
-  // Define the table styles
-  const tableStyles = createTableStyles();
+  // Define the table styles with better alignment
+  const tableStyles = {
+    headStyles: {
+      fillColor: themeColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'left'
+    },
+    bodyStyles: {
+      textColor: [50, 50, 50]
+    },
+    columnStyles: {
+      0: { halign: 'left' },    // Product name
+      1: { halign: 'center' },  // Quantity
+      2: { halign: 'right' },   // Unit price
+      3: { halign: 'right' }    // Total
+    },
+    margin: { top: 10, right: 20, bottom: 10, left: 20 }
+  };
   
-  // Map purchase order products to table rows
-  const rows = purchaseOrder.lineItems?.map(item => [
-    item.display_name,
-    item.quantity,
-    formatCurrency(item.unitPrice),
-    formatCurrency(item.total)
-  ]) || [];
+  // Map purchase order lines to table rows
+  const rows = purchaseOrder.lineItems?.map(line => {
+    const productName = line.vendor_product_name || line.new_product_name || 'N/A';
+    const quantity = line.quantity || line.total_qty_purchased || 0;
+    const unitCost = line.unit_price || line.cost || 0;
+    const total = line.line_total || (quantity * unitCost) || 0;
+    
+    return [
+      productName,
+      quantity,
+      formatCurrency(unitCost),
+      formatCurrency(total)
+    ];
+  }) || [];
   
   // Add the items table to the document
-  (doc as any).autoTable({
-    head: [['Product', 'Quantity', 'Unit Price', 'Total']],
+  autoTable(doc, {
+    head: [['Product', 'Qty', 'Price', 'Total']],
     body: rows,
-    startY: 80,
+    startY: 70,
     ...tableStyles
   });
   
   // Get the final Y position of the table
-  const finalY = (doc as any).autoTable.previous.finalY;
+  const finalY = doc.lastAutoTable.finalY;
   
-  // Add totals section
+  // Add totals section with reduced spacing and bold text for key figures
   doc.setFontSize(11);
-  let currentY = finalY + 15;
+  let currentY = finalY + 10;
   
-  doc.text(`Total:`, 150, currentY, { align: 'right' });
-  doc.text(formatCurrency(purchaseOrder.total_amount || purchaseOrder.totalCost || 0), 190, currentY, { align: 'right' });
+  doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
+  doc.setFont(undefined, 'bold');
+  doc.text(formatCurrency(purchaseOrder.subtotal || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
   
-  // Add payment information if available
-  if (purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0) {
-    currentY += 20;
-    doc.setFontSize(12);
+  if (purchaseOrder.tax_rate && purchaseOrder.tax_rate > 0) {
+    currentY += 7;
+    doc.text(`Tax (${purchaseOrder.tax_rate}%):`, 150, currentY, { align: 'right' });
     doc.setFont(undefined, 'bold');
-    doc.text('Payment Information', 20, currentY);
+    doc.text(formatCurrency(purchaseOrder.tax_amount || 0), 190, currentY, { align: 'right' });
     doc.setFont(undefined, 'normal');
+  }
+  
+  currentY += 7;
+  doc.text(`Total:`, 150, currentY, { align: 'right' });
+  doc.setFont(undefined, 'bold');
+  doc.text(formatCurrency(purchaseOrder.total || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
+  
+  // Add payment details if available
+  if (purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0) {
+    currentY += 15;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment History', 20, currentY);
+    doc.setFont(undefined, 'normal');
+    currentY += 7;
     
-    currentY += 10;
-    doc.setFontSize(10);
-    
-    // Add payment table
     const paymentRows = purchaseOrder.vendorPayments.map(payment => [
       formatShortDate(payment.date),
-      payment.method,
-      formatCurrency(payment.amount),
+      payment.method || '',
+      formatCurrency(payment.amount || 0),
       payment.notes || ''
     ]);
     
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Date', 'Method', 'Amount', 'Notes']],
       body: paymentRows,
       startY: currentY,
-      ...tableStyles,
-      headStyles: {
-        ...tableStyles.headStyles,
-        fillColor: [60, 60, 60] // Darker gray for payment table header
+      ...{
+        ...tableStyles,
+        margin: { top: 10, right: 20, bottom: 10, left: 20 }
       }
     });
     
-    currentY = (doc as any).autoTable.previous.finalY + 10;
+    currentY = doc.lastAutoTable.finalY + 10;
   }
   
   // Add payment status
-  currentY += 10;
-  doc.setFontSize(11);
-  doc.text(`Paid:`, 150, currentY, { align: 'right' });
-  doc.text(formatCurrency(purchaseOrder.total_paid || 0), 190, currentY, { align: 'right' });
+  if (purchaseOrder.payment_status) {
+    doc.setFontSize(11);
+    doc.text(`Payment Status: ${purchaseOrder.payment_status}`, 20, currentY);
+  }
   
-  currentY += 10;
-  doc.text(`Balance:`, 150, currentY, { align: 'right' });
-  doc.text(formatCurrency(purchaseOrder.balance || 0), 190, currentY, { align: 'right' });
-  
-  // Add notes if available
+  // Add notes if available with reduced spacing
   if (purchaseOrder.po_notes) {
-    currentY += 20;
+    currentY += 15;
     doc.setFontSize(11);
     doc.text('Notes:', 20, currentY);
-    currentY += 10;
+    currentY += 7;
     doc.setFontSize(10);
     
     // Split notes into multiple lines if needed
@@ -410,37 +484,31 @@ export async function generateAndStorePurchaseOrderPDF(
       purchaseOrder.po_date || new Date()
     );
     
-    // Store PDF using edge function
-    const storageResult = await storePDF(pdfBlob, 'purchaseOrder', purchaseOrder.id, filename);
-    
-    if (!storageResult.success) {
-      return createPDFError(
-        PDFErrorType.STORAGE_ERROR,
-        `Failed to store purchase order PDF: ${storageResult.message}`
-      );
-    }
-    
-    // If download is requested and we have a URL, trigger download
-    if (download && storageResult.url) {
+    // If download is requested, trigger download directly
+    if (download) {
       try {
-        // Use file-saver library instead of creating a temporary link
-        const response = await fetch(storageResult.url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        saveAs(blob, filename);
+        saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
       } catch (downloadError) {
-        console.error('Error handling purchaseOrder PDF download:', downloadError);
+        console.error('Error handling purchaseOrder PDF download:', 
+          downloadError instanceof Error 
+            ? JSON.stringify({ message: downloadError.message, stack: downloadError.stack }, null, 2) 
+            : String(downloadError)
+        );
         // Continue even if download fails
       }
     }
     
-    return createPDFSuccess(storageResult.url!);
+    // Create a temporary URL for the blob
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    return createPDFSuccess(blobUrl);
   } catch (error) {
-    console.error('Error generating purchase order PDF:', error);
+    console.error('Error generating purchase order PDF:', 
+      error instanceof Error 
+        ? JSON.stringify({ message: error.message, stack: error.stack }, null, 2) 
+        : String(error)
+    );
     return createPDFError(
       PDFErrorType.GENERATION_ERROR,
       error instanceof Error ? error.message : 'Unknown error generating purchase order PDF'

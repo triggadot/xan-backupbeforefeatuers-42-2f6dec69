@@ -22,9 +22,8 @@ The PDF generation system is organized into document-specific modules:
 2. Hook delegates to appropriate document-specific module
 3. Module uses detail hook to fetch data with proper relationships
 4. Module generates PDF using jsPDF
-5. PDF is stored using edge function
-6. Database is updated with PDF URL
-7. URL is returned to UI for display/download/sharing
+5. PDF is converted to a blob and a blob URL is created
+6. URL is returned to UI for display/download/sharing
 
 ## Core Components
 
@@ -67,7 +66,7 @@ Each document type has its own module with three main functions:
 
 1. **Data Fetching**: Retrieves document data with all related information
 2. **PDF Generation**: Creates a PDF document using jsPDF
-3. **Storage and Download**: Stores the PDF and handles downloads
+3. **Direct Download**: Handles PDF generation and download
 
 Example for invoices:
 
@@ -84,12 +83,12 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
   // Creates a PDF document using jsPDF
 }
 
-// 3. Storage and download
+// 3. Generation and download
 export async function generateAndStoreInvoicePDF(
   invoiceId: string | any,
   download: boolean = false
 ): Promise<PDFOperationResult> {
-  // Handles the complete workflow
+  // Handles the complete workflow including direct download
 }
 ```
 
@@ -223,22 +222,17 @@ The PDF generation system uses a standardized error handling approach:
    - Verify that the document ID is passed correctly (string, not object)
    - Ensure the database connection is working
 
-2. **PDF storage fails**
-   - Check Supabase storage permissions
-   - Verify that the edge function has the correct service role key
-   - Check for storage bucket existence and access rights
+2. **PDF preview doesn't show**
+   - Verify that the blob URL is valid
+   - Check that the PDF viewer component is properly configured
+   - Ensure the blob hasn't been revoked
 
-3. **PDF preview doesn't show**
-   - Verify that the PDF URL is valid and accessible
-   - Check for CORS issues
-   - Ensure the PDF viewer component is properly configured
+3. **PDF download fails**
+   - Check that the file-saver library is properly imported
+   - Verify that the blob is valid
+   - Look for errors in the console related to the download process
 
-4. **PDF download fails**
-   - Verify that the PDF URL is valid and accessible
-   - Check for CORS issues
-   - Ensure the file-saver library is properly imported and used
-
-5. **"[object Object]" errors in document IDs**
+4. **"[object Object]" errors in document IDs**
    - Make sure to pass string IDs to PDF generation functions
    - If passing objects, ensure they have id or glide_row_id properties
    - Check the console for detailed error messages
@@ -253,13 +247,29 @@ The PDF generation system uses a standardized error handling approach:
    - All PDF generation functions now accept either string IDs or object references
    - Logic to extract the correct ID from objects has been added
 
-3. **Better download mechanism**:
-   - All PDF modules now use the file-saver library for downloads
-   - This replaces the temporary link approach which can be unreliable
+3. **Direct download mechanism**:
+   - PDF modules now create blob URLs directly instead of using Supabase storage
+   - This eliminates dependency on external storage and simplifies the download process
+   - Uses file-saver library for reliable downloads across browsers
 
 4. **Column existence checking**:
    - Added schema validation before querying columns that might not exist
    - Prevents errors when database schema differs from expected
+
+## Future Enhancements
+
+1. **Supabase Storage Integration**:
+   - In the future, we plan to reimplement Supabase storage for PDFs
+   - This will allow for persistent storage and sharing of PDFs
+   - The current direct download approach will be maintained as a fallback
+
+2. **PDF Caching**:
+   - Implement a caching mechanism to avoid regenerating unchanged PDFs
+   - Store blob URLs in memory for quick access
+
+3. **Batch PDF Generation**:
+   - Add support for generating multiple PDFs at once
+   - Create ZIP archives for downloading multiple PDFs
 
 ## Best Practices
 
@@ -267,4 +277,4 @@ The PDF generation system uses a standardized error handling approach:
 2. Use the document-specific PDF actions components for the best user experience
 3. Handle errors gracefully in the UI with informative messages
 4. Use the `usePDFOperations` hook for all PDF operations to ensure consistent behavior
-5. Always store PDFs in Supabase using the `supabase_pdf_url` field
+5. Remember to revoke blob URLs when they are no longer needed to prevent memory leaks

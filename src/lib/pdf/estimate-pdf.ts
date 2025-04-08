@@ -1,4 +1,5 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -13,7 +14,6 @@ import {
   createPDFError,
   createPDFSuccess
 } from './common';
-import { storePDF } from '../pdf-storage';
 import { saveAs } from 'file-saver'; // Import file-saver library
 
 // Type definitions
@@ -184,23 +184,81 @@ export async function fetchEstimateForPDF(estimateId: string): Promise<EstimateW
 export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
   const doc = new jsPDF();
   
-  // Add letterhead
-  addLetterhead(doc, 'ESTIMATE');
+  // Set theme color - dark blue
+  const themeColor = [0, 51, 102]; // Dark blue RGB
   
-  // Add estimate details
+  // Add header
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text('ESTIMATE', 20, 30);
+  
+  // Add estimate ID directly below header
   doc.setFontSize(12);
-  doc.text(`Estimate #: ${estimate.estimate_uid || 'N/A'}`, 20, 45);
-  doc.text(`Date: ${formatShortDate(estimate.created_at)}`, 150, 45, { align: 'right' });
+  doc.setFont(undefined, 'normal');
+  doc.text(`ID: ${estimate.estimate_uid || ''}`, 20, 40);
   
-  if (estimate.expiration_date) {
-    doc.text(`Expiration: ${formatShortDate(estimate.expiration_date)}`, 150, 55, { align: 'right' });
+  // Add date on the same line as ID but right-aligned
+  doc.text(`Date: ${formatShortDate(estimate.estimate_date || new Date())}`, 190, 40, { align: 'right' });
+  
+  // Add horizontal line
+  doc.setDrawColor(...themeColor);
+  doc.setLineWidth(0.5);
+  doc.line(20, 45, 190, 45);
+  
+  // Add account details if available
+  let yPos = 55;
+  if (estimate.account) {
+    doc.setFontSize(11);
+    doc.text(estimate.account.name || 'N/A', 20, yPos);
+    yPos += 5;
+    
+    if (estimate.account.address_line_1) {
+      doc.setFontSize(10);
+      doc.text(estimate.account.address_line_1, 20, yPos);
+      yPos += 5;
+    }
+    
+    if (estimate.account.address_line_2) {
+      doc.text(estimate.account.address_line_2, 20, yPos);
+      yPos += 5;
+    }
+    
+    const cityStateZip = [
+      estimate.account.city,
+      estimate.account.state,
+      estimate.account.postal_code
+    ].filter(Boolean).join(', ');
+    
+    if (cityStateZip) {
+      doc.text(cityStateZip, 20, yPos);
+      yPos += 5;
+    }
+    
+    if (estimate.account.country) {
+      doc.text(estimate.account.country, 20, yPos);
+      yPos += 5;
+    }
   }
   
-  // Add customer details
-  addAccountDetails(doc, 'Customer:', estimate.account, 60);
-  
-  // Define the table styles
-  const tableStyles = createTableStyles();
+  // Define the table styles with better alignment
+  const tableStyles = {
+    headStyles: {
+      fillColor: themeColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'left'
+    },
+    bodyStyles: {
+      textColor: [50, 50, 50]
+    },
+    columnStyles: {
+      0: { halign: 'left' },    // Product name
+      1: { halign: 'center' },  // Quantity
+      2: { halign: 'right' },   // Unit price
+      3: { halign: 'right' }    // Total
+    },
+    margin: { top: 10, right: 20, bottom: 10, left: 20 }
+  };
   
   // Map estimate products to table rows
   const rows = estimate.estimateLines?.map(line => {
@@ -219,46 +277,54 @@ export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
   }) || [];
   
   // Add the items table to the document
-  (doc as any).autoTable({
-    head: [['Product', 'Quantity', 'Unit Price', 'Total']],
+  autoTable(doc, {
+    head: [['Product', 'Qty', 'Price', 'Total']],
     body: rows,
-    startY: 80,
+    startY: 70,
     ...tableStyles
   });
   
   // Get the final Y position of the table
-  const finalY = (doc as any).autoTable.previous.finalY;
+  const finalY = doc.lastAutoTable.finalY;
   
-  // Add totals section
+  // Add totals section with reduced spacing and bold text for key figures
   doc.setFontSize(11);
-  let currentY = finalY + 15;
+  let currentY = finalY + 10;
   
   doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
+  doc.setFont(undefined, 'bold');
   doc.text(formatCurrency(estimate.subtotal || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
   
   if (estimate.tax_rate && estimate.tax_rate > 0) {
-    currentY += 10;
+    currentY += 7;
     doc.text(`Tax (${estimate.tax_rate}%):`, 150, currentY, { align: 'right' });
+    doc.setFont(undefined, 'bold');
     doc.text(formatCurrency(estimate.tax_amount || 0), 190, currentY, { align: 'right' });
+    doc.setFont(undefined, 'normal');
   }
   
   // Add credits if available
   if (estimate.credits && estimate.credits.length > 0) {
-    currentY += 10;
+    currentY += 7;
     doc.text(`Credits:`, 150, currentY, { align: 'right' });
+    doc.setFont(undefined, 'bold');
     doc.text(formatCurrency(estimate.credits.reduce((sum, credit) => sum + (Number(credit.amount) || 0), 0)), 190, currentY, { align: 'right' });
+    doc.setFont(undefined, 'normal');
   }
   
-  currentY += 10;
+  currentY += 7;
   doc.text(`Total:`, 150, currentY, { align: 'right' });
+  doc.setFont(undefined, 'bold');
   doc.text(formatCurrency(estimate.total || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
   
-  // Add notes if available
+  // Add notes if available with reduced spacing
   if (estimate.notes) {
-    currentY += 20;
+    currentY += 15;
     doc.setFontSize(11);
     doc.text('Notes:', 20, currentY);
-    currentY += 10;
+    currentY += 7;
     doc.setFontSize(10);
     
     // Split notes into multiple lines if needed
@@ -266,12 +332,12 @@ export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
     doc.text(splitNotes, 20, currentY);
   }
   
-  // Add terms if available
+  // Add terms if available with reduced spacing
   if (estimate.terms) {
-    currentY += 20;
+    currentY += 15;
     doc.setFontSize(11);
     doc.text('Terms & Conditions:', 20, currentY);
-    currentY += 10;
+    currentY += 7;
     doc.setFontSize(10);
     
     // Split terms into multiple lines if needed
@@ -338,42 +404,36 @@ export async function generateAndStoreEstimatePDF(
     
     // Generate filename
     const filename = generateFilename(
-      'Estimate',
+      'EST',
       estimate.estimate_uid?.replace(/^EST#/, '') || estimate.id,
-      estimate.created_at || new Date()
+      estimate.estimate_date || new Date()
     );
     
-    // Store PDF using edge function
-    const storageResult = await storePDF(pdfBlob, 'estimate', estimate.id, filename);
-    
-    if (!storageResult.success) {
-      return createPDFError(
-        PDFErrorType.STORAGE_ERROR,
-        `Failed to store estimate PDF: ${storageResult.message}`
-      );
-    }
-    
-    // If download is requested and we have a URL, trigger download
-    if (download && storageResult.url) {
+    // If download is requested, trigger download directly
+    if (download) {
       try {
-        // Use file-saver library instead of creating a temporary link
-        const response = await fetch(storageResult.url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        saveAs(blob, filename);
+        saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
       } catch (downloadError) {
-        console.error('Error handling estimate PDF download:', downloadError);
+        console.error('Error handling estimate PDF download:', 
+          downloadError instanceof Error 
+            ? JSON.stringify({ message: downloadError.message, stack: downloadError.stack }, null, 2) 
+            : String(downloadError)
+        );
         // Continue even if download fails
       }
     }
     
-    return createPDFSuccess(storageResult.url!);
+    // Create a temporary URL for the blob
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    return createPDFSuccess(blobUrl);
   } catch (error) {
-    console.error('Error generating estimate PDF:', error);
+    console.error('Error generating estimate PDF:', 
+      error instanceof Error 
+        ? JSON.stringify({ message: error.message, stack: error.stack }, null, 2) 
+        : String(error)
+    );
     return createPDFError(
       PDFErrorType.GENERATION_ERROR,
       error instanceof Error ? error.message : 'Unknown error generating estimate PDF'

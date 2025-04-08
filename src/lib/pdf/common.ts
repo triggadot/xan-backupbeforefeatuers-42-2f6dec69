@@ -1,11 +1,14 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';
 import { saveAs } from 'file-saver';
 
-// Extend jsPDF with autoTable
+// The autoTable plugin adds this property to jsPDF instances
 declare module 'jspdf' {
   interface jsPDF {
+    lastAutoTable: {
+      finalY: number;
+    };
     autoTable: (options: {
       head?: Array<Array<string>>;
       body?: Array<Array<string | number>>;
