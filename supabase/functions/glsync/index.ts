@@ -121,6 +121,29 @@ serve(async (req) => {
       
       return await syncData(supabase, connectionId, mappingId);
     }
+    else if (action === 'syncMapping') {
+      if (!mappingId) {
+        throw new Error('Mapping ID is required');
+      }
+      
+      // Get the connection ID from the mapping
+      const { data: mapping, error: mappingError } = await supabase
+        .from('gl_mappings')
+        .select('connection_id')
+        .eq('id', mappingId)
+        .single();
+      
+      if (mappingError) {
+        throw mappingError;
+      }
+      
+      if (!mapping) {
+        throw new Error('Mapping not found');
+      }
+      
+      // Call syncData with the retrieved connection ID
+      return await syncData(supabase, mapping.connection_id, mappingId);
+    }
     else {
       throw new Error(`Unknown action: ${action}`);
     }
