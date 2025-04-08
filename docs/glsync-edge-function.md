@@ -97,38 +97,16 @@ The `syncData` function handles the core synchronization process:
    }
    ```
 
-3. **Special Handling for Estimate Lines**:
+3. **Standard Upsert for All Tables**:
    ```typescript
-   // Special handling for gl_estimate_lines table to use our custom glsync function
-   if (mapping.supabase_table === 'gl_estimate_lines') {
-     console.log('Using custom glsync function for estimate lines');
+   // Use batching to avoid hitting limits
+   const batchSize = 100;
+   let recordsProcessed = 0;
+   
+   for (let i = 0; i < transformedRows.length; i += batchSize) {
+     const batch = transformedRows.slice(i, i + batchSize);
      
-     try {
-       // First, call the master control function to disable triggers
-       const { error: controlError } = await supabase.rpc('glsync_master_control');
-       if (controlError) {
-         throw controlError;
-       }
-       
-       // Use our custom glsync function for estimate lines
-       const { error: syncError } = await supabase.rpc('glsync_estimate_lines', {
-         data: batch
-       });
-       
-       if (syncError) {
-         throw syncError;
-       }
-       
-       // Finally, call the cleanup function to re-enable triggers and update totals
-       const { error: cleanupError } = await supabase.rpc('glsync_master_cleanup');
-       if (cleanupError) {
-         throw cleanupError;
-       }
-     } catch (err) {
-       upsertError = err as Error;
-     }
-   } else {
-     // Standard upsert for other tables
+     // Standard upsert for all tables including gl_estimate_lines
      const { error } = await supabase
        .from(mapping.supabase_table)
        .upsert(batch, { 
@@ -136,9 +114,15 @@ The `syncData` function handles the core synchronization process:
          ignoreDuplicates: false
        });
      
-     upsertError = error;
+     if (error) {
+       // Error handling
+     } else {
+       recordsProcessed += batch.length;
+     }
    }
    ```
+
+> **Note**: All tables, including `gl_estimate_lines`, use the standard upsert pattern. There is no special handling for any specific tables in accordance with the Glidebase pattern.
 
 ## Deployment
 

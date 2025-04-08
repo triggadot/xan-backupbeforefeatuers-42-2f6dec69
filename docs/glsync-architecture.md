@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Glidebase Sync system provides bidirectional synchronization between Glide Apps and Supabase PostgreSQL database. It follows a specific architecture pattern to ensure data integrity while allowing flexible relationships between tables.
+The Glidebase Sync system provides bidirectional synchronization between Glide Apps and Supabase PostgreSQL database. It follows a standardized architecture pattern to ensure data integrity while allowing flexible relationships between tables.
 
 ## Key Components
 
@@ -13,24 +13,23 @@ The edge function serves as the API endpoint that handles sync requests from Gli
 - Authenticates requests using API keys
 - Fetches data from Glide's API
 - Transforms the data to match Supabase schema
-- Uses specialized functions for different tables
+- Uses a standardized upsert approach for all tables
 - Handles error logging and reporting
 
-### 2. Database Functions
-
-The system uses several specialized PostgreSQL functions:
-
-- `glsync_master_control()`: Completely overrides all PostgreSQL rules and constraints during sync
-- `glsync_estimate_lines(data JSONB)`: Handles estimate lines sync with special relationship handling
-- `glsync_master_cleanup()`: Re-enables constraints, fixes inconsistent data, and updates calculated fields
-
-### 3. Database Tables
+### 2. Database Tables
 
 All tables follow the Glidebase pattern:
 - Primary key: `id` (UUID)
 - Glide identifier: `glide_row_id` (TEXT)
 - Relationship fields: `rowid_[table_name]` (TEXT) referencing `glide_row_id` of related tables
 - Timestamps: `created_at`, `updated_at`
+
+### 3. Database Triggers
+
+The system relies on database triggers to maintain data integrity:
+- `set_estimate_line_display_name_trigger`: Sets display names based on product information
+- `update_estimate_totals_trigger`: Updates totals in the parent estimates table
+- `handle_estimate_line_changes`: Manages related data when estimate lines change
 
 ### 4. Views
 
@@ -44,24 +43,27 @@ The system uses views to simplify data access:
 2. Edge function receives request with mapping ID
 3. Edge function fetches data from Glide API
 4. Data is transformed to match Supabase schema
-5. **Override Mode**: All PostgreSQL constraints and triggers are disabled
-6. For estimate lines, special sync functions are called
-7. **Cleanup Mode**: System fixes inconsistent data and re-enables constraints
-8. Results and errors are logged and returned to client
+5. **Standard Upsert**: All tables use the same upsert method with consistent configuration
+   ```typescript
+   const { error } = await supabase
+     .from(mapping.supabase_table)
+     .upsert(batch, { 
+       onConflict: 'glide_row_id',
+       ignoreDuplicates: false
+     });
+   ```
+6. Database triggers automatically handle relationships and calculated fields
+7. Results and errors are logged and returned to client
 
 ## Handling Inconsistent Data
 
 The Glidebase sync system is designed to handle inconsistent data from Glide:
 
-1. **Complete Override**: During sync, all PostgreSQL rules and constraints are temporarily disabled
-2. **Accept All Data**: The system accepts all data from Glide, even if it would normally violate constraints
-3. **Automatic Repair**: After sync, the system automatically:
-   - Creates missing related records
-   - Fixes invalid display names
-   - Updates calculated fields
-4. **Logging**: The system logs all repairs for later review
+1. **Standard Approach**: All tables use the same sync methodology
+2. **Automatic Triggers**: Database triggers handle relationships and calculated fields
+3. **Logging**: The system logs all errors for later review
 
-This approach ensures that sync operations always succeed, even with inconsistent data, allowing for later cleanup and data quality improvements.
+This approach ensures that sync operations are consistent across all tables, including estimate lines.
 
 ## Relationship Handling
 
@@ -69,5 +71,5 @@ The Glidebase system uses a specific pattern for relationships:
 
 - No actual foreign key constraints in PostgreSQL
 - Relationships are maintained through `rowid_` fields
-- Missing related records are created as placeholders during sync
+- Database triggers handle relationship integrity
 - Indexes on relationship fields optimize performance
