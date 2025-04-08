@@ -98,10 +98,11 @@ export const glSyncService = {
     connectionId: string, 
     mappingId: string,
     options: {
-      logLevel?: 'minimal' | 'detailed'
+      logLevel?: 'minimal' | 'detailed',
+      onProgress?: (progress: number) => void
     } = {}
   ): Promise<SyncResult | null> {
-    const { logLevel = 'detailed' } = options;
+    const { logLevel = 'detailed', onProgress } = options;
     const timer = logger.timer('syncData');
     
     logger.info(`Syncing data for mapping ${mappingId}`, {
@@ -114,18 +115,33 @@ export const glSyncService = {
         try {
           const { data, error } = await supabase
             .from('gl_mappings')
-            .select('name, glide_table, supabase_table')
+            .select('glide_table, supabase_table, column_mappings')
             .eq('id', mappingId)
             .single();
             
-          if (!error && data && 'name' in data && 'glide_table' in data && 'supabase_table' in data) {
+          if (!error && data) {
             logger.info(`Sync details:`, {
               data: {
-                mappingName: data.name,
                 glideTable: data.glide_table,
-                supabaseTable: data.supabase_table
+                supabaseTable: data.supabase_table,
+                hasMappings: !!data.column_mappings && Object.keys(data.column_mappings).length > 0
               }
             });
+            
+            // Validate column mappings
+            if (!data.column_mappings || typeof data.column_mappings !== 'object') {
+              logger.warn(`Invalid column_mappings format for mapping ${mappingId}`, {
+                data: { mappingId, columnMappings: data.column_mappings }
+              });
+            } else {
+              // Type assertion to access the $rowID property safely
+              const mappings = data.column_mappings as Record<string, any>;
+              if (!mappings.$rowID) {
+                logger.warn(`Missing required $rowID mapping for mapping ${mappingId}`, {
+                  data: { mappingId }
+                });
+              }
+            }
           }
         } catch (err) {
           logger.warn(`Could not fetch mapping details`, { data: err });
@@ -133,56 +149,55 @@ export const glSyncService = {
       }
       
       // Prepare request body
-      const requestBody = {
+      const body = {
         action: 'syncData',
         connectionId,
         mappingId,
         logLevel
       };
       
-      logger.debug(`Sending request to edge function:`, { data: requestBody });
-      
       // Call the edge function
-      const { data, error } = await supabase.functions.invoke('glsync', {
-        body: requestBody
-      });
-
+      const { data, error } = await supabase.functions.invoke('glsync', { body });
+      
       if (error) {
         logger.error(`Error syncing data:`, { data: error });
-        return null;
+        return {
+          success: false,
+          error: error.message || 'Unknown error'
+        };
       }
       
-      // Add timing information to the result
-      const duration = timer.stop({ 
-        message: `Sync completed for mapping ${mappingId}`,
-        level: data?.success ? 'info' : 'warn',
-        data: {
-          success: data?.success,
-          recordsProcessed: data?.recordsProcessed,
-          error: data?.error
+      // Process the response
+      const result = data as SyncResult;
+      
+      if (result.success) {
+        logger.info(`Sync successful`, { 
+          data: { 
+            recordsProcessed: result.recordsProcessed,
+            failedRecords: result.failedRecords || 0
+          } 
+        });
+        
+        // Call onProgress with 100% when done
+        if (onProgress) {
+          onProgress(100);
         }
-      });
-      
-      // Add syncTime to the result if not already present
-      if (data && !data.syncTime) {
-        data.syncTime = duration;
+        
+        return result;
+      } else {
+        logger.error(`Sync failed`, { data: { error: result.error } });
+        return result;
       }
-
-      return data as SyncResult;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error(`Exception in syncData: ${errorMessage}`, { data: err });
       
-      // Return a structured error result
       return {
         success: false,
-        error: errorMessage,
-        syncTime: timer.stop({ 
-          message: `Sync failed for mapping ${mappingId}`,
-          level: 'error',
-          logDuration: false
-        })
+        error: errorMessage
       };
+    } finally {
+      timer.stop();
     }
   },
 
@@ -255,33 +270,43 @@ export const glSyncService = {
   },
 
   /**
+   * Validates relationships to ensure data exists before mapping
+   * @returns A promise that resolves to a validation result object
+   */
+  async validateRelationships(): Promise<{
+    success: boolean;
+    validTables: string[];
+    error?: string;
+  }> {
+    const timer = logger.timer('validateRelationships');
+    logger.info('Validating relationships');
+    
+    try {
+      // This function is deprecated and will be removed in a future version
+      logger.warn('validateRelationships is deprecated and will be removed in a future version');
+      
+      return {
+        success: true,
+        validTables: []
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error(`Exception in validateRelationships: ${errorMessage}`, { data: err });
+      
+      return {
+        success: false,
+        validTables: [],
+        error: errorMessage
+      };
+    } finally {
+      timer.stop();
+    }
+  },
+
+  /**
    * Maps all relationships between tables in the database
    * 
-   * This function calls a database procedure to identify and map relationships between tables
-   * based on the naming convention where foreign keys are stored in columns with the
-   * prefix 'rowid_' that reference the 'glide_row_id' column in target tables.
-   * 
-   * @param options - Configuration options for relationship mapping
-   * @param options.tableFilter - Optional string filter to limit which tables are included in the mapping
-   * @param options.retryCount - Optional number of times to retry failed mappings
-   * @returns A promise that resolves to a mapping result object containing:
-   *   - success: boolean indicating if the operation was successful
-   *   - result: optional result data from the database procedure
-   *   - error: optional error message if the operation failed
-   * 
-   * @example
-   * // Map all relationships
-   * const result = await glSyncService.mapAllRelationships();
-   * 
-   * // Map relationships for specific tables
-   * const result = await glSyncService.mapAllRelationships({ 
-   *   tableFilter: 'gl_invoices' 
-   * });
-   * 
-   * // Map relationships with a retry count
-   * const result = await glSyncService.mapAllRelationships({ 
-   *   retryCount: 3 
-   * });
+   * This function is deprecated and will be removed in a future version
    */
   async mapAllRelationships(options?: {
     tableFilter?: string;
@@ -292,95 +317,12 @@ export const glSyncService = {
     error?: string;
   }> {
     const timer = logger.timer('mapAllRelationships');
-    logger.info(`Mapping all relationships`, { data: options });
+    logger.warn('mapAllRelationships is deprecated and will be removed in a future version');
     
-    try {
-      // First check if there are any valid mappings to process
-      const { data: validationData, error: validationError } = await supabase
-        .from('gl_relationship_mapping_log')
-        .select('count')
-        .eq('status', 'pending');
-      
-      if (validationError) {
-        logger.error(`Error validating pending relationships:`, { data: validationError });
-        return { success: false, error: validationError.message };
-      }
-
-      const pendingCount = validationData?.[0]?.count ?? 0;
-      logger.info(`Found ${pendingCount} pending relationships`);
-      
-      // Call the SQL function to map all relationships
-      const { data, error } = await supabase.rpc('map_all_sb_relationships', {
-        p_table_filter: options?.tableFilter || null
-      });
-
-      if (error) {
-        logger.error(`Error mapping relationships:`, { data: error });
-        return { success: false, error: error.message };
-      }
-
-      logger.info(`Relationship mapping completed successfully`, { data });
-      return { success: true, result: data };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logger.error(`Exception in mapAllRelationships: ${errorMessage}`, { data: err });
-      return { success: false, error: errorMessage };
-    } finally {
-      timer.stop();
-    }
-  },
-
-  /**
-   * Validates relationships to ensure data exists before mapping
-   * @returns A promise that resolves to a validation result object
-   */
-  async validateRelationships(): Promise<{
-    success: boolean;
-    validTables: string[];
-    error?: string;
-  }> {
-    const timer = logger.timer('validateRelationships');
-    logger.info(`Validating relationships`);
-    
-    try {
-      // Get a list of tables with pending relationships
-      const { data, error } = await supabase
-        .from('gl_relationship_mappings')
-        .select('supabase_table, target_table')
-        .eq('enabled', true);
-      
-      if (error) {
-        logger.error(`Error fetching relationship mappings:`, { data: error });
-        return { success: false, validTables: [], error: error.message };
-      }
-
-      // Extract table names from the relationship mappings
-      // Handle the case where data might be null or undefined
-      const sourceTableNames = data?.map(d => d.supabase_table) || [];
-      const targetTableNames = data?.map(d => d.target_table) || [];
-      
-      // Create a unique set of table names
-      const tables = [...new Set([...sourceTableNames, ...targetTableNames])];
-      
-      logger.info(`Found ${tables.length} tables with relationships`);
-
-      // For this implementation, we'll assume all tables in the relationship mappings
-      // are valid. This is a safe assumption since the relationship mappings
-      // are created based on existing tables.
-      const validTables = [...tables];
-      
-      logger.info(`Considering all ${validTables.length} tables as valid for relationship mapping`);
-      return { 
-        success: true, 
-        validTables 
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logger.error(`Exception in validateRelationships: ${errorMessage}`, { data: err });
-      return { success: false, validTables: [], error: errorMessage };
-    } finally {
-      timer.stop();
-    }
+    return {
+      success: true,
+      result: { message: 'Function is deprecated' }
+    };
   },
 
   /**
@@ -962,7 +904,6 @@ export const {
   syncData,
   getColumnMappings,
   validateMapping,
-  mapAllRelationships,
   validateRelationships,
   recordSyncError,
   validateColumnMappings,

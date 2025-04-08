@@ -440,12 +440,6 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
       throw new Error(`Invalid column_mappings format for mapping ${mappingId}. Expected object, got ${typeof columnMappings}`);
     }
     
-    // Check if required $rowID mapping exists
-    if (!columnMappings.$rowID) {
-      console.error('Missing required $rowID mapping:', columnMappings);
-      throw new Error(`Missing required $rowID mapping for mapping ${mappingId}`);
-    }
-    
     // Validate and normalize column mappings
     const validatedMappings = validateAndFixColumnMappings(columnMappings);
     console.log('Validated mappings:', JSON.stringify(validatedMappings, null, 2));
@@ -464,7 +458,11 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         const supabaseRow: Record<string, any> = {};
         
         // Always map glide_row_id
-        supabaseRow.glide_row_id = glideRow.$rowID;
+        if (glideRow.$rowID) {
+          supabaseRow.glide_row_id = glideRow.$rowID;
+        } else {
+          throw new Error('Missing required $rowID in Glide data');
+        }
         
         // Debug: Log the first row structure
         if (transformedRows.length === 0) {
@@ -482,12 +480,6 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
             console.log(`Mapping: ${glideColumnId} -> ${supabase_column_name} (${data_type})`);
             console.log(`Glide value by ID exists: ${glideRow[glideColumnId] !== undefined}`);
             console.log(`Glide value by name exists: ${glideRow[glide_column_name] !== undefined}`);
-            
-            if (glideRow[glideColumnId] !== undefined) {
-              console.log(`Glide value by ID: ${JSON.stringify(glideRow[glideColumnId])}`);
-            } else if (glideRow[glide_column_name] !== undefined) {
-              console.log(`Glide value by name: ${JSON.stringify(glideRow[glide_column_name])}`);
-            }
           }
           
           // Try to get the value using the column ID first, then fall back to the column name
@@ -503,9 +495,20 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
             }
           }
           
+          // If we still don't have a value, try using $rowIndex or other special cases
+          if (glideValue === undefined && glideColumnId === '$rowIndex' && glideRow.$rowIndex !== undefined) {
+            glideValue = glideRow.$rowIndex;
+          }
+          
           if (glideValue !== undefined) {
             try {
               supabaseRow[supabase_column_name] = transformValue(glideValue, data_type);
+              
+              // Special handling for relationship fields (rowid_ fields)
+              if (supabase_column_name.startsWith('rowid_') && typeof supabaseRow[supabase_column_name] === 'string') {
+                // Ensure rowid_ fields are properly formatted
+                supabaseRow[supabase_column_name] = supabaseRow[supabase_column_name].trim();
+              }
             } catch (err: any) {
               const transformError = err instanceof Error ? err : new Error(String(err));
               console.error(`Error transforming value for ${supabase_column_name}:`, {
@@ -526,6 +529,9 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
               // Use null for the value that failed transformation
               supabaseRow[supabase_column_name] = null;
             }
+          } else if (transformedRows.length === 0) {
+            // Log missing values only for the first row to avoid excessive logging
+            console.log(`No value found for ${glideColumnId} or ${glide_column_name}`);
           }
         }
         
@@ -697,22 +703,35 @@ function validateAndFixColumnMappings(columnMappings: Record<string, any>): Reco
   const validatedMappings: Record<string, any> = {};
   
   for (const [glideColumnId, mappingInfo] of Object.entries(columnMappings)) {
-    if (typeof mappingInfo !== 'object') {
+    // Skip non-object mappings
+    if (typeof mappingInfo !== 'object' || mappingInfo === null) {
       console.error(`Invalid mapping format for ${glideColumnId}: ${JSON.stringify(mappingInfo)}`);
       continue;
     }
     
-    const { glide_column_name, supabase_column_name, data_type } = mappingInfo;
+    const { data_type, glide_column_name, supabase_column_name } = mappingInfo;
     
+    // Ensure all required fields are present
     if (!glide_column_name || !supabase_column_name || !data_type) {
       console.error(`Missing required fields for ${glideColumnId}: ${JSON.stringify(mappingInfo)}`);
       continue;
     }
     
+    // Store the validated mapping with all necessary information
     validatedMappings[glideColumnId] = {
       glide_column_name,
       supabase_column_name,
       data_type
+    };
+  }
+  
+  // Ensure $rowID mapping exists
+  if (!validatedMappings.$rowID) {
+    console.warn('No explicit $rowID mapping found, adding default mapping');
+    validatedMappings.$rowID = {
+      glide_column_name: '$rowID',
+      supabase_column_name: 'glide_row_id',
+      data_type: 'string'
     };
   }
   
@@ -724,26 +743,43 @@ function transformValue(value: any, dataType: string): any {
     return null;
   }
   
-  switch (dataType) {
-    case 'string':
-    case 'email-address':
-    case 'image-uri':
-      return String(value);
-    case 'number':
-      return Number(value);
-    case 'boolean':
-      return Boolean(value);
-    case 'date-time':
-      // If it's already a valid date string, return it
-      if (typeof value === 'string' && !isNaN(Date.parse(value))) {
-        return value;
-      }
-      // If it's a number (timestamp), convert to ISO string
-      if (typeof value === 'number') {
-        return new Date(value).toISOString();
-      }
-      return null;
-    default:
-      return String(value);
+  try {
+    switch (dataType.toLowerCase()) {
+      case 'string':
+      case 'email-address':
+      case 'image-uri':
+      case 'text':
+        return String(value);
+      case 'number':
+      case 'integer':
+      case 'decimal':
+      case 'currency':
+        return typeof value === 'string' ? parseFloat(value) : Number(value);
+      case 'boolean':
+        if (typeof value === 'string') {
+          return value.toLowerCase() === 'true' || value === '1';
+        }
+        return Boolean(value);
+      case 'date-time':
+      case 'date':
+      case 'datetime':
+        // If it's already a valid date string, return it
+        if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+          return value;
+        }
+        // If it's a number (timestamp), convert to ISO string
+        if (typeof value === 'number') {
+          return new Date(value).toISOString();
+        }
+        return null;
+      case 'json':
+      case 'object':
+        return typeof value === 'string' ? JSON.parse(value) : value;
+      default:
+        return String(value);
+    }
+  } catch (error) {
+    console.error(`Error transforming value (${dataType}):`, value, error);
+    return null;
   }
 }

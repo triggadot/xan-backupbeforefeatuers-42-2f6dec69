@@ -53,17 +53,30 @@ export function SyncOverview() {
     setSyncingItems(prev => ({ ...prev, [mappingId]: true }));
     
     try {
-      await syncData(connectionId, mappingId);
-      toast({
-        title: "Sync initiated",
-        description: "The sync process has been started successfully.",
+      // Use the improved syncData function with progress tracking
+      const result = await syncData(connectionId, mappingId, {
+        logLevel: 'detailed',
+        onProgress: (progress) => {
+          // Could use progress for a progress bar in the future
+          console.log(`Sync progress: ${progress}%`);
+        }
       });
+      
+      if (result?.success) {
+        toast({
+          title: "Sync initiated",
+          description: `Successfully started sync for ${result.recordsProcessed || 0} records.`,
+        });
+      } else {
+        throw new Error(result?.error || 'Unknown error during sync');
+      }
       
       // Refresh data after a short delay
       setTimeout(() => {
         refreshData();
       }, 2000);
     } catch (error) {
+      console.error('Sync error:', error);
       toast({
         title: "Sync failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
