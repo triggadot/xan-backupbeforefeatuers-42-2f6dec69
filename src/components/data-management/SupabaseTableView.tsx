@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, KeyboardEvent } from "react";
-import { useTableData, TableName } from "@/hooks/useTableData";
+import { useTableData, TableName } from "@/hooks/gl-sync";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -84,7 +84,7 @@ import {
 } from "lucide-react";
 import TableRecordDialog from "./TableRecordDialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/utils/use-toast";
 
 // Define type for general record with ID
 type TableRecord = Record<string, unknown> & { id: string };

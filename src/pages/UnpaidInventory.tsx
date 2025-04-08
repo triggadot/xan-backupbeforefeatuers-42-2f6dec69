@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
-import { RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import UnpaidInventoryList from '@/components/feature/product/UnpaidInventoryList';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
-import { UnpaidProduct } from '@/types/product';
+import { RefreshCw } from 'lucide-react';
+import { UnpaidInventoryList } from '@/components/products/UnpaidInventoryList';
+import { useToast } from '@/hooks/utils/use-toast';
+import { UnpaidProduct } from '@/types/products';
+import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
+import { AmountDisplay } from '@/components/shared/AmountDisplay';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 const UnpaidInventory: React.FC = () => {
   const { unpaidInventory, isLoading, error, refreshDashboard } = useBusinessDashboard();

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { useInvoiceDetail } from '@/hooks/useInvoiceDetail';
+import { useInvoiceDetail } from '@/hooks/invoices';
 import { InvoiceDetailView } from '@/components/new/invoices';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 

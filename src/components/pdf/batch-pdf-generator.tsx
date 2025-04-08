@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, FileText, CheckCircle, AlertCircle, Download } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { 
   createBatchPDFJob, 
   startBatchPDFJob, 

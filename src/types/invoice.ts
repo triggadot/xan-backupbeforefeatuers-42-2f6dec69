@@ -125,6 +125,10 @@ export interface UpdateInvoiceInput {
   tax_rate?: number; // New field
 }
 
+export interface InvoiceWithAccount extends Invoice {
+  account?: GlAccount;
+}
+
 export interface InvoiceListItem {
   id: string;
   invoiceNumber: string;

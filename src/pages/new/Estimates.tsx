@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEstimates } from '@/hooks/useEstimates';
+import { useEstimates } from '@/hooks/estimates';
 import { EstimateWithDetails, EstimateFilters } from '@/types/estimate';
 import { EstimateList, EstimateStats } from '@/components/new/estimates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, RefreshCw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const Estimates = () => {

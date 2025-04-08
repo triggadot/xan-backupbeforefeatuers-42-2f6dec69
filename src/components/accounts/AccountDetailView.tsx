@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Mail, Phone, AlertCircle, DollarSign, FileText, PackageOpen, Calendar, User } from 'lucide-react';
-import { useAccount } from '@/hooks/useAccount';
+import { useAccountDetail } from '@/hooks/accounts/useAccountDetail';
 import { formatCurrency } from '@/utils/format-utils';
 import { EntityDetailLayout } from '@/components/common/EntityDetailLayout';
 import { DetailCard } from '@/components/common/DetailCard';
@@ -21,7 +21,7 @@ interface AccountDetailViewProps {
 const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { account, relatedData, isLoading, error } = useAccount(id || '');
+  const { account, relatedData, isLoading, error } = useAccountDetail(id || '');
   const [editMode, setEditMode] = useState<boolean>(isEditing);
   
   // Set edit mode based on prop changes

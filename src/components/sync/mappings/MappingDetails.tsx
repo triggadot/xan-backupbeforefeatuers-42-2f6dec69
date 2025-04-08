@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { GlMapping } from '@/types/glsync';
 import { ColumnMappingsView } from './ColumnMappingsView';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { SyncErrorsView } from './SyncErrorsView';
 import { SyncLogsView } from './SyncLogsView';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/hooks/utils/use-is-mobile';
 import { motion } from 'framer-motion';
-import { useGlSync } from '@/hooks/useGlSync';
+import { useGlSync } from '@/hooks/gl-sync';
 
 interface MappingDetailsProps {
   mapping?: GlMapping;

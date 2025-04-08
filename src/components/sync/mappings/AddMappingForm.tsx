@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { GlColumnMapping } from '@/types/glsync';
 import { convertToDbMapping, getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
-import { useGlSync } from '@/hooks/useGlSync';
+import { useGlSync } from '@/hooks/gl-sync';
 
 interface AddMappingFormProps {
   onSuccess?: () => Promise<void>;

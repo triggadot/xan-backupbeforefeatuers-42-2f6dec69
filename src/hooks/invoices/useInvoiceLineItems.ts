@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { InvoiceLineItem } from '@/types/invoice';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 export function useInvoiceLineItems() {
   const [isLoading, setIsLoading] = useState(false);

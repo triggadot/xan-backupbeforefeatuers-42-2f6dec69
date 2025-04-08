@@ -8,7 +8,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useRealtimeSyncLogs } from '@/hooks/useRealtimeSyncLogs';
+import { useRealtimeSyncLogs } from '@/hooks/gl-sync/useRealtimeSyncLogs';
 import { SyncLogTable } from './ui/SyncLogTable';
 import { RefreshCw } from 'lucide-react';
 import { SyncLogFilter } from '@/types/syncLog';

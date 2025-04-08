@@ -9,7 +9,7 @@ import ConnectionCard from './ConnectionCard';
 import AddConnectionDialog from './AddConnectionDialog';
 import EditConnectionDialog from './EditConnectionDialog';
 import DeleteConnectionDialog from './DeleteConnectionDialog';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 const ConnectionsList: React.FC = () => {
   const [connections, setConnections] = useState<GlConnection[]>([]);

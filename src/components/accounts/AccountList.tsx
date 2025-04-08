@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -13,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/utils/format-utils';
-import { Account } from '@/types/accountNew';
+import { Account } from '@/types/accounts';
 
 interface AccountListProps {
   accounts: Account[];

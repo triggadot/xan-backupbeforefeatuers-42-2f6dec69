@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Database, RefreshCw, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { SyncOverview } from './overview/SyncOverview';
 import { SyncDock } from './SyncDock';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
+import { useIsMobile } from '@/hooks/utils/use-is-mobile';
+import { useGlSync } from '@/hooks/gl-sync';
+import { useRealtimeMappings } from '@/hooks/mappings/useRealtimeMappings';
 import { MappingsList } from './mappings/MappingsList';
 import { SyncLogsView } from './mappings/SyncLogsView';
 import { SyncErrorsView } from './mappings/SyncErrorsView';
@@ -20,8 +20,8 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { AnimatePresence } from 'framer-motion';
 import { SyncDetailTable } from './SyncDetailTable';
-import { TableName } from '@/hooks/useTableData';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
+import { TableName } from '@/hooks/gl-sync';
+import { useGlSyncStatus } from '@/hooks/gl-sync';
 
 // Table metadata for display purposes
 const TABLE_INFO: Record<string, { displayName: string; description: string }> = {

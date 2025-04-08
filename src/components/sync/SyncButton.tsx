@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useGlSync } from '@/hooks/useGlSync';
+import { useToast } from '@/hooks/utils/use-toast';
+import { useGlSync } from '@/hooks/gl-sync';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

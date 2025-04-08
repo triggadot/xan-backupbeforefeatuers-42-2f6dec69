@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
 import { EstimateWithDetails } from '@/types/estimate';
 

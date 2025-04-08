@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { InvoiceWithAccount, InvoiceStatus } from '@/types/new/invoice';
+import { useToast } from '@/hooks/utils/use-toast';
+import { InvoiceWithAccount } from '@/types/new/invoice';
 import { format } from 'date-fns'; // Added import for format from date-fns
 
 interface InvoiceListProps {
@@ -172,9 +172,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading }) => {
               <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.total_amount)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <span className={`inline-flex items-center gap-1.5 py-0.5 px-2 rounded-full text-xs font-medium ${
-                  invoice.payment_status?.toLowerCase() === InvoiceStatus.PAID.toLowerCase() ? 'bg-green-100 text-green-800' :
-                  invoice.payment_status?.toLowerCase() === InvoiceStatus.PENDING.toLowerCase() ? 'bg-yellow-100 text-yellow-800' :
-                  invoice.payment_status?.toLowerCase() === InvoiceStatus.OVERDUE.toLowerCase() ? 'bg-red-100 text-red-800' :
+                  invoice.payment_status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' :
+                  invoice.payment_status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  invoice.payment_status?.toLowerCase() === 'overdue' ? 'bg-red-100 text-red-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
                   {invoice.payment_status || 'Draft'}

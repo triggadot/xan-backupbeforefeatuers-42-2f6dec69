@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useIsMobile } from '@/hooks/use-is-mobile'; // Fix import path
+import { useGlSyncStatus } from '@/hooks/gl-sync'; // Updated import path
+import { useGlSync } from '@/hooks/gl-sync';
+import { useIsMobile } from '@/hooks/utils/use-is-mobile'; // Updated import path
 import { SyncStatusBadge } from '../ui/SyncStatusBadge';
 import { GlSyncStatus } from '@/types/glsync';
 import { debounce } from '@/utils/debounce-utils'; // Fix import path
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { RefreshCw, ExternalLink, AlertCircle, CheckCircle2, XCircle, Loader2, Database, Info, BarChart2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActiveMappingCard } from './ActiveMappingCard';

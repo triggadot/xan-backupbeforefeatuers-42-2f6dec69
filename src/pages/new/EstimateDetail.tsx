@@ -1,8 +1,8 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useEstimateDetail } from '@/hooks/useEstimateDetail';
+import { useEstimateDetail } from '@/hooks/estimates';
 import { EstimateDetailView } from '@/components/new/estimates';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 const EstimateDetail = () => {
   const { id } = useParams<{ id: string }>();

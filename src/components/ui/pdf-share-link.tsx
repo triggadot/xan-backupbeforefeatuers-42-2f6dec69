@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Share2, Copy, Check, Mail } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 interface PDFShareLinkProps {
   pdfUrl: string | null;

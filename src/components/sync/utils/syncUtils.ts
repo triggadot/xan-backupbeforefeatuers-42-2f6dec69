@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { TableName } from '@/hooks/useTableData';
+import { TableName } from '@/hooks/gl-sync';
 import { Mapping } from '@/types/syncLog';
 
 /**

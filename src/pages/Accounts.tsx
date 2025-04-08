@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, RefreshCw, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,15 +8,17 @@ import {
   DialogTitle 
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useQueryClient } from '@tanstack/react-query';
 import AccountCardList from '@/components/accounts/AccountCardList';
 import AccountForm from '@/components/accounts/AccountForm';
-import { useAccountsNew } from '@/hooks/useAccountsNew';
+import { useFetchAccounts, useAccountMutation } from '@/hooks/accounts';
 import { Account, AccountFormData } from '@/types/accounts';
 
 const Accounts: React.FC = () => {
-  const { accounts, isLoading, error, fetchAccounts, addAccount } = useAccountsNew();
+  const queryClient = useQueryClient();
+  const { accounts = [], isLoading, error } = useFetchAccounts();
+  const { createAccount, isCreating } = useAccountMutation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAccounts = accounts.filter(account => 
@@ -27,23 +28,19 @@ const Accounts: React.FC = () => {
   );
 
   const handleAddAccount = async (data: AccountFormData) => {
-    setIsSubmitting(true);
-    try {
-      await addAccount({
-        name: data.name,
-        type: data.type,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        website: data.website,
-        notes: data.notes,
-        status: 'active',
-        balance: 0,
-      });
-      setIsCreateDialogOpen(false);
-    } finally {
-      setIsSubmitting(false);
-    }
+    createAccount({
+      account_name: data.name,
+      client_type: data.type,
+      email_of_who_added: data.email,
+      phone: data.phone,
+      address: data.address,
+      website: data.website,
+      notes: data.notes,
+      status: 'active',
+      balance: 0,
+      accounts_uid: `${data.type}_${Date.now()}`,
+    });
+    setIsCreateDialogOpen(false);
   };
 
   return (
@@ -64,7 +61,7 @@ const Accounts: React.FC = () => {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={() => fetchAccounts()}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['accounts'] })}
             disabled={isLoading}
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
@@ -88,7 +85,7 @@ const Accounts: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Create New Account</DialogTitle>
           </DialogHeader>
-          <AccountForm onSubmit={handleAddAccount} isSubmitting={isSubmitting} />
+          <AccountForm onSubmit={handleAddAccount} isSubmitting={isCreating} />
         </DialogContent>
       </Dialog>
     </div>

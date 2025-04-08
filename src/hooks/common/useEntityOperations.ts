@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { SupabaseTableName } from '@/utils/supabase';
+import { SupabaseTableName } from '@/types/supabase';
 
 // Generic hook for basic CRUD operations on any entity
 export function useEntityOperations<T extends { id: string }>(tableName: SupabaseTableName) {

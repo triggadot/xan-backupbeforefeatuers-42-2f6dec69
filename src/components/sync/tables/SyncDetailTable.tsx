@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useTableData, TableName } from "@/hooks/useTableData";
+import { useTableData, TableName } from "@/hooks/gl-sync";
 import { TABLE_INFO } from "./utils/syncUtils";
 import {
   Table,

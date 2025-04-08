@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useSupabaseTables } from '@/hooks/useSupabaseTables';
+import { useSupabaseTables } from '@/hooks/gl-sync/useSupabaseTables';
 import { Table } from 'lucide-react';
 
 interface EditTableButtonProps {

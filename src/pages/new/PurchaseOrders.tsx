@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePurchaseOrdersNew } from '@/hooks/usePurchaseOrdersNew';
+import { usePurchaseOrders } from '@/hooks/purchase-orders';
 import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
 import PurchaseOrderList from '@/components/new/purchase-orders/purchase-order-list';
 import PurchaseOrderStats from '@/components/new/purchase-orders/purchase-order-stats';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, RefreshCw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const PurchaseOrders = () => {
@@ -16,7 +16,7 @@ const PurchaseOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<PurchaseOrderFilters>({});
   
-  const { purchaseOrders, isLoading, error, fetchPurchaseOrders } = usePurchaseOrdersNew(filters);
+  const { purchaseOrders, isLoading, error, fetchPurchaseOrders } = usePurchaseOrders(filters);
 
   const filteredPurchaseOrders = purchaseOrders.filter(po =>
     (po.vendor?.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 

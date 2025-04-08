@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { 
   addCustomerCredit as addCustomerCreditService, 
   updateCustomerCredit as updateCustomerCreditService, 

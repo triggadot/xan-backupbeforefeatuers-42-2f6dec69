@@ -1,78 +1,102 @@
 import { Card, Grid, Metric, Text, AreaChart, DonutChart } from '@tremor/react';
-import { InvoiceStatus } from '@/types/Invoice';
 import { formatCurrency } from '@/lib/utils';
+import { InvoiceWithAccount } from '@/types/invoice';
+import { useMemo } from 'react';
 
-// Sample data - replace with actual data from your API
-const invoiceData = [
-  {
-    month: 'Jan',
-    Paid: 4500,
-    Pending: 1500,
-    Overdue: 500,
-  },
-  {
-    month: 'Feb',
-    Paid: 5500,
-    Pending: 1800,
-    Overdue: 300,
-  },
-  {
-    month: 'Mar',
-    Paid: 6000,
-    Pending: 2200,
-    Overdue: 800,
-  },
-  {
-    month: 'Apr',
-    Paid: 7200,
-    Pending: 1400,
-    Overdue: 600,
-  },
-  {
-    month: 'May',
-    Paid: 8100,
-    Pending: 1900,
-    Overdue: 400,
-  },
-  {
-    month: 'Jun',
-    Paid: 9000,
-    Pending: 2100,
-    Overdue: 300,
-  },
-];
+interface InvoiceStatsProps {
+  invoices: InvoiceWithAccount[];
+}
 
-const statusData = [
-  { name: 'Paid', value: 65, color: 'emerald' },
-  { name: 'Pending', value: 25, color: 'amber' },
-  { name: 'Overdue', value: 10, color: 'rose' },
-];
+const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices }) => {
+  // Calculate metrics based on invoice balance
+  const metrics = useMemo(() => {
+    const totalInvoiced = invoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+    
+    const paidInvoices = invoices.filter(invoice => (invoice.balance || 0) <= 0 && (invoice.total_amount || 0) > 0);
+    const totalPaid = paidInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+    
+    const pendingInvoices = invoices.filter(invoice => (invoice.balance || 0) > 0);
+    const totalPending = pendingInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+    
+    const overdueInvoices = invoices.filter(invoice => 
+      (invoice.balance || 0) > 0 && invoice.due_date && new Date(invoice.due_date) < new Date()
+    );
+    const totalOverdue = overdueInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
-const InvoiceStats = () => {
-  // In a real app, you would fetch this data from your API
-  const totalInvoiced = 42500;
-  const totalPaid = 32000;
-  const totalPending = 8500;
-  const totalOverdue = 2000;
+    // Calculate percentages for the donut chart
+    const paidPercentage = Math.round((paidInvoices.length / (invoices.length || 1)) * 100);
+    const pendingPercentage = Math.round((pendingInvoices.length / (invoices.length || 1)) * 100);
+    const overduePercentage = Math.round((overdueInvoices.length / (invoices.length || 1)) * 100);
+
+    return {
+      totalInvoiced,
+      totalPaid,
+      totalPending,
+      totalOverdue,
+      statusData: [
+        { name: 'Paid', value: paidPercentage, color: 'emerald' },
+        { name: 'Pending', value: pendingPercentage, color: 'amber' },
+        { name: 'Overdue', value: overduePercentage, color: 'rose' },
+      ]
+    };
+  }, [invoices]);
+
+  // Group invoices by month for the area chart
+  const chartData = useMemo(() => {
+    const monthlyData = new Map();
+    const today = new Date();
+    
+    // Create entries for the last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthKey = date.toLocaleString('default', { month: 'short' });
+      monthlyData.set(monthKey, { month: monthKey, Paid: 0, Pending: 0, Overdue: 0 });
+    }
+    
+    // Populate with actual invoice data
+    invoices.forEach(invoice => {
+      if (!invoice.created_at) return;
+      
+      const invoiceDate = new Date(invoice.created_at);
+      const monthKey = invoiceDate.toLocaleString('default', { month: 'short' });
+      
+      // Only include invoices from the last 6 months
+      if (monthlyData.has(monthKey)) {
+        const monthData = monthlyData.get(monthKey);
+        
+        if ((invoice.balance || 0) <= 0 && (invoice.total_amount || 0) > 0) {
+          monthData.Paid += (invoice.total_amount || 0);
+        } else if ((invoice.balance || 0) > 0) {
+          if (invoice.due_date && new Date(invoice.due_date) < today) {
+            monthData.Overdue += (invoice.total_amount || 0);
+          } else {
+            monthData.Pending += (invoice.total_amount || 0);
+          }
+        }
+      }
+    });
+    
+    return Array.from(monthlyData.values());
+  }, [invoices]);
 
   return (
     <div className="space-y-6">
       <Grid numItemsMd={2} numItemsLg={4} className="gap-6">
         <Card decoration="top" decorationColor="emerald">
           <Text>Total Invoiced</Text>
-          <Metric>{formatCurrency(totalInvoiced)}</Metric>
+          <Metric>{formatCurrency(metrics.totalInvoiced)}</Metric>
         </Card>
         <Card decoration="top" decorationColor="emerald">
           <Text>Total Paid</Text>
-          <Metric>{formatCurrency(totalPaid)}</Metric>
+          <Metric>{formatCurrency(metrics.totalPaid)}</Metric>
         </Card>
         <Card decoration="top" decorationColor="amber">
           <Text>Pending</Text>
-          <Metric>{formatCurrency(totalPending)}</Metric>
+          <Metric>{formatCurrency(metrics.totalPending)}</Metric>
         </Card>
         <Card decoration="top" decorationColor="rose">
           <Text>Overdue</Text>
-          <Metric>{formatCurrency(totalOverdue)}</Metric>
+          <Metric>{formatCurrency(metrics.totalOverdue)}</Metric>
         </Card>
       </Grid>
 
@@ -81,7 +105,7 @@ const InvoiceStats = () => {
           <Text className="mb-4">Invoice Trends (Last 6 Months)</Text>
           <AreaChart
             className="h-72"
-            data={invoiceData}
+            data={chartData}
             index="month"
             categories={["Paid", "Pending", "Overdue"]}
             colors={["emerald", "amber", "rose"]}
@@ -94,7 +118,7 @@ const InvoiceStats = () => {
           <Text className="mb-4">Invoice Status Distribution</Text>
           <DonutChart
             className="h-72"
-            data={statusData}
+            data={metrics.statusData}
             category="value"
             index="name"
             colors={["emerald", "amber", "rose"]}

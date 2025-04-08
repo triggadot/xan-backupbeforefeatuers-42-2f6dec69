@@ -9,7 +9,7 @@ import {
   X, Loader2, ExternalLink, Key, Server 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { 
   Dialog,
   DialogContent,

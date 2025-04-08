@@ -21,7 +21,7 @@ import {
   Legend
 } from '@tremor/react';
 import { Package, Gift, Calendar, DollarSign, ShoppingBag, User } from 'lucide-react';
-import { UnpaidProduct } from '@/types/product';
+import { UnpaidProduct } from '@/types/products';
 import { Link } from 'react-router-dom';
 
 interface UnpaidInventoryCardProps {

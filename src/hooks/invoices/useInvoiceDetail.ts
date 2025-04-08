@@ -1,164 +1,176 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice, InvoiceWithDetails, InvoiceLineItem, InvoicePayment } from '@/types/invoice';
-import { 
-  InvoiceRow,
-  hasProperty, 
-  asNumber,
-  asDate,
-  parseJsonIfString,
-  asString
-} from '@/types/supabase';
+import { Invoice, InvoiceLine, InvoiceWithAccount } from '@/types/invoice';
 
-export function useInvoiceDetail() {
-  const [isLoading, setIsLoading] = useState(false);
+interface UseInvoiceDetailReturn {
+  invoice: InvoiceWithAccount | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Fetches details for a single invoice, including its line items and account information.
+ * @param invoiceId - The ID (UUID) or glide_row_id of the invoice to fetch.
+ */
+export function useInvoiceDetail(invoiceId: string | undefined): UseInvoiceDetailReturn {
+  const [invoice, setInvoice] = useState<InvoiceWithAccount | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getInvoice = async (id: string): Promise<InvoiceWithDetails | null> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Refresh the materialized view
-      await supabase.rpc('refresh_materialized_view_secure', {
-        view_name: 'mv_invoice_customer_details'
-      });
-      
-      // Fetch from the materialized view
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('mv_invoice_customer_details')
-        .select('*')
-        .eq('glide_row_id', id)
-        .single();
-        
-      if (invoiceError) throw invoiceError;
-      
-      if (!invoiceData) {
-        throw new Error(`Invoice with ID ${id} not found`);
-      }
-
-      const invoice = invoiceData as InvoiceRow;
-      
-      // Safely handle customer data
-      let customerName = 'Unknown Customer';
-      let customerData = undefined;
-      
-      if (invoice.customer) {
-        // If it's a string (JSON), parse it
-        const customerObj = parseJsonIfString<Record<string, unknown>>(invoice.customer);
-          
-        customerData = customerObj;
-        
-        if (customerObj && hasProperty(customerObj, 'account_name')) {
-          customerName = asString(customerObj.account_name) || 'Unknown Customer';
-        }
-      }
-      
-      // Fetch line items and payments
-      const { data: lineItems, error: lineItemsError } = await supabase
-        .from('gl_invoice_lines')
-        .select(`
-          *,
-          product:rowid_products(*)
-        `)
-        .eq('rowid_invoices', id);
-        
-      if (lineItemsError) throw lineItemsError;
-      
-      const { data: payments, error: paymentsError } = await supabase
-        .from('gl_customer_payments')
-        .select('*')
-        .eq('rowid_invoices', id);
-        
-      if (paymentsError) throw paymentsError;
-      
-      // Format line items and payments
-      const formattedLineItems: InvoiceLineItem[] = lineItems.map(item => ({
-        id: String(item.id || ''),
-        invoiceId: String(item.rowid_invoices || ''),
-        productId: String(item.rowid_products || ''),
-        description: String(item.renamed_product_name || ''),
-        productName: String(item.renamed_product_name || 'Unnamed Product'),
-        quantity: asNumber(item.qty_sold || 0),
-        unitPrice: asNumber(item.selling_price || 0),
-        total: asNumber(item.line_total || 0),
-        notes: String(item.product_sale_note || ''),
-        createdAt: asDate(item.created_at) || new Date(),
-        updatedAt: asDate(item.updated_at) || new Date(),
-        productDetails: item.product || undefined
-      }));
-      
-      const formattedPayments: InvoicePayment[] = payments.map(payment => ({
-        id: String(payment.id || ''),
-        invoiceId: String(payment.rowid_invoices || ''),
-        accountId: String(payment.rowid_accounts || ''),
-        date: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
-        amount: asNumber(payment.payment_amount || 0),
-        paymentMethod: String(payment.type_of_payment || 'Payment'),
-        notes: String(payment.payment_note || ''),
-        paymentDate: asDate(payment.date_of_payment) || asDate(payment.created_at) || new Date(),
-        createdAt: asDate(payment.created_at) || new Date(),
-        updatedAt: asDate(payment.updated_at) || new Date()
-      }));
-      
-      // Calculate subtotal
-      const subtotal = formattedLineItems.reduce((sum, item) => sum + item.total, 0);
-      
-      // Use actual due_date or calculate it (30 days after invoice date)
-      const invoiceDate = asDate(invoice.invoice_order_date) || asDate(invoice.created_at) || new Date();
-      
-      const dueDate = asDate(invoice.due_date) || 
-        new Date(invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      // Ensure status is one of the valid types
-      let status = String(invoice.payment_status || 'draft');
-      if (!['draft', 'sent', 'paid', 'partial', 'overdue'].includes(status)) {
-        status = 'draft';
-      }
-      
-      // Calculate amount paid
-      const amountPaid = formattedPayments.reduce((sum, payment) => sum + payment.amount, 0);
-      
-      return {
-        id: String(invoice.glide_row_id || ''),
-        glide_row_id: String(invoice.glide_row_id || ''),
-        invoiceNumber: String(invoice.glide_row_id || ''),
-        customerId: String(invoice.rowid_accounts || ''),
-        customerName: customerName,
-        invoiceDate: invoiceDate,
-        dueDate: dueDate,
-        status: status as 'draft' | 'sent' | 'paid' | 'partial' | 'overdue',
-        total_amount: asNumber(invoice.total_amount || 0),
-        total_paid: asNumber(invoice.total_paid || 0),
-        balance: asNumber(invoice.balance || 0),
-        lineItems: formattedLineItems,
-        payments: formattedPayments,
-        account: customerData,
-        total: subtotal,
-        subtotal: subtotal,
-        amountPaid: amountPaid,
-        notes: String(invoice.notes || ''),
-        tax_rate: asNumber(invoice.tax_rate || 0),
-        tax_amount: asNumber(invoice.tax_amount || 0),
-        created_at: String(invoice.created_at || ''),
-        updated_at: String(invoice.updated_at || ''),
-        createdAt: asDate(invoice.created_at) || new Date(),
-        updatedAt: asDate(invoice.updated_at) || undefined
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching invoice';
-      setError(errorMessage);
-      console.error('Error fetching invoice:', err);
-      return null;
-    } finally {
+  useEffect(() => {
+    if (!invoiceId) {
       setIsLoading(false);
+      setError("Invoice ID is required.");
+      setInvoice(null);
+      return;
     }
-  };
 
-  return {
-    getInvoice,
-    isLoading,
-    error
-  };
+    const fetchInvoiceDetail = async () => {
+      setIsLoading(true);
+      setError(null);
+      setInvoice(null);
+
+      try {
+        // Try to fetch invoice by id first
+        let { data: invoiceData, error: invoiceError } = await supabase
+          .from('gl_invoices')
+          .select('*')
+          .eq('id', invoiceId)
+          .single();
+
+        // If not found by id, try by glide_row_id
+        if (!invoiceData && invoiceError) {
+          const { data, error } = await supabase
+            .from('gl_invoices')
+            .select('*')
+            .eq('glide_row_id', invoiceId)
+            .single();
+          
+          invoiceData = data;
+          invoiceError = error;
+        }
+
+        if (invoiceError || !invoiceData) {
+          throw new Error(invoiceError?.message || 'Invoice not found.');
+        }
+
+        // Log the invoice for debugging
+        console.log("Found invoice:", invoiceData);
+
+        // Initialize invoice with empty lines array
+        const invoiceWithDetails: InvoiceWithAccount = {
+          ...invoiceData,
+          total_amount: Number(invoiceData.total_amount) || 0,
+          total_paid: Number(invoiceData.total_paid) || 0,
+          balance: Number(invoiceData.balance) || 0,
+          tax_rate: Number(invoiceData.tax_rate) || 0,
+          tax_amount: Number(invoiceData.tax_amount) || 0,
+          lines: [],
+          account: undefined
+        };
+
+        // Fetch all products to get their display_name
+        const { data: productsData, error: productsError } = await supabase
+          .from('gl_products')
+          .select('*');
+
+        if (productsError) {
+          console.error('Error fetching products:', productsError);
+          // Continue without product data
+        }
+
+        // Create lookup map for products by glide_row_id
+        const productsMap = new Map();
+        if (productsData) {
+          productsData.forEach((product: any) => {
+            productsMap.set(product.glide_row_id, {
+              display_name: product.vendor_product_name || product.main_new_product_name || product.main_vendor_product_name || 'Unknown Product',
+              id: product.id,
+              glide_row_id: product.glide_row_id
+            });
+          });
+        }
+
+        // Fetch invoice line items using glide_row_id relationship
+        const { data: linesData, error: linesError } = await supabase
+          .from('gl_invoice_lines')
+          .select('*')
+          .eq('rowid_invoices', invoiceData.glide_row_id);
+
+        if (linesError) {
+          console.error('Error fetching invoice lines:', linesError);
+          // We'll still proceed with the invoice, just without line items
+        } else if (linesData && linesData.length > 0) {
+          console.log("Found invoice lines:", linesData);
+          // Transform and add line items to the invoice
+          invoiceWithDetails.lines = linesData.map((line: any) => {
+            // Get product data if available
+            const product = line.rowid_products ? productsMap.get(line.rowid_products) : null;
+            
+            // Use renamed_product_name if available, otherwise fall back to product display_name
+            const productName = line.renamed_product_name || (product ? product.display_name : 'Unknown Product');
+            
+            return {
+              id: line.id,
+              glide_row_id: line.glide_row_id,
+              renamed_product_name: line.renamed_product_name,
+              display_name: productName, // Add a display_name field with the appropriate product name
+              date_of_sale: line.date_of_sale,
+              rowid_invoices: line.rowid_invoices,
+              rowid_products: line.rowid_products,
+              qty_sold: Number(line.qty_sold) || 0,
+              selling_price: Number(line.selling_price) || 0,
+              product_sale_note: line.product_sale_note,
+              user_email_of_added: line.user_email_of_added,
+              created_at: line.created_at,
+              updated_at: line.updated_at,
+              line_total: Number(line.line_total) || 0,
+              // Store the associated product if available
+              product: product || undefined
+            };
+          });
+        }
+
+        // Fetch account information if rowid_accounts is available
+        if (invoiceData.rowid_accounts) {
+          const { data: accountData, error: accountError } = await supabase
+            .from('gl_accounts')
+            .select('*')
+            .eq('glide_row_id', invoiceData.rowid_accounts)
+            .single();
+
+          if (accountError) {
+            console.error('Error fetching account:', accountError);
+            // We'll still proceed with the invoice, just without account info
+          } else if (accountData) {
+            console.log("Found account:", accountData);
+            // Add account info to the invoice
+            invoiceWithDetails.account = {
+              id: accountData.id,
+              glide_row_id: accountData.glide_row_id,
+              account_name: accountData.account_name,
+              email_of_who_added: accountData.email_of_who_added,
+              client_type: accountData.client_type,
+              accounts_uid: accountData.accounts_uid,
+              balance: Number(accountData.balance) || 0,
+              created_at: accountData.created_at,
+              updated_at: accountData.updated_at
+            };
+          }
+        }
+
+        // Set the complete invoice with all details
+        setInvoice(invoiceWithDetails);
+      } catch (err: any) {
+        console.error('Error fetching invoice details:', err);
+        setError(err.message || 'Failed to fetch invoice details.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInvoiceDetail();
+  }, [invoiceId]);
+
+  return { invoice, isLoading, error };
 }

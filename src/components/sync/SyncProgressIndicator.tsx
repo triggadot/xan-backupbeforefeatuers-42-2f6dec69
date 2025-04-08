@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
+import { useGlSyncStatus } from '@/hooks/gl-sync';
 import { SyncButton } from './SyncButton';
 
 interface SyncProgressIndicatorProps {

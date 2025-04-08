@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
+import { useBusinessDashboard } from '@/hooks/dashboard';
 import { Button } from '@/components/ui/button';
 import { 
   Grid, 
@@ -38,13 +38,13 @@ export default function ModernDashboard() {
     unpaidInventory,
     isLoading, 
     error, 
-    refreshDashboard 
+    fetchDashboardData 
   } = useBusinessDashboard();
 
   // Fetch dashboard data on component mount
   useEffect(() => {
-    refreshDashboard();
-  }, [refreshDashboard]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   return (
     <div className="container py-8 space-y-8">
@@ -57,7 +57,7 @@ export default function ModernDashboard() {
           </p>
         </div>
         <Button 
-          onClick={refreshDashboard} 
+          onClick={fetchDashboardData} 
           variant="outline" 
           className="flex items-center gap-2"
           disabled={isLoading}
@@ -76,7 +76,7 @@ export default function ModernDashboard() {
               <Text>{error}</Text>
             </div>
             <Button 
-              onClick={refreshDashboard} 
+              onClick={fetchDashboardData} 
               variant="outline" 
               className="flex items-center gap-2"
             >

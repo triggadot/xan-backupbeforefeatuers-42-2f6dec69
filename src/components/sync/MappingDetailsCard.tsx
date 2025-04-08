@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { GlMapping, GlSyncStatus } from '@/types/glsync';
 import { ArrowRightLeft, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncValidation } from '@/hooks/useGlSyncValidation';
+import { useGlSync } from '@/hooks/gl-sync';
+import { useGlSyncValidation } from '@/hooks/gl-sync';
 import { SyncStatusDisplay, ValidationDisplay, ValidationResult } from './ui/StatusDisplay';
 
 export interface MappingDetailsCardProps {

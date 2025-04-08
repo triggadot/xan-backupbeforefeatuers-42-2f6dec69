@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils/use-mobile';
 import { navigationConfig } from './navigationConfig';
 import {
   Sidebar,

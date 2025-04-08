@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { MappingsList } from '@/components/sync/mappings/MappingsList';
 import { GlMapping } from '@/types/glsync';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollAnimation } from '@/components/ui/scroll-animation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';

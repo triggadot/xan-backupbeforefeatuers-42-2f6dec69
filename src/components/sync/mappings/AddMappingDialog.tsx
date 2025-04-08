@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -12,10 +11,10 @@ import GlideTableSelector from '@/components/sync/GlideTableSelector';
 import { ConnectionSelect } from './ConnectionSelect';
 import { SupabaseTableSelect } from './SupabaseTableSelect';
 import { SyncDirectionSelect } from './SyncDirectionSelect';
-import { useConnections } from '@/hooks/useConnections';
-import { useSupabaseTables } from '@/hooks/useSupabaseTables';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useAddMapping } from '@/hooks/useAddMapping';
+import { useConnections } from '@/hooks/connections/useConnections';
+import { useSupabaseTables } from '@/hooks/gl-sync/useSupabaseTables';
+import { useGlSync } from '@/hooks/gl-sync';
+import { useAddMapping } from '@/hooks/mappings/useAddMapping';
 import { GlConnection } from '@/types/glsync';
 
 interface AddMappingDialogProps {

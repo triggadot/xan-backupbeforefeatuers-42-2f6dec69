@@ -1,17 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, DownloadIcon, SearchIcon } from 'lucide-react';
-import { InvoiceStatus } from '@/types/new/invoice';
 import InvoiceList from '@/components/new/invoices/invoice-list';
-import { useToast } from '@/hooks/use-toast';
+import InvoiceStats from '@/components/new/invoices/invoice-stats';
+import { useToast } from '@/hooks/utils/use-toast';
 import { formatCurrency } from '@/lib/utils';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useInvoices } from '@/hooks/invoices';
 
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const { toast } = useToast();
-  const { invoices, isLoading } = useInvoices();
+  const { invoices, isLoading, error } = useInvoices();
+
+  // Show error toast if there's an error from the hook
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load invoices',
+        variant: 'destructive',
+      });
+      console.error('Error loading invoices:', error);
+    }
+  }, [error, toast]);
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch = 
@@ -36,20 +48,22 @@ const Invoices = () => {
 
   const statusOptions = [
     { value: 'all', label: 'All Invoices' },
-    { value: InvoiceStatus.DRAFT, label: 'Drafts' },
-    { value: InvoiceStatus.PENDING, label: 'Pending' },
-    { value: InvoiceStatus.PAID, label: 'Paid' },
-    { value: InvoiceStatus.OVERDUE, label: 'Overdue' },
+    { value: 'draft', label: 'Drafts' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'overdue', label: 'Overdue' },
   ];
 
   // Calculate summary metrics
   const totalInvoiced = invoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  const totalPaid = invoices.reduce((sum, invoice) => sum + (invoice.total_paid || 0), 0);
+  const totalPaid = invoices
+    .filter(invoice => (invoice.balance || 0) <= 0 && (invoice.total_amount || 0) > 0)
+    .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
   const totalPending = invoices
-    .filter(invoice => invoice.payment_status?.toLowerCase() === InvoiceStatus.PENDING.toLowerCase())
+    .filter(invoice => (invoice.balance || 0) > 0)
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
   const totalOverdue = invoices
-    .filter(invoice => invoice.payment_status?.toLowerCase() === InvoiceStatus.OVERDUE.toLowerCase())
+    .filter(invoice => (invoice.balance || 0) > 0 && invoice.due_date && new Date(invoice.due_date) < new Date())
     .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
   return (
@@ -87,63 +101,7 @@ const Invoices = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Total Invoiced */}
-        <div className="flex flex-col bg-white border shadow-sm rounded-xl p-4 md:p-5 dark:bg-slate-900 dark:border-gray-800">
-          <div className="flex items-center gap-x-2">
-            <span className="text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-              Total Invoiced
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-x-2">
-            <h3 className="text-xl sm:text-2xl font-medium text-gray-800 dark:text-gray-200">
-              {formatCurrency(totalInvoiced)}
-            </h3>
-          </div>
-        </div>
-
-        {/* Total Paid */}
-        <div className="flex flex-col bg-white border shadow-sm rounded-xl p-4 md:p-5 dark:bg-slate-900 dark:border-gray-800">
-          <div className="flex items-center gap-x-2">
-            <span className="text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-              Total Paid
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-x-2">
-            <h3 className="text-xl sm:text-2xl font-medium text-green-600 dark:text-green-500">
-              {formatCurrency(totalPaid)}
-            </h3>
-          </div>
-        </div>
-
-        {/* Pending */}
-        <div className="flex flex-col bg-white border shadow-sm rounded-xl p-4 md:p-5 dark:bg-slate-900 dark:border-gray-800">
-          <div className="flex items-center gap-x-2">
-            <span className="text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-              Pending
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-x-2">
-            <h3 className="text-xl sm:text-2xl font-medium text-yellow-600 dark:text-yellow-500">
-              {formatCurrency(totalPending)}
-            </h3>
-          </div>
-        </div>
-
-        {/* Overdue */}
-        <div className="flex flex-col bg-white border shadow-sm rounded-xl p-4 md:p-5 dark:bg-slate-900 dark:border-gray-800">
-          <div className="flex items-center gap-x-2">
-            <span className="text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-              Overdue
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-x-2">
-            <h3 className="text-xl sm:text-2xl font-medium text-red-600 dark:text-red-500">
-              {formatCurrency(totalOverdue)}
-            </h3>
-          </div>
-        </div>
-      </div>
+      <InvoiceStats invoices={invoices} />
 
       {/* Invoice List with Filters */}
       <div className="bg-white border shadow-sm rounded-xl dark:bg-slate-900 dark:border-gray-800">

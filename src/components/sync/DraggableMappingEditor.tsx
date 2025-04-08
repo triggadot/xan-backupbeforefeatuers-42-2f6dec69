@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowUpDown, Trash2, Plus, Save, Database, ArrowRight, Edit, RefreshCw, AlertCircle, Check } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Mapping } from '@/types/syncLog';
 

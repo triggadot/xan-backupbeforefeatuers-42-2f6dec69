@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import DataTable from '@/components/common/DataTable';
 import { Button } from '@/components/ui/button';
-import { useTableData } from '@/hooks/useTableData';
+import { useTableData } from '@/hooks/gl-sync';
 import TableRecordDialog from '@/components/data-management/TableRecordDialog';
 import { ColumnDef } from '@/types';
 import { 

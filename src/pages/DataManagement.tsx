@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSupabaseTables } from '@/hooks/useSupabaseTables';
+import { useSupabaseTables } from '@/hooks/gl-sync/useSupabaseTables';
 import SupabaseTableView from '@/components/data-management/SupabaseTableView';
 import { 
   RefreshCw, 

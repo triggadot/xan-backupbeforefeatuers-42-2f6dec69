@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils/use-mobile';
 import {
   Sidebar,
   SidebarContent as SidebarContentComponent,
@@ -158,7 +157,7 @@ function DemoSidebar() {
       <SidebarFooter className="border-t p-3">
         <div className="text-xs text-muted-foreground">
           {isExpanded && (
-            <p className="px-2">© 2023 Demo. All rights reserved.</p>
+            <p className="px-2"> 2023 Demo. All rights reserved.</p>
           )}
         </div>
       </SidebarFooter>

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Account } from '@/types/accountNew';
+import { Account } from '@/types/accounts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { User } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { AmountDisplay } from '@/components/invoices/shared/AmountDisplay';
+import { AmountDisplay } from '@/components/shared/AmountDisplay';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AccountCardProps {

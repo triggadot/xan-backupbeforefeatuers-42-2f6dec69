@@ -1,39 +1,28 @@
-import { Routes, Route } from 'react-router-dom';
-import { Toaster } from "@/components/ui/toaster";
-import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import ModernDashboard from '@/pages/ModernDashboard';
-import Products from '@/pages/Products';
-import TableDemo from '@/pages/TableDemo';
-import SidebarDemo from '@/pages/SidebarDemo';
-// Temporarily comment out imports for pages we'll rebuild
-// import Accounts from '@/pages/Accounts';
-// import AccountDetail from '@/pages/AccountDetail';
-import Sync from '@/pages/Sync';
-import Auth from '@/pages/Auth';
-import NotFound from '@/pages/NotFound';
-import MappingView from '@/pages/MappingView';
-// import Invoices from '@/pages/Invoices';
-// import InvoiceDetail from '@/pages/InvoiceDetail';
-// import EditInvoice from '@/pages/EditInvoice';
-// import PurchaseOrders from '@/pages/PurchaseOrders';
-// import PurchaseOrderDetail from '@/pages/PurchaseOrderDetail';
-// import Estimates from '@/pages/Estimates';
-// import EstimateDetail from '@/pages/EstimateDetail';
-import DataManagement from '@/pages/DataManagement';
-import DataTables from '@/pages/DataTables';
-import Index from '@/pages/Index';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import Layout from '@/components/layout/Layout';
+import { Toaster } from "@/components/ui/toaster";
+import Auth from '@/pages/Auth';
+import DataManagement from '@/pages/DataManagement';
+import Index from '@/pages/Index';
+import MappingView from '@/pages/MappingView';
+import ModernDashboard from '@/pages/ModernDashboard';
+import NotFound from '@/pages/NotFound';
+import SidebarDemo from '@/pages/SidebarDemo';
+import Sync from '@/pages/Sync';
+import TableDemo from '@/pages/TableDemo';
+import { Route, Routes } from 'react-router-dom';
 
-// Import our new pages
-import NewInvoices from '@/pages/new/Invoices';
-import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
-import NewEstimates from '@/pages/new/Estimates';
-import EstimateDetailPage from '@/pages/new/EstimateDetail';
-import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
-import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
-import Accounts from '@/pages/Accounts';
+// Import our pages
 import AccountDetail from '@/pages/AccountDetail';
+import Accounts from '@/pages/Accounts';
+import EstimateDetailPage from '@/pages/new/EstimateDetail';
+import NewEstimates from '@/pages/new/Estimates';
+import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
+import NewInvoices from '@/pages/new/Invoices';
+import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
+import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
+import ProductsPage from '@/pages/new/Products';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (
@@ -56,22 +45,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <ModernDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="products" 
-            element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="data-tables" 
-            element={
-              <ProtectedRoute>
-                <DataTables />
               </ProtectedRoute>
             } 
           />
@@ -156,6 +129,30 @@ function App() {
             } 
           />
           <Route 
+            path="products" 
+            element={
+              <ProtectedRoute>
+                <ProductsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="products/:id" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="products/new" 
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="estimates" 
             element={
               <ProtectedRoute>
@@ -195,7 +192,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
           <Route path="sync">
             <Route 
               path="mapping/:id" 
@@ -230,7 +226,6 @@ function App() {
               } 
             />
           </Route>
-          
           <Route path="table-demo" element={<TableDemo />} />
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />

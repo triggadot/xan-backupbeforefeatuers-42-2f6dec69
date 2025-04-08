@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, Variants, HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
+import { useIntersectionObserver } from '@/hooks/utils/use-intersection-observer';
 
 type AnimationType = 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom' | 'none';
 

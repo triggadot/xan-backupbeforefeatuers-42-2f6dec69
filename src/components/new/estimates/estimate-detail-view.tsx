@@ -15,7 +15,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EstimateWithDetails } from '@/types/estimate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 interface EstimateDetailViewProps {
   estimate: EstimateWithDetails;

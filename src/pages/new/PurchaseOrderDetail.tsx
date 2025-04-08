@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
-import { usePurchaseOrderDetail } from '@/hooks/usePurchaseOrderDetail';
+import { usePurchaseOrderDetail } from '@/hooks/purchase-orders';
 import PurchaseOrderDetailView from '@/components/new/purchase-orders/purchase-order-detail-view';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();

@@ -47,11 +47,6 @@ export const navigationConfig: NavigationConfig = {
       icon: "shoppingBag",
     },
     {
-      title: "Data Tables",
-      href: "/data-tables",
-      icon: "table",
-    },
-    {
       title: "Unpaid Inventory",
       href: "/unpaid-inventory",
       icon: "alertCircle",
@@ -100,11 +95,6 @@ export const navigationConfig: NavigationConfig = {
           title: "Products",
           href: "/products",
           icon: "shoppingBag",
-        },
-        {
-          title: "Data Tables",
-          href: "/data-tables",
-          icon: "table",
         },
         {
           title: "Unpaid Inventory",

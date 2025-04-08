@@ -1,6 +1,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Estimate } from '@/types/estimate';
 

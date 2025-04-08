@@ -5,10 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Database, Settings, List, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
-import { useGlSync } from '@/hooks/useGlSync';
-import { useRealtimeMappings } from '@/hooks/useRealtimeMappings';
-import { TableName } from '@/hooks/useTableData';
+import { useToast } from '@/hooks/utils/use-toast';
+import { useGlSync } from '@/hooks/gl-sync';
+import { useRealtimeMappings } from '@/hooks/mappings/useRealtimeMappings';
+import { TableName } from '@/hooks/gl-sync/useTableData';
 import { SyncDock } from './SyncDock';
 import { SyncOverview } from './SyncOverview';
 import { MappingsList } from '../mappings/MappingsList';
@@ -21,7 +21,7 @@ import {
   fetchRecordCount,
   storeLastSyncTime
 } from '../utils/syncUtils';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/hooks/utils/use-is-mobile';
 import { Mapping } from '@/types/syncLog';
 
 /**
