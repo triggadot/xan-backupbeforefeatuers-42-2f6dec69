@@ -255,3 +255,37 @@ This view is refreshed when needed using:
 ```sql
 REFRESH MATERIALIZED VIEW mv_product_vendor_details;
 ```
+
+## Database Functions and Triggers
+
+### set_default_product_category
+
+A database trigger function that ensures the `category` field in the `gl_products` table is never NULL by setting a default value of "Flowers".
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_default_product_category()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If category is NULL, set it to 'Flowers'
+  IF NEW.category IS NULL THEN
+    NEW.category := 'Flowers';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to execute the function
+CREATE TRIGGER set_product_category_trigger
+BEFORE INSERT OR UPDATE ON public.gl_products
+FOR EACH ROW
+EXECUTE FUNCTION public.set_default_product_category();
+```
+
+**Purpose:** Maintains data consistency by ensuring all products have a category, which improves reporting and filtering capabilities.
+
+**Behavior:** Runs automatically before any INSERT or UPDATE operation on the `gl_products` table. If the category field is NULL, it sets it to "Flowers".
+
+**Implementation Details:** Uses a BEFORE trigger to modify the NEW record before it's written to the database. No frontend code changes are required as the default value is handled entirely at the database level.
+
+[See detailed documentation](../database/set_default_product_category.ts)
