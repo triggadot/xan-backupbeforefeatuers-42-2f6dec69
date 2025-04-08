@@ -77,25 +77,16 @@ import {
   Trash,
   Check,
   X,
-  Loader2,
-  AlertCircle,
-  Database,
-  ArrowDownUp,
 } from "lucide-react";
 import TableRecordDialog from "./TableRecordDialog";
-import { useGlSync } from '@/hooks/useGlSync';
-import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 
 // Define type for general record with ID
 type TableRecord = Record<string, unknown> & { id: string };
 
 interface SupabaseTableViewProps {
   tableName: string;
-  displayName?: string;
+  displayName: string;
   description?: string;
-  showSyncOptions?: boolean;
 }
 
 // EditableCell component for inline editing
@@ -287,12 +278,7 @@ function renderCellValue(value: any, column: string) {
   return String(value);
 }
 
-export default function SupabaseTableView({ 
-  tableName, 
-  displayName, 
-  description,
-  showSyncOptions = true 
-}: SupabaseTableViewProps) {
+export default function SupabaseTableView({ tableName, displayName, description }: SupabaseTableViewProps) {
   const { data, isLoading, error, fetchData, createRecord, updateRecord, deleteRecord } = useTableData<TableRecord>(
     tableName as TableName
   );
@@ -314,8 +300,6 @@ export default function SupabaseTableView({
   // State for inline editing
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
   const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({});
-
-  const { toast } = useToast();
 
   // Fetch data on mount
   useEffect(() => {
@@ -617,148 +601,132 @@ export default function SupabaseTableView({
   // Error state
   if (error) {
     return (
-      <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 mb-4">
-        <CardContent className="p-4 flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-red-800 dark:text-red-200">Error Loading Data</h4>
-            <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-md bg-destructive/10 text-destructive p-4">
+        <h2 className="font-medium">Error loading {displayName}</h2>
+        <p className="text-sm mt-1">{error}</p>
+      </div>
     );
   }
 
-  const { syncData, isLoading: syncLoading } = useGlSync();
-  const { allSyncStatuses, isLoading: statusLoading, refreshData: refreshSyncData } = useGlSyncStatus();
-
-  // Find the mapping for this table
-  const tableMapping = useMemo(() => {
-    if (!allSyncStatuses) return null;
-    return allSyncStatuses.find(status => status.supabase_table === tableName);
-  }, [allSyncStatuses, tableName]);
-
-  // Function to sync the current table
-  const handleSyncTable = async () => {
-    if (!tableMapping) {
-      toast({
-        title: "Sync Error",
-        description: "No mapping found for this table. Please set up a mapping first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      await syncData(tableMapping.connection_id, tableMapping.mapping_id);
-      toast({
-        title: "Sync Started",
-        description: `Synchronizing ${displayName || tableName}...`,
-      });
-      
-      // Refresh sync data after a delay
-      setTimeout(() => {
-        refreshSyncData();
-      }, 2000);
-    } catch (error) {
-      toast({
-        title: "Sync Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className="space-y-4">
-      {/* Table Header with Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-        <div>
-          <h2 className="text-xl font-semibold">{displayName || tableName}</h2>
-          {description && <p className="text-muted-foreground text-sm">{description}</p>}
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          {showSyncOptions && tableMapping && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleSyncTable}
-              disabled={syncLoading || tableMapping?.current_status === 'processing'}
-              className="h-8 px-3 text-xs"
-            >
-              {syncLoading || tableMapping?.current_status === 'processing' ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  Syncing...
-                </>
-              ) : (
-                <>
-                  <ArrowDownUp className="h-3.5 w-3.5 mr-1.5" />
-                  Sync Table
-                </>
-              )}
-            </Button>
-          )}
-          
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => fetchData()}
-            disabled={isLoading}
-            className="h-8 px-3 text-xs"
-          >
-            {isLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {/* Global filter */}
+          <div className="relative">
+            <Input
+              ref={inputRef}
+              placeholder="Search all columns..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className={cn("min-w-64 ps-9", Boolean(globalFilter) && "pe-9")}
+            />
+            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+              <ListFilter size={16} strokeWidth={2} aria-hidden="true" />
+            </div>
+            {Boolean(globalFilter) && (
+              <button
+                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Clear filter"
+                onClick={() => {
+                  setGlobalFilter("");
+                  if (inputRef.current) {
+                    inputRef.current.focus();
+                  }
+                }}
+              >
+                <CircleX size={16} strokeWidth={2} aria-hidden="true" />
+              </button>
             )}
+          </div>
+
+          {/* Refresh data */}
+          <Button variant="outline" size="sm" onClick={() => fetchData()} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          
-          <Button 
-            variant="default" 
-            size="sm"
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="h-8 px-3 text-xs"
-          >
-            Add Row
+
+          {/* Toggle columns visibility */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Columns3 className="mr-2 h-4 w-4" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {column.id
+                        .split("_")
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(" ")}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Selected rows actions */}
+          {table.getSelectedRowModel().rows.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive">
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                  <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                    {table.getSelectedRowModel().rows.length}
+                  </span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <div className="flex flex-col gap-2 max-sm:items-center sm:flex-row sm:gap-4">
+                  <div
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border"
+                    aria-hidden="true"
+                  >
+                    <CircleAlert className="opacity-80" size={16} strokeWidth={2} />
+                  </div>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete{" "}
+                      {table.getSelectedRowModel().rows.length} selected{" "}
+                      {table.getSelectedRowModel().rows.length === 1 ? "record" : "records"}.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
+          {/* Add new record button */}
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add {displayName}
           </Button>
         </div>
       </div>
-      
-      {/* Sync Status Banner */}
-      {showSyncOptions && tableMapping && (
-        <div className={cn(
-          "p-3 rounded-md mb-4 text-sm flex items-center justify-between",
-          tableMapping.current_status === 'processing' ? "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200" :
-          tableMapping.current_status === 'error' ? "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-200" :
-          "bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200"
-        )}>
-          <div className="flex items-center gap-2">
-            {tableMapping.current_status === 'processing' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : tableMapping.current_status === 'error' ? (
-              <AlertCircle className="h-4 w-4" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            <span>
-              {tableMapping.current_status === 'processing' ? 'Sync in progress...' :
-               tableMapping.current_status === 'error' ? 'Last sync failed' :
-               `Last synced: ${tableMapping.last_sync_completed_at ? new Date(tableMapping.last_sync_completed_at).toLocaleString() : 'Never'}`}
-            </span>
-          </div>
-          <div>
-            {tableMapping.total_records !== undefined && (
-              <span className="text-xs font-medium">
-                {tableMapping.total_records} records
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-      
+
       {/* Table */}
       <div className="rounded-md border">
         <div className="overflow-x-auto">
@@ -942,4 +910,4 @@ export default function SupabaseTableView({
       />
     </div>
   );
-}
+} 

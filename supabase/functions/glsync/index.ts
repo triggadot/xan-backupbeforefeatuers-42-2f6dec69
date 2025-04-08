@@ -1,7 +1,5 @@
-// Use the correct import URL for Supabase JS client in Deno
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { testGlideConnection, getGlideTableColumns } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,14 +26,7 @@ interface GlMapping {
   sync_direction: 'to_supabase' | 'to_glide' | 'both';
 }
 
-interface SyncRequestBody {
-  action: string;
-  connectionId: string;
-  mappingId: string;
-  tableId: string;
-}
-
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -43,8 +34,8 @@ serve(async (req) => {
 
   try {
     // Create Supabase client
-    const supabaseUrl = await Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = await Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Supabase URL or service role key is not set');
@@ -53,7 +44,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Parse request body
-    const requestBody = await req.json() as SyncRequestBody;
+    const requestBody = await req.json();
     const { action, connectionId, mappingId, tableId } = requestBody;
 
     console.log(`Processing ${action} action for connection ${connectionId}`);
@@ -125,13 +116,13 @@ serve(async (req) => {
       throw new Error(`Unknown action: ${action}`);
     }
     
-  } catch (error: unknown) {
-    console.error('Error:', error instanceof Error ? error.message : String(error));
+  } catch (error) {
+    console.error('Error:', error.message);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -141,7 +132,7 @@ serve(async (req) => {
   }
 });
 
-async function testGlideConnectionHandler(supabase: any, connectionId: string) {
+async function testGlideConnectionHandler(supabase, connectionId: string) {
   console.log(`Testing connection with ID: ${connectionId}`);
   
   try {
@@ -199,8 +190,8 @@ async function testGlideConnectionHandler(supabase: any, connectionId: string) {
         status: 200
       }
     );
-  } catch (error: unknown) {
-    console.error('Connection test failed:', error instanceof Error ? error.message : String(error));
+  } catch (error) {
+    console.error('Connection test failed:', error);
     
     // Update connection status to error
     await supabase
@@ -211,7 +202,7 @@ async function testGlideConnectionHandler(supabase: any, connectionId: string) {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -221,7 +212,7 @@ async function testGlideConnectionHandler(supabase: any, connectionId: string) {
   }
 }
 
-async function getGlideColumnMappings(supabase: any, connectionId: string, tableId: string) {
+async function getGlideColumnMappings(supabase, connectionId: string, tableId: string) {
   console.log(`Getting column mappings for table: ${tableId}`);
   
   try {
@@ -252,13 +243,13 @@ async function getGlideColumnMappings(supabase: any, connectionId: string, table
         status: 200
       }
     );
-  } catch (error: unknown) {
-    console.error('Error getting column mappings:', error instanceof Error ? error.message : String(error));
+  } catch (error) {
+    console.error('Error getting column mappings:', error);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -268,43 +259,38 @@ async function getGlideColumnMappings(supabase: any, connectionId: string, table
   }
 }
 
-async function syncData(supabase: any, connectionId: string, mappingId: string) {
-  console.log(`Syncing data for mapping: ${mappingId}`);
+async function syncData(supabase, connectionId: string, mappingId: string) {
+  console.log(`Starting sync for mapping: ${mappingId}`);
   
   // Create a sync log entry
-  const { data: logData, error: logError } = await supabase
+  const { data: logEntry, error: logError } = await supabase
     .from('gl_sync_logs')
     .insert({
       mapping_id: mappingId,
-      status: 'running',
-      started_at: new Date().toISOString()
+      status: 'started',
+      message: 'Sync started'
     })
     .select()
     .single();
   
   if (logError) {
     console.error('Error creating sync log:', logError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Failed to create sync log entry' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
   }
   
-  // Store the log ID for later updates
-  const logId = logData?.id;
+  const logId = logEntry.id;
+  console.log(`Created sync log with ID: ${logId}`);
   
   try {
-    // Get mapping details
-    const { data: mapping, error: mappingError } = await supabase
-      .from('gl_mappings')
-      .select('*')
-      .eq('id', mappingId)
-      .single();
-    
-    if (mappingError) {
-      throw mappingError;
-    }
-    
-    if (!mapping) {
-      throw new Error('Mapping not found');
-    }
-    
     // Get connection details
     const { data: connection, error: connectionError } = await supabase
       .from('gl_connections')
@@ -320,9 +306,31 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
       throw new Error('Connection not found');
     }
     
-    // Fetch data from Glide API
-    console.log(`Fetching data from Glide API for table: ${mapping.glide_table}`);
+    // Get mapping details
+    const { data: mapping, error: mappingError } = await supabase
+      .from('gl_mappings')
+      .select('*')
+      .eq('id', mappingId)
+      .single();
     
+    if (mappingError) {
+      throw mappingError;
+    }
+    
+    if (!mapping) {
+      throw new Error('Mapping not found');
+    }
+    
+    // Update log to processing
+    await supabase
+      .from('gl_sync_logs')
+      .update({
+        status: 'processing',
+        message: 'Fetching data from Glide'
+      })
+      .eq('id', logId);
+    
+    // Fetch data from Glide
     const glideResponse = await fetch('https://api.glideapp.io/api/function/queryTables', {
       method: 'POST',
       headers: {
@@ -345,29 +353,28 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
       throw new Error(`Glide API returned: ${glideResponse.status} - ${errorText}`);
     }
     
-    // Define a type for the Glide API response
-    interface GlideTableData {
-      rows: Record<string, any>[];
-      columns: Record<string, string>;
-    }
-    
-    interface GlideApiResponse extends Array<GlideTableData> {}
-    
-    const glideData = await glideResponse.json() as GlideApiResponse;
+    const glideData = await glideResponse.json();
     console.log('Glide API response:', JSON.stringify(glideData, null, 2));
-    
-    if (!glideData || !Array.isArray(glideData) || glideData.length === 0 || !glideData[0]?.rows) {
-      throw new Error('No data returned from Glide API');
-    }
     
     const tableData = glideData[0];
     
-    // Update log to processing
+    if (!tableData || !tableData.rows) {
+      throw new Error('No data returned from Glide API');
+    }
+    
+    // Log first row for debugging
+    if (tableData.rows.length > 0) {
+      console.log('First row sample:', JSON.stringify(tableData.rows[0], null, 2));
+      console.log('Column mappings:', JSON.stringify(mapping.column_mappings, null, 2));
+    }
+    
+    // Update log with progress
     await supabase
       .from('gl_sync_logs')
       .update({
         status: 'processing',
-        message: 'Fetching data from Glide'
+        message: `Processing ${tableData.rows.length} records`,
+        records_processed: 0
       })
       .eq('id', logId);
     
@@ -411,7 +418,7 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         console.error('Error transforming row:', error);
         errors.push({
           type: 'TRANSFORM_ERROR',
-          message: error instanceof Error ? error.message : String(error),
+          message: error.message,
           record: glideRow,
           retryable: false
         });
@@ -420,7 +427,7 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         await supabase.rpc('gl_record_sync_error', {
           p_mapping_id: mappingId,
           p_error_type: 'TRANSFORM_ERROR',
-          p_error_message: error instanceof Error ? error.message : String(error),
+          p_error_message: error.message,
           p_record_data: glideRow,
           p_retryable: false
         });
@@ -448,15 +455,43 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         
         let upsertError: Error | null = null;
         
-        // Standard upsert for all tables
-        const { error } = await supabase
-          .from(mapping.supabase_table)
-          .upsert(batch, { 
-            onConflict: 'glide_row_id',
-            ignoreDuplicates: false
-          });
-        
-        upsertError = error;
+        // Special handling for gl_estimate_lines table to use our custom glsync function
+        if (mapping.supabase_table === 'gl_estimate_lines') {
+          console.log('Using permission-safe glsync function for estimate lines');
+          
+          try {
+            // Use our permission-safe sync function for estimate lines
+            const { data: syncResult, error: syncError } = await supabase.rpc('glsync_estimate_lines_safe', {
+              data: batch
+            });
+            
+            if (syncError) {
+              throw syncError;
+            }
+            
+            // Log sync results
+            if (syncResult) {
+              console.log(`Estimate lines sync results: Inserted ${syncResult.inserted?.length || 0}, Updated ${syncResult.updated?.length || 0}, Errors ${syncResult.errors?.length || 0}`);
+              
+              // If there were errors, log them but continue processing
+              if (syncResult.errors && syncResult.errors.length > 0) {
+                console.warn('Some estimate lines had errors:', syncResult.errors);
+              }
+            }
+          } catch (err) {
+            upsertError = err as Error;
+          }
+        } else {
+          // Standard upsert for other tables
+          const { error } = await supabase
+            .from(mapping.supabase_table)
+            .upsert(batch, { 
+              onConflict: 'glide_row_id',
+              ignoreDuplicates: false
+            });
+          
+          upsertError = error;
+        }
         
         if (upsertError) {
           console.error('Error upserting data:', upsertError);
@@ -465,14 +500,18 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
           await supabase.rpc('gl_record_sync_error', {
             p_mapping_id: mappingId,
             p_error_type: 'DATABASE_ERROR',
-            p_error_message: upsertError instanceof Error ? upsertError.message : String(upsertError),
+            p_error_message: typeof upsertError === 'object' && upsertError !== null && 'message' in upsertError 
+              ? String(upsertError.message) 
+              : String(upsertError),
             p_record_data: { batch_index: i, batch_size: batch.length },
             p_retryable: true
           });
           
           errors.push({
             type: 'DATABASE_ERROR',
-            message: upsertError instanceof Error ? upsertError.message : String(upsertError),
+            message: typeof upsertError === 'object' && upsertError !== null && 'message' in upsertError 
+              ? String(upsertError.message) 
+              : String(upsertError),
             batch_index: i,
             retryable: true
           });
@@ -521,15 +560,15 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
         status: 200
       }
     );
-  } catch (error: unknown) {
-    console.error('Error during sync:', error instanceof Error ? error.message : String(error));
+  } catch (error) {
+    console.error('Error during sync:', error);
     
     // Update sync log with error
     await supabase
       .from('gl_sync_logs')
       .update({
         status: 'failed',
-        message: `Sync failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Sync failed: ${error.message}`,
         completed_at: new Date().toISOString()
       })
       .eq('id', logId);
@@ -537,7 +576,7 @@ async function syncData(supabase: any, connectionId: string, mappingId: string) 
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
