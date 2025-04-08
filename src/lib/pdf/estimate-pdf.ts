@@ -182,74 +182,47 @@ export async function fetchEstimateForPDF(estimateId: string): Promise<EstimateW
  * }
  */
 export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
-  const doc = new jsPDF();
+  const doc = new jsPDF({
+    compress: true, 
+    putOnlyUsedFonts: true
+  });
   
   // Set theme color - dark blue
   const themeColor = [0, 51, 102]; // Dark blue RGB
   
   // Add header
-  doc.setFontSize(18);
-  doc.setFont(undefined, 'bold');
-  doc.text('ESTIMATE', 20, 30);
+  doc.setFontSize(26);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ESTIMATE', 15, 20);
   
-  // Add estimate ID directly below header
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'normal');
-  doc.text(`ID: ${estimate.estimate_uid || ''}`, 20, 40);
-  
-  // Add date on the same line as ID but right-aligned
-  doc.text(`Date: ${formatShortDate(estimate.estimate_date || new Date())}`, 190, 40, { align: 'right' });
+  // Add estimate ID and date
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${estimate.estimate_uid || ''}`, 15, 28);
+  doc.text(`Date: ${formatShortDate(estimate.estimate_date || new Date())}`, 195, 28, { align: 'right' });
   
   // Add horizontal line
   doc.setDrawColor(...themeColor);
-  doc.setLineWidth(0.5);
-  doc.line(20, 45, 190, 45);
+  doc.setLineWidth(1.5);
+  doc.line(15, 32, 195, 32);
   
-  // Add account details if available
-  let yPos = 55;
-  if (estimate.account) {
-    doc.setFontSize(11);
-    doc.text(estimate.account.name || 'N/A', 20, yPos);
-    yPos += 5;
-    
-    if (estimate.account.address_line_1) {
-      doc.setFontSize(10);
-      doc.text(estimate.account.address_line_1, 20, yPos);
-      yPos += 5;
-    }
-    
-    if (estimate.account.address_line_2) {
-      doc.text(estimate.account.address_line_2, 20, yPos);
-      yPos += 5;
-    }
-    
-    const cityStateZip = [
-      estimate.account.city,
-      estimate.account.state,
-      estimate.account.postal_code
-    ].filter(Boolean).join(', ');
-    
-    if (cityStateZip) {
-      doc.text(cityStateZip, 20, yPos);
-      yPos += 5;
-    }
-    
-    if (estimate.account.country) {
-      doc.text(estimate.account.country, 20, yPos);
-      yPos += 5;
-    }
-  }
+  // Start product table immediately after the header
+  const tableStartY = 45;
   
   // Define the table styles with better alignment
   const tableStyles = {
+    theme: 'striped',
     headStyles: {
       fillColor: themeColor,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      halign: 'left'
+      halign: 'left' // Default alignment for headers
     },
     bodyStyles: {
       textColor: [50, 50, 50]
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
     },
     columnStyles: {
       0: { halign: 'left' },    // Product name
@@ -257,31 +230,45 @@ export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
       2: { halign: 'right' },   // Unit price
       3: { halign: 'right' }    // Total
     },
+    head: [
+      [
+        { content: 'Product', styles: { halign: 'left' } },
+        { content: 'Qty', styles: { halign: 'center' } },
+        { content: 'Price', styles: { halign: 'right' } },
+        { content: 'Total', styles: { halign: 'right' } }
+      ]
+    ],
     margin: { top: 10, right: 20, bottom: 10, left: 20 }
   };
   
   // Map estimate products to table rows
   const rows = estimate.estimateLines?.map(line => {
-    const productName = line.product_name || 
+    const productName = line.sale_product_name || 
+      line.product_name_display || 
+      line.product_name || 
       (line.productDetails?.vendor_product_name || 
        line.productDetails?.main_new_product_name || 
        line.productDetails?.main_vendor_product_name || 
-       'N/A');
+       'Product Description');
+    
+    // Match the same fields used in EstimateDetailView
+    const quantity = Math.round(Number(line.qty_sold) || Number(line.qty) || 0);
+    const unitPrice = Number(line.selling_price) || Number(line.price) || 0;
+    const lineTotal = Number(line.line_total) || (quantity * unitPrice);
     
     return [
       productName,
-      line.qty || 0,
-      formatCurrency(line.price || 0),
-      formatCurrency(line.line_total || 0)
+      quantity,
+      formatCurrency(unitPrice),
+      formatCurrency(lineTotal)
     ];
   }) || [];
   
   // Add the items table to the document
   autoTable(doc, {
-    head: [['Product', 'Qty', 'Price', 'Total']],
+    ...tableStyles,
     body: rows,
-    startY: 70,
-    ...tableStyles
+    startY: tableStartY,
   });
   
   // Get the final Y position of the table
@@ -291,32 +278,47 @@ export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
   doc.setFontSize(11);
   let currentY = finalY + 10;
   
-  doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
+  // Calculate totals
+  const totalQuantity = estimate.estimateLines?.reduce((total, line) => 
+    total + (Math.round(Number(line.qty_sold) || Number(line.qty) || 0)), 0) || 0;
+    
+  const subtotal = estimate.total_amount || 
+    estimate.estimateLines?.reduce((total, line) => 
+      total + (Number(line.line_total) || 
+      (Number(line.qty_sold) || Number(line.qty) || 0) * 
+      (Number(line.selling_price) || Number(line.price) || 0)), 0) || 0;
+
+  const creditsApplied = estimate.total_credits || 
+    estimate.credits?.reduce((total, credit) => 
+      total + (Number(credit.amount) || 0), 0) || 0;
+
+  const balanceDue = estimate.balance || (subtotal - creditsApplied);
+  
+  doc.text(`Subtotal (${totalQuantity} item${totalQuantity === 1 ? '' : 's'}):`, 150, currentY, { align: 'right' });
   doc.setFont(undefined, 'bold');
-  doc.text(formatCurrency(estimate.subtotal || 0), 190, currentY, { align: 'right' });
+  doc.text(formatCurrency(subtotal), 190, currentY, { align: 'right' });
   doc.setFont(undefined, 'normal');
   
   if (estimate.tax_rate && estimate.tax_rate > 0) {
     currentY += 7;
-    doc.text(`Tax (${estimate.tax_rate}%):`, 150, currentY, { align: 'right' });
+    doc.text(`Tax (${(estimate.tax_rate * 100).toFixed(2)}%):`, 150, currentY, { align: 'right' });
     doc.setFont(undefined, 'bold');
-    doc.text(formatCurrency(estimate.tax_amount || 0), 190, currentY, { align: 'right' });
+    doc.text(formatCurrency(estimate.tax_amount || (estimate.subtotal || 0) * (estimate.tax_rate || 0)), 190, currentY, { align: 'right' });
     doc.setFont(undefined, 'normal');
   }
   
-  // Add credits if available
   if (estimate.credits && estimate.credits.length > 0) {
     currentY += 7;
-    doc.text(`Credits:`, 150, currentY, { align: 'right' });
+    doc.text(`Credit(s) Applied:`, 150, currentY, { align: 'right' });
     doc.setFont(undefined, 'bold');
-    doc.text(formatCurrency(estimate.credits.reduce((sum, credit) => sum + (Number(credit.amount) || 0), 0)), 190, currentY, { align: 'right' });
+    doc.text(formatCurrency(creditsApplied), 190, currentY, { align: 'right' });
     doc.setFont(undefined, 'normal');
   }
   
   currentY += 7;
-  doc.text(`Total:`, 150, currentY, { align: 'right' });
+  doc.text(`Balance Due:`, 150, currentY, { align: 'right' });
   doc.setFont(undefined, 'bold');
-  doc.text(formatCurrency(estimate.total || 0), 190, currentY, { align: 'right' });
+  doc.text(formatCurrency(balanceDue), 190, currentY, { align: 'right' });
   doc.setFont(undefined, 'normal');
   
   // Add notes if available with reduced spacing

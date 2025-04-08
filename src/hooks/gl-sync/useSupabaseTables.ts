@@ -59,24 +59,27 @@ export function useSupabaseTables() {
       // Use core tables as a fallback
       let fetchedTables = [...CORE_GL_TABLES];
       
-      // Try to fetch tables from database
-      const { data, error } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .not('table_name', 'like', 'pg_%')
-        .not('table_name', 'like', 'auth_%')
-        .not('table_name', 'like', 'storage_%')
-        .not('table_name', 'like', 'supabase_%')
-        .order('table_name');
-      
-      if (error) {
-        console.error('Error in useSupabaseTables:', error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        fetchedTables = data;
+      try {
+        // Try to fetch tables from database
+        const { data, error } = await supabase
+          .rpc('get_public_tables')
+          .select();
+        
+        if (error) {
+          console.error('Error in useSupabaseTables:', error);
+          // Fall back to core tables if RPC fails
+          return CORE_GL_TABLES;
+        }
+        
+        if (data && data.length > 0) {
+          // Convert the data to the expected format if needed
+          fetchedTables = data.map(item => ({
+            table_name: item.table_name
+          }));
+        }
+      } catch (rpcError) {
+        console.error('RPC function error:', rpcError);
+        // Silently fall back to core tables
       }
       
       setTables(fetchedTables);

@@ -47,7 +47,15 @@ export function useFetchAccounts(filters?: Record<string, any>) {
         // Build query with filters
         let query = supabase
           .from('gl_accounts')
-          .select('*');
+          .select(`
+            *,
+            gl_invoices!rowid_accounts(
+              id,
+              total_amount,
+              total_paid,
+              balance
+            )
+          `);
         
         // Apply filters
         const queryFilters = getQueryFilters();
@@ -68,24 +76,34 @@ export function useFetchAccounts(filters?: Record<string, any>) {
         if (error) throw error;
         
         // Map database records to Account type
-        const accounts = (data || []).map((account: GlAccount): Account => ({
-          id: account.id,
-          glide_row_id: account.glide_row_id || '',
-          accounts_uid: account.accounts_uid || '',
-          name: account.account_name || '',
-          type: account.client_type as 'Customer' | 'Vendor' | 'Customer & Vendor',
-          is_customer: account.client_type === 'Customer' || account.client_type === 'Customer & Vendor',
-          is_vendor: account.client_type === 'Vendor' || account.client_type === 'Customer & Vendor',
-          email: account.email_of_who_added,
-          phone: '',
-          website: '',
-          address: '',
-          notes: '',
-          status: 'active',
-          balance: 0,
-          created_at: account.created_at || '',
-          updated_at: account.updated_at || '',
-        }));
+        const accounts = (data || []).map((account: any): Account => {
+          // Calculate account balance from related invoices
+          let calculatedBalance = 0;
+          if (account.gl_invoices && account.gl_invoices.length > 0) {
+            calculatedBalance = account.gl_invoices.reduce((total: number, invoice: any) => {
+              return total + (invoice.balance || 0);
+            }, 0);
+          }
+          
+          return {
+            id: account.id,
+            glide_row_id: account.glide_row_id || '',
+            accounts_uid: account.accounts_uid || '',
+            name: account.account_name || '',
+            type: account.client_type as 'Customer' | 'Vendor' | 'Customer & Vendor',
+            is_customer: account.client_type === 'Customer' || account.client_type === 'Customer & Vendor',
+            is_vendor: account.client_type === 'Vendor' || account.client_type === 'Customer & Vendor',
+            email: account.email_of_who_added,
+            phone: '',
+            website: '',
+            address: '',
+            notes: '',
+            status: 'active',
+            balance: calculatedBalance,
+            created_at: account.created_at || '',
+            updated_at: account.updated_at || '',
+          };
+        });
         
         return accounts;
       } catch (err) {

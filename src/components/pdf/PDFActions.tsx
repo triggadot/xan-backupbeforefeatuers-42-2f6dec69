@@ -3,6 +3,7 @@ import { Download, Eye, FileText } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { usePDFOperations, DocumentType } from '@/hooks/pdf/usePDFOperations';
 import { useToast } from '@/hooks/utils/use-toast';
+import { PDFPreview } from './PDFPreview';
 
 interface PDFActionsProps extends Omit<ButtonProps, 'onClick'> {
   documentType: DocumentType;
@@ -20,16 +21,22 @@ interface PDFActionsProps extends Omit<ButtonProps, 'onClick'> {
  * @param onPDFGenerated - Callback when PDF is generated
  * @param rest - Other button props
  */
-export const PDFActions: React.FC<PDFActionsProps> = ({
+export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
   documentType,
   document,
   showLabels = false,
   onPDFGenerated,
+  children,
   ...rest
 }) => {
   const { toast } = useToast();
-  const { generatePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
+  const { generatePDF, downloadPDF, loading: pdfLoading } = usePDFOperations();
   const [isLoading, setIsLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  // Loading state combines all possible loading states
+  const loading = isLoading || pdfLoading;
 
   // Handle PDF download
   const handleDownloadPDF = async () => {
@@ -48,45 +55,62 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
       if (!url) {
         // Generate new PDF if none exists
         console.log(`No existing PDF found, generating new ${documentType} PDF`);
-        url = await generatePDF(documentType, document, true); // true = download after generation
+        const result = await generatePDF(documentType, document.id || document.glide_row_id, true);
         
-        if (url && onPDFGenerated) {
-          onPDFGenerated(url);
+        if (result.success && result.url) {
+          url = result.url;
+          if (onPDFGenerated) {
+            onPDFGenerated(url);
+          }
+        } else {
+          throw new Error(result.error || 'Failed to generate PDF');
         }
       } else {
         console.log(`Using existing ${documentType} PDF URL:`, url);
-        // Generate filename based on document details
-        let fileName = '';
-        
-        switch (documentType) {
-          case 'invoice':
-            fileName = `Invoice_${document.invoice_uid || document.id?.substring(0, 8) || 'unknown'}.pdf`;
-            break;
-          case 'purchaseOrder':
-            fileName = `PO_${document.purchase_order_uid || document.id?.substring(0, 8) || 'unknown'}.pdf`;
-            break;
-          case 'estimate':
-            fileName = `Estimate_${document.estimate_uid || document.id?.substring(0, 8) || 'unknown'}.pdf`;
-            break;
-          default:
-            fileName = `Document_${document.id?.substring(0, 8) || 'unknown'}.pdf`;
-        }
-        
-        // Download the PDF directly
-        await downloadPDF(url, fileName);
+        // Download the existing PDF
+        await downloadPDF(url, getFileName());
       }
-    } catch (error) {
-      console.error(`Error handling ${documentType} PDF download:`, error);
+      
       toast({
-        title: 'PDF Download Failed',
-        description: error instanceof Error ? error.message : 'There was an error downloading the PDF. Please try again.',
+        title: 'PDF Downloaded',
+        description: 'Your PDF has been downloaded successfully.',
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to download PDF. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
-
+  
+  // Get filename for download
+  const getFileName = () => {
+    let fileName = '';
+    
+    switch (documentType) {
+      case 'invoice':
+        fileName = `Invoice_${document.invoice_uid || document.id || 'document'}.pdf`;
+        break;
+      case 'purchaseOrder':
+        fileName = `PurchaseOrder_${document.purchase_order_uid || document.id || 'document'}.pdf`;
+        break;
+      case 'estimate':
+        fileName = `Estimate_${document.estimate_uid || document.id || 'document'}.pdf`;
+        break;
+      case 'product':
+        fileName = `Product_${document.product_name || document.id || 'document'}.pdf`;
+        break;
+      default:
+        fileName = `Document_${document.id || 'document'}.pdf`;
+    }
+    
+    return fileName;
+  };
+  
   // Handle PDF generation
   const handleGeneratePDF = async () => {
     if (!document) return;
@@ -95,60 +119,68 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
       setIsLoading(true);
       toast({
         title: 'Generating PDF',
-        description: 'Creating your PDF document...',
+        description: 'Creating your PDF...',
       });
       
-      const url = await generatePDF(documentType, document, false);
+      const result = await generatePDF(documentType, document.id || document.glide_row_id);
       
-      if (url && onPDFGenerated) {
-        onPDFGenerated(url);
+      if (result.success && result.url) {
+        if (onPDFGenerated) {
+          onPDFGenerated(result.url);
+        }
+        
+        toast({
+          title: 'PDF Generated',
+          description: 'Your PDF has been successfully created.',
+        });
+      } else {
+        throw new Error(result.error || 'Failed to generate PDF');
       }
     } catch (error) {
-      console.error(`Error generating ${documentType} PDF:`, error);
+      console.error('Error generating PDF:', error);
       toast({
-        title: 'PDF Generation Failed',
-        description: error instanceof Error ? error.message : 'There was an error generating the PDF. Please try again.',
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   // Handle PDF view
   const handleViewPDF = async () => {
     if (!document) return;
     
     try {
       setIsLoading(true);
+      
       // Use existing PDF URL or generate a new one
       let url = document.supabase_pdf_url;
       
       if (!url) {
-        toast({
-          title: 'Generating PDF',
-          description: 'Creating your PDF for viewing...',
-        });
-        
         // Generate new PDF if none exists
-        url = await generatePDF(documentType, document, false);
+        console.log(`No existing PDF found, generating new ${documentType} PDF for preview`);
+        const result = await generatePDF(documentType, document.id || document.glide_row_id);
         
-        if (url && onPDFGenerated) {
-          onPDFGenerated(url);
+        if (result.success && result.url) {
+          url = result.url;
+          if (onPDFGenerated) {
+            onPDFGenerated(url);
+          }
+        } else {
+          throw new Error(result.error || 'Failed to generate PDF');
         }
       }
       
-      if (url) {
-        // Open PDF in a new tab
-        window.open(url, '_blank');
-      } else {
-        throw new Error('Failed to generate or retrieve PDF for viewing');
-      }
+      // Open the preview
+      setPreviewUrl(url);
+      setIsPreviewOpen(true);
     } catch (error) {
-      console.error(`Error viewing ${documentType} PDF:`, error);
+      console.error('Error viewing PDF:', error);
       toast({
-        title: 'PDF View Failed',
-        description: error instanceof Error ? error.message : 'There was an error preparing the PDF for viewing. Please try again.',
+        title: 'Error',
+        description: 'Failed to generate PDF preview. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -156,43 +188,62 @@ export const PDFActions: React.FC<PDFActionsProps> = ({
     }
   };
 
-  // Loading state for buttons
-  const loading = isLoading || isGenerating || isStoring;
-
   return (
-    <div className="flex space-x-2">
-      <Button
-        variant={rest.variant || 'outline'}
-        size={rest.size || 'default'}
-        onClick={handleDownloadPDF}
-        disabled={loading}
-        className={rest.className}
-      >
-        <Download className="h-4 w-4 mr-2" />
-        {showLabels && 'Download'}
-      </Button>
+    <div className="flex items-center space-x-2">
+      {children ? (
+        <Button
+          variant={rest.variant || 'outline'}
+          size={rest.size || 'default'}
+          onClick={handleGeneratePDF}
+          disabled={loading}
+          className={rest.className}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          {children}
+        </Button>
+      ) : (
+        <>
+          <Button
+            variant={rest.variant || 'outline'}
+            size={rest.size || 'default'}
+            onClick={handleGeneratePDF}
+            disabled={loading}
+            className={rest.className}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {showLabels && 'Generate'}
+          </Button>
+          
+          <Button
+            variant={rest.variant || 'outline'}
+            size={rest.size || 'default'}
+            onClick={handleDownloadPDF}
+            disabled={loading}
+            className={rest.className}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {showLabels && 'Download'}
+          </Button>
+          
+          <Button
+            variant={rest.variant || 'outline'}
+            size={rest.size || 'default'}
+            onClick={handleViewPDF}
+            disabled={loading}
+            className={rest.className}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            {showLabels && 'View'}
+          </Button>
+        </>
+      )}
       
-      <Button
-        variant={rest.variant || 'outline'}
-        size={rest.size || 'default'}
-        onClick={handleViewPDF}
-        disabled={loading}
-        className={rest.className}
-      >
-        <Eye className="h-4 w-4 mr-2" />
-        {showLabels && 'View'}
-      </Button>
-      
-      <Button
-        variant={rest.variant || 'outline'}
-        size={rest.size || 'default'}
-        onClick={handleGeneratePDF}
-        disabled={loading}
-        className={rest.className}
-      >
-        <FileText className="h-4 w-4 mr-2" />
-        {showLabels && 'Generate'}
-      </Button>
+      {/* PDF Preview Modal/Drawer */}
+      <PDFPreview
+        url={previewUrl}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </div>
   );
 };

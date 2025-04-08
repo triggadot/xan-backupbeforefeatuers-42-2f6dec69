@@ -315,17 +315,7 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
         <div className="mt-6 flex justify-end">
           <div className="w-full max-w-xs space-y-2">
             <div className="flex justify-between text-sm text-gray-600 font-semibold">
-              <span>Total Quantity:</span>
-              <span>{Math.round(totalQuantity)}</span>
-            </div>
-            
-            <div className="flex justify-between text-sm text-gray-600 font-semibold">
               <span>Item(s) Total:</span>
-              <span>{formatCurrency(estimate.total_amount || 0)}</span>
-            </div>
-            
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Total Amount:</span>
               <span>{formatCurrency(estimate.total_amount || 0)}</span>
             </div>
             
@@ -335,6 +325,11 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
                 <span className="text-green-600">{formatCurrency(estimate.total_credits || 0)}</span>
               </div>
             )}
+            
+            <div className="flex justify-between font-bold text-lg border-t pt-2">
+              <span>Total Amount:</span>
+              <span>{formatCurrency(estimate.total_amount || 0)}</span>
+            </div>
             
             <div className="flex justify-between font-semibold text-lg border-t pt-2">
               <span>Balance Due:</span>

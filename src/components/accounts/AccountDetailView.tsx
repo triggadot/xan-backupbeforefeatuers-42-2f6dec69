@@ -21,7 +21,7 @@ interface AccountDetailViewProps {
 const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { account, relatedData, isLoading, error } = useAccountDetail(id || '');
+  const { account, relatedData, isLoading, isError } = useAccountDetail(id);
   const [editMode, setEditMode] = useState<boolean>(isEditing);
   
   // Set edit mode based on prop changes
@@ -41,7 +41,11 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
     );
   }
 
-  const accountType = account ? determineAccountType(account.type) : 'unknown';
+  const accountType = account ? 
+    (account.is_customer && account.is_vendor ? 'both' : 
+      account.is_customer ? 'customer' : 
+      account.is_vendor ? 'vendor' : 'unknown') 
+    : 'unknown';
   const typeLabel = account?.type || '';
   
   const getStatusVariant = (): "default" | "destructive" | "outline" | "secondary" | "success" | "warning" => {
@@ -63,6 +67,7 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
   const hasInvoices = relatedData?.invoices && relatedData.invoices.length > 0;
   const hasPurchaseOrders = relatedData?.purchaseOrders && relatedData.purchaseOrders.length > 0;
   const hasProducts = relatedData?.products && relatedData.products.length > 0;
+  const hasEstimates = relatedData?.estimates && relatedData.estimates.length > 0;
 
   // Handle edit mode toggle
   const handleEditToggle = () => {
@@ -173,6 +178,9 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                   <p>{relatedData?.invoices.length || 0} invoices</p>
                   <p>{relatedData?.invoices.filter(inv => inv.status === 'paid').length || 0} paid</p>
                   <p>{relatedData?.invoices.filter(inv => inv.status === 'pending').length || 0} pending</p>
+                  {hasEstimates && (
+                    <p>{relatedData?.estimates.length || 0} estimates</p>
+                  )}
                 </div>
               </div>
             )}
@@ -227,6 +235,9 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
               <TabsTrigger value="products" disabled={!hasProducts}>
                 Products {hasProducts && `(${relatedData?.products?.length})`}
               </TabsTrigger>
+              <TabsTrigger value="estimates" disabled={!hasEstimates}>
+                Estimates {hasEstimates && `(${relatedData?.estimates?.length})`}
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="invoices" className="mt-4">
@@ -236,10 +247,10 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                           <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -248,22 +259,19 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                           <tr key={invoice.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <Link to={`/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-900">
-                                {invoice.number || invoice.id.substring(0, 8)}
+                                {invoice.invoice_uid || invoice.number || invoice.id.substring(0, 8)}
                               </Link>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(invoice.date)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.amount)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <Badge variant={
-                                invoice.status === 'paid' ? 'success' :
-                                invoice.status === 'overdue' ? 'destructive' :
-                                'secondary'
-                              }>
-                                {invoice.status}
-                              </Badge>
-                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(invoice.invoice_order_date || invoice.date)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.total_amount || invoice.amount || 0)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.balance || 0)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <Link to={`/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                              <div className="flex justify-end gap-2">
+                                <Link to={`/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                                {invoice.supabase_pdf_url && (
+                                  <a href={invoice.supabase_pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-900">PDF</a>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -285,10 +293,10 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO #</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                           <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -297,22 +305,19 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                           <tr key={po.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <Link to={`/purchase-orders/${po.id}`} className="text-blue-600 hover:text-blue-900">
-                                {po.number || po.id.substring(0, 8)}
+                                {po.purchase_order_uid || po.number || po.id.substring(0, 8)}
                               </Link>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(po.date)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(po.amount)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <Badge variant={
-                                po.status === 'completed' ? 'success' :
-                                po.status === 'cancelled' ? 'destructive' :
-                                'secondary'
-                              }>
-                                {po.status}
-                              </Badge>
-                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(po.po_date || po.date)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(po.total_amount || po.amount || 0)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(po.balance || 0)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <Link to={`/purchase-orders/${po.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                              <div className="flex justify-end gap-2">
+                                <Link to={`/purchase-orders/${po.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                                {po.supabase_pdf_url && (
+                                  <a href={po.supabase_pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-900">PDF</a>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -334,10 +339,10 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                           <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -346,14 +351,21 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                           <tr key={product.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <Link to={`/products/${product.id}`} className="text-blue-600 hover:text-blue-900">
-                                {product.name}
+                                {product.vendor_product_name || product.main_new_product_name || product.new_product_name || product.name || 'Unnamed Product'}
                               </Link>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{product.sku || 'N/A'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(product.price)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{product.stock !== undefined ? product.stock : 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{product.sku || '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(product.cost || product.price || 0)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {product.samples ? 'Sample' : product.fronted ? 'Fronted' : 'Regular'}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <Link to={`/products/${product.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                              <div className="flex justify-end gap-2">
+                                <Link to={`/products/${product.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                                {product.supabase_pdf_url && (
+                                  <a href={product.supabase_pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-900">PDF</a>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -364,6 +376,54 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
               ) : (
                 <div className="bg-white p-6 rounded-lg border text-center">
                   <p className="text-muted-foreground">No products found for this account.</p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="estimates" className="mt-4">
+              {hasEstimates ? (
+                <div className="bg-white rounded-lg overflow-hidden border">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimate #</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Converted</th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {relatedData?.estimates?.map((estimate) => (
+                          <tr key={estimate.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <Link to={`/estimates/${estimate.id}`} className="text-blue-600 hover:text-blue-900">
+                                {estimate.estimate_uid || estimate.number || estimate.estimate_number || estimate.id.substring(0, 8)}
+                              </Link>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(estimate.estimate_date || estimate.date)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(estimate.total_amount || estimate.amount || 0)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {estimate.status === 'converted' ? 'Yes' : 'No'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end gap-2">
+                                <Link to={`/estimates/${estimate.id}`} className="text-blue-600 hover:text-blue-900">View</Link>
+                                {estimate.supabase_pdf_url && (
+                                  <a href={estimate.supabase_pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-900">PDF</a>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white p-6 rounded-lg border text-center">
+                  <p className="text-muted-foreground">No estimates found for this account.</p>
                 </div>
               )}
             </TabsContent>

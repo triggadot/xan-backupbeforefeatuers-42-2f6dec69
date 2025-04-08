@@ -11,12 +11,14 @@ import { Input } from '@/components/ui/input';
 import { useQueryClient } from '@tanstack/react-query';
 import AccountCardList from '@/components/accounts/AccountCardList';
 import AccountForm from '@/components/accounts/AccountForm';
-import { useFetchAccounts, useAccountMutation } from '@/hooks/accounts';
-import { Account, AccountFormData } from '@/types/accounts';
+import { useAccountMutation } from '@/hooks/accounts';
+import { useAccountsWithBalances } from '@/hooks/accounts/useAccountsWithBalances';
+import { Account } from '@/types/accountNew';
+import { AccountFormData } from '@/types/accounts';
 
 const Accounts: React.FC = () => {
   const queryClient = useQueryClient();
-  const { accounts = [], isLoading, error } = useFetchAccounts();
+  const { accounts = [], isLoading, error } = useAccountsWithBalances();
   const { createAccount, isCreating } = useAccountMutation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

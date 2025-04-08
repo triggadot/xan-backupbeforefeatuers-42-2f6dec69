@@ -59,10 +59,19 @@ export function useAccountDetail(id?: string) {
         
         if (purchaseOrdersError) throw purchaseOrdersError;
         
+        // Fetch related estimates
+        const { data: estimates, error: estimatesError } = await supabase
+          .from('gl_estimates')
+          .select('*')
+          .eq('rowid_accounts', account.glide_row_id);
+        
+        if (estimatesError) throw estimatesError;
+        
         // Calculate account statistics
         const totalInvoices = invoices?.length || 0;
         const totalProducts = products?.length || 0;
         const totalPurchaseOrders = purchaseOrders?.length || 0;
+        const totalEstimates = estimates?.length || 0;
         const totalInvoiceAmount = invoices?.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0) || 0;
         const totalPaid = invoices?.reduce((sum, invoice) => sum + (invoice.total_paid || 0), 0) || 0;
         const balance = totalInvoiceAmount - totalPaid;
@@ -94,10 +103,12 @@ export function useAccountDetail(id?: string) {
             invoices: invoices || [],
             products: products || [],
             purchaseOrders: purchaseOrders || [],
+            estimates: estimates || [],
             stats: {
               totalInvoices,
               totalProducts,
               totalPurchaseOrders,
+              totalEstimates,
               totalInvoiceAmount,
               totalPaid,
               balance

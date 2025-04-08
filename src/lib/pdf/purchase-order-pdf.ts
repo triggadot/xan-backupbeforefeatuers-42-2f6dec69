@@ -49,8 +49,6 @@ export interface PurchaseOrderWithDetails extends PurchaseOrder {
     method: string;
     notes: string;
   }[];
-  vendor?: Database['public']['Tables']['gl_accounts']['Row'];
-  vendorName?: string;
   number?: string;
   date?: string;
   status?: string;
@@ -115,32 +113,6 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
       total_paid: Number(poData.total_paid) || 0,
       balance: Number(poData.balance) || 0
     };
-
-    // Fetch accounts (vendors)
-    const { data: accountData, error: accountError } = await supabase
-      .from('gl_accounts')
-      .select('*');
-
-    if (accountError) {
-      console.error('Error fetching accounts:', accountError);
-    } else {
-      // Create lookup maps for related data
-      const accountMap = new Map();
-      if (accountData) {
-        accountData.forEach((account: any) => {
-          accountMap.set(account.glide_row_id, account);
-        });
-      }
-
-      // Add vendor information
-      if (poData.rowid_accounts) {
-        const vendor = accountMap.get(poData.rowid_accounts);
-        if (vendor) {
-          poWithDetails.vendor = vendor;
-          poWithDetails.vendorName = vendor.account_name;
-        }
-      }
-    }
 
     // Fetch products that serve as purchase order line items
     // First try using rowid_purchase_orders
@@ -245,141 +217,165 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
  * }
  */
 export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrderWithDetails): jsPDF {
-  const doc = new jsPDF();
+  const doc = new jsPDF({
+    compress: true, 
+    putOnlyUsedFonts: true
+  });
   
   // Set theme color - dark blue
   const themeColor = [0, 51, 102]; // Dark blue RGB
   
   // Add header
-  doc.setFontSize(18);
-  doc.setFont(undefined, 'bold');
-  doc.text('PURCHASE ORDER', 20, 30);
+  doc.setFontSize(26);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PURCHASE ORDER', 15, 20);
   
-  // Add PO ID directly below header
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'normal');
-  doc.text(`ID: ${purchaseOrder.purchase_order_uid || ''}`, 20, 40);
-  
-  // Add date on the same line as ID but right-aligned
-  doc.text(`Date: ${formatShortDate(purchaseOrder.po_date || new Date())}`, 190, 40, { align: 'right' });
+  // Add PO ID and date
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${purchaseOrder.purchase_order_uid || ''}`, 15, 28);
+  doc.text(`Date: ${formatShortDate(purchaseOrder.po_date || new Date())}`, 195, 28, { align: 'right' });
   
   // Add horizontal line
   doc.setDrawColor(...themeColor);
-  doc.setLineWidth(0.5);
-  doc.line(20, 45, 190, 45);
+  doc.setLineWidth(1.5);
+  doc.line(15, 32, 195, 32);
   
-  // Add vendor details if available
-  let yPos = 55;
-  if (purchaseOrder.vendor) {
-    doc.setFontSize(11);
-    doc.text(purchaseOrder.vendor.account_name || 'N/A', 20, yPos);
-    yPos += 5;
-    
-    if (purchaseOrder.vendor.address_line_1) {
-      doc.setFontSize(10);
-      doc.text(purchaseOrder.vendor.address_line_1, 20, yPos);
-      yPos += 5;
-    }
-    
-    if (purchaseOrder.vendor.address_line_2) {
-      doc.text(purchaseOrder.vendor.address_line_2, 20, yPos);
-      yPos += 5;
-    }
-    
-    const cityStateZip = [
-      purchaseOrder.vendor.city,
-      purchaseOrder.vendor.state,
-      purchaseOrder.vendor.postal_code
-    ].filter(Boolean).join(', ');
-    
-    if (cityStateZip) {
-      doc.text(cityStateZip, 20, yPos);
-      yPos += 5;
-    }
-    
-    if (purchaseOrder.vendor.country) {
-      doc.text(purchaseOrder.vendor.country, 20, yPos);
-      yPos += 5;
-    }
-  }
+  // Start product table immediately after the header
+  const tableStartY = 45;
   
   // Define the table styles with better alignment
   const tableStyles = {
+    theme: 'striped',
     headStyles: {
-      fillColor: themeColor,
+      fillColor: [0, 51, 102],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      halign: 'left'
+      halign: 'left' // Default alignment for headers
     },
     bodyStyles: {
       textColor: [50, 50, 50]
     },
-    columnStyles: {
-      0: { halign: 'left' },    // Product name
-      1: { halign: 'center' },  // Quantity
-      2: { halign: 'right' },   // Unit price
-      3: { halign: 'right' }    // Total
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
     },
-    margin: { top: 10, right: 20, bottom: 10, left: 20 }
+    columnStyles: {
+      0: { halign: 'left' },   // Product name left-aligned
+      1: { halign: 'center' }, // Quantity center-aligned
+      2: { halign: 'right' },  // Price right-aligned
+      3: { halign: 'right' }   // Total right-aligned
+    },
+    head: [
+      [
+        { content: 'Product', styles: { halign: 'left' } },
+        { content: 'Qty', styles: { halign: 'center' } },
+        { content: 'Price', styles: { halign: 'right' } },
+        { content: 'Total', styles: { halign: 'right' } }
+      ]
+    ],
+    body: purchaseOrder.lineItems?.map(line => {
+      // Use the same display name logic as in the detail view component
+      const productName = line.display_name || line.new_product_name || line.vendor_product_name || 'Unnamed Product';
+      const quantity = line.quantity || line.total_qty_purchased || 0;
+      const unitCost = line.unit_price || line.cost || 0;
+      const total = line.line_total || (quantity * unitCost) || 0;
+      
+      return [
+        productName,
+        quantity,
+        formatCurrency(unitCost),
+        formatCurrency(total)
+      ];
+    }) || [],
+    startY: tableStartY
   };
   
-  // Map purchase order lines to table rows
-  const rows = purchaseOrder.lineItems?.map(line => {
-    const productName = line.vendor_product_name || line.new_product_name || 'N/A';
-    const quantity = line.quantity || line.total_qty_purchased || 0;
-    const unitCost = line.unit_price || line.cost || 0;
-    const total = line.line_total || (quantity * unitCost) || 0;
-    
-    return [
-      productName,
-      quantity,
-      formatCurrency(unitCost),
-      formatCurrency(total)
-    ];
-  }) || [];
-  
   // Add the items table to the document
-  autoTable(doc, {
-    head: [['Product', 'Qty', 'Price', 'Total']],
-    body: rows,
-    startY: 70,
-    ...tableStyles
-  });
+  autoTable(doc, tableStyles);
   
   // Get the final Y position of the table
   const finalY = doc.lastAutoTable.finalY;
   
+  // Calculate totals correctly
+  const totalQuantity = purchaseOrder.lineItems?.reduce((sum, item) => {
+    const quantity = Math.round(Number(item.quantity) || Number(item.total_qty_purchased) || 0);
+    return sum + quantity;
+  }, 0) || 0;
+
+  const subtotal = purchaseOrder.subtotal || purchaseOrder.lineItems?.reduce((sum, item) => {
+    const quantity = item.quantity || item.total_qty_purchased || 0;
+    const unitCost = item.unit_price || item.cost || 0;
+    return sum + (quantity * unitCost);
+  }, 0) || 0;
+  
+  // Calculate total payments
+  const totalPayments = purchaseOrder.vendorPayments?.reduce((sum, payment) => {
+    return sum + (payment.amount || 0);
+  }, 0) || 0;
+  
   // Add totals section with reduced spacing and bold text for key figures
   doc.setFontSize(11);
-  let currentY = finalY + 10;
+  let currentYPos = finalY + 10;
   
-  doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
-  doc.setFont(undefined, 'bold');
-  doc.text(formatCurrency(purchaseOrder.subtotal || 0), 190, currentY, { align: 'right' });
-  doc.setFont(undefined, 'normal');
+  doc.text(`Subtotal (${totalQuantity} item${totalQuantity === 1 ? '' : 's'}):`, 150, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(subtotal), 190, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
   
   if (purchaseOrder.tax_rate && purchaseOrder.tax_rate > 0) {
-    currentY += 7;
-    doc.text(`Tax (${purchaseOrder.tax_rate}%):`, 150, currentY, { align: 'right' });
-    doc.setFont(undefined, 'bold');
-    doc.text(formatCurrency(purchaseOrder.tax_amount || 0), 190, currentY, { align: 'right' });
-    doc.setFont(undefined, 'normal');
+    currentYPos += 7;
+    doc.text(`Tax (${purchaseOrder.tax_rate}%):`, 150, currentYPos, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCurrency(purchaseOrder.tax_amount || 0), 190, currentYPos, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
   }
   
-  currentY += 7;
-  doc.text(`Total:`, 150, currentY, { align: 'right' });
-  doc.setFont(undefined, 'bold');
-  doc.text(formatCurrency(purchaseOrder.total || 0), 190, currentY, { align: 'right' });
-  doc.setFont(undefined, 'normal');
+  // Add total paid on first page
+  currentYPos += 7;
+  doc.text(`Total Paid:`, 150, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(purchaseOrder.total_paid || totalPayments), 190, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
   
-  // Add payment details if available
+  // Add balance
+  currentYPos += 7;
+  doc.text(`Balance:`, 150, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'bold');
+  
+  // Calculate balance as total minus payments, using the same fields as in the detail view
+  const total = purchaseOrder.total_amount || purchaseOrder.total || subtotal + (purchaseOrder.tax_amount || 0);
+  const balance = purchaseOrder.balance || (total - (purchaseOrder.total_paid || totalPayments));
+  
+  doc.text(formatCurrency(balance), 190, currentYPos, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  
+  // Add payment details on a new page if available
   if (purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0) {
-    currentY += 15;
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('Payment History', 20, currentY);
-    doc.setFont(undefined, 'normal');
-    currentY += 7;
+    // Add a new page for payment history
+    doc.addPage();
+    
+    // Add header to the new page
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PURCHASE ORDER', 15, 20);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${purchaseOrder.purchase_order_uid || ''}`, 15, 28);
+    doc.text(`Date: ${formatShortDate(purchaseOrder.po_date || new Date())}`, 195, 28, { align: 'right' });
+    
+    // Add horizontal line
+    doc.setDrawColor(...themeColor);
+    doc.setLineWidth(1.5);
+    doc.line(15, 32, 195, 32);
+    
+    // Payment history title
+    currentYPos = 50;
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment History', 15, currentYPos);
+    doc.setFont('helvetica', 'normal');
+    currentYPos += 10;
     
     const paymentRows = purchaseOrder.vendorPayments.map(payment => [
       formatShortDate(payment.date),
@@ -388,36 +384,62 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrderWithDetails
       payment.notes || ''
     ]);
     
-    autoTable(doc, {
-      head: [['Date', 'Method', 'Amount', 'Notes']],
+    const paymentTableStyles = {
+      theme: 'striped',
+      headStyles: {
+        fillColor: [0, 51, 102],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'left' // Default alignment for headers
+      },
+      bodyStyles: {
+        textColor: [50, 50, 50]
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
+      columnStyles: {
+        0: { halign: 'left' },   // Date left-aligned
+        1: { halign: 'left' },   // Method left-aligned
+        2: { halign: 'right' },  // Amount right-aligned
+        3: { halign: 'left' }    // Notes left-aligned
+      },
+      head: [
+        [
+          { content: 'Date', styles: { halign: 'left' } },
+          { content: 'Method', styles: { halign: 'left' } },
+          { content: 'Amount', styles: { halign: 'right' } },
+          { content: 'Notes', styles: { halign: 'left' } }
+        ]
+      ],
       body: paymentRows,
-      startY: currentY,
-      ...{
-        ...tableStyles,
-        margin: { top: 10, right: 20, bottom: 10, left: 20 }
-      }
-    });
+      startY: currentYPos
+    };
     
-    currentY = doc.lastAutoTable.finalY + 10;
-  }
-  
-  // Add payment status
-  if (purchaseOrder.payment_status) {
-    doc.setFontSize(11);
-    doc.text(`Payment Status: ${purchaseOrder.payment_status}`, 20, currentY);
+    // Add the payment history table
+    autoTable(doc, paymentTableStyles);
+    
+    // Add total payments after the payment history table
+    const paymentTableFinalY = doc.lastAutoTable.finalY;
+    currentYPos = paymentTableFinalY + 10;
+    
+    doc.text(`Total Paid:`, 150, currentYPos, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatCurrency(purchaseOrder.total_paid || totalPayments), 190, currentYPos, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
   }
   
   // Add notes if available with reduced spacing
   if (purchaseOrder.po_notes) {
-    currentY += 15;
+    currentYPos += 15;
     doc.setFontSize(11);
-    doc.text('Notes:', 20, currentY);
-    currentY += 7;
+    doc.text('Notes:', 20, currentYPos);
+    currentYPos += 7;
     doc.setFontSize(10);
     
     // Split notes into multiple lines if needed
     const splitNotes = doc.splitTextToSize(purchaseOrder.po_notes, 170);
-    doc.text(splitNotes, 20, currentY);
+    doc.text(splitNotes, 20, currentYPos);
   }
   
   // Add footer

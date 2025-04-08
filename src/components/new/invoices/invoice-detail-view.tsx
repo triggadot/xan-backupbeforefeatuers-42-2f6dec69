@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { PDFActions } from '@/components/pdf/PDFActions';
 import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
-import { PDFActions } from '@/components/pdf/PDFActions';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { Printer } from 'lucide-react';
+import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
@@ -34,17 +33,15 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
     }
   };
 
-  // For debugging purposes
-  console.log("Rendering InvoiceDetailView with invoice:", invoice);
-
   // Calculate subtotal if tax information is available
   const subtotal = invoice.tax_amount ? (invoice.total_amount || 0) - (invoice.tax_amount || 0) : invoice.total_amount || 0;
 
-  // Calculate total quantity
-  const totalQuantity = invoice.lines?.reduce((total, line) => total + (Number(line.qty_sold) || 0), 0) || 0;
+  // Calculate item count
+  const itemCount = invoice.lines?.length || 0;
 
   // PDF operations
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
+  const { generatePDF, loading } = usePDFOperations();
 
   // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
@@ -67,32 +64,8 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
     }
   }, [invoice]);
 
-  // Handle printing
-  const handlePrintInvoice = () => {
-    toast({
-      title: 'Print Invoice',
-      description: 'Preparing invoice for printing...',
-    });
-    
-    // You can use window.print() or a more sophisticated approach
-    window.print();
-  };
-
   return (
     <Card className="w-full max-w-4xl mx-auto">
-      {/* Debug panel - visible only in development */}
-      {process.env.NODE_ENV !== 'production' && (
-        <div className="bg-yellow-100 p-4 text-xs font-mono border-b border-yellow-200">
-          <h3 className="font-bold mb-2">Debug Information:</h3>
-          <div><strong>Invoice ID:</strong> {invoice.id}</div>
-          <div><strong>Glide Row ID:</strong> {invoice.glide_row_id}</div>
-          <div><strong>Account ID:</strong> {invoice.rowid_accounts}</div>
-          <div><strong>Status:</strong> {invoice.payment_status}</div>
-          <div><strong>Line Items:</strong> {invoice.lines?.length || 0}</div>
-          <div><strong>Has Account:</strong> {invoice.account ? 'Yes' : 'No'}</div>
-        </div>
-      )}
-
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
           {formattedInvoiceNumber}
@@ -113,6 +86,16 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
             </h2>
             <p className="text-gray-500">
               {invoice.gl_accounts?.account_name || 'No Account'}
+              {invoice.gl_accounts?.balance !== undefined && (
+                <span className="ml-2">
+                  <AmountDisplay 
+                    amount={invoice.gl_accounts.balance} 
+                    variant="auto" 
+                    showLabel={true} 
+                    className="text-sm"
+                  />
+                </span>
+              )}
             </p>
           </div>
           
@@ -125,10 +108,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
               showLabels={true}
               onPDFGenerated={(url) => setPdfUrl(url)}
             />
-            <Button variant="outline" size="sm" onClick={handlePrintInvoice}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
           </div>
         </div>
 
@@ -169,7 +148,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
               {invoice.lines && invoice.lines.length > 0 ? (
                 invoice.lines.map((line, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{line.renamed_product_name || 'Unnamed Product'}</TableCell>
+                    <TableCell className="font-medium">{line.product_name_display || line.renamed_product_name || 'Unnamed Product'}</TableCell>
                     <TableCell className="text-right">{line.qty_sold || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.selling_price || 0)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.line_total || 0)}</TableCell>
@@ -187,30 +166,24 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
         {/* Totals */}
         <div className="mt-6 space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-500">Subtotal</span>
-            <span>{formatCurrency(subtotal)}</span>
-          </div>
-          
-          {invoice.tax_amount && invoice.tax_amount > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-500">Tax ({invoice.tax_rate || 0}%)</span>
-              <span>{formatCurrency(invoice.tax_amount)}</span>
-            </div>
-          )}
-          
-          <div className="flex justify-between font-bold">
-            <span>Total</span>
-            <span>{formatCurrency(invoice.total_amount || 0)}</span>
+            <span className="text-gray-500 font-medium">
+              Subtotal ({itemCount} item{itemCount !== 1 ? 's' : ''}):
+            </span>
+            <AmountDisplay amount={subtotal} />
           </div>
           
           <div className="flex justify-between">
-            <span className="text-gray-500">Paid</span>
-            <span>{formatCurrency(invoice.total_paid || 0)}</span>
+            <span className="text-gray-500 font-medium">Paid:</span>
+            <AmountDisplay amount={invoice.total_paid || 0} variant={invoice.total_paid ? 'success' : 'default'} />
           </div>
           
           <div className="flex justify-between font-bold pt-2 border-t">
-            <span>Balance</span>
-            <span>{formatCurrency(invoice.balance || 0)}</span>
+            <span>Balance:</span>
+            <AmountDisplay 
+              amount={invoice.balance || 0} 
+              variant={invoice.balance === 0 ? 'success' : (invoice.balance > 0 ? 'destructive' : 'default')} 
+              className="font-bold" 
+            />
           </div>
         </div>
 

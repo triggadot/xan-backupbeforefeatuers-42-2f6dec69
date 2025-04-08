@@ -144,7 +144,6 @@ export const usePDFOperations = () => {
   return {
     generatePDF,
     downloadPDF,
-    isGenerating,
-    isStoring
+    loading: isGenerating || isStoring
   };
 }
