@@ -1,116 +1,88 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { GlMapping, GlSyncStatus } from '@/types/glsync';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useGlSyncStatus } from '@/hooks/useGlSyncStatus';
-import { useGlSync } from '@/hooks/useGlSync';
-import { ProgressIndicator } from './ui/ProgressIndicator';
-import { RefreshCw } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { SyncButton } from './SyncButton';
 
-export interface SyncProgressIndicatorProps {
-  mapping: GlMapping;
-  status?: GlSyncStatus;
+interface SyncProgressIndicatorProps {
+  mapping: {
+    id: string;
+    connection_id: string;
+    glide_table: string;
+    supabase_table: string;
+    glide_table_display_name?: string;
+  };
 }
 
-export const SyncProgressIndicator: React.FC<SyncProgressIndicatorProps> = ({ 
-  mapping,
-  status: initialStatus 
-}) => {
-  // State declarations
-  const [isSyncing, setIsSyncing] = useState(false);
+export function SyncProgressIndicator({ mapping }: SyncProgressIndicatorProps) {
+  const { refreshData } = useGlSyncStatus();
   
-  // Hooks
-  const { syncStatus } = useGlSyncStatus(mapping.id);
-  const { syncData } = useGlSync();
-  const { toast } = useToast();
-
-  // Handle sync button click
-  const handleSync = async () => {
-    if (isSyncing || syncStatus?.current_status === 'processing') return;
-    
-    setIsSyncing(true);
-    try {
-      const result = await syncData(mapping.connection_id, mapping.id);
-      
-      if (result) {
-        toast({
-          title: 'Sync started',
-          description: 'The synchronization process has been initiated.',
-        });
-      } else {
-        toast({
-          title: 'Sync failed',
-          description: 'An unknown error occurred',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Sync failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  // Find sync status for this mapping
+  const { syncStatus, allSyncStatuses, isLoading } = useGlSyncStatus();
   
-  // Return/render component
+  // Get the status for this specific mapping
+  const mappingStatus = allSyncStatuses.find(status => status.mapping_id === mapping.id);
+  
+  // Calculate progress
+  const progress = mappingStatus?.records_processed && mappingStatus?.total_records
+    ? Math.min(100, Math.round((mappingStatus.records_processed / mappingStatus.total_records) * 100))
+    : 0;
+  
+  // Determine if sync is in progress
+  const isSyncing = mappingStatus?.current_status === 'running' || mappingStatus?.current_status === 'processing';
+  
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Sync Progress</CardTitle>
-          <Button 
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">
+          {mapping.glide_table_display_name || mapping.glide_table}
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
             size="sm"
-            variant="default"
-            className="h-8 px-3 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
-            onClick={handleSync}
-            disabled={isSyncing || syncStatus?.current_status === 'processing'}
+            onClick={() => refreshData()}
+            disabled={isLoading}
           >
-            {isSyncing || syncStatus?.current_status === 'processing' ? (
-              <>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Syncing...
-              </>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Sync Now
-              </>
+              <RefreshCw className="h-4 w-4" />
             )}
+            <span className="sr-only">Refresh</span>
           </Button>
+          
+          <SyncButton
+            connectionId={mapping.connection_id}
+            mappingId={mapping.id}
+            variant="outline"
+            size="sm"
+            onSyncComplete={refreshData}
+            showIcon={true}
+            label="Sync"
+          />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <ProgressIndicator 
-            current={syncStatus?.records_processed} 
-            total={syncStatus?.total_records}
-            showText={true}
-            showPercentage={true}
-          />
-          
-          <div className="text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status</span>
-              <span className="capitalize">
-                {syncStatus?.current_status || 'Not synced'}
-              </span>
-            </div>
-            
-            {syncStatus?.last_sync_completed_at && (
-              <div className="flex justify-between mt-2">
-                <span className="text-muted-foreground">Last Completed</span>
-                <span>
-                  {new Date(syncStatus.last_sync_completed_at).toLocaleString()}
-                </span>
-              </div>
-            )}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>
+              {mappingStatus?.current_status === 'running' ? 'Syncing...' : 
+               mappingStatus?.current_status === 'processing' ? 'Processing...' :
+               mappingStatus?.current_status === 'completed' ? 'Completed' :
+               mappingStatus?.current_status === 'completed_with_errors' ? 'Completed with errors' :
+               mappingStatus?.current_status === 'error' ? 'Error' :
+               'Ready'}
+            </span>
+            <span>
+              {mappingStatus?.records_processed || 0} / {mappingStatus?.total_records || 0} records
+            </span>
           </div>
         </div>
       </CardContent>
     </Card>
   );
-};
+}

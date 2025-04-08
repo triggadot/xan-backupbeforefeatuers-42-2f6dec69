@@ -6,6 +6,7 @@ export interface EstimateLine {
   rowid_estimates?: string;
   rowid_products?: string;
   sale_product_name?: string;
+  product_name_display?: string;
   qty_sold: number;
   selling_price: number;
   line_total: number;

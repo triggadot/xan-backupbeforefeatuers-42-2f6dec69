@@ -135,13 +135,19 @@ const PurchaseOrderList = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{purchaseOrder.number || `PO-${purchaseOrder.id.slice(0, 8)}`}</div>
+                    <Link to={`/purchase-orders/${purchaseOrder.id}`} className="hover:underline">
+                      <div className="font-medium">{purchaseOrder.number || `PO-${purchaseOrder.id.slice(0, 8)}`}</div>
+                    </Link>
                   </TableCell>
                   <TableCell>
-                    {purchaseOrder.date ? format(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                    <Link to={`/purchase-orders/${purchaseOrder.id}`} className="text-gray-700 hover:text-gray-900">
+                      {purchaseOrder.date ? format(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                    </Link>
                   </TableCell>
                   <TableCell>
-                    {purchaseOrder.vendorName || (purchaseOrder.vendor?.account_name || 'N/A')}
+                    <Link to={`/purchase-orders/${purchaseOrder.id}`} className="text-gray-700 hover:text-gray-900">
+                      {purchaseOrder.vendorName || (purchaseOrder.vendor?.account_name || 'N/A')}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(purchaseOrder.status)}>

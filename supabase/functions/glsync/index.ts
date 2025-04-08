@@ -1,7 +1,7 @@
 // Use the correct import URL for Supabase JS client in Deno
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { testGlideConnection, getGlideTableColumns, fetchGlideTableData } from '../shared/glide-api'
+import { testGlideConnection, getGlideTableColumns, fetchGlideTableData } from '../shared/glide-api.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

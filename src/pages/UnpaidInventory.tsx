@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { useUnpaidInventory } from '@/hooks/useUnpaidInventory';
+import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UnpaidInventoryList from '@/components/feature/product/UnpaidInventoryList';
@@ -11,19 +10,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const UnpaidInventory: React.FC = () => {
-  const { products, isLoading, error } = useUnpaidInventory();
+  const { unpaidInventory, isLoading, error, refreshDashboard } = useBusinessDashboard();
   const [unpaidProducts, setUnpaidProducts] = useState<UnpaidProduct[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (products) {
-      setUnpaidProducts(products);
+    // Combine samples and fronted products
+    if (unpaidInventory) {
+      setUnpaidProducts([...unpaidInventory.samples, ...unpaidInventory.fronted]);
     }
-  }, [products]);
+  }, [unpaidInventory]);
 
   const fetchUnpaidInventory = async () => {
-    // Refresh the page - no need for a full implementation since useUnpaidInventory will refresh on mount
-    window.location.reload();
+    refreshDashboard();
   };
 
   const markAsPaid = async (productId: string): Promise<boolean> => {

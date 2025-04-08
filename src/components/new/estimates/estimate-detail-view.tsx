@@ -246,7 +246,7 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
               {estimate.estimateLines && estimate.estimateLines.length > 0 ? (
                 estimate.estimateLines.map((line, index) => (
                   <TableRow key={line.id || index} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{line.sale_product_name || 'Product Description'}</TableCell>
+                    <TableCell className="font-medium">{line.sale_product_name || line.product_name_display || 'Product Description'}</TableCell>
                     <TableCell>{Math.round(Number(line.qty_sold) || 0)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.selling_price || 0)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.line_total || (line.qty_sold || 0) * (line.selling_price || 0))}</TableCell>

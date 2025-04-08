@@ -302,11 +302,9 @@ const PurchaseOrderDetailView = ({
                     {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => (
                       <tr key={item.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4">
-                          <div className="font-medium">{item.new_product_name || item.product_name || 'Unnamed Product'}</div>
-                          {item.vendor_product_name ? (
-                            <div className="text-xs text-gray-500">{item.vendor_product_name}</div>
-                          ) : (
-                            <div className="text-xs text-gray-500">No vendor product name</div>
+                          <div className="font-medium">{item.display_name || item.new_product_name || item.vendor_product_name || 'Unnamed Product'}</div>
+                          {item.vendor_product_name && item.display_name !== item.vendor_product_name && (
+                            <div className="text-xs text-gray-500">Vendor's Product Name: "{item.vendor_product_name}"</div>
                           )}
                           {item.notes && <div className="text-xs text-gray-500 mt-1">{item.notes}</div>}
                           {(item.samples || item.fronted) && (

@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import Dashboard from '@/pages/Dashboard';
+import ModernDashboard from '@/pages/ModernDashboard';
 import Products from '@/pages/Products';
 import TableDemo from '@/pages/TableDemo';
 import SidebarDemo from '@/pages/SidebarDemo';
@@ -55,7 +55,7 @@ function App() {
             path="dashboard" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <ModernDashboard />
               </ProtectedRoute>
             } 
           />
