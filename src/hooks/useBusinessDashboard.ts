@@ -69,7 +69,7 @@ export function useBusinessDashboard() {
         // Unpaid inventory - products that are samples or fronted
         supabase
           .from('gl_products')
-          .select('*, gl_accounts!gl_products_rowid_accounts_fkey(account_name)')
+          .select('*')
           .or('samples.eq.true,fronted.eq.true')
       ]);
       
@@ -168,14 +168,35 @@ export function useBusinessDashboard() {
       
       setStatusMetrics(calculatedStatusMetrics);
       
-      // Process unpaid inventory data
-      const unpaidData = unpaidInventoryResponse.data || [];
+      // Process unpaid inventory
+      const unpaidProducts = unpaidInventoryResponse.data || [];
       
-      // Process samples
-      const samplesData = unpaidData
+      // Fetch accounts for the unpaid products
+      const accountIds = [...new Set(unpaidProducts.map(item => item.rowid_accounts).filter(Boolean))];
+      
+      let accountsMap = new Map();
+      if (accountIds.length > 0) {
+        const { data: accountsData, error: accountsError } = await supabase
+          .from('gl_accounts')
+          .select('glide_row_id, account_name')
+          .in('glide_row_id', accountIds);
+          
+        if (accountsError) {
+          console.error('Error fetching accounts for unpaid products:', accountsError);
+        } else if (accountsData) {
+          // Create a lookup map for accounts
+          accountsMap = new Map(
+            accountsData.map(account => [account.glide_row_id, account])
+          );
+        }
+      }
+      
+      // Process samples and fronted products
+      const samplesData = unpaidProducts
         .filter(item => item.samples === true)
         .map(item => {
-          const vendorName = item.gl_accounts?.account_name || 'Unknown';
+          const account = accountsMap.get(item.rowid_accounts);
+          const vendorName = account ? account.account_name : 'Unknown Vendor';
           const unpaidValue = Number(item.cost || 0) * Number(item.total_qty_purchased || 0);
           
           return {
@@ -207,10 +228,11 @@ export function useBusinessDashboard() {
         });
       
       // Process fronted items
-      const frontedData = unpaidData
+      const frontedData = unpaidProducts
         .filter(item => item.fronted === true)
         .map(item => {
-          const vendorName = item.gl_accounts?.account_name || 'Unknown';
+          const account = accountsMap.get(item.rowid_accounts);
+          const vendorName = account ? account.account_name : 'Unknown Vendor';
           const unpaidValue = Number(item.cost || 0) * Number(item.total_qty_purchased || 0);
           
           return {
