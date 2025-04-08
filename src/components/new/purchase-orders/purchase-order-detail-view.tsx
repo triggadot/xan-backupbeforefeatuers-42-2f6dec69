@@ -1,6 +1,6 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Printer, Download, Share2, Edit, RefreshCw, Database } from 'lucide-react';
+import { ChevronLeft, Printer, Edit, RefreshCw, Database } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
+import { PDFActions } from '@/components/pdf/PDFActions';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 
 interface PurchaseOrderDetailViewProps {
   purchaseOrder: PurchaseOrder | null;
@@ -119,6 +121,10 @@ const PurchaseOrderDetailView = ({
     }
   };
 
+  // PDF operations
+  const { generatePDF, storePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(purchaseOrder?.supabase_pdf_url || null);
+
   const statusColor = useMemo(() => {
     if (!purchaseOrder) return 'bg-gray-100 text-gray-800';
 
@@ -135,6 +141,17 @@ const PurchaseOrderDetailView = ({
         return 'bg-blue-100 text-blue-800';
     }
   }, [purchaseOrder]);
+
+  // Handle printing
+  const handlePrintInvoice = () => {
+    toast({
+      title: 'Print Purchase Order',
+      description: 'Preparing purchase order for printing...',
+    });
+    
+    // Use window.print() for printing
+    window.print();
+  };
 
   if (isLoading) {
     return (
@@ -182,33 +199,69 @@ const PurchaseOrderDetailView = ({
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to Purchase Orders
           </Button>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGoBack}
+              className="flex items-center gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to List
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEdit}
+              className="flex items-center gap-1"
+            >
+              <Edit className="h-4 w-4" />
+              Edit
+            </Button>
+            
+            <PDFActions 
+              documentType="purchaseOrder"
+              document={purchaseOrder}
+              variant="outline"
+              size="sm"
+              showLabels={true}
+              onPDFGenerated={(url) => setPdfUrl(url)}
+            />
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintInvoice}
+              className="flex items-center gap-1"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+            
             {onRefresh && (
-              <Button onClick={onRefresh} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
             )}
-            <Button onClick={checkDatabase} variant="outline" size="sm">
-              <Database className="h-4 w-4 mr-2" />
-              Check Database
-            </Button>
-            <Button onClick={handleEdit} variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button variant="outline" size="sm">
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
+            
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={checkDatabase}
+                className="flex items-center gap-1"
+              >
+                <Database className="h-4 w-4" />
+                Check DB
+              </Button>
+            )}
           </div>
         </div>
 
@@ -279,128 +332,128 @@ const PurchaseOrderDetailView = ({
               )}
             </CardContent>
           </Card>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Line Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {purchaseOrder.lineItems && purchaseOrder.lineItems.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="py-2 px-4 text-left font-medium">Product</th>
-                      <th className="py-2 px-4 text-right font-medium">Quantity</th>
-                      <th className="py-2 px-4 text-right font-medium">Cost</th>
-                      <th className="py-2 px-4 text-right font-medium">Total</th>
-                      <th className="py-2 px-4 text-center font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => (
-                      <tr key={item.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <div className="font-medium">{item.display_name || item.new_product_name || item.vendor_product_name || 'Unnamed Product'}</div>
-                          {item.vendor_product_name && item.display_name !== item.vendor_product_name && (
-                            <div className="text-xs text-gray-500">Vendor's Product Name: "{item.vendor_product_name}"</div>
-                          )}
-                          {item.notes && <div className="text-xs text-gray-500 mt-1">{item.notes}</div>}
-                          {(item.samples || item.fronted) && (
-                            <div className="mt-1 flex gap-1">
-                              {item.samples && (
-                                <Badge variant="outline" className="text-xs">Sample</Badge>
-                              )}
-                              {item.fronted && (
-                                <Badge variant="outline" className="text-xs">Fronted</Badge>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">{item.quantity}</td>
-                        <td className="py-3 px-4 text-right">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(item.total)}</td>
+          <Card>
+            <CardHeader>
+              <CardTitle>Line Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {purchaseOrder.lineItems && purchaseOrder.lineItems.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-2 px-4 text-left font-medium">Product</th>
+                        <th className="py-2 px-4 text-right font-medium">Quantity</th>
+                        <th className="py-2 px-4 text-right font-medium">Cost</th>
+                        <th className="py-2 px-4 text-right font-medium">Total</th>
+                        <th className="py-2 px-4 text-center font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => (
+                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="font-medium">{item.display_name || item.new_product_name || item.vendor_product_name || 'Unnamed Product'}</div>
+                            {item.vendor_product_name && item.display_name !== item.vendor_product_name && (
+                              <div className="text-xs text-gray-500">Vendor's Product Name: "{item.vendor_product_name}"</div>
+                            )}
+                            {item.notes && <div className="text-xs text-gray-500 mt-1">{item.notes}</div>}
+                            {(item.samples || item.fronted) && (
+                              <div className="mt-1 flex gap-1">
+                                {item.samples && (
+                                  <Badge variant="outline" className="text-xs">Sample</Badge>
+                                )}
+                                {item.fronted && (
+                                  <Badge variant="outline" className="text-xs">Fronted</Badge>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">{item.quantity}</td>
+                          <td className="py-3 px-4 text-right">{formatCurrency(item.unitPrice)}</td>
+                          <td className="py-3 px-4 text-right font-medium">{formatCurrency(item.total)}</td>
+                          <td className="py-3 px-4 text-center">
+                            {item.category && (
+                              <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50">
+                        <td className="py-3 px-4 font-medium">Total</td>
+                        <td className="py-3 px-4 text-right font-medium">{purchaseOrder.totalUnits || 0}</td>
+                        <td className="py-3 px-4"></td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.totalCost || 0)}</td>
                         <td className="py-3 px-4 text-center">
-                          {item.category && (
-                            <Badge variant="secondary" className="text-xs">{item.category}</Badge>
-                          )}
+                          <Badge className={statusColor}>{purchaseOrder.status}</Badge>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50">
-                      <td className="py-3 px-4 font-medium">Total</td>
-                      <td className="py-3 px-4 text-right font-medium">{purchaseOrder.totalUnits || 0}</td>
-                      <td className="py-3 px-4"></td>
-                      <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.totalCost || 0)}</td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge className={statusColor}>{purchaseOrder.status}</Badge>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500">No line items found for this purchase order.</p>
-            )}
-          </CardContent>
-        </Card>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500">No line items found for this purchase order.</p>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="py-2 px-4 text-left font-medium">Date</th>
-                      <th className="py-2 px-4 text-left font-medium">Method</th>
-                      <th className="py-2 px-4 text-right font-medium">Amount</th>
-                      <th className="py-2 px-4 text-left font-medium">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchaseOrder.vendorPayments.map((payment) => {
-                      // Use any type to safely access properties
-                      const paymentAny = payment as any;
-                      return (
-                        <tr key={payment.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            {payment.date ? formatDate(new Date(payment.date)) : 'N/A'}
-                          </td>
-                          <td className="py-3 px-4">{payment.method || 'N/A'}</td>
-                          <td className="py-3 px-4 text-right font-medium">
-                            {formatCurrency(payment.amount || paymentAny.payment_amount || 0)}
-                          </td>
-                          <td className="py-3 px-4">{payment.notes || paymentAny.vendor_purchase_note || ''}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50">
-                      <td colSpan={2} className="py-3 px-4 font-medium">Total Paid</td>
-                      <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.total_paid || 0)}</td>
-                      <td></td>
-                    </tr>
-                    <tr className="bg-gray-50">
-                      <td colSpan={2} className="py-3 px-4 font-medium">Balance</td>
-                      <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.balance || 0)}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500">No payment history found for this purchase order.</p>
-            )}
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-2 px-4 text-left font-medium">Date</th>
+                        <th className="py-2 px-4 text-left font-medium">Method</th>
+                        <th className="py-2 px-4 text-right font-medium">Amount</th>
+                        <th className="py-2 px-4 text-left font-medium">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchaseOrder.vendorPayments.map((payment) => {
+                        // Use any type to safely access properties
+                        const paymentAny = payment as any;
+                        return (
+                          <tr key={payment.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              {payment.date ? formatDate(new Date(payment.date)) : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">{payment.method || 'N/A'}</td>
+                            <td className="py-3 px-4 text-right font-medium">
+                              {formatCurrency(payment.amount || paymentAny.payment_amount || 0)}
+                            </td>
+                            <td className="py-3 px-4">{payment.notes || paymentAny.vendor_purchase_note || ''}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50">
+                        <td colSpan={2} className="py-3 px-4 font-medium">Total Paid</td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.total_paid || 0)}</td>
+                        <td></td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td colSpan={2} className="py-3 px-4 font-medium">Balance</td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(purchaseOrder.balance || 0)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500">No payment history found for this purchase order.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

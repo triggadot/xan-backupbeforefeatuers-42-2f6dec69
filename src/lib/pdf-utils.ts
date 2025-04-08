@@ -353,6 +353,113 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
 }
 
 /**
+ * Generate a PDF based on document type and data
+ * 
+ * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
+ * @param data - The document data
+ * @returns The generated PDF document or null if generation failed
+ */
+export function generatePDF(
+  type: 'invoice' | 'purchaseOrder' | 'estimate',
+  data: Invoice | PurchaseOrder | Estimate
+): jsPDF | null {
+  try {
+    console.log(`Generating PDF for ${type} with ID: ${data.id}`);
+    
+    switch (type) {
+      case 'invoice':
+        return generateInvoicePDF(data as Invoice);
+      case 'purchaseOrder':
+        return generatePurchaseOrderPDF(data as PurchaseOrder);
+      case 'estimate':
+        return generateEstimatePDF(data as Estimate);
+      default:
+        console.error(`Unknown document type: ${type}`);
+        return null;
+    }
+  } catch (error) {
+    console.error(`Error generating ${type} PDF:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generate a filename for a PDF document
+ * @param prefix The document type prefix (e.g., 'Invoice', 'PO', 'Estimate')
+ * @param id The document ID or UID
+ * @param date The document date
+ * @returns A formatted filename string
+ */
+export function generateFilename(prefix: string, id: string, date: Date | string): string {
+  const formattedDate = typeof date === 'string' 
+    ? new Date(date).toISOString().split('T')[0] 
+    : date.toISOString().split('T')[0];
+  
+  return `${prefix}_${id}_${formattedDate}.pdf`;
+}
+
+/**
+ * Store a PDF document in Supabase storage
+ * @param doc The jsPDF document to store
+ * @param entityType The type of entity ('invoice', 'purchase-order', 'estimate')
+ * @param entityId The ID of the entity
+ * @param fileName Optional custom filename
+ * @returns The public URL of the stored PDF or null if storage failed
+ */
+export async function storePDFInSupabase(
+  doc: jsPDF,
+  entityType: 'invoice' | 'purchase-order' | 'estimate',
+  entityId: string,
+  fileName?: string
+): Promise<string | null> {
+  try {
+    // Convert the PDF to a blob
+    const pdfOutput = doc.output('blob');
+    
+    // Generate a filename if not provided
+    const finalFileName = fileName || `${entityType}_${entityId}_${new Date().toISOString()}.pdf`;
+    
+    // Determine the folder path based on entity type
+    const folderPath = entityType === 'invoice' 
+      ? 'Invoices' 
+      : entityType === 'purchase-order' 
+        ? 'PurchaseOrders' 
+        : 'Estimates';
+    
+    // Upload to Supabase storage
+    const { data, error } = await supabase
+      .storage
+      .from('documents')
+      .upload(`${folderPath}/${finalFileName}`, pdfOutput, {
+        contentType: 'application/pdf',
+        upsert: true
+      });
+    
+    if (error) {
+      console.error(`Error uploading ${entityType} PDF to Supabase:`, error);
+      return null;
+    }
+    
+    // Get the public URL
+    const { data: urlData } = supabase
+      .storage
+      .from('documents')
+      .getPublicUrl(`${folderPath}/${finalFileName}`);
+    
+    if (!urlData || !urlData.publicUrl) {
+      console.error(`Failed to get public URL for ${entityType} PDF`);
+      return null;
+    }
+    
+    console.log(`PDF stored successfully: ${urlData.publicUrl}`);
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in storePDFInSupabase:', error);
+    return null;
+  }
+}
+
+/**
  * Upload a PDF to Supabase storage
  * @param doc The jsPDF document to upload
  * @param folderName The folder to store the PDF in (Invoices, PurchaseOrders, or Estimates)

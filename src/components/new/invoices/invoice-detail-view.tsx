@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,6 +7,9 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
+import { PDFActions } from '@/components/pdf/PDFActions';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { Printer } from 'lucide-react';
 
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
@@ -40,6 +43,9 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
   // Calculate total quantity
   const totalQuantity = invoice.lines?.reduce((total, line) => total + (Number(line.qty_sold) || 0), 0) || 0;
 
+  // PDF operations
+  const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
+
   // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
     try {
@@ -60,37 +66,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
       return invoice.id?.substring(0, 8) || 'Unknown';
     }
   }, [invoice]);
-
-  // Handle PDF download
-  const handleDownloadPdf = () => {
-    // Check if we have a direct link
-    if (invoice.doc_glideforeverlink) {
-      window.open(invoice.doc_glideforeverlink, '_blank');
-    } else {
-      toast({
-        title: 'PDF Download',
-        description: 'Generating PDF document...',
-      });
-      
-      // In a real implementation, you would make an API call to generate and download the PDF
-      setTimeout(() => {
-        toast({
-          title: 'PDF Generated',
-          description: 'Your invoice PDF has been generated and downloaded.',
-        });
-      }, 1000);
-    }
-  };
-
-  // Handle invoice sharing
-  const handleShareInvoice = () => {
-    toast({
-      title: 'Share Invoice',
-      description: 'Opening share options...',
-    });
-    
-    // In a real implementation, you would have sharing functionality
-  };
 
   // Handle printing
   const handlePrintInvoice = () => {
@@ -131,87 +106,61 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
         </Badge>
       </CardHeader>
       <CardContent>
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2 mb-6 justify-end">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1" 
-            onClick={handleDownloadPdf}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1" 
-            onClick={handlePrintInvoice}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Print
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex items-center gap-1" 
-            onClick={handleShareInvoice}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            Share
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
-          <div className="border-b pb-3 md:border-b-0 md:pb-0">
-            <h3 className="font-semibold mb-2 text-gray-700">Billed To:</h3>
-            {invoice.account ? (
-              <div className="space-y-1">
-                <p className="font-medium text-base">{invoice.account.account_name || 'Unnamed Account'}</p>
-                {invoice.account.accounts_uid && <p className="text-gray-600">{invoice.account.accounts_uid}</p>}
-                {invoice.account.email_of_who_added && <p className="text-gray-600">{invoice.account.email_of_who_added}</p>}
-                {invoice.account.client_type && (
-                  <p className="text-xs mt-1 inline-block px-2 py-1 bg-gray-100 rounded-md text-gray-700">
-                    {invoice.account.client_type}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-gray-500">Account ID: {invoice.rowid_accounts || 'N/A'}</p>
-            )}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Invoice #{invoice.invoice_uid || formattedInvoiceNumber}
+            </h2>
+            <p className="text-gray-500">
+              {invoice.gl_accounts?.account_name || 'No Account'}
+            </p>
           </div>
-          <div className="text-right">
-            <div className="flex flex-col space-y-2">
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-700">Invoice Date:</span> 
-                <span>{formatDate(invoice.invoice_order_date) || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-700">Due Date:</span> 
-                <span>{formatDate(invoice.due_date) || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-700">Created:</span> 
-                <span>{formatDate(invoice.created_timestamp) || 'N/A'}</span>
-              </div>
-            </div>
+          
+          <div className="flex space-x-2">
+            <PDFActions 
+              documentType="invoice"
+              document={invoice}
+              variant="outline"
+              size="sm"
+              showLabels={true}
+              onPDFGenerated={(url) => setPdfUrl(url)}
+            />
+            <Button variant="outline" size="sm" onClick={handlePrintInvoice}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
           </div>
         </div>
 
-        {/* Invoice Line Items */}
-        <h3 className="text-lg font-semibold mb-2 text-gray-800">Items</h3>
-        <div className="rounded-md border overflow-hidden">
+        {/* Invoice Details */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Invoice Date</h3>
+            <p className="text-gray-900">{formatDate(invoice.invoice_order_date)}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Due Date</h3>
+            <p className="text-gray-900">{formatDate(invoice.due_date)}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Customer</h3>
+            <p className="text-gray-900">{invoice.gl_accounts?.account_name || 'N/A'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Status</h3>
+            <Badge variant={statusColor()}>
+              {(invoice.payment_status || 'draft').toUpperCase()}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Line Items */}
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Qty</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Unit Price</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
@@ -219,78 +168,57 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
             <TableBody>
               {invoice.lines && invoice.lines.length > 0 ? (
                 invoice.lines.map((line, index) => (
-                  <TableRow key={line.id || index} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{line.display_name || line.renamed_product_name || 'Product Description'}</TableCell>
-                    <TableCell>{Math.round(Number(line.qty_sold) || 0)}</TableCell>
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{line.renamed_product_name || 'Unnamed Product'}</TableCell>
+                    <TableCell className="text-right">{line.qty_sold || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.selling_price || 0)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(line.line_total || (line.qty_sold || 0) * (line.selling_price || 0))}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(line.line_total || 0)}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-gray-500">No items on this invoice.</TableCell>
+                  <TableCell colSpan={4} className="text-center py-4">No line items found</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Invoice Totals */}
-        <div className="mt-6 flex justify-end">
-          <div className="w-full max-w-xs space-y-2">
-            <div className="flex justify-between text-sm text-gray-600 font-semibold">
-              <span>Total Quantity:</span>
-              <span>{Math.round(totalQuantity)}</span>
+        {/* Totals */}
+        <div className="mt-6 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-500">Subtotal</span>
+            <span>{formatCurrency(subtotal)}</span>
+          </div>
+          
+          {invoice.tax_amount && invoice.tax_amount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-500">Tax ({invoice.tax_rate || 0}%)</span>
+              <span>{formatCurrency(invoice.tax_amount)}</span>
             </div>
-            
-            <div className="flex justify-between text-sm text-gray-600 font-semibold">
-              <span>Item(s) Total:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            
-            {invoice.tax_amount && invoice.tax_amount > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Tax ({invoice.tax_rate || 0}%):</span>
-                <span>{formatCurrency(invoice.tax_amount || 0)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
-              <span>Total Amount:</span>
-              <span>{formatCurrency(invoice.total_amount || 0)}</span>
-            </div>
-            
-            <div className="flex justify-between text-sm">
-              <span>Total Paid:</span>
-              <span className="text-green-600">{formatCurrency(invoice.total_paid || 0)}</span>
-            </div>
-            
-            <div className="flex justify-between font-semibold text-lg border-t pt-2">
-              <span>Balance Due:</span>
-              <span className={invoice.balance && invoice.balance > 0 ? 'text-red-600' : 'text-green-600'}>
-                {formatCurrency(invoice.balance || 0)}
-              </span>
-            </div>
+          )}
+          
+          <div className="flex justify-between font-bold">
+            <span>Total</span>
+            <span>{formatCurrency(invoice.total_amount || 0)}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-500">Paid</span>
+            <span>{formatCurrency(invoice.total_paid || 0)}</span>
+          </div>
+          
+          <div className="flex justify-between font-bold pt-2 border-t">
+            <span>Balance</span>
+            <span>{formatCurrency(invoice.balance || 0)}</span>
           </div>
         </div>
 
-        {/* Notes Section */}
+        {/* Notes */}
         {invoice.notes && (
-          <div className="mt-6 pt-4 border-t">
-            <h4 className="font-semibold mb-1 text-gray-700">Notes:</h4>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded-md">{invoice.notes}</p>
-          </div>
-        )}
-        
-        {/* User Email - Only show if available */}
-        {invoice.user_email && (
-          <div className="mt-4 text-xs text-right text-gray-500">
-            Created by: {invoice.user_email}
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
+            <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
           </div>
         )}
       </CardContent>

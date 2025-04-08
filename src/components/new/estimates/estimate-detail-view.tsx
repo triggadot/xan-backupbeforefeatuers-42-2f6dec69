@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Printer, Download, Share2, Edit, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
@@ -16,6 +16,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { EstimateWithDetails } from '@/types/estimate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/utils/use-toast';
+import { PDFActions } from '@/components/pdf/PDFActions';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 
 interface EstimateDetailViewProps {
   estimate: EstimateWithDetails;
@@ -40,6 +42,10 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
   // Calculate total quantity
   const totalQuantity = estimate.estimateLines?.reduce((total, line) => total + (Number(line.qty_sold) || 0), 0) || 0;
 
+  // PDF operations
+  const { generatePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(estimate.supabase_pdf_url || null);
+
   // Generate estimate number using format EST#[account_uid]MMDDYY
   const formattedEstimateNumber = useMemo(() => {
     try {
@@ -62,23 +68,45 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
   }, [estimate]);
 
   // Handle PDF download
-  const handleDownloadPdf = () => {
-    // Check if we have a direct link
-    if (estimate.glide_pdf_url) {
-      window.open(estimate.glide_pdf_url, '_blank');
-    } else {
+  const handleDownloadPdf = async () => {
+    if (!estimate) return;
+    
+    try {
       toast({
         title: 'PDF Download',
-        description: 'Generating PDF document...',
+        description: 'Preparing your estimate PDF...',
       });
       
-      // In a real implementation, you would make an API call to generate and download the PDF
-      setTimeout(() => {
-        toast({
-          title: 'PDF Generated',
-          description: 'Your estimate PDF has been generated and downloaded.',
-        });
-      }, 1000);
+      // Use existing PDF URL or generate a new one
+      let url = pdfUrl || estimate.supabase_pdf_url;
+      
+      if (!url) {
+        // Generate new PDF if none exists
+        console.log('No existing PDF found, generating new estimate PDF');
+        url = await generatePDF('estimate', estimate, true); // true = download after generation
+        
+        if (url) {
+          setPdfUrl(url);
+          console.log('Estimate PDF generated and stored successfully:', url);
+          // Note: downloadPDF is called automatically by generatePDF when the third parameter is true
+        } else {
+          throw new Error('Failed to generate and store estimate PDF');
+        }
+      } else {
+        console.log('Using existing estimate PDF URL:', url);
+        // Generate filename based on estimate details
+        const fileName = `Estimate_${estimate.estimate_uid || formattedEstimateNumber}.pdf`;
+        
+        // Download the PDF directly
+        await downloadPDF(url, fileName);
+      }
+    } catch (error) {
+      console.error('Error handling estimate PDF download:', error);
+      toast({
+        title: 'PDF Download Failed',
+        description: 'There was an error generating or downloading the PDF. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -156,7 +184,29 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
           {getStatusBadge()}
         </CardHeader>
         
-        <CardContent className="pt-6">
+        <CardContent>
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Estimate #{estimate.estimate_uid || formattedEstimateNumber}
+              </h2>
+              <p className="text-gray-500">
+                {estimate.account?.account_name || 'No Account'}
+              </p>
+            </div>
+            
+            <div className="flex space-x-2">
+              <PDFActions 
+                documentType="estimate"
+                document={estimate}
+                variant="outline"
+                size="default"
+                showLabels={true}
+                onPDFGenerated={(url) => setPdfUrl(url)}
+              />
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Customer</h3>
