@@ -12,21 +12,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFActions } from '@/components/pdf/PDFActions';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-
 interface PurchaseOrderDetailViewProps {
   purchaseOrder: PurchaseOrder | null;
   isLoading: boolean;
   onRefresh?: () => void;
 }
-
 const PurchaseOrderDetailView = ({
   purchaseOrder,
   isLoading,
-  onRefresh,
+  onRefresh
 }: PurchaseOrderDetailViewProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     if (purchaseOrder?.lineItems) {
       console.log('Line items in detail view:', purchaseOrder.lineItems);
@@ -37,11 +36,9 @@ const PurchaseOrderDetailView = ({
       });
     }
   }, [purchaseOrder]);
-
   const handleGoBack = () => {
     navigate('/purchase-orders');
   };
-
   const handleEdit = () => {
     if (purchaseOrder) {
       navigate(`/purchase-orders/edit/${purchaseOrder.id}`);
@@ -51,64 +48,57 @@ const PurchaseOrderDetailView = ({
   // Debug function to check database for this specific purchase order
   const checkDatabase = async () => {
     if (!purchaseOrder) return;
-    
     try {
       // Fetch the purchase order
-      const { data: poData, error: poError } = await supabase
-        .from('gl_purchase_orders')
-        .select('*')
-        .eq('id', purchaseOrder.id)
-        .single();
-      
+      const {
+        data: poData,
+        error: poError
+      } = await supabase.from('gl_purchase_orders').select('*').eq('id', purchaseOrder.id).single();
       if (poError) {
         console.error('Error fetching purchase order:', poError);
         toast({
           title: 'Error',
           description: 'Error fetching purchase order: ' + poError.message,
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
-      
       console.log('Purchase order from DB:', poData);
-      
+
       // Fetch products linked to this purchase order
-      const { data: productsData, error: productsError } = await supabase
-        .from('gl_products')
-        .select('*')
-        .eq('rowid_purchase_orders', poData.glide_row_id);
-      
+      const {
+        data: productsData,
+        error: productsError
+      } = await supabase.from('gl_products').select('*').eq('rowid_purchase_orders', poData.glide_row_id);
       if (productsError) {
         console.error('Error fetching products:', productsError);
         toast({
           title: 'Error',
           description: 'Error fetching products: ' + productsError.message,
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
-      
       console.log('Products from DB:', productsData);
-      
+
       // Check vendor_product_name specifically
       if (productsData && productsData.length > 0) {
         productsData.forEach((product, index) => {
           console.log(`Product ${index} full data:`, product);
           console.log(`Product ${index} vendor_product_name:`, product.vendor_product_name);
-          
+
           // List all fields in the product object to see what's available
           console.log(`Product ${index} available fields:`, Object.keys(product));
         });
-        
         toast({
           title: 'Database Check',
-          description: `Found ${productsData.length} products. Check console for details.`,
+          description: `Found ${productsData.length} products. Check console for details.`
         });
       } else {
         toast({
           title: 'No Products',
           description: 'No products found for this purchase order.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
       }
     } catch (err) {
@@ -116,18 +106,22 @@ const PurchaseOrderDetailView = ({
       toast({
         title: 'Error',
         description: 'An error occurred while checking the database.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
 
   // PDF operations
-  const { generatePDF, storePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
+  const {
+    generatePDF,
+    storePDF,
+    downloadPDF,
+    isGenerating,
+    isStoring
+  } = usePDFOperations();
   const [pdfUrl, setPdfUrl] = useState<string | null>(purchaseOrder?.supabase_pdf_url || null);
-
   const statusColor = useMemo(() => {
     if (!purchaseOrder) return 'bg-gray-100 text-gray-800';
-
     switch (purchaseOrder.status?.toLowerCase()) {
       case 'paid':
         return 'bg-green-100 text-green-800';
@@ -146,29 +140,24 @@ const PurchaseOrderDetailView = ({
   const handlePrintInvoice = () => {
     toast({
       title: 'Print Purchase Order',
-      description: 'Preparing purchase order for printing...',
+      description: 'Preparing purchase order for printing...'
     });
-    
+
     // Use window.print() for printing
     window.print();
   };
-
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-6">
+    return <div className="container mx-auto py-6">
         <div className="flex flex-col space-y-6">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
             <div className="h-64 bg-gray-200 rounded w-full"></div>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!purchaseOrder) {
-    return (
-      <div className="container mx-auto py-6">
+    return <div className="container mx-auto py-6">
         <div className="flex flex-col space-y-6">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             Purchase order not found.
@@ -178,21 +167,18 @@ const PurchaseOrderDetailView = ({
             Back to Purchase Orders
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Safely access vendor properties
   const getVendorProperty = (property: string): string => {
     if (!purchaseOrder.vendor) return '';
-    
+
     // Use any type to bypass TypeScript's type checking
     const vendor = purchaseOrder.vendor as any;
     return vendor[property] || '';
   };
-
-  return (
-    <div className="container mx-auto py-6">
+  return <div className="container mx-auto py-6">
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <Button onClick={handleGoBack} variant="outline" size="sm">
@@ -200,68 +186,32 @@ const PurchaseOrderDetailView = ({
             Back to Purchase Orders
           </Button>
           <div className="flex space-x-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGoBack}
-              className="flex items-center gap-1"
-            >
+            <Button variant="outline" size="sm" onClick={handleGoBack} className="flex items-center gap-1">
               <ChevronLeft className="h-4 w-4" />
               Back to List
             </Button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEdit}
-              className="flex items-center gap-1"
-            >
+            <Button variant="outline" size="sm" onClick={handleEdit} className="flex items-center gap-1">
               <Edit className="h-4 w-4" />
               Edit
             </Button>
             
-            <PDFActions 
-              documentType="purchaseOrder"
-              document={purchaseOrder}
-              variant="outline"
-              size="sm"
-              showLabels={true}
-              onPDFGenerated={(url) => setPdfUrl(url)}
-            />
+            <PDFActions documentType="purchaseOrder" document={purchaseOrder} variant="outline" size="sm" showLabels={true} onPDFGenerated={url => setPdfUrl(url)} />
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrintInvoice}
-              className="flex items-center gap-1"
-            >
+            <Button variant="outline" size="sm" onClick={handlePrintInvoice} className="flex items-center gap-1">
               <Printer className="h-4 w-4" />
               Print
             </Button>
             
-            {onRefresh && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRefresh}
-                className="flex items-center gap-1"
-              >
+            {onRefresh && <Button variant="outline" size="sm" onClick={onRefresh} className="flex items-center gap-1">
                 <RefreshCw className="h-4 w-4" />
                 Refresh
-              </Button>
-            )}
+              </Button>}
             
-            {process.env.NODE_ENV === 'development' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={checkDatabase}
-                className="flex items-center gap-1"
-              >
+            {process.env.NODE_ENV === 'development' && <Button variant="outline" size="sm" onClick={checkDatabase} className="flex items-center gap-1">
                 <Database className="h-4 w-4" />
                 Check DB
-              </Button>
-            )}
+              </Button>}
           </div>
         </div>
 
@@ -282,9 +232,7 @@ const PurchaseOrderDetailView = ({
                 <div>
                   <p className="text-sm font-medium text-gray-500">Date</p>
                   <p className="text-lg">
-                    {purchaseOrder.date
-                      ? formatDate(new Date(purchaseOrder.date))
-                      : 'N/A'}
+                    {purchaseOrder.date ? formatDate(new Date(purchaseOrder.date)) : 'N/A'}
                   </p>
                 </div>
                 <div>
@@ -315,31 +263,14 @@ const PurchaseOrderDetailView = ({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Vendor Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {purchaseOrder.vendor ? (
-                <div className="space-y-2">
-                  <p className="font-semibold">{getVendorProperty('account_name') || 'No name provided'}</p>
-                  <p>{getVendorProperty('email') || getVendorProperty('account_email') || 'No email provided'}</p>
-                  <p>{getVendorProperty('phone') || getVendorProperty('account_phone') || 'No phone provided'}</p>
-                  <p>{getVendorProperty('address') || getVendorProperty('account_address') || 'No address provided'}</p>
-                </div>
-              ) : (
-                <p className="text-gray-500">No vendor information available</p>
-              )}
-            </CardContent>
-          </Card>
+          
 
           <Card>
             <CardHeader>
               <CardTitle>Line Items</CardTitle>
             </CardHeader>
             <CardContent>
-              {purchaseOrder.lineItems && purchaseOrder.lineItems.length > 0 ? (
-                <div className="overflow-x-auto">
+              {purchaseOrder.lineItems && purchaseOrder.lineItems.length > 0 ? <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
@@ -351,35 +282,23 @@ const PurchaseOrderDetailView = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => (
-                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                      {purchaseOrder.lineItems.map((item: PurchaseOrderLineItem) => <tr key={item.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div className="font-medium">{item.display_name || item.new_product_name || item.vendor_product_name || 'Unnamed Product'}</div>
-                            {item.vendor_product_name && item.display_name !== item.vendor_product_name && (
-                              <div className="text-xs text-gray-500">Vendor's Product Name: "{item.vendor_product_name}"</div>
-                            )}
+                            {item.vendor_product_name && item.display_name !== item.vendor_product_name && <div className="text-xs text-gray-500">Vendor's Product Name: "{item.vendor_product_name}"</div>}
                             {item.notes && <div className="text-xs text-gray-500 mt-1">{item.notes}</div>}
-                            {(item.samples || item.fronted) && (
-                              <div className="mt-1 flex gap-1">
-                                {item.samples && (
-                                  <Badge variant="outline" className="text-xs">Sample</Badge>
-                                )}
-                                {item.fronted && (
-                                  <Badge variant="outline" className="text-xs">Fronted</Badge>
-                                )}
-                              </div>
-                            )}
+                            {(item.samples || item.fronted) && <div className="mt-1 flex gap-1">
+                                {item.samples && <Badge variant="outline" className="text-xs">Sample</Badge>}
+                                {item.fronted && <Badge variant="outline" className="text-xs">Fronted</Badge>}
+                              </div>}
                           </td>
                           <td className="py-3 px-4 text-right">{item.quantity}</td>
                           <td className="py-3 px-4 text-right">{formatCurrency(item.unitPrice)}</td>
                           <td className="py-3 px-4 text-right font-medium">{formatCurrency(item.total)}</td>
                           <td className="py-3 px-4 text-center">
-                            {item.category && (
-                              <Badge variant="secondary" className="text-xs">{item.category}</Badge>
-                            )}
+                            {item.category && <Badge variant="secondary" className="text-xs">{item.category}</Badge>}
                           </td>
-                        </tr>
-                      ))}
+                        </tr>)}
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-50">
@@ -393,10 +312,7 @@ const PurchaseOrderDetailView = ({
                       </tr>
                     </tfoot>
                   </table>
-                </div>
-              ) : (
-                <p className="text-gray-500">No line items found for this purchase order.</p>
-              )}
+                </div> : <p className="text-gray-500">No line items found for this purchase order.</p>}
             </CardContent>
           </Card>
 
@@ -405,8 +321,7 @@ const PurchaseOrderDetailView = ({
               <CardTitle>Payment History</CardTitle>
             </CardHeader>
             <CardContent>
-              {purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0 ? (
-                <div className="overflow-x-auto">
+              {purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0 ? <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
@@ -417,11 +332,10 @@ const PurchaseOrderDetailView = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {purchaseOrder.vendorPayments.map((payment) => {
-                        // Use any type to safely access properties
-                        const paymentAny = payment as any;
-                        return (
-                          <tr key={payment.id} className="border-b hover:bg-gray-50">
+                      {purchaseOrder.vendorPayments.map(payment => {
+                    // Use any type to safely access properties
+                    const paymentAny = payment as any;
+                    return <tr key={payment.id} className="border-b hover:bg-gray-50">
                             <td className="py-3 px-4">
                               {payment.date ? formatDate(new Date(payment.date)) : 'N/A'}
                             </td>
@@ -430,9 +344,8 @@ const PurchaseOrderDetailView = ({
                               {formatCurrency(payment.amount || paymentAny.payment_amount || 0)}
                             </td>
                             <td className="py-3 px-4">{payment.notes || paymentAny.vendor_purchase_note || ''}</td>
-                          </tr>
-                        );
-                      })}
+                          </tr>;
+                  })}
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-50">
@@ -447,16 +360,11 @@ const PurchaseOrderDetailView = ({
                       </tr>
                     </tfoot>
                   </table>
-                </div>
-              ) : (
-                <p className="text-gray-500">No payment history found for this purchase order.</p>
-              )}
+                </div> : <p className="text-gray-500">No payment history found for this purchase order.</p>}
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default PurchaseOrderDetailView;
