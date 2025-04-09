@@ -1,0 +1,9 @@
+
+{
+  "imports": {
+    "pdf-lib": "https://cdn.skypack.dev/pdf-lib@1.17.1?dts",
+    "std/": "https://deno.land/std@0.177.0/",
+    "supabase": "https://esm.sh/@supabase/supabase-js@2.7.1",
+    "postgres": "https://deno.land/x/postgres@v0.17.0/mod.ts"
+  }
+}
