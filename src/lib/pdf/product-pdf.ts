@@ -12,9 +12,10 @@ import {
   PDFErrorType,
   PDFOperationResult,
   createPDFError,
-  createPDFSuccess
+  createPDFSuccess,
+  createPDFFailure
 } from './common';
-import { saveAs } from 'file-saver'; // Import file-saver library
+import { saveAs } from 'file-saver';
 
 // Type definitions
 export type Product = Database['public']['Tables']['gl_products']['Row'];
@@ -419,10 +420,10 @@ export async function generateAndStoreProductPDF(
     const product = await fetchProductForPDF(id);
     
     if (!product) {
-      return createPDFError(
-        PDFErrorType.FETCH_ERROR,
-        `Failed to fetch product with ID: ${id}`
-      );
+      return createPDFFailure({
+        type: PDFErrorType.FETCH_ERROR,
+        message: `Failed to fetch product with ID: ${id}`
+      });
     }
     
     // Generate PDF
@@ -514,9 +515,9 @@ export async function generateAndStoreProductPDF(
         ? JSON.stringify({ message: error.message, stack: error.stack }, null, 2) 
         : String(error)
     );
-    return createPDFError(
-      PDFErrorType.GENERATION_ERROR,
-      error instanceof Error ? error.message : 'Unknown error generating product PDF'
-    );
+    return createPDFFailure({
+      type: PDFErrorType.GENERATION_ERROR,
+      message: error instanceof Error ? error.message : 'Unknown error generating product PDF'
+    });
   }
 }

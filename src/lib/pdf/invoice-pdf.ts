@@ -9,7 +9,8 @@ import {
   PDFErrorType,
   PDFOperationResult,
   createPDFError,
-  createPDFSuccess
+  createPDFSuccess,
+  createPDFFailure
 } from './common';
 import { saveAs } from 'file-saver';
 
@@ -249,7 +250,10 @@ export async function generateAndStoreInvoicePDF(
     
     const invoice = await fetchInvoiceForPDF(id);
     if (!invoice) {
-      return createPDFError(PDFErrorType.FETCH_ERROR, `Failed to fetch invoice: ${id}`);
+      return createPDFFailure({
+        type: PDFErrorType.FETCH_ERROR,
+        message: `Failed to fetch invoice with ID: ${id}`
+      });
     }
     
     const pdfDoc = generateInvoicePDF(invoice);
@@ -307,9 +311,9 @@ export async function generateAndStoreInvoicePDF(
     
     return createPDFSuccess(URL.createObjectURL(pdfBlob));
   } catch (error) {
-    return createPDFError(
-      PDFErrorType.GENERATION_ERROR, 
-      error instanceof Error ? error.message : 'Unknown error'
-    );
+    return createPDFFailure({
+      type: PDFErrorType.GENERATION_ERROR,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }

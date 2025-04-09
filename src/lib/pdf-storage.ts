@@ -1,4 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  PDFErrorType, 
+  createPDFError, 
+  createPDFFailure, 
+  StorePDFRequest, 
+  StorePDFResponse 
+} from './pdf/common';
+
 /**
  * Interface for PDF storage request
  * @interface StorePDFRequest
@@ -113,19 +121,21 @@ export async function storePDF(
 
     if (error) {
       console.error('Error calling store-pdf function:', error);
-      return {
-        success: false,
-        message: `Failed to store PDF: ${error.message || 'Unknown error'}`
-      };
+      return createPDFFailure({
+        type: PDFErrorType.STORAGE_ERROR,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        details: error
+      });
     }
 
     if (!data || !data.success) {
       const errorMessage = data?.error || 'Unknown error occurred during PDF storage';
       console.warn(`Edge function returned error: ${errorMessage}`);
-      return {
-        success: false,
-        message: errorMessage
-      };
+      return createPDFFailure({
+        type: PDFErrorType.STORAGE_ERROR,
+        message: errorMessage,
+        details: data?.error
+      });
     }
 
     // Successfully stored the PDF
@@ -137,10 +147,11 @@ export async function storePDF(
     };
   } catch (error) {
     console.error('Error in storePDF:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
+    return createPDFFailure({
+      type: PDFErrorType.STORAGE_ERROR,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      details: error
+    });
   }
 }
 

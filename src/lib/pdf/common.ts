@@ -156,7 +156,7 @@ export function createPDFSuccess(url: string): PDFOperationResult {
  * @param error PDF error
  * @returns Failed PDF operation result
  */
-export function createPDFError(error: PDFError): PDFOperationResult {
+export function createPDFFailure(error: PDFError): PDFOperationResult {
   return {
     success: false,
     url: null,
