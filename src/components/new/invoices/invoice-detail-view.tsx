@@ -9,52 +9,91 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
-
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
 }
 
+/**
+ * Displays the details of a single invoice, including line items.
+ */
 const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   invoice
 }) => {
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
+  const statusColor = () => {
+    switch (invoice.payment_status?.toLowerCase()) {
+      case 'paid':
+        return 'success';
+      // Green
+      case 'partial':
+        // Updated from 'partially paid' or similar
+        return 'warning';
+      // Yellow
+      case 'unpaid':
+        return 'destructive';
+      // Red
+      case 'credit':
+        // New status
+        return 'info';
+      // Blue (assuming 'info' variant exists)
+      case 'draft': // Explicitly handle draft
+      default:
+        // Default includes draft and any unexpected values
+        return 'secondary';
+      // Gray
+    }
+  };
+
+  // Calculate subtotal if tax information is available
   const subtotal = invoice.tax_amount ? (invoice.total_amount || 0) - (invoice.tax_amount || 0) : invoice.total_amount || 0;
+
+  // Calculate item count
   const itemCount = invoice.lines?.length || 0;
 
+  // PDF operations
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
-  const { generatePDF, loading } = usePDFOperations();
+  const {
+    generatePDF,
+    loading
+  } = usePDFOperations();
 
+  // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
     try {
+      // Get account_uid from account, if available
       const accountUid = invoice.account?.accounts_uid || 'NOACC';
+
+      // Format the date as MMDDYY
       let dateString = 'NODATE';
       if (invoice.invoice_order_date) {
         const invoiceDate = new Date(invoice.invoice_order_date);
         dateString = format(invoiceDate, 'MMddyy');
       }
+
+      // Create the formatted invoice number
       return `INV#${accountUid}${dateString}`;
     } catch (err) {
       console.error('Error formatting invoice number:', err);
       return invoice.id?.substring(0, 8) || 'Unknown';
     }
   }, [invoice]);
-
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
+  return <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-2xl font-bold">
-          {invoice.invoice_uid || "No Invoice ID"}
-        </CardTitle>
-        <div className="text-sm text-gray-500">
-          {formatDate(invoice.invoice_order_date) || "No Date"}
-        </div>
+        
+        <Badge variant={statusColor()} className="text-xs font-semibold uppercase">
+          {(invoice.payment_status || 'draft').toUpperCase()}
+        </Badge>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center mb-6">
           <div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Invoice #{invoice.invoice_uid || formattedInvoiceNumber}
+            </h2>
             <p className="text-gray-500">
-              {`Customer: ${invoice.account?.accounts_uid || 'N/A'}`}
+              {invoice.gl_accounts?.account_name || 'No Account'}
               {invoice.gl_accounts?.balance !== undefined && <span className="ml-2">
                   <AmountDisplay amount={invoice.gl_accounts.balance} variant="auto" showLabel={true} className="text-sm" />
                 </span>}
@@ -69,16 +108,23 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
         {/* Invoice Details */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-500">Payment Status</h3>
-            <p className="text-gray-900">
-              <Badge variant={invoice.payment_status?.toLowerCase() === 'paid' ? 'success' : 
-                               invoice.payment_status?.toLowerCase() === 'partial' ? 'warning' : 
-                               invoice.payment_status?.toLowerCase() === 'credit' ? 'info' : 'destructive'}>
-                {(invoice.payment_status || 'DRAFT').toUpperCase()}
-              </Badge>
-            </p>
+            <h3 className="text-sm font-medium text-gray-500">Invoice Date</h3>
+            <p className="text-gray-900">{formatDate(invoice.invoice_order_date)}</p>
           </div>
-          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Due Date</h3>
+            <p className="text-gray-900">{formatDate(invoice.due_date)}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Customer</h3>
+            <p className="text-gray-900">{invoice.gl_accounts?.account_name || 'N/A'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Status</h3>
+            <Badge variant={statusColor()}>
+              {(invoice.payment_status || 'draft').toUpperCase()}
+            </Badge>
+          </div>
         </div>
 
         {/* Line Items */}
@@ -131,8 +177,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
             <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
           </div>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default InvoiceDetailView;
