@@ -500,8 +500,7 @@ export async function generateAndStorePurchaseOrderPDF(
     // Generate filename
     const filename = generateFilename(
       'PO',
-      purchaseOrder.purchase_order_uid?.replace(/^PO#/, '') || purchaseOrder.id,
-      purchaseOrder.po_date || new Date()
+      purchaseOrder.purchase_order_uid?.replace(/^PO#/, '') || purchaseOrder.id
     );
     
     // If download is requested, trigger download directly
@@ -534,7 +533,7 @@ export async function generateAndStorePurchaseOrderPDF(
             const { error: functionError } = await supabase.functions.invoke('generate-pdf', {
               body: {
                 id: purchaseOrder.id,
-                type: 'purchaseOrder'
+                type: 'purchaseorder'
               },
             });
 

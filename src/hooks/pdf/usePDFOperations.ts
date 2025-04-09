@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/utils/use-toast';
@@ -20,6 +19,7 @@ export const usePDFOperations = () => {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isStoring, setIsStoring] = useState(false);
+  const [isServerProcessing, setIsServerProcessing] = useState(false);
 
   /**
    * Generates a PDF document based on the document type and data
@@ -84,7 +84,68 @@ export const usePDFOperations = () => {
       throw error; // Re-throw the error for the caller to handle
     } finally {
       setIsGenerating(false);
-      setIsStoring(false);
+    }
+  };
+
+  /**
+   * Request server-side batch generation of PDFs using the edge function
+   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * @param documentId The document ID to generate the PDF from
+   * @returns Promise resolving to a boolean indicating success
+   */
+  const batchGeneratePDF = async (
+    documentType: DocumentType,
+    documentId: string
+  ): Promise<boolean> => {
+    if (!documentId) {
+      console.error('No document ID provided for batch PDF generation');
+      return false;
+    }
+
+    setIsServerProcessing(true);
+
+    try {
+      // Map document type to the expected API format
+      const typeMap: Record<DocumentType, string> = {
+        invoice: 'invoice',
+        purchaseOrder: 'purchaseOrder',
+        estimate: 'estimate',
+        product: 'product'
+      };
+
+      // Call the batch-generate-and-store-pdfs edge function
+      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
+        body: {
+          items: [
+            {
+              id: documentId,
+              type: typeMap[documentType]
+            }
+          ]
+        }
+      });
+
+      if (error) {
+        console.error('Error calling batch PDF generation:', error);
+        throw new Error(`Failed to request batch generation: ${error.message}`);
+      }
+
+      console.log('Batch PDF generation response:', data);
+      return true;
+    } catch (error) {
+      console.error(`Error requesting batch ${documentType} PDF generation:`, 
+        error instanceof Error 
+          ? { message: error.message, stack: error.stack } 
+          : String(error)
+      );
+      toast({
+        title: 'Batch PDF Request Failed',
+        description: error instanceof Error ? error.message : 'There was an error requesting PDF generation.',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsServerProcessing(false);
     }
   };
 
@@ -202,10 +263,12 @@ export const usePDFOperations = () => {
 
   return {
     generatePDF,
+    batchGeneratePDF,
     downloadPDF,
     storePDF,
     isGenerating,
     isStoring,
-    loading: isGenerating || isStoring
+    isServerProcessing,
+    loading: isGenerating || isStoring || isServerProcessing
   };
 };

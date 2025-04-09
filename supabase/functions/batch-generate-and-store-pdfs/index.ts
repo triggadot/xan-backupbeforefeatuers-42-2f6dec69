@@ -1,8 +1,7 @@
-
+import { PageSizes, PDFDocument, rgb, StandardFonts } from 'https://cdn.skypack.dev/pdf-lib@1.17.1?dts';
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts'; // This path is causing the issue
-import { PDFDocument, rgb, StandardFonts, PageSizes } from 'https://cdn.skypack.dev/pdf-lib@1.17.1?dts';
+import { corsHeaders } from '../_shared/cors.ts';
 
 console.log('Batch Generate and Store PDFs function booting up');
 
@@ -10,9 +9,40 @@ console.log('Batch Generate and Store PDFs function booting up');
 const tableMap: { [key: string]: string } = {
   invoice: 'gl_invoices',
   estimate: 'gl_estimates',
-  purchaseOrder: 'gl_purchase_orders',
-  // Add other types if needed
+  purchaseorder: 'gl_purchase_orders',
+  // Also support these alternative formats that might be used
+  invoices: 'gl_invoices',
+  estimates: 'gl_estimates',
+  purchaseorders: 'gl_purchase_orders',
+  'purchase-order': 'gl_purchase_orders',
+  'purchase-orders': 'gl_purchase_orders',
+  'purchase_order': 'gl_purchase_orders',
+  'purchase_orders': 'gl_purchase_orders'
 };
+
+// Standardize document type format for internal processing
+function normalizeDocumentType(type: string): string {
+  // Convert to lowercase and remove any hyphens or underscores
+  const normalized = type.toLowerCase().trim();
+  
+  if (normalized === 'purchase-order' || 
+      normalized === 'purchase_order' || 
+      normalized === 'purchaseorders' ||
+      normalized === 'purchase-orders' ||
+      normalized === 'purchase_orders') {
+    return 'purchaseorder';
+  }
+  
+  if (normalized === 'invoices') {
+    return 'invoice';
+  }
+  
+  if (normalized === 'estimates') {
+    return 'estimate';
+  }
+  
+  return normalized;
+}
 
 // Generate a PDF for an invoice using pdf-lib
 async function generateInvoicePDF(invoice: any): Promise<Uint8Array | null> {
@@ -355,10 +385,133 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
       });
     }
     
+    // Table header
+    const tableY = height - 180;
+    page.drawText('Product', {
+      x: 50,
+      y: tableY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    page.drawText('Qty', {
+      x: 300,
+      y: tableY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    page.drawText('Price', {
+      x: 380,
+      y: tableY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    page.drawText('Total', {
+      x: 480,
+      y: tableY,
+      size: 12,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // Draw horizontal line
+    page.drawLine({
+      start: { x: 50, y: tableY - 10 },
+      end: { x: 550, y: tableY - 10 },
+      thickness: 1,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+    
+    // Line items
+    let currentY = tableY - 30;
+    
+    // Fetch line items if needed
+    let lines = estimate.lines || [];
+    if (!lines.length && estimate.id) {
+      // If lines aren't included in the estimate data, try to fetch them
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        if (supabaseUrl && serviceRoleKey) {
+          const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+          const { data: linesData } = await supabaseAdmin
+            .from('gl_estimate_lines')
+            .select('*')
+            .eq('rowid_estimates', estimate.glide_row_id);
+          
+          if (linesData?.length) {
+            lines = linesData;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching estimate lines:', error);
+      }
+    }
+    
+    if (lines.length > 0) {
+      for (const line of lines) {
+        const productName = line.product_name_display || line.renamed_product_name || line.description || line.product_name || 'Unnamed Product';
+        const qty = line.quantity || 0;
+        const price = line.unit_price || 0;
+        const total = (qty * price) || line.total || 0;
+        
+        // Truncate product name if too long
+        const maxChars = 30;
+        const displayName = productName.length > maxChars
+          ? productName.substring(0, maxChars) + '...'
+          : productName;
+        
+        page.drawText(displayName, {
+          x: 50,
+          y: currentY,
+          size: 10,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        
+        page.drawText(`${qty}`, {
+          x: 300,
+          y: currentY,
+          size: 10,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        
+        page.drawText(`$${price.toFixed(2)}`, {
+          x: 380,
+          y: currentY,
+          size: 10,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        
+        page.drawText(`$${total.toFixed(2)}`, {
+          x: 480,
+          y: currentY,
+          size: 10,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        
+        currentY -= 20;
+        
+        // Add a new page if we're running out of space
+        if (currentY < 100) {
+          page = pdfDoc.addPage(PageSizes.A4);
+          currentY = height - 50;
+        }
+      }
+    }
+    
     // Status
     page.drawText(`Status: ${estimate.status || 'Draft'}`, {
       x: 50,
-      y: height - 160,
+      y: height - 240,
       size: 12,
       font: regularFont,
       color: rgb(0, 0, 0),
@@ -367,7 +520,7 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
     // Total summary
     page.drawText(`Total Amount: $${(estimate.total_amount || 0).toFixed(2)}`, {
       x: 50,
-      y: height - 200,
+      y: height - 260,
       size: 14,
       font: boldFont,
       color: rgb(0, 0, 0),
@@ -377,7 +530,7 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
     if (estimate.notes) {
       page.drawText('Notes:', {
         x: 50,
-        y: height - 240,
+        y: height - 300,
         size: 12,
         font: boldFont,
         color: rgb(0, 0, 0),
@@ -385,7 +538,7 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
       
       // Split notes into lines
       const noteLines = estimate.notes.split('\n');
-      let noteY = height - 260;
+      let noteY = height - 320;
       
       for (const line of noteLines) {
         // Handle text wrapping
@@ -429,9 +582,11 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
 
 // Generic function to generate PDF based on document type
 async function generatePDF(type: string, data: any): Promise<Uint8Array | null> {
-  console.log(`Generating ${type} PDF for ID: ${data.id}`);
+  // Normalize the type to handle different input formats
+  const normalizedType = normalizeDocumentType(type);
+  console.log(`Generating ${normalizedType} PDF for ID: ${data.id}`);
   
-  switch (type.toLowerCase()) {
+  switch (normalizedType) {
     case 'invoice':
       return await generateInvoicePDF(data);
     case 'purchaseorder':
@@ -439,7 +594,7 @@ async function generatePDF(type: string, data: any): Promise<Uint8Array | null> 
     case 'estimate':
       return await generateEstimatePDF(data);
     default:
-      console.error(`Unsupported document type: ${type}`);
+      console.error(`Unsupported document type: ${type} (normalized to ${normalizedType})`);
       return null;
   }
 }
@@ -475,35 +630,64 @@ serve(async (req: Request) => {
     // Process items sequentially to avoid overwhelming resources
     for (const item of items) {
       const { id, type } = item;
-      const tableName = tableMap[type];
+      
+      // Normalize the document type
+      const normalizedType = normalizeDocumentType(type);
+      const tableName = tableMap[normalizedType];
 
-      if (!id || !type || !tableName) {
-        console.error('Invalid item:', item);
-        results.push({ id, type, success: false, error: 'Invalid item data' });
+      if (!id || !normalizedType || !tableName) {
+        console.error('Invalid item:', { id, type, normalizedType, tableName });
+        results.push({ 
+          id, 
+          type, 
+          normalizedType,
+          success: false, 
+          error: `Invalid item data or unsupported document type: ${type}` 
+        });
         continue; // Skip to next item
       }
-
-      let itemResult = { id, type, success: false, error: '', url: null };
+      
+      let itemResult = { id, type: normalizedType, success: false, error: '', url: null };
 
       try {
-        console.log(`Processing ${type} with ID: ${id}`);
+        console.log(`Processing ${normalizedType} with ID: ${id}`);
 
         // 1. Fetch document data
         const { data: documentData, error: fetchError } = await supabaseAdmin
           .from(tableName)
-          .select('*, gl_accounts:rowid_accounts(*)')
+          .select('*')
           .eq('id', id)
           .maybeSingle();
 
         if (fetchError || !documentData) {
           throw new Error(
-            `Failed to fetch ${type} ${id}: ${fetchError?.message || 'Not found'}`,
+            `Failed to fetch ${normalizedType} ${id}: ${fetchError?.message || 'Not found'}`,
           );
         }
-        console.log(`Fetched data for ${type} ${id}`);
+        console.log(`Fetched data for ${normalizedType} ${id}`);
         
+        // Separately fetch the related account following Glidebase pattern
+        if (documentData.rowid_accounts) {
+          try {
+            const { data: accountData } = await supabaseAdmin
+              .from('gl_accounts')
+              .select('*')
+              .eq('glide_row_id', documentData.rowid_accounts)
+              .maybeSingle();
+              
+            if (accountData) {
+              // Manually attach the account data
+              documentData.gl_accounts = accountData;
+              console.log(`Added account data to ${normalizedType} ${id}`);
+            }
+          } catch (accountError) {
+            console.warn(`Failed to fetch account for ${normalizedType} ${id}:`, accountError);
+            // Continue without account if fetch fails
+          }
+        }
+
         // Conditionally fetch line items for invoices
-        if (type === 'invoice') {
+        if (normalizedType === 'invoice') {
           try {
             const { data: lines } = await supabaseAdmin
               .from('gl_invoice_lines')
@@ -518,7 +702,7 @@ serve(async (req: Request) => {
             console.warn(`Failed to fetch invoice lines for ${id}:`, lineError);
             // Continue without lines if fetch fails
           }
-        } else if (type === 'estimate') {
+        } else if (normalizedType === 'estimate') {
           try {
             const { data: lines } = await supabaseAdmin
               .from('gl_estimate_lines')
@@ -536,38 +720,57 @@ serve(async (req: Request) => {
         }
 
         // 2. Generate PDF using pdf-lib
-        const pdfBytes = await generatePDF(type, documentData);
+        const pdfBytes = await generatePDF(normalizedType, documentData);
         if (!pdfBytes) {
-          throw new Error(`Failed to generate PDF for ${type} ${id}`);
+          throw new Error(`Failed to generate PDF for ${normalizedType} ${id}`);
         }
-        console.log(`Generated PDF for ${type} ${id}`);
+        console.log(`Generated PDF for ${normalizedType} ${id}`);
 
-        // 3. Upload PDF to Supabase Storage
-        const fileName = `${type}/${id}.pdf`; // Consistent path structure
-        const { error: uploadError } = await supabaseAdmin.storage
-          .from('pdfs') // Use the 'pdfs' bucket
-          .upload(fileName, pdfBytes, {
+        // Generate filename using just the document UID
+        let fileName = ''; // Default fallback
+        
+        // Use exactly the document UID without prefixing with document type
+        if (normalizedType === 'invoice' && documentData.invoice_uid) {
+          fileName = `${documentData.invoice_uid}.pdf`;
+        } 
+        else if (normalizedType === 'estimate' && documentData.estimate_uid) {
+          fileName = `${documentData.estimate_uid}.pdf`;
+        }
+        else if (normalizedType === 'purchaseorder' && documentData.purchase_order_uid) {
+          fileName = `${documentData.purchase_order_uid}.pdf`;
+        }
+        else {
+          // Fallback if no UID is found
+          fileName = `${id}.pdf`;
+        }
+        
+        // Store files in type-specific folders
+        const storageKey = `${normalizedType}/${fileName}`;
+        
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+          .from('pdfs')
+          .upload(storageKey, pdfBytes, {
             contentType: 'application/pdf',
-            upsert: true, // Overwrite if exists
+            upsert: true,
           });
 
         if (uploadError) {
           throw new Error(
-            `Failed to upload PDF for ${type} ${id}: ${uploadError.message}`,
+            `Failed to upload PDF for ${normalizedType} ${id}: ${uploadError.message}`,
           );
         }
-        console.log(`Uploaded PDF to storage for ${type} ${id} at ${fileName}`);
+        console.log(`Uploaded PDF to storage for ${normalizedType} ${id} at ${storageKey}`);
 
         // 4. Get Public URL
         const { data: urlData } = supabaseAdmin.storage
           .from('pdfs')
-          .getPublicUrl(fileName);
+          .getPublicUrl(storageKey);
 
         if (!urlData?.publicUrl) {
-          console.warn(`Could not get public URL for ${fileName}. Using path.`);
+          console.warn(`Could not get public URL for ${storageKey}. Using path.`);
         }
-        const publicUrl = urlData?.publicUrl || fileName;
-        console.log(`Got public URL for ${type} ${id}: ${publicUrl}`);
+        const publicUrl = urlData?.publicUrl || storageKey;
+        console.log(`Got public URL for ${normalizedType} ${id}: ${publicUrl}`);
 
         // 5. Update Database Record
         const { error: updateError } = await supabaseAdmin
@@ -577,16 +780,63 @@ serve(async (req: Request) => {
 
         if (updateError) {
           throw new Error(
-            `Failed to update DB for ${type} ${id}: ${updateError.message}`,
+            `Failed to update DB for ${normalizedType} ${id}: ${updateError.message}`,
           );
         }
-        console.log(`Updated database for ${type} ${id}`);
+        
+        // 6. Send webhook notification if configured
+        try {
+          // Get webhook URL from vault
+          const { data: webhookData, error: webhookError } = await supabaseAdmin
+            .from('vault.secrets')
+            .select('secret')
+            .eq('name', 'n8n_pdf_webhook')
+            .single();
+            
+          if (webhookError) {
+            console.warn(`Could not retrieve webhook URL from vault: ${webhookError.message}`);
+          } else if (webhookData?.secret) {
+            console.log(`Sending webhook notification for ${normalizedType} ${id}`);
+            
+            // Prepare notification payload with metadata
+            const notificationPayload = {
+              event: 'pdf_generated',
+              timestamp: new Date().toISOString(),
+              documentType: normalizedType,
+              documentId: id,
+              glideRowId: documentData.glide_row_id,
+              documentUid: documentData.invoice_uid || documentData.estimate_uid || documentData.purchase_order_uid,
+              pdfUrl: publicUrl,
+              tableUpdated: tableName,
+              storageKey: storageKey,
+              fromFunction: 'batch-generate-and-store-pdfs'
+            };
+            
+            // Send webhook notification
+            const webhookResponse = await fetch(webhookData.secret, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(notificationPayload)
+            });
+            
+            if (!webhookResponse.ok) {
+              console.warn(`Webhook notification failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
+            } else {
+              console.log(`Webhook notification sent successfully for ${normalizedType} ${id}`);
+            }
+          }
+        } catch (webhookError) {
+          // Log webhook error but don't fail the operation
+          console.error(`Error sending webhook notification: ${webhookError.message}`);
+        }
 
         // Record success
         itemResult = { ...itemResult, success: true, url: publicUrl };
       } catch (error) {
         console.error(
-          `Error processing ${type} ${id}:`,
+          `Error processing ${normalizedType} ${id}:`,
           error.message || error,
         );
         itemResult = { ...itemResult, success: false, error: error.message };

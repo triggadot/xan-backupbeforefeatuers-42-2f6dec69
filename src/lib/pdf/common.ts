@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 
 /**
@@ -115,13 +114,18 @@ export function addAccountDetails(doc: any, title: string, accountName: string, 
 
 /**
  * Generate a filename for a PDF document
- * @param prefix Prefix for the filename
- * @param id Document ID
- * @returns Generated filename
+ * @param prefix Document type prefix (e.g., "INV", "EST", "PO")
+ * @param id Document ID or UID (e.g., "12345" or "INV#BNC03125")
+ * @returns Generated filename using just the document UID
  */
-export function generateFilename(prefix: string, id: string): string {
-  const timestamp = new Date().toISOString().replace(/[:.-]/g, '_');
-  return `${prefix}_${id}_${timestamp}.pdf`;
+export function generateFilename(prefix: string, id: string, date?: Date | string): string {
+  // If ID already has a prefix like INV#, EST#, or PO#, use it as is
+  if (/^(INV|EST|PO)#/i.test(id)) {
+    return `${id}.pdf`;
+  }
+  
+  // Otherwise use the provided prefix and ID
+  return `${prefix}#${id}.pdf`;
 }
 
 /**
