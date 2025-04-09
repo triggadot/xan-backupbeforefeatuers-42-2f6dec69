@@ -1,7 +1,7 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts'; // Assuming shared CORS setup
-import { Buffer } from 'https://deno.land/std@0.177.0/io/buffer.ts'; // For base64 decoding
+import { corsHeaders } from '../_shared/cors.ts';
 
 console.log('Store PDF function booting up');
 

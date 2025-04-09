@@ -62,7 +62,6 @@ export async function fetchInvoiceForPDF(invoiceId: string): Promise<InvoiceWith
     const { data: productsData } = await supabase.from('gl_products').select('*');
     
     if (productsData) {
-      // Use specific type for product
       productsData.forEach((product: Database['public']['Tables']['gl_products']['Row']) => {
         productsMap.set(product.glide_row_id, {
           display_name: product.vendor_product_name || product.main_new_product_name || 'Unknown Product',
@@ -78,7 +77,6 @@ export async function fetchInvoiceForPDF(invoiceId: string): Promise<InvoiceWith
       .eq('rowid_invoices', invoiceData.glide_row_id);
 
     if (linesData?.length) {
-      // Use specific type for line
       invoiceWithDetails.lines = linesData.map((line: Database['public']['Tables']['gl_invoice_lines']['Row']) => ({
         ...line,
         qty_sold: Number(line.qty_sold) || 0,
@@ -112,26 +110,21 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
   });
   const themeColor = [0, 51, 102];
   
-  // Header
   doc.setFontSize(26);
   doc.setFont('helvetica', 'bold');
   doc.text('INVOICE', 15, 20);
   
-  // Invoice meta
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`${invoice.invoice_uid || ''}`, 15, 28);
   doc.text(`Date: ${formatShortDate(invoice.invoice_order_date || new Date())}`, 195, 28, { align: 'right' });
   
-  // Divider
   doc.setDrawColor(...themeColor);
   doc.setLineWidth(1.5);
   doc.line(15, 32, 195, 32);
   
-  // Start product table immediately after the header
   const tableStartY = 45;
   
-  // Table styles with better centering and consistent padding
   const tableStyles = {
     theme: 'striped',
     headStyles: {
@@ -140,7 +133,7 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
       fontStyle: 'bold',
       fontSize: 10,
       cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-      halign: 'left' // Default alignment for headers
+      halign: 'left'
     },
     bodyStyles: {
       textColor: [50, 50, 50],
@@ -152,10 +145,10 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
       fillColor: [245, 245, 245]
     },
     columnStyles: {
-      0: { halign: 'left' },     // Product - left aligned
-      1: { halign: 'center' },   // Qty - center aligned
-      2: { halign: 'right' },    // Price - right aligned
-      3: { halign: 'right' }     // Total - right aligned
+      0: { halign: 'left' },
+      1: { halign: 'center' },
+      2: { halign: 'right' },
+      3: { halign: 'right' }
     },
     head: [
       [
@@ -166,10 +159,9 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
       ]
     ],
     margin: { top: 5, right: 10, bottom: 5, left: 15 },
-    tableWidth: 180 // Make table use more space
+    tableWidth: 180
   };
   
-  // Table data
   const rows = invoice.lines?.map(line => [
     line.product_name_display || line.renamed_product_name || (line.product?.display_name || ''),
     line.qty_sold || 0,
@@ -177,29 +169,22 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
     formatCurrency(line.line_total || 0)
   ]) || [];
   
-  // Add table
   autoTable(doc, {
     ...tableStyles,
     body: rows,
     startY: tableStartY
   });
   
-  // Calculate total quantity
   const totalQuantity = invoice.lines?.reduce((total, line) => 
     total + (Math.round(Number(line.qty_sold) || 0)), 0) || 0;
   
-  // Totals section with better fonts and alignment
-  // Provide specific type assertion for lastAutoTable property added by the plugin
   const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   let currentY = finalY;
   
-  // Set up totals section with improved typography
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   
-  // Draw totals using a standardized function with better alignment
   const addTotalLine = (label: string, amount: number, isBold = false) => {
-    // Use proper spacing and fonts
     if (isBold) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
@@ -208,32 +193,26 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
       doc.setFontSize(11);
     }
     
-    // Use consistent spacing for right-aligned values
     doc.text(`${label}:`, 150, currentY, { align: 'right' });
     doc.text(formatCurrency(amount), 195, currentY, { align: 'right' });
     
-    // Reset font and add consistent spacing
     doc.setFont('helvetica', 'normal');
     currentY += 8;
   };
   
-  // Add totals with enhanced legibility
   addTotalLine(`Subtotal (${totalQuantity} item${totalQuantity === 1 ? '' : 's'})`, invoice.total_amount || 0);
   addTotalLine('Payments', invoice.total_paid || 0);
   
-  // Make balance due stand out
   const balance = invoice.balance || 0;
   if (balance < 0) {
-    doc.setTextColor(0, 100, 0); // Dark green
+    doc.setTextColor(0, 100, 0);
   } else if (balance > 0) {
-    doc.setTextColor(150, 0, 0); // Dark red
+    doc.setTextColor(150, 0, 0);
   }
   
-  // Draw balance due line with enhanced visibility
   addTotalLine('Balance Due', balance, true);
-  doc.setTextColor(0, 0, 0); // Reset text color
+  doc.setTextColor(0, 0, 0);
   
-  // Notes section with better formatting
   if (invoice.invoice_notes) {
     currentY += 5;
     doc.setFontSize(11);
@@ -247,9 +226,8 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
     doc.text(splitNotes, 15, currentY);
   }
   
-  // Footer
   doc.setFontSize(8);
-  doc.setTextColor(60, 60, 60); // Darker gray for better contrast
+  doc.setTextColor(60, 60, 60);
   for (let i = 1; i <= doc.getNumberOfPages(); i++) {
     doc.setPage(i);
     doc.text(`Page ${i} of ${doc.getNumberOfPages()}`, 195, 287, { align: 'right' });
@@ -258,7 +236,6 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
   return doc;
 }
 
-// Define a more specific type for the invoiceId parameter
 type InvoiceIdInput = string | { id?: string; glide_row_id?: string };
 
 export async function generateAndStoreInvoicePDF(
@@ -278,7 +255,6 @@ export async function generateAndStoreInvoicePDF(
     const pdfDoc = generateInvoicePDF(invoice);
     const pdfBlob = pdfDoc.output('blob');
     
-    // Generate filename using invoice_uid and date
     const filename = invoice.invoice_uid 
       ? `${invoice.invoice_uid}-${formatShortDate(invoice.invoice_date || new Date(), 'YYYYMMDD')}.pdf`
       : generateFilename('INV', invoice.id || id, invoice.invoice_date || new Date());
@@ -287,16 +263,12 @@ export async function generateAndStoreInvoicePDF(
       try {
         saveAs(pdfBlob, filename);
 
-        // --- Start Background Storage ---
-        // Asynchronously store the PDF in Supabase after download starts
         const storePdfInBackground = async () => {
           try {
-            // Convert Blob to Base64
             const reader = new FileReader();
             reader.readAsDataURL(pdfBlob);
             const base64Data = await new Promise<string>((resolve, reject) => {
               reader.onloadend = () => {
-                // Result is data:application/pdf;base64,xxxxx - remove the prefix
                 const base64String = (reader.result as string)?.split(',')[1];
                 if (base64String) {
                   resolve(base64String);
@@ -307,11 +279,10 @@ export async function generateAndStoreInvoicePDF(
               reader.onerror = (error) => reject(error);
             });
 
-            // Invoke the Edge Function
             console.log(`Invoking store-pdf for invoice ID: ${invoice.id}`);
             const { error: functionError } = await supabase.functions.invoke('store-pdf', {
-              body: JSON.stringify({ // Ensure body is stringified JSON
-                id: invoice.id, // Use the actual invoice ID (uuid)
+              body: JSON.stringify({
+                id: invoice.id,
                 type: 'invoice',
                 pdfData: base64Data,
                 fileName: filename,
@@ -320,28 +291,20 @@ export async function generateAndStoreInvoicePDF(
 
             if (functionError) {
               console.error(`Error calling store-pdf function for invoice ${invoice.id}:`, functionError);
-              // Optional: Add subtle user feedback (e.g., toast)
             } else {
               console.log(`Successfully triggered background storage for invoice ${invoice.id}`);
-              // Optional: Add subtle user feedback (e.g., toast)
             }
           } catch (bgError) {
             console.error(`Error during background PDF storage for invoice ${invoice.id}:`, bgError);
-            // Optional: Add subtle user feedback (e.g., toast)
           }
         };
 
-        storePdfInBackground(); // Fire and forget
-        // --- End Background Storage ---
-
+        storePdfInBackground();
       } catch (error) {
         console.error('Download error:', error);
-        // Note: The main function still returns success based on blob creation,
-        // background storage failure is handled separately.
       }
     }
     
-    // Return success based on blob generation, regardless of background storage outcome
     return createPDFSuccess(URL.createObjectURL(pdfBlob));
   } catch (error) {
     return createPDFError(

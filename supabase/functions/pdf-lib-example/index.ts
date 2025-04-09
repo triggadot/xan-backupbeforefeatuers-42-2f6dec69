@@ -4,7 +4,7 @@
 
 import { serve } from "std/http/server.ts";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
   // Handle CORS if needed

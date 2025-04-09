@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, Trash2, FileTextIcon } from 'lucide-react'; // Added FileTextIcon
+import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, Trash2, FileTextIcon } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/utils/use-toast';
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import { Button } from '@/components/ui/button'; // Import Button component
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 import {
@@ -34,8 +34,8 @@ const PurchaseOrderList = ({
 }: PurchaseOrderListProps) => {
   const { toast } = useToast();
   const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<string[]>([]);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false); // State for batch processing
-  
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedPurchaseOrders(purchaseOrders.map(po => po.id));
@@ -66,7 +66,6 @@ const PurchaseOrderList = ({
     });
   };
 
-  // --- Batch PDF Generation Handler ---
   const handleBatchGeneratePdfs = async () => {
     if (selectedPurchaseOrders.length === 0 || isBatchProcessing) {
       return;
@@ -76,23 +75,22 @@ const PurchaseOrderList = ({
     const processingToast = toast({
       title: 'Batch PDF Generation Started',
       description: `Processing ${selectedPurchaseOrders.length} purchase order(s)... Please wait.`,
-      duration: 999999, // Keep toast open until dismissed
+      duration: 999999,
     });
 
-    const itemsToProcess = selectedPurchaseOrders.map(id => ({ id, type: 'purchaseOrder' })); // Set type to 'purchaseOrder'
+    const itemsToProcess = selectedPurchaseOrders.map(id => ({ id, type: 'purchaseOrder' }));
 
     try {
       const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
         body: JSON.stringify({ items: itemsToProcess }),
       });
 
-      processingToast.dismiss(); // Dismiss loading toast
+      processingToast.dismiss();
 
       if (error) {
         throw error;
       }
 
-      // Process results from the function
       type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
       const results: BatchResultItem[] = data?.results || [];
       const successCount = results.filter((r) => r.success).length;
@@ -109,12 +107,11 @@ const PurchaseOrderList = ({
         console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
       }
       
-      // Clear selection after processing
-      setSelectedPurchaseOrders([]); 
+      setSelectedPurchaseOrders([]);
 
     } catch (error) {
       console.error('Error calling batch-generate-and-store-pdfs function:', error);
-      processingToast.dismiss(); // Dismiss loading toast on error too
+      processingToast.dismiss();
       toast({
         title: 'Batch PDF Generation Failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
@@ -125,7 +122,6 @@ const PurchaseOrderList = ({
       setIsBatchProcessing(false);
     }
   };
-  // --- End Batch PDF Generation Handler ---
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -170,7 +166,6 @@ const PurchaseOrderList = ({
 
   return (
     <Card>
-      {/* Add Batch Action Button */}
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle>Purchase Orders</CardTitle> 
         <Button
