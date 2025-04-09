@@ -1,209 +1,189 @@
-import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+
+import React, { useState, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Copy, Mail, Check, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CopyIcon, Mail, Share2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/utils/use-toast';
-import { DocumentType } from './PDFButton';
+import { PDFPreviewModalProps } from './PDFPreviewModal';
 
-interface PDFShareModalProps {
-  pdfUrl: string;
-  documentType: DocumentType;
-  document: any;
-  isOpen: boolean;
-  onClose: () => void;
+export interface PDFShareModalProps extends PDFPreviewModalProps {
+  title?: string;
 }
 
 /**
- * Modal component for sharing PDFs via link or email
+ * Modal for sharing PDF documents via various methods (email, link, etc.)
  */
-export function PDFShareModal({
-  pdfUrl,
-  documentType,
-  document,
-  isOpen,
-  onClose,
-}: PDFShareModalProps) {
+export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document' }: PDFShareModalProps) {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('email');
   const [copied, setCopied] = useState(false);
-  const [emailAddress, setEmailAddress] = useState('');
-  const [emailSubject, setEmailSubject] = useState(getDefaultEmailSubject());
-  const [emailBody, setEmailBody] = useState(getDefaultEmailBody());
-  const [isSending, setIsSending] = useState(false);
-
-  // Get default email subject based on document type
-  function getDefaultEmailSubject(): string {
-    switch (documentType) {
-      case 'invoice':
-        return `Invoice ${document.invoice_uid || ''} from ${document.gl_accounts?.account_name || 'Us'}`;
-      case 'purchaseOrder':
-        return `Purchase Order ${document.purchase_order_uid || ''} for ${document.gl_accounts?.account_name || 'Vendor'}`;
-      case 'estimate':
-        return `Estimate ${document.estimate_uid || ''} for ${document.gl_accounts?.account_name || 'You'}`;
-      default:
-        return 'Document Shared';
+  const [recipient, setRecipient] = useState('');
+  const [subject, setSubject] = useState(`${title || 'Document'} Shared with You`);
+  const [emailBody, setEmailBody] = useState('');
+  
+  // Safe function to get document type from title or URL
+  const getDocumentType = (): string => {
+    if (title) {
+      const lowerTitle = title.toLowerCase();
+      if (lowerTitle.includes('invoice')) return 'invoice';
+      if (lowerTitle.includes('purchase order')) return 'purchase order';
+      if (lowerTitle.includes('estimate')) return 'estimate';
+      return 'document';
     }
-  }
+    
+    if (pdfUrl) {
+      const lowerUrl = pdfUrl.toLowerCase();
+      if (lowerUrl.includes('invoice')) return 'invoice';
+      if (lowerUrl.includes('po') || lowerUrl.includes('purchase')) return 'purchase order';
+      if (lowerUrl.includes('estimate')) return 'estimate';
+    }
+    
+    return 'document';
+  };
 
-  // Get default email body based on document type
-  function getDefaultEmailBody(): string {
-    const documentName = documentType.charAt(0).toUpperCase() + documentType.slice(1);
-    return `Please find the attached ${documentName} at the following link:\n\n${pdfUrl}\n\nThank you for your business.`;
-  }
+  // Generate default email body based on document type
+  const getDefaultEmailBody = useMemo(() => {
+    const docType = getDocumentType();
+    return `I'm sharing this ${docType} with you for your reference. You can view or download it using the link below:\n\n${pdfUrl || ''}`;
+  }, [pdfUrl, title]);
+  
+  // Set default email body when component mounts or when URL changes
+  React.useEffect(() => {
+    setEmailBody(getDefaultEmailBody);
+  }, [getDefaultEmailBody]);
 
-  // Handle copy link to clipboard
   const handleCopyLink = async () => {
+    if (!pdfUrl) {
+      toast({
+        title: "Error",
+        description: "No PDF URL available to copy",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       await navigator.clipboard.writeText(pdfUrl);
       setCopied(true);
       toast({
-        title: 'Link Copied',
-        description: 'The PDF link has been copied to your clipboard.',
+        title: "Link Copied",
+        description: "PDF link copied to clipboard",
       });
       
       // Reset copied state after 3 seconds
-      setTimeout(() => {
-        setCopied(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Failed to copy link:', error);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
       toast({
-        title: 'Copy Failed',
-        description: 'Failed to copy the link. Please try again.',
-        variant: 'destructive',
+        title: "Copy Failed",
+        description: "Could not copy link to clipboard",
+        variant: "destructive",
       });
     }
   };
 
-  // Handle send email
   const handleSendEmail = () => {
-    if (!emailAddress) {
+    if (!recipient) {
       toast({
-        title: 'Email Required',
-        description: 'Please enter an email address.',
-        variant: 'destructive',
+        title: "Missing Recipient",
+        description: "Please enter a recipient email address",
+        variant: "destructive",
       });
       return;
     }
-
-    setIsSending(true);
-
+    
+    if (!pdfUrl) {
+      toast({
+        title: "Error",
+        description: "No PDF URL available to share",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Create mailto link with subject and body
-    const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    const mailtoLink = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    window.open(mailtoLink, '_blank');
     
-    // Open default email client
-    window.location.href = mailtoLink;
-    
-    // Show success toast
     toast({
-      title: 'Email Prepared',
-      description: 'Your email has been prepared in your default email client.',
+      title: "Email Prepared",
+      description: "Your email client has been opened with the prepared message",
     });
-    
-    setIsSending(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share PDF</DialogTitle>
+          <DialogTitle>{title || 'Share Document'}</DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="link" className="w-full">
+        <Tabs defaultValue="email" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="link">Copy Link</TabsTrigger>
-            <TabsTrigger value="email">Email</TabsTrigger>
+            <TabsTrigger value="email">
+              <Mail className="h-4 w-4 mr-2" /> Email
+            </TabsTrigger>
+            <TabsTrigger value="link">
+              <Share2 className="h-4 w-4 mr-2" /> Copy Link
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="link" className="mt-4">
-            <div className="flex items-center space-x-2">
-              <Input
-                value={pdfUrl}
-                readOnly
+          <TabsContent value="email" className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="recipient" className="text-sm font-medium">Recipient Email</label>
+              <Input 
+                id="recipient" 
+                placeholder="example@email.com"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="subject" className="text-sm font-medium">Subject</label>
+              <Input 
+                id="subject" 
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="message" className="text-sm font-medium">Message</label>
+              <Textarea 
+                id="message" 
+                rows={5} 
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)} 
+              />
+            </div>
+            <Button className="w-full" onClick={handleSendEmail}>
+              <Mail className="h-4 w-4 mr-2" /> Send Email
+            </Button>
+          </TabsContent>
+          
+          <TabsContent value="link" className="space-y-4">
+            <div className="flex space-x-2">
+              <Input 
+                value={pdfUrl || ''} 
+                readOnly 
                 className="flex-1"
               />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleCopyLink}
-                disabled={copied}
-              >
+              <Button variant="outline" size="icon" onClick={handleCopyLink}>
                 {copied ? (
                   <Check className="h-4 w-4" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <CopyIcon className="h-4 w-4" />
                 )}
+                <span className="sr-only">Copy</span>
               </Button>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Copy this link to share the PDF document.
-            </p>
-          </TabsContent>
-          
-          <TabsContent value="email" className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="recipient@example.com"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="body">Message</Label>
-              <Textarea
-                id="body"
-                rows={4}
-                value={emailBody}
-                onChange={(e) => setEmailBody(e.target.value)}
-              />
+            <div className="text-sm text-muted-foreground">
+              This link provides direct access to the PDF document.
             </div>
           </TabsContent>
         </Tabs>
-        
-        <DialogFooter className="sm:justify-between">
-          <Button variant="ghost" onClick={onClose}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          
-          <Tabs.Consumer>
-            {(value) => (
-              value === 'link' ? (
-                <Button onClick={handleCopyLink} disabled={copied}>
-                  {copied ? 'Copied!' : 'Copy Link'}
-                </Button>
-              ) : (
-                <Button onClick={handleSendEmail} disabled={isSending}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  {isSending ? 'Sending...' : 'Send Email'}
-                </Button>
-              )
-            )}
-          </Tabs.Consumer>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

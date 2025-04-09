@@ -4,6 +4,7 @@ import { Button, ButtonProps } from '@/components/ui/button';
 import { FileText, Download, Loader2 } from 'lucide-react';
 import { usePDFOperations, DocumentType } from '@/hooks/pdf/usePDFOperations';
 import { PDFPreviewModal } from './PDFPreviewModal';
+import { PDFShareModal } from './PDFShareModal';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFErrorType } from '@/lib/pdf/common';
 
@@ -65,6 +66,7 @@ export function PDFGenerationButton({
 }: PDFGenerationButtonProps) {
   const { toast } = useToast();
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   
   // Use our custom PDF operations hook
@@ -128,6 +130,14 @@ export function PDFGenerationButton({
     }
   };
 
+  // Toggle sharing modal
+  const handleShare = () => {
+    if (pdfUrl) {
+      setShowPreviewModal(false);
+      setShowShareModal(true);
+    }
+  };
+
   // Get the appropriate button label based on document type
   const getButtonLabel = () => {
     if (!showLabel) return null;
@@ -140,6 +150,17 @@ export function PDFGenerationButton({
     };
     
     return labels[documentType] || 'Generate PDF';
+  };
+
+  const getModalTitle = () => {
+    const titles: Record<DocumentType, string> = {
+      invoice: 'Invoice PDF',
+      purchaseOrder: 'Purchase Order PDF',
+      estimate: 'Estimate PDF',
+      product: 'Product PDF'
+    };
+    
+    return titles[documentType] || 'Document PDF';
   };
 
   return (
@@ -165,7 +186,16 @@ export function PDFGenerationButton({
           pdfUrl={pdfUrl}
           isOpen={showPreviewModal}
           onClose={() => setShowPreviewModal(false)}
-          title={`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} PDF`}
+          title={getModalTitle()}
+        />
+      )}
+
+      {showShareModal && pdfUrl && (
+        <PDFShareModal 
+          pdfUrl={pdfUrl}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          title={getModalTitle()}
         />
       )}
     </>

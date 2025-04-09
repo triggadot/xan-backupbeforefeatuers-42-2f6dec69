@@ -7,6 +7,7 @@ import { generateAndStoreEstimatePDF } from '@/lib/pdf/estimate-pdf';
 import { generateAndStorePurchaseOrderPDF } from '@/lib/pdf/purchase-order-pdf';
 import { generateAndStoreProductPDF } from '@/lib/pdf/product-pdf';
 import { PDFOperationResult } from '@/lib/pdf/common';
+import { supabase } from '@/integrations/supabase/client';
 
 export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate' | 'product';
 
@@ -163,11 +164,19 @@ export const usePDFOperations = () => {
         reader.onerror = (error) => reject(error);
       });
       
+      // Map document type to the expected API format
+      const typeMap: Record<DocumentType, string> = {
+        invoice: 'invoice',
+        purchaseOrder: 'purchase-order',
+        estimate: 'estimate',
+        product: 'product'
+      };
+      
       const { data, error } = await supabase.functions.invoke('store-pdf', {
         body: {
-          id: documentId,
-          type: documentType,
-          pdfData: base64Data,
+          documentType: typeMap[documentType],
+          documentId,
+          pdfBase64: base64Data,
           fileName: `${documentType}_${documentId}.pdf`
         }
       });
