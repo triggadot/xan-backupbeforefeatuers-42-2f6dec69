@@ -29,7 +29,8 @@ export interface Credit {
   credit_date: string;
   credit_amount: number;
   notes?: string;
-  rowid_estimates: string;
+  rowid_estimates?: string;
+  rowid_invoices?: string;
   rowid_accounts: string;
   created_at: string;
   updated_at: string;
@@ -68,7 +69,7 @@ export function useAccountOverview(accountId: string) {
         }
         
         // Fetch account data
-        const { data: account, error: accountError } = await supabase
+        let { data: account, error: accountError } = await supabase
           .from('gl_accounts')
           .select('*')
           .eq('id', accountId)
@@ -77,42 +78,177 @@ export function useAccountOverview(accountId: string) {
         if (accountError) throw accountError;
         if (!account) throw new Error('Account not found');
         
-        // Fetch unpaid invoices for this account
-        const { data: unpaidInvoices, error: invoicesError } = await supabase
+        // 1. Fetch primary data (invoices)
+        let { data: unpaidInvoicesData, error: invoicesError } = await supabase
           .from('gl_invoices')
-          .select(`
-            *,
-            account:gl_accounts!rowid_accounts(*)
-          `)
+          .select('*')
           .eq('rowid_accounts', account.glide_row_id)
           .or('payment_status.eq.pending,payment_status.eq.overdue,payment_status.is.null');
         
         if (invoicesError) throw invoicesError;
+        let unpaidInvoices = unpaidInvoicesData || [];
+        
+        // 2. Fetch invoice lines
+        let invoiceLines: any[] = [];
+        if (unpaidInvoices.length > 0) {
+          const invoiceIds = unpaidInvoices.map(invoice => invoice.glide_row_id);
+          
+          const { data: lines, error: linesError } = await supabase
+            .from('gl_invoice_lines')
+            .select('*')
+            .in('rowid_invoices', invoiceIds);
+          
+          if (linesError) throw linesError;
+          invoiceLines = lines || [];
+          
+          // 3. Fetch products for invoice lines
+          const productIds = invoiceLines
+            .map(line => line.rowid_products)
+            .filter(Boolean);
+          
+          let products: any[] = [];
+          if (productIds.length > 0) {
+            const { data: productsData, error: productsError } = await supabase
+              .from('gl_products')
+              .select('*')
+              .in('glide_row_id', productIds);
+            
+            if (productsError) throw productsError;
+            products = productsData || [];
+          }
+          
+          // 4. Create lookup maps
+          const productMap = new Map();
+          products.forEach(product => {
+            productMap.set(product.glide_row_id, product);
+          });
+          
+          // 5. Manually join data
+          // Attach products to lines
+          invoiceLines = invoiceLines.map(line => {
+            const product = line.rowid_products ? productMap.get(line.rowid_products) : null;
+            return {
+              ...line,
+              product
+            };
+          });
+          
+          // Group lines by invoice
+          const linesByInvoice = new Map();
+          invoiceLines.forEach(line => {
+            if (!linesByInvoice.has(line.rowid_invoices)) {
+              linesByInvoice.set(line.rowid_invoices, []);
+            }
+            linesByInvoice.get(line.rowid_invoices).push(line);
+          });
+          
+          // Attach lines to invoices
+          unpaidInvoices = unpaidInvoices.map(invoice => {
+            return {
+              ...invoice,
+              lines: linesByInvoice.get(invoice.glide_row_id) || []
+            };
+          });
+        }
         
         // Fetch sample estimates for this account
-        const { data: sampleEstimates, error: estimatesError } = await supabase
+        let { data: sampleEstimatesData, error: estimatesError } = await supabase
           .from('gl_estimates')
           .select('*')
           .eq('rowid_accounts', account.glide_row_id)
-          .eq('is_sample', true);
+          .eq('is_a_sample', true);
         
         if (estimatesError) throw estimatesError;
+        let sampleEstimates = sampleEstimatesData || [];
         
-        // Fetch payments for this account
-        const { data: payments, error: paymentsError } = await supabase
+        // Get all estimate IDs for later use with credits
+        const allEstimateIds = sampleEstimates.map(estimate => estimate.glide_row_id);
+        
+        // Fetch estimate lines
+        let estimateLines: any[] = [];
+        if (sampleEstimates.length > 0) {
+          const estimateIds = sampleEstimates.map(estimate => estimate.glide_row_id);
+          
+          const { data: lines, error: linesError } = await supabase
+            .from('gl_estimate_lines')
+            .select('*')
+            .in('rowid_estimates', estimateIds);
+          
+          if (linesError) throw linesError;
+          estimateLines = lines || [];
+          
+          // Fetch products for estimate lines
+          const productIds = estimateLines
+            .map(line => line.rowid_products)
+            .filter(Boolean);
+          
+          let products: any[] = [];
+          if (productIds.length > 0) {
+            const { data: productsData, error: productsError } = await supabase
+              .from('gl_products')
+              .select('*')
+              .in('glide_row_id', productIds);
+            
+            if (productsError) throw productsError;
+            products = productsData || [];
+          }
+          
+          // Create lookup maps
+          const productMap = new Map();
+          products.forEach(product => {
+            productMap.set(product.glide_row_id, product);
+          });
+          
+          // Manually join data
+          // Attach products to lines
+          estimateLines = estimateLines.map(line => {
+            const product = line.rowid_products ? productMap.get(line.rowid_products) : null;
+            return {
+              ...line,
+              product
+            };
+          });
+          
+          // Group lines by estimate
+          const linesByEstimate = new Map();
+          estimateLines.forEach(line => {
+            if (!linesByEstimate.has(line.rowid_estimates)) {
+              linesByEstimate.set(line.rowid_estimates, []);
+            }
+            linesByEstimate.get(line.rowid_estimates).push(line);
+          });
+          
+          // Attach lines to estimates
+          sampleEstimates = sampleEstimates.map(estimate => {
+            return {
+              ...estimate,
+              lines: linesByEstimate.get(estimate.glide_row_id) || []
+            };
+          });
+        }
+        
+        // Get all invoice IDs for payments (only open invoices)
+        const openInvoiceIds = unpaidInvoices.map(invoice => invoice.glide_row_id);
+        
+        // Fetch payments for this account's open invoices
+        const { data: paymentsData, error: paymentsError } = await supabase
           .from('gl_customer_payments')
           .select('*')
-          .eq('rowid_accounts', account.glide_row_id);
+          .eq('rowid_accounts', account.glide_row_id)
+          .in('rowid_invoices', openInvoiceIds.length > 0 ? openInvoiceIds : ['']);
         
         if (paymentsError) throw paymentsError;
+        const payments = paymentsData || [];
         
-        // Fetch credits for this account
-        const { data: credits, error: creditsError } = await supabase
-          .from('gl_credits')
+        // Fetch credits related to the account's estimates
+        const { data: creditsData, error: creditsError } = await supabase
+          .from('gl_customer_credits')
           .select('*')
-          .eq('rowid_accounts', account.glide_row_id);
+          .eq('rowid_accounts', account.glide_row_id)
+          .in('rowid_estimates', allEstimateIds.length > 0 ? allEstimateIds : ['']);
         
         if (creditsError) throw creditsError;
+        const credits = creditsData || [];
         
         // Calculate totals
         const totalUnpaid = unpaidInvoices?.reduce(
@@ -120,11 +256,13 @@ export function useAccountOverview(accountId: string) {
           0
         ) || 0;
         
+        // Only count payments related to open invoices
         const totalPaid = payments?.reduce(
           (sum, payment) => sum + (payment.payment_amount || 0), 
           0
         ) || 0;
         
+        // Only count credits related to estimates
         const totalCredits = credits?.reduce(
           (sum, credit) => sum + (credit.credit_amount || 0), 
           0

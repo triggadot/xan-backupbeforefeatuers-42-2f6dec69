@@ -1,4 +1,3 @@
-
 /**
  * Common entity types used throughout the application
  */
@@ -7,10 +6,9 @@ import { LucideIcon } from 'lucide-react';
 export type EntityStatus = 
   // Invoice statuses
   | 'draft'
-  | 'sent'
+  | 'unpaid'
   | 'paid'
   | 'partial'
-  | 'overdue'
   // Purchase order statuses
   | 'pending'
   | 'complete'

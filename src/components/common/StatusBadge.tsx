@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { EntityStatus } from '@/types/common';
@@ -17,14 +16,12 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
       // Invoice statuses
       case "draft":
         return "outline";
-      case "sent":
+      case "unpaid":
         return "secondary";
       case "paid":
         return "success";
       case "partial":
         return "warning";
-      case "overdue":
-        return "destructive";
       // Purchase order statuses
       case "pending":
         return "secondary";
@@ -49,14 +46,12 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
     switch (status) {
       case "draft":
         return "Draft";
-      case "sent":
-        return "Sent";
+      case "unpaid":
+        return "Unpaid";
       case "paid":
         return "Paid";
       case "partial":
         return "Partially Paid";
-      case "overdue":
-        return "Overdue";
       case "pending":
         return "Pending";
       case "complete":
@@ -76,8 +71,8 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
 
   return (
     <Badge 
-      variant={getVariant() as any} 
-      className={size === "sm" ? "text-xs px-2 py-0" : ""}
+      variant={getVariant()} 
+      className={size === "sm" ? "text-xs py-0 px-2" : ""}
     >
       {getLabel()}
     </Badge>

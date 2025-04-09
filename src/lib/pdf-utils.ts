@@ -115,88 +115,109 @@ export function formatShortDate(dateString: string | null | undefined): string {
  */
 export function generateInvoicePDF(invoice: Invoice): jsPDF {
   const doc = new jsPDF();
+  let currentY = 20;
   
-  // Add letterhead
-  doc.setFontSize(24);
-  doc.setFont(undefined, 'bold');
-  doc.text('INVOICE', 105, 20, { align: 'center' });
-  doc.setFont(undefined, 'normal');
+  // Add header with company info
+  doc.setFontSize(20);
+  doc.text('INVOICE', 105, currentY, { align: 'center' });
+  currentY += 15;
   
-  // Add horizontal line
-  doc.setLineWidth(0.5);
-  doc.line(20, 35, 190, 35);
-  
-  // Add invoice details
+  // Add company info
   doc.setFontSize(12);
-  doc.text(`Invoice #: ${invoice.invoice_uid || 'N/A'}`, 20, 45);
-  doc.text(`Date: ${formatShortDate(invoice.invoice_order_date)}`, 150, 45, { align: 'right' });
+  doc.text('Your Company Name', 20, currentY);
+  currentY += 10;
+  doc.text('123 Business St', 20, currentY);
+  currentY += 7;
+  doc.text('City, State 12345', 20, currentY);
+  currentY += 7;
+  doc.text('Phone: (555) 555-5555', 20, currentY);
+  currentY += 7;
+  doc.text('Email: info@yourcompany.com', 20, currentY);
   
-  // Add customer details
-  doc.setFontSize(11);
-  doc.text('Bill To:', 20, 60);
-  doc.setFont(undefined, 'bold');
-  doc.text(invoice.gl_accounts?.account_name || 'N/A', 20, 70);
-  doc.setFont(undefined, 'normal');
+  // Add invoice info
+  currentY = 35;
+  doc.setFontSize(12);
+  doc.text(`Invoice #: ${invoice.invoice_uid || 'N/A'}`, 130, currentY);
+  currentY += 10;
+  doc.text(`Date: ${formatShortDate(invoice.invoice_order_date)}`, 130, currentY);
+  currentY += 10;
   
-  // Define the table styles
-  const tableStyles = {
-    headStyles: {
-      fillColor: [44, 62, 80], // Dark blue header
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      halign: 'center'
-    },
-    alternateRowStyles: {
-      fillColor: [240, 240, 240] // Light gray for alternate rows
-    },
-    columnStyles: {
-      0: { cellWidth: 'auto' }, // Product name
-      1: { cellWidth: 40, halign: 'center' }, // Quantity
-      2: { cellWidth: 40, halign: 'right' }, // Price
-      3: { cellWidth: 40, halign: 'right' } // Total
-    },
-    margin: { top: 80 }
-  };
-
-  // Map invoice products to table rows
-  const rows = invoice.invoice_lines?.map(line => [
-    line.renamed_product_name || 'N/A',
-    line.qty_sold || 0,
-    formatCurrency(line.selling_price || 0),
-    formatCurrency(line.line_total || 0)
-  ]) || [];
-
-  // Add the items table to the document
-  (doc as any).autoTable({
-    head: [['Product', 'Quantity', 'Unit Price', 'Total']],
-    body: rows,
-    startY: 80,
-    ...tableStyles
-  });
-
-  // Get the final Y position of the table
-  const finalY = (doc as any).autoTable.previous.finalY;
-
-  // Add totals section
-  doc.setFontSize(11);
-  doc.text(`Subtotal:`, 150, finalY + 15, { align: 'right' });
-  doc.text(formatCurrency(invoice.total_amount || 0), 190, finalY + 15, { align: 'right' });
-  
-  let currentY = finalY + 15;
-  
-  if (invoice.tax_rate && invoice.tax_rate > 0) {
-    currentY += 10;
-    doc.text(`Tax (${invoice.tax_rate}%):`, 150, currentY, { align: 'right' });
-    doc.text(formatCurrency(invoice.tax_amount || 0), 190, currentY, { align: 'right' });
-    
-    currentY += 10;
-    doc.text(`Total:`, 150, currentY, { align: 'right' });
-    doc.text(formatCurrency((invoice.total_amount || 0) + (invoice.tax_amount || 0)), 190, currentY, { align: 'right' });
+  // Add customer info
+  currentY = 80;
+  doc.setFontSize(14);
+  doc.text('Bill To:', 20, currentY);
+  currentY += 10;
+  doc.setFontSize(12);
+  if (invoice.gl_accounts) {
+    doc.text(invoice.gl_accounts.account_name || 'N/A', 20, currentY);
+    currentY += 7;
+    // Add more customer details if available
+  } else {
+    doc.text('Customer information not available', 20, currentY);
   }
   
+  // Add invoice items table
+  currentY += 20;
+  const tableColumn: AutoTableColumn[] = [
+    { header: 'Item', dataKey: 'item' },
+    { header: 'Description', dataKey: 'description' },
+    { header: 'Qty', dataKey: 'qty' },
+    { header: 'Unit Price', dataKey: 'price' },
+    { header: 'Total', dataKey: 'total' }
+  ];
+  
+  const tableRows = [];
+  
+  if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
+    for (const line of invoice.invoice_lines) {
+      tableRows.push({
+        item: line.gl_products?.display_name || 'N/A',
+        description: line.product_sale_note || '',
+        qty: line.qty_sold || 0,
+        price: formatCurrency(line.selling_price || 0),
+        total: formatCurrency(line.line_total || 0)
+      });
+    }
+  } else {
+    tableRows.push({
+      item: 'No items',
+      description: '',
+      qty: '',
+      price: '',
+      total: ''
+    });
+  }
+  
+  doc.autoTable({
+    head: [tableColumn.map(col => col.header)],
+    body: tableRows.map(row => [
+      row.item,
+      row.description,
+      row.qty,
+      row.price,
+      row.total
+    ]),
+    startY: currentY,
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 5 },
+    headStyles: { fillColor: [66, 66, 66] }
+  });
+  
+  // Get the y position after the table
+  currentY = (doc as any).lastAutoTable.finalY + 20;
+  
+  // Add totals
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
+  doc.text(formatCurrency(invoice.total_amount || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
+  
   currentY += 10;
-  doc.text(`Payments:`, 150, currentY, { align: 'right' });
+  doc.setFont(undefined, 'bold');
+  doc.text(`Amount Paid:`, 150, currentY, { align: 'right' });
   doc.text(formatCurrency(invoice.total_paid || 0), 190, currentY, { align: 'right' });
+  doc.setFont(undefined, 'normal');
   
   currentY += 10;
   doc.setFont(undefined, 'bold');

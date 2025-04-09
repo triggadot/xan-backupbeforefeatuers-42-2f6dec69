@@ -16,6 +16,7 @@ import { Route, Routes } from 'react-router-dom';
 // Import our pages
 import AccountDetail from '@/pages/AccountDetail';
 import Accounts from '@/pages/Accounts';
+import AccountOverview from '@/pages/AccountOverview';
 import EstimateDetailPage from '@/pages/new/EstimateDetail';
 import NewEstimates from '@/pages/new/Estimates';
 import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
@@ -69,6 +70,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AccountDetail isEditing={true} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="account-overview/:accountId" 
+            element={
+              <ProtectedRoute>
+                <AccountOverview />
               </ProtectedRoute>
             } 
           />

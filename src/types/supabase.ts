@@ -1,4 +1,3 @@
-
 import { Database } from '@/integrations/supabase/types';
 import { PostgrestError } from '@supabase/supabase-js';
 
@@ -152,9 +151,6 @@ export interface InvoiceRow {
   total_amount?: number | string;
   total_paid?: number | string;
   balance?: number | string;
-  due_date?: string;
-  tax_rate?: number | string;
-  tax_amount?: number | string;
   notes?: string;
   // This can be a complex object, so we use a union type
   customer?: string | Record<string, unknown> | null;

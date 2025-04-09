@@ -34,8 +34,7 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   customerId: string;
   customerName: string;
   invoiceDate: Date;
-  dueDate?: Date; // Now mapped from db field
-  status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
+  status: 'draft' | 'unpaid' | 'paid' | 'partial';
   total_paid: number;
   balance: number;
   lineItems?: InvoiceLineItem[];
@@ -48,7 +47,6 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   updated_at?: string;
   glide_row_id: string;
   total_amount: number;
-  tax_rate?: number; // New field
   pdf_link?: string; // Internal Glide use only
   supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
@@ -63,8 +61,6 @@ export interface InvoiceWithDetails extends Invoice {
   subtotal: number;
   createdAt?: Date;
   updatedAt?: Date;
-  tax_rate?: number;
-  tax_amount?: number;
   pdf_link?: string; // Internal Glide use only
   supabase_pdf_url?: string; // Supabase storage URL for PDFs
 }
@@ -107,7 +103,6 @@ export interface CreateInvoiceInput {
   dueDate?: Date;
   status: string;
   notes?: string;
-  tax_rate?: number; // New field
   lineItems: Array<{
     productId: string;
     description: string;
@@ -122,7 +117,6 @@ export interface UpdateInvoiceInput {
   dueDate?: Date;
   status?: string;
   notes?: string;
-  tax_rate?: number; // New field
 }
 
 export interface InvoiceWithAccount extends Invoice {

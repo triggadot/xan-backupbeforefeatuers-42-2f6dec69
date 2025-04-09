@@ -49,9 +49,9 @@ const Invoices = () => {
   const statusOptions = [
     { value: 'all', label: 'All Invoices' },
     { value: 'draft', label: 'Drafts' },
-    { value: 'pending', label: 'Pending' },
+    { value: 'unpaid', label: 'Unpaid' },
     { value: 'paid', label: 'Paid' },
-    { value: 'overdue', label: 'Overdue' },
+    { value: 'partial', label: 'Partial' },
   ];
 
   // Calculate summary metrics

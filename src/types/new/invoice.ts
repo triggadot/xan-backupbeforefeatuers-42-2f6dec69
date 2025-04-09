@@ -1,8 +1,8 @@
 export enum InvoiceStatus {
   DRAFT = 'draft',
-  PENDING = 'pending',
+  UNPAID = 'unpaid',
   PAID = 'paid',
-  OVERDUE = 'overdue'
+  PARTIAL = 'partial'
 }
 
 export interface Invoice {
@@ -12,7 +12,6 @@ export interface Invoice {
   invoice_order_date: string | null;
   created_timestamp: string | null;
   submitted_timestamp: string | null;
-  processed: boolean | null;
   user_email: string | null;
   notes: string | null;
   doc_glideforeverlink: string | null;
@@ -22,9 +21,6 @@ export interface Invoice {
   total_paid: number | null;
   balance: number | null;
   payment_status: string | null;
-  tax_rate: number | null;
-  tax_amount: number | null;
-  due_date: string | null;
 }
 
 export interface InvoiceLine {
