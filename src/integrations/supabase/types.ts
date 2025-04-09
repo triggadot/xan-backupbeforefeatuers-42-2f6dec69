@@ -419,6 +419,7 @@ export type Database = {
           payment_status: string | null
           rowid_accounts: string | null
           submitted_timestamp: string | null
+          supabase_pdf_url: string | null
           total_amount: number | null
           total_paid: number | null
           updated_at: string | null
@@ -437,6 +438,7 @@ export type Database = {
           payment_status?: string | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          supabase_pdf_url?: string | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
@@ -455,6 +457,7 @@ export type Database = {
           payment_status?: string | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
+          supabase_pdf_url?: string | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
@@ -610,6 +613,7 @@ export type Database = {
           product_count: number | null
           purchase_order_uid: string | null
           rowid_accounts: string | null
+          supabase_pdf_url: string | null
           total_amount: number | null
           total_paid: number | null
           updated_at: string | null
@@ -627,6 +631,7 @@ export type Database = {
           product_count?: number | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
+          supabase_pdf_url?: string | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
@@ -644,6 +649,7 @@ export type Database = {
           product_count?: number | null
           purchase_order_uid?: string | null
           rowid_accounts?: string | null
+          supabase_pdf_url?: string | null
           total_amount?: number | null
           total_paid?: number | null
           updated_at?: string | null
