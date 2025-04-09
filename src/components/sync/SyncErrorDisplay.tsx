@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GlSyncRecord } from '@/types/glsync';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface SyncErrorDisplayProps {
   syncErrors: GlSyncRecord[];
@@ -203,8 +203,10 @@ export function SyncErrorDisplay({
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
-                            <DialogHeader>
+                            <VisuallyHidden>
                               <DialogTitle>Resolve Sync Error</DialogTitle>
+                            </VisuallyHidden>
+                            <DialogHeader>
                               <DialogDescription>
                                 Mark this error as resolved and add optional resolution notes.
                               </DialogDescription>

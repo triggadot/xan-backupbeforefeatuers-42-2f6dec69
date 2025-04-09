@@ -211,11 +211,11 @@ export async function fetchProductForPDF(productId: string): Promise<ProductDeta
   }
 }
 
+// Define a more specific type for the productId parameter
+type ProductIdInput = string | { id?: string; glide_row_id?: string };
+
 /**
- * Generate a PDF for a product
- * 
- * @param product - The product data with related information
- * @returns jsPDF document object
+ * Generate and store a product PDF
  * 
  * @example
  * const product = await fetchProductForPDF('123');
@@ -404,7 +404,7 @@ export function generateProductPDF(product: ProductDetail): jsPDF {
  * }
  */
 export async function generateAndStoreProductPDF(
-  productId: string | any,
+  productId: ProductIdInput, // Use the specific type
   download: boolean = false
 ): Promise<PDFOperationResult> {
   try {
@@ -446,6 +446,54 @@ export async function generateAndStoreProductPDF(
       try {
         saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
+
+        // --- Start Background Storage ---
+        // Asynchronously store the PDF in Supabase after download starts
+        const storePdfInBackground = async () => {
+          try {
+            // Convert Blob to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            const base64Data = await new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => {
+                const base64String = (reader.result as string)?.split(',')[1];
+                if (base64String) {
+                  resolve(base64String);
+                } else {
+                  reject(new Error('Failed to read blob as base64'));
+                }
+              };
+              reader.onerror = (error) => reject(error);
+            });
+
+            // Invoke the Edge Function
+            // NOTE: Products don't have a supabase_pdf_url column currently.
+            // This call will fail unless the column is added or a different
+            // storage/tracking mechanism is used for product PDFs.
+            // For now, just log the attempt.
+            console.log(`Attempting to invoke store-pdf for product ID: ${product.id} (DB update will likely fail)`);
+            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
+              body: JSON.stringify({ // Ensure body is stringified JSON
+                id: product.id, // Use the actual product ID (uuid)
+                type: 'product', // Correct type
+                pdfData: base64Data,
+                fileName: filename,
+              }),
+            });
+
+            if (functionError) {
+              console.error(`Error calling store-pdf function for product ${product.id}:`, functionError);
+            } else {
+              console.log(`Successfully triggered background storage for product ${product.id}`);
+            }
+          } catch (bgError) {
+            console.error(`Error during background PDF storage for product ${product.id}:`, bgError);
+          }
+        };
+
+        storePdfInBackground(); // Fire and forget
+        // --- End Background Storage ---
+
       } catch (downloadError) {
         console.error('Error handling product PDF download:', 
           downloadError instanceof Error 

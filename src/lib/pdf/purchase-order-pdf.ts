@@ -128,7 +128,8 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
       .eq('purchase_order_uid', poData.purchase_order_uid);
     
     // Combine results, removing duplicates
-    let productData: any[] = [];
+    // Specify type for productData
+    let productData: Database['public']['Tables']['gl_products']['Row'][] = [];
     if (productData1) {
       productData = [...productData1];
     }
@@ -147,7 +148,8 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
     } else {
       // Process line items (products)
       if (productData && productData.length > 0) {
-        productData.forEach((product: any) => {
+        // Specify type for product in forEach
+        productData.forEach((product: Database['public']['Tables']['gl_products']['Row']) => {
           const hasVendorProductName = 'vendor_product_name' in product;
           
           const lineItem: PurchaseOrderLineItem = {
@@ -184,7 +186,8 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
       console.error('Error fetching vendor payments:', paymentError);
     } else {
       // Process payments
-      poWithDetails.vendorPayments = paymentData ? paymentData.map((payment: any) => ({
+      // Specify type for payment in map
+      poWithDetails.vendorPayments = paymentData ? paymentData.map((payment: Database['public']['Tables']['gl_vendor_payments']['Row']) => ({
         id: payment.id,
         amount: Number(payment.payment_amount) || 0,
         date: payment.date_of_payment,
@@ -204,8 +207,11 @@ export async function fetchPurchaseOrderForPDF(purchaseOrderId: string): Promise
   }
 }
 
+// Define a more specific type for the purchaseOrderId parameter
+type PurchaseOrderIdInput = string | { id?: string; glide_row_id?: string };
+
 /**
- * Generate a PDF for a purchase order
+ * Generate and store a purchase order PDF
  * 
  * @param purchaseOrder - The purchase order data with related vendor and line items
  * @returns jsPDF document object
@@ -469,7 +475,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrderWithDetails
  * }
  */
 export async function generateAndStorePurchaseOrderPDF(
-  purchaseOrderId: string | any,
+  purchaseOrderId: PurchaseOrderIdInput, // Use the specific type
   download: boolean = false
 ): Promise<PDFOperationResult> {
   try {
@@ -511,6 +517,50 @@ export async function generateAndStorePurchaseOrderPDF(
       try {
         saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
+
+        // --- Start Background Storage ---
+        // Asynchronously store the PDF in Supabase after download starts
+        const storePdfInBackground = async () => {
+          try {
+            // Convert Blob to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            const base64Data = await new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => {
+                const base64String = (reader.result as string)?.split(',')[1];
+                if (base64String) {
+                  resolve(base64String);
+                } else {
+                  reject(new Error('Failed to read blob as base64'));
+                }
+              };
+              reader.onerror = (error) => reject(error);
+            });
+
+            // Invoke the Edge Function
+            console.log(`Invoking store-pdf for purchase order ID: ${purchaseOrder.id}`);
+            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
+              body: JSON.stringify({ // Ensure body is stringified JSON
+                id: purchaseOrder.id, // Use the actual PO ID (uuid)
+                type: 'purchaseOrder', // Correct type
+                pdfData: base64Data,
+                fileName: filename,
+              }),
+            });
+
+            if (functionError) {
+              console.error(`Error calling store-pdf function for PO ${purchaseOrder.id}:`, functionError);
+            } else {
+              console.log(`Successfully triggered background storage for PO ${purchaseOrder.id}`);
+            }
+          } catch (bgError) {
+            console.error(`Error during background PDF storage for PO ${purchaseOrder.id}:`, bgError);
+          }
+        };
+
+        storePdfInBackground(); // Fire and forget
+        // --- End Background Storage ---
+
       } catch (downloadError) {
         console.error('Error handling purchaseOrder PDF download:', 
           downloadError instanceof Error 

@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, ArrowUpDownIcon } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button'; // Import Button component
 import { useToast } from '@/hooks/utils/use-toast';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { format } from 'date-fns';
+import { ArrowUpDownIcon, DownloadIcon, EyeIcon, FileTextIcon, PencilIcon, ShareIcon } from 'lucide-react'; // Added FileTextIcon
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type SortableColumn = keyof Pick<InvoiceWithAccount, 'invoice_order_date' | 'total_amount' | 'payment_status' | 'account'> | 'account.name';
 type SortDirection = 'asc' | 'desc';
@@ -20,6 +22,7 @@ interface InvoiceListProps {
 const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColumn, sortDirection, onSort }) => {
   const { toast } = useToast();
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false); // State for batch processing
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -42,8 +45,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
       title: 'Download Started',
       description: 'Your invoice PDF is being prepared for download.',
     });
-    // Implement PDF download functionality
-    // You can use the doc_glideforeverlink field from your database if available
+    // TODO: Connect this to the actual download+background store logic
+    // Likely call generateAndStoreInvoicePDF(id, true) from '@/lib/pdf/invoice-pdf'
+    console.log("Placeholder: Download PDF for invoice", id);
   };
 
   const handleShareInvoice = (id: string) => {
@@ -52,7 +56,70 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
       description: 'Invoice sharing options opened.',
     });
     // Implement invoice sharing functionality
+    console.log("Placeholder: Share invoice", id);
   };
+
+  // --- Batch PDF Generation Handler ---
+  const handleBatchGeneratePdfs = async () => {
+    if (selectedInvoices.length === 0 || isBatchProcessing) {
+      return;
+    }
+
+    setIsBatchProcessing(true);
+    const processingToast = toast({
+      title: 'Batch PDF Generation Started',
+      description: `Processing ${selectedInvoices.length} invoice(s)... Please wait.`,
+      duration: 999999, // Keep toast open until dismissed
+    });
+
+    const itemsToProcess = selectedInvoices.map(id => ({ id, type: 'invoice' }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
+        body: JSON.stringify({ items: itemsToProcess }),
+      });
+
+      processingToast.dismiss(); // Dismiss loading toast
+
+      if (error) {
+        throw error;
+      }
+
+      // Process results from the function
+      // Define a type for the result item
+      type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
+      const results: BatchResultItem[] = data?.results || [];
+      const successCount = results.filter((r) => r.success).length;
+      const failureCount = results.length - successCount;
+
+      toast({
+        title: 'Batch PDF Generation Complete',
+        description: `Successfully generated ${successCount} PDF(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}`,
+        variant: failureCount > 0 ? 'warning' : 'default',
+        duration: 5000,
+      });
+
+      if (failureCount > 0) {
+        console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
+      }
+      
+      // Clear selection after processing
+      setSelectedInvoices([]); 
+
+    } catch (error) {
+      console.error('Error calling batch-generate-and-store-pdfs function:', error);
+      processingToast.dismiss(); // Dismiss loading toast on error too
+      toast({
+        title: 'Batch PDF Generation Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+  // --- End Batch PDF Generation Handler ---
 
   const formatInvoiceNumber = (invoice: InvoiceWithAccount) => {
     try {
@@ -106,6 +173,17 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
 
   return (
     <div className="overflow-x-auto">
+      {/* Add Batch Action Button */}
+      <div className="mb-4 flex justify-end">
+        <Button
+          onClick={handleBatchGeneratePdfs}
+          disabled={selectedInvoices.length === 0 || isBatchProcessing}
+          size="sm"
+        >
+          <FileTextIcon className="mr-2 h-4 w-4" />
+          {isBatchProcessing ? 'Processing...' : `Generate ${selectedInvoices.length} PDF(s)`}
+        </Button>
+      </div>
       {/* Preline UI Table */}
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead>
@@ -121,6 +199,10 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
                   />
                 </div>
               </div>
+            </th>
+            {/* Invoice Number Column */}
+            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+              Invoice #
             </th>
             <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
               <button type="button" onClick={() => onSort('account.name')} className="px-0">
@@ -172,6 +254,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
                   </div>
                 </div>
               </td>
+              {/* Invoice Number Data */}
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <Link to={`/invoices/${invoice.id}`} className="text-blue-600 hover:text-blue-700 hover:underline">
                   {formatInvoiceNumber(invoice)}
@@ -202,7 +285,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(invoice.invoice_order_date)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.total_amount)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-right">{formatCurrency(invoice.total_amount)}</td> {/* Align right */}
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 {/* Updated badge logic for DATABASE statuses */}
                 <span className={`inline-flex items-center gap-1.5 py-0.5 px-2 rounded-full text-xs font-medium ${ 

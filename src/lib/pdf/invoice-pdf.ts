@@ -62,7 +62,8 @@ export async function fetchInvoiceForPDF(invoiceId: string): Promise<InvoiceWith
     const { data: productsData } = await supabase.from('gl_products').select('*');
     
     if (productsData) {
-      productsData.forEach((product: any) => {
+      // Use specific type for product
+      productsData.forEach((product: Database['public']['Tables']['gl_products']['Row']) => {
         productsMap.set(product.glide_row_id, {
           display_name: product.vendor_product_name || product.main_new_product_name || 'Unknown Product',
           id: product.id,
@@ -77,7 +78,8 @@ export async function fetchInvoiceForPDF(invoiceId: string): Promise<InvoiceWith
       .eq('rowid_invoices', invoiceData.glide_row_id);
 
     if (linesData?.length) {
-      invoiceWithDetails.lines = linesData.map((line: any) => ({
+      // Use specific type for line
+      invoiceWithDetails.lines = linesData.map((line: Database['public']['Tables']['gl_invoice_lines']['Row']) => ({
         ...line,
         qty_sold: Number(line.qty_sold) || 0,
         selling_price: Number(line.selling_price) || 0,
@@ -187,7 +189,8 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
     total + (Math.round(Number(line.qty_sold) || 0)), 0) || 0;
   
   // Totals section with better fonts and alignment
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  // Provide specific type assertion for lastAutoTable property added by the plugin
+  const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   let currentY = finalY;
   
   // Set up totals section with improved typography
@@ -255,8 +258,11 @@ export function generateInvoicePDF(invoice: InvoiceWithDetails): jsPDF {
   return doc;
 }
 
+// Define a more specific type for the invoiceId parameter
+type InvoiceIdInput = string | { id?: string; glide_row_id?: string };
+
 export async function generateAndStoreInvoicePDF(
-  invoiceId: string | any,
+  invoiceId: InvoiceIdInput,
   download = false
 ): Promise<PDFOperationResult> {
   try {
@@ -280,11 +286,62 @@ export async function generateAndStoreInvoicePDF(
     if (download) {
       try {
         saveAs(pdfBlob, filename);
+
+        // --- Start Background Storage ---
+        // Asynchronously store the PDF in Supabase after download starts
+        const storePdfInBackground = async () => {
+          try {
+            // Convert Blob to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            const base64Data = await new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => {
+                // Result is data:application/pdf;base64,xxxxx - remove the prefix
+                const base64String = (reader.result as string)?.split(',')[1];
+                if (base64String) {
+                  resolve(base64String);
+                } else {
+                  reject(new Error('Failed to read blob as base64'));
+                }
+              };
+              reader.onerror = (error) => reject(error);
+            });
+
+            // Invoke the Edge Function
+            console.log(`Invoking store-pdf for invoice ID: ${invoice.id}`);
+            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
+              body: JSON.stringify({ // Ensure body is stringified JSON
+                id: invoice.id, // Use the actual invoice ID (uuid)
+                type: 'invoice',
+                pdfData: base64Data,
+                fileName: filename,
+              }),
+            });
+
+            if (functionError) {
+              console.error(`Error calling store-pdf function for invoice ${invoice.id}:`, functionError);
+              // Optional: Add subtle user feedback (e.g., toast)
+            } else {
+              console.log(`Successfully triggered background storage for invoice ${invoice.id}`);
+              // Optional: Add subtle user feedback (e.g., toast)
+            }
+          } catch (bgError) {
+            console.error(`Error during background PDF storage for invoice ${invoice.id}:`, bgError);
+            // Optional: Add subtle user feedback (e.g., toast)
+          }
+        };
+
+        storePdfInBackground(); // Fire and forget
+        // --- End Background Storage ---
+
       } catch (error) {
         console.error('Download error:', error);
+        // Note: The main function still returns success based on blob creation,
+        // background storage failure is handled separately.
       }
     }
     
+    // Return success based on blob generation, regardless of background storage outcome
     return createPDFSuccess(URL.createObjectURL(pdfBlob));
   } catch (error) {
     return createPDFError(

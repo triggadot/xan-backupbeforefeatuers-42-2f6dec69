@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Mapping } from '@/types/syncLog';
 
 export interface DeleteMappingDialogProps {
@@ -46,8 +46,10 @@ const DeleteMappingDialog: React.FC<DeleteMappingDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
+        <VisuallyHidden>
+          <DialogTitle>Delete Mapping Confirmation</DialogTitle>
+        </VisuallyHidden>
         <DialogHeader>
-          <DialogTitle>Delete Mapping</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this mapping? This action cannot be undone.
           </DialogDescription>

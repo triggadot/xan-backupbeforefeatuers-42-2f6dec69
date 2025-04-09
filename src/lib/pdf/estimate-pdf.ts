@@ -168,8 +168,11 @@ export async function fetchEstimateForPDF(estimateId: string): Promise<EstimateW
   }
 }
 
+// Define a more specific type for the estimateId parameter
+type EstimateIdInput = string | { id?: string; glide_row_id?: string };
+
 /**
- * Generate a PDF for an estimate
+ * Generate and store an estimate PDF
  * 
  * @param estimate - The estimate data with related account and line items
  * @returns jsPDF document object
@@ -374,7 +377,7 @@ export function generateEstimatePDF(estimate: EstimateWithDetails): jsPDF {
  * }
  */
 export async function generateAndStoreEstimatePDF(
-  estimateId: string | any,
+  estimateId: EstimateIdInput, // Use the specific type
   download: boolean = false
 ): Promise<PDFOperationResult> {
   try {
@@ -416,6 +419,50 @@ export async function generateAndStoreEstimatePDF(
       try {
         saveAs(pdfBlob, filename);
         console.log(`PDF downloaded successfully: ${filename}`);
+
+        // --- Start Background Storage ---
+        // Asynchronously store the PDF in Supabase after download starts
+        const storePdfInBackground = async () => {
+          try {
+            // Convert Blob to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(pdfBlob);
+            const base64Data = await new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => {
+                const base64String = (reader.result as string)?.split(',')[1];
+                if (base64String) {
+                  resolve(base64String);
+                } else {
+                  reject(new Error('Failed to read blob as base64'));
+                }
+              };
+              reader.onerror = (error) => reject(error);
+            });
+
+            // Invoke the Edge Function
+            console.log(`Invoking store-pdf for estimate ID: ${estimate.id}`);
+            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
+              body: JSON.stringify({ // Ensure body is stringified JSON
+                id: estimate.id, // Use the actual estimate ID (uuid)
+                type: 'estimate',
+                pdfData: base64Data,
+                fileName: filename,
+              }),
+            });
+
+            if (functionError) {
+              console.error(`Error calling store-pdf function for estimate ${estimate.id}:`, functionError);
+            } else {
+              console.log(`Successfully triggered background storage for estimate ${estimate.id}`);
+            }
+          } catch (bgError) {
+            console.error(`Error during background PDF storage for estimate ${estimate.id}:`, bgError);
+          }
+        };
+
+        storePdfInBackground(); // Fire and forget
+        // --- End Background Storage ---
+
       } catch (downloadError) {
         console.error('Error handling estimate PDF download:', 
           downloadError instanceof Error 

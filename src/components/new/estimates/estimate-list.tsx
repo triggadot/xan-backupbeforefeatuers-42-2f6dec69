@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw } from 'lucide-react';
+import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, FileTextIcon } from 'lucide-react'; // Added FileTextIcon
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/utils/use-toast';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { Button } from '@/components/ui/button'; // Import Button component
 import { format } from 'date-fns';
 import { EstimateWithDetails } from '@/types/estimate';
 
@@ -23,6 +25,7 @@ export const EstimateList: React.FC<EstimateListProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedEstimates, setSelectedEstimates] = useState<string[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false); // State for batch processing
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -56,6 +59,67 @@ export const EstimateList: React.FC<EstimateListProps> = ({
     });
     // Implement estimate sharing functionality
   };
+
+  // --- Batch PDF Generation Handler ---
+  const handleBatchGeneratePdfs = async () => {
+    if (selectedEstimates.length === 0 || isBatchProcessing) {
+      return;
+    }
+
+    setIsBatchProcessing(true);
+    const processingToast = toast({
+      title: 'Batch PDF Generation Started',
+      description: `Processing ${selectedEstimates.length} estimate(s)... Please wait.`,
+      duration: 999999, // Keep toast open until dismissed
+    });
+
+    const itemsToProcess = selectedEstimates.map(id => ({ id, type: 'estimate' })); // Set type to 'estimate'
+
+    try {
+      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
+        body: JSON.stringify({ items: itemsToProcess }),
+      });
+
+      processingToast.dismiss(); // Dismiss loading toast
+
+      if (error) {
+        throw error;
+      }
+
+      // Process results from the function
+      type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
+      const results: BatchResultItem[] = data?.results || [];
+      const successCount = results.filter((r) => r.success).length;
+      const failureCount = results.length - successCount;
+
+      toast({
+        title: 'Batch PDF Generation Complete',
+        description: `Successfully generated ${successCount} PDF(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}`,
+        variant: failureCount > 0 ? 'warning' : 'default',
+        duration: 5000,
+      });
+
+      if (failureCount > 0) {
+        console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
+      }
+      
+      // Clear selection after processing
+      setSelectedEstimates([]); 
+
+    } catch (error) {
+      console.error('Error calling batch-generate-and-store-pdfs function:', error);
+      processingToast.dismiss(); // Dismiss loading toast on error too
+      toast({
+        title: 'Batch PDF Generation Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+  // --- End Batch PDF Generation Handler ---
 
   const formatEstimateNumber = (estimate: EstimateWithDetails) => {
     try {
@@ -109,6 +173,17 @@ export const EstimateList: React.FC<EstimateListProps> = ({
 
   return (
     <div className="flex flex-col">
+      {/* Add Batch Action Button */}
+      <div className="p-1.5 flex justify-end">
+        <Button
+          onClick={handleBatchGeneratePdfs}
+          disabled={selectedEstimates.length === 0 || isBatchProcessing}
+          size="sm"
+        >
+          <FileTextIcon className="mr-2 h-4 w-4" />
+          {isBatchProcessing ? 'Processing...' : `Generate ${selectedEstimates.length} PDF(s)`}
+        </Button>
+      </div>
       <div className="-m-1.5 overflow-x-auto">
         <div className="p-1.5 min-w-full inline-block align-middle">
           <div className="border rounded-lg overflow-hidden">
