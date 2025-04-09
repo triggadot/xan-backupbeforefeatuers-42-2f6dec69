@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
-
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
 }
@@ -17,22 +16,33 @@ interface InvoiceDetailViewProps {
 /**
  * Displays the details of a single invoice, including line items.
  */
-const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
-  const { toast } = useToast();
-
+const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
+  invoice
+}) => {
+  const {
+    toast
+  } = useToast();
   const statusColor = () => {
     switch (invoice.payment_status?.toLowerCase()) {
       case 'paid':
-        return 'success'; // Green
-      case 'partial': // Updated from 'partially paid' or similar
-        return 'warning'; // Yellow
+        return 'success';
+      // Green
+      case 'partial':
+        // Updated from 'partially paid' or similar
+        return 'warning';
+      // Yellow
       case 'unpaid':
-        return 'destructive'; // Red
-      case 'credit': // New status
-        return 'info'; // Blue (assuming 'info' variant exists)
+        return 'destructive';
+      // Red
+      case 'credit':
+        // New status
+        return 'info';
+      // Blue (assuming 'info' variant exists)
       case 'draft': // Explicitly handle draft
-      default: // Default includes draft and any unexpected values
-        return 'secondary'; // Gray
+      default:
+        // Default includes draft and any unexpected values
+        return 'secondary';
+      // Gray
     }
   };
 
@@ -44,21 +54,24 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
 
   // PDF operations
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
-  const { generatePDF, loading } = usePDFOperations();
+  const {
+    generatePDF,
+    loading
+  } = usePDFOperations();
 
   // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
     try {
       // Get account_uid from account, if available
       const accountUid = invoice.account?.accounts_uid || 'NOACC';
-      
+
       // Format the date as MMDDYY
       let dateString = 'NODATE';
       if (invoice.invoice_order_date) {
         const invoiceDate = new Date(invoice.invoice_order_date);
         dateString = format(invoiceDate, 'MMddyy');
       }
-      
+
       // Create the formatted invoice number
       return `INV#${accountUid}${dateString}`;
     } catch (err) {
@@ -66,51 +79,30 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
       return invoice.id?.substring(0, 8) || 'Unknown';
     }
   }, [invoice]);
-
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
+  return <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
           {formattedInvoiceNumber}
-          {invoice.glide_row_id && <span className="ml-2 text-sm text-gray-500">{invoice.glide_row_id}</span>}
+          {invoice.glide_row_id}
         </CardTitle>
-        <Badge
-          variant={statusColor()}
-          className="text-xs font-semibold uppercase"
-        >
+        <Badge variant={statusColor()} className="text-xs font-semibold uppercase">
           {(invoice.payment_status || 'draft').toUpperCase()}
         </Badge>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">
-              Invoice #{invoice.invoice_uid || formattedInvoiceNumber}
-            </h2>
+            
             <p className="text-gray-500">
               {invoice.gl_accounts?.account_name || 'No Account'}
-              {invoice.gl_accounts?.balance !== undefined && (
-                <span className="ml-2">
-                  <AmountDisplay 
-                    amount={invoice.gl_accounts.balance} 
-                    variant="auto" 
-                    showLabel={true} 
-                    className="text-sm"
-                  />
-                </span>
-              )}
+              {invoice.gl_accounts?.balance !== undefined && <span className="ml-2">
+                  <AmountDisplay amount={invoice.gl_accounts.balance} variant="auto" showLabel={true} className="text-sm" />
+                </span>}
             </p>
           </div>
           
           <div className="flex space-x-2">
-            <PDFActions 
-              documentType="invoice"
-              document={invoice}
-              variant="outline"
-              size="sm"
-              showLabels={true}
-              onPDFGenerated={(url) => setPdfUrl(url)}
-            />
+            <PDFActions documentType="invoice" document={invoice} variant="outline" size="sm" showLabels={true} onPDFGenerated={url => setPdfUrl(url)} />
           </div>
         </div>
 
@@ -120,20 +112,9 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
             <h3 className="text-sm font-medium text-gray-500">Invoice Date</h3>
             <p className="text-gray-900">{formatDate(invoice.invoice_order_date)}</p>
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Due Date</h3>
-            <p className="text-gray-900">{formatDate(invoice.due_date)}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Customer</h3>
-            <p className="text-gray-900">{invoice.gl_accounts?.account_name || 'N/A'}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Status</h3>
-            <Badge variant={statusColor()}>
-              {(invoice.payment_status || 'draft').toUpperCase()}
-            </Badge>
-          </div>
+          
+          
+          
         </div>
 
         {/* Line Items */}
@@ -148,20 +129,14 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoice.lines && invoice.lines.length > 0 ? (
-                invoice.lines.map((line, index) => (
-                  <TableRow key={index}>
+              {invoice.lines && invoice.lines.length > 0 ? invoice.lines.map((line, index) => <TableRow key={index}>
                     <TableCell className="font-medium">{line.product_name_display || line.renamed_product_name || 'Unnamed Product'}</TableCell>
                     <TableCell className="text-right">{line.qty_sold || 0}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.selling_price || 0)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(line.line_total || 0)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
+                  </TableRow>) : <TableRow>
                   <TableCell colSpan={4} className="text-center py-4">No line items found</TableCell>
-                </TableRow>
-              )}
+                </TableRow>}
             </TableBody>
           </Table>
         </div>
@@ -182,24 +157,16 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
           
           <div className="flex justify-between font-bold pt-2 border-t">
             <span>Balance:</span>
-            <AmountDisplay 
-              amount={invoice.balance || 0} 
-              variant={invoice.balance === 0 ? 'success' : (invoice.balance > 0 ? 'destructive' : 'default')} 
-              className="font-bold" 
-            />
+            <AmountDisplay amount={invoice.balance || 0} variant={invoice.balance === 0 ? 'success' : invoice.balance > 0 ? 'destructive' : 'default'} className="font-bold" />
           </div>
         </div>
 
         {/* Notes */}
-        {invoice.notes && (
-          <div className="mt-6">
+        {invoice.notes && <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
             <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
-          </div>
-        )}
+          </div>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default InvoiceDetailView;
