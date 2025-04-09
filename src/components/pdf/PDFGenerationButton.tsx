@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { FileText, Download, Loader2 } from 'lucide-react';
@@ -50,15 +51,6 @@ interface PDFGenerationButtonProps extends Omit<ButtonProps, 'onClick'> {
 
 /**
  * Enhanced PDF generation button component using the usePDFOperations hook
- * 
- * @example
- * // Generate an invoice PDF with preview
- * <PDFGenerationButton 
- *   documentType="invoice" 
- *   documentId="123" 
- *   showPreview={true} 
- *   onSuccess={(url) => console.log('PDF URL:', url)} 
- * />
  */
 export function PDFGenerationButton({
   documentType,
@@ -78,8 +70,7 @@ export function PDFGenerationButton({
   // Use our custom PDF operations hook
   const { 
     generatePDF,
-    isGenerating,
-    isStoring
+    loading
   } = usePDFOperations();
 
   /**
@@ -157,11 +148,11 @@ export function PDFGenerationButton({
         variant="outline"
         size="sm"
         onClick={handleGeneratePDF}
-        disabled={isGenerating || isStoring}
+        disabled={loading}
         className={className}
         {...props}
       >
-        {(isGenerating || isStoring) ? (
+        {loading ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : (
           <FileText className="h-4 w-4 mr-2" />

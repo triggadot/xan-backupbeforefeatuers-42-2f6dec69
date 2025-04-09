@@ -10,46 +10,52 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { PDFActions } from '@/components/pdf/PDFActions';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { PDFGenerationButton } from '@/components/pdf/PDFGenerationButton';
+
 interface PurchaseOrderDetailViewProps {
   purchaseOrder: PurchaseOrder | null;
   isLoading: boolean;
   onRefresh?: () => void;
 }
+
 const PurchaseOrderDetailView = ({
   purchaseOrder,
   isLoading,
   onRefresh
 }: PurchaseOrderDetailViewProps) => {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(purchaseOrder?.supabase_pdf_url || null);
+  
+  useEffect(() => {
+    if (purchaseOrder?.supabase_pdf_url) {
+      setPdfUrl(purchaseOrder.supabase_pdf_url);
+    }
+  }, [purchaseOrder]);
+  
   useEffect(() => {
     if (purchaseOrder?.lineItems) {
       console.log('Line items in detail view:', purchaseOrder.lineItems);
-      // Log each line item individually to check vendor_product_name
       purchaseOrder.lineItems.forEach((item, index) => {
         console.log(`Line item ${index}:`, item);
         console.log(`Line item ${index} vendor_product_name:`, item.vendor_product_name);
       });
     }
   }, [purchaseOrder]);
+  
   const handleGoBack = () => {
     navigate('/purchase-orders');
   };
+  
   const handleEdit = () => {
     if (purchaseOrder) {
       navigate(`/purchase-orders/edit/${purchaseOrder.id}`);
     }
   };
 
-  // Debug function to check database for this specific purchase order
   const checkDatabase = async () => {
     if (!purchaseOrder) return;
     try {
-      // Fetch the purchase order
       const {
         data: poData,
         error: poError
@@ -65,7 +71,6 @@ const PurchaseOrderDetailView = ({
       }
       console.log('Purchase order from DB:', poData);
 
-      // Fetch products linked to this purchase order
       const {
         data: productsData,
         error: productsError
@@ -81,13 +86,10 @@ const PurchaseOrderDetailView = ({
       }
       console.log('Products from DB:', productsData);
 
-      // Check vendor_product_name specifically
       if (productsData && productsData.length > 0) {
         productsData.forEach((product, index) => {
           console.log(`Product ${index} full data:`, product);
           console.log(`Product ${index} vendor_product_name:`, product.vendor_product_name);
-
-          // List all fields in the product object to see what's available
           console.log(`Product ${index} available fields:`, Object.keys(product));
         });
         toast({
@@ -111,15 +113,31 @@ const PurchaseOrderDetailView = ({
     }
   };
 
-  // PDF operations
-  const {
-    generatePDF,
-    storePDF,
-    downloadPDF,
-    isGenerating,
-    isStoring
-  } = usePDFOperations();
-  const [pdfUrl, setPdfUrl] = useState<string | null>(purchaseOrder?.supabase_pdf_url || null);
+  const handlePrintInvoice = () => {
+    toast({
+      title: 'Print Purchase Order',
+      description: 'Preparing purchase order for printing...'
+    });
+
+    window.print();
+  };
+
+  const handlePDFSuccess = (url: string) => {
+    setPdfUrl(url);
+    toast({
+      title: 'PDF Generated',
+      description: 'The purchase order PDF has been generated successfully.'
+    });
+  };
+
+  const handlePDFError = (error: any) => {
+    toast({
+      title: 'PDF Generation Failed',
+      description: error instanceof Error ? error.message : 'An error occurred while generating the PDF.',
+      variant: 'destructive'
+    });
+  };
+
   const statusColor = useMemo(() => {
     if (!purchaseOrder) return 'bg-gray-100 text-gray-800';
     switch (purchaseOrder.status?.toLowerCase()) {
@@ -136,16 +154,6 @@ const PurchaseOrderDetailView = ({
     }
   }, [purchaseOrder]);
 
-  // Handle printing
-  const handlePrintInvoice = () => {
-    toast({
-      title: 'Print Purchase Order',
-      description: 'Preparing purchase order for printing...'
-    });
-
-    // Use window.print() for printing
-    window.print();
-  };
   if (isLoading) {
     return <div className="container mx-auto py-6">
         <div className="flex flex-col space-y-6">
@@ -156,6 +164,7 @@ const PurchaseOrderDetailView = ({
         </div>
       </div>;
   }
+  
   if (!purchaseOrder) {
     return <div className="container mx-auto py-6">
         <div className="flex flex-col space-y-6">
@@ -170,15 +179,14 @@ const PurchaseOrderDetailView = ({
       </div>;
   }
 
-  // Safely access vendor properties
   const getVendorProperty = (property: string): string => {
     if (!purchaseOrder.vendor) return '';
-
-    // Use any type to bypass TypeScript's type checking
     const vendor = purchaseOrder.vendor as any;
     return vendor[property] || '';
   };
-  return <div className="container mx-auto py-6">
+
+  return (
+    <div className="container mx-auto py-6">
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <Button onClick={handleGoBack} variant="outline" size="sm">
@@ -196,22 +204,36 @@ const PurchaseOrderDetailView = ({
               Edit
             </Button>
             
-            <PDFActions documentType="purchaseOrder" document={purchaseOrder} variant="outline" size="sm" showLabels={true} onPDFGenerated={url => setPdfUrl(url)} />
+            <PDFGenerationButton 
+              documentType="purchaseOrder" 
+              documentId={purchaseOrder.id} 
+              download={true}
+              showPreview={true}
+              onSuccess={handlePDFSuccess}
+              onError={handlePDFError}
+              variant="outline" 
+              size="sm"
+              showLabel={true}
+            />
             
             <Button variant="outline" size="sm" onClick={handlePrintInvoice} className="flex items-center gap-1">
               <Printer className="h-4 w-4" />
               Print
             </Button>
             
-            {onRefresh && <Button variant="outline" size="sm" onClick={onRefresh} className="flex items-center gap-1">
+            {onRefresh && (
+              <Button variant="outline" size="sm" onClick={onRefresh} className="flex items-center gap-1">
                 <RefreshCw className="h-4 w-4" />
                 Refresh
-              </Button>}
+              </Button>
+            )}
             
-            {process.env.NODE_ENV === 'development' && <Button variant="outline" size="sm" onClick={checkDatabase} className="flex items-center gap-1">
+            {process.env.NODE_ENV === 'development' && (
+              <Button variant="outline" size="sm" onClick={checkDatabase} className="flex items-center gap-1">
                 <Database className="h-4 w-4" />
                 Check DB
-              </Button>}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -262,8 +284,6 @@ const PurchaseOrderDetailView = ({
               </div>
             </CardContent>
           </Card>
-
-          
 
           <Card>
             <CardHeader>
@@ -333,7 +353,6 @@ const PurchaseOrderDetailView = ({
                     </thead>
                     <tbody>
                       {purchaseOrder.vendorPayments.map(payment => {
-                    // Use any type to safely access properties
                     const paymentAny = payment as any;
                     return <tr key={payment.id} className="border-b hover:bg-gray-50">
                             <td className="py-3 px-4">
@@ -365,6 +384,8 @@ const PurchaseOrderDetailView = ({
           </Card>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default PurchaseOrderDetailView;

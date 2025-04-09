@@ -460,22 +460,14 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrderWithDetails
 }
 
 /**
- * Generate and store a purchase order PDF
+ * Generate, save locally, and upload a purchase order PDF to Supabase storage
  * 
  * @param purchaseOrderId - The ID of the purchase order
  * @param download - Whether to download the PDF after generation
  * @returns Promise resolving to the operation result
- * 
- * @example
- * const result = await generateAndStorePurchaseOrderPDF('123', true);
- * if (result.success) {
- *   console.log('PDF URL:', result.url);
- * } else {
- *   console.error('Error:', result.error?.message);
- * }
  */
 export async function generateAndStorePurchaseOrderPDF(
-  purchaseOrderId: PurchaseOrderIdInput, // Use the specific type
+  purchaseOrderId: PurchaseOrderIdInput,
   download: boolean = false
 ): Promise<PDFOperationResult> {
   try {
@@ -538,18 +530,16 @@ export async function generateAndStorePurchaseOrderPDF(
             });
 
             // Invoke the Edge Function
-            console.log(`Invoking store-pdf for purchase order ID: ${purchaseOrder.id}`);
-            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
-              body: JSON.stringify({ // Ensure body is stringified JSON
-                id: purchaseOrder.id, // Use the actual PO ID (uuid)
-                type: 'purchaseOrder', // Correct type
-                pdfData: base64Data,
-                fileName: filename,
-              }),
+            console.log(`Invoking generate-pdf for purchase order ID: ${purchaseOrder.id}`);
+            const { error: functionError } = await supabase.functions.invoke('generate-pdf', {
+              body: {
+                id: purchaseOrder.id,
+                type: 'purchaseOrder'
+              },
             });
 
             if (functionError) {
-              console.error(`Error calling store-pdf function for PO ${purchaseOrder.id}:`, functionError);
+              console.error(`Error calling generate-pdf function for PO ${purchaseOrder.id}:`, functionError);
             } else {
               console.log(`Successfully triggered background storage for PO ${purchaseOrder.id}`);
             }

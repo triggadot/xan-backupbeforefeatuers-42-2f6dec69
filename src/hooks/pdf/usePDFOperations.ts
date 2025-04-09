@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/utils/use-toast';
@@ -141,9 +142,61 @@ export const usePDFOperations = () => {
     }
   };
 
+  // Store PDF in Supabase storage
+  const storePDF = async (
+    documentType: DocumentType,
+    documentId: string,
+    pdfBlob: Blob
+  ): Promise<string | null> => {
+    setIsStoring(true);
+    try {
+      // Call our edge function to store the PDF
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1]; // Remove the data:application/pdf;base64, part
+          resolve(base64);
+        };
+        reader.onerror = (error) => reject(error);
+      });
+      
+      const { data, error } = await supabase.functions.invoke('store-pdf', {
+        body: {
+          id: documentId,
+          type: documentType,
+          pdfData: base64Data,
+          fileName: `${documentType}_${documentId}.pdf`
+        }
+      });
+      
+      if (error) {
+        console.error('Error storing PDF:', error);
+        toast({
+          title: 'Storage Failed',
+          description: 'The PDF was generated but could not be stored on the server.',
+          variant: 'destructive'
+        });
+        return null;
+      }
+      
+      return data?.url || null;
+    } catch (error) {
+      console.error('Error storing PDF:', error);
+      return null;
+    } finally {
+      setIsStoring(false);
+    }
+  };
+
   return {
     generatePDF,
     downloadPDF,
+    storePDF,
+    isGenerating,
+    isStoring,
     loading: isGenerating || isStoring
   };
-}
+};

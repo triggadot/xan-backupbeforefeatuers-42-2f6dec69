@@ -20,8 +20,9 @@ import {
   SearchIcon, 
   XIcon 
 } from "lucide-react";
+import { PDFGenerationButton } from "@/components/pdf/PDFGenerationButton";
+import { PDFPreviewModal } from "@/components/pdf/PDFPreviewModal";
 
-// Types based on your database schema
 interface Product {
   id: string;
   glide_row_id: string;
@@ -70,6 +71,8 @@ export function PurchaseOrderTable({
 }: PurchaseOrderTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedPO, setExpandedPO] = useState<string | null>(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const filteredPurchaseOrders = useMemo(() => {
     if (!searchTerm) return purchaseOrders;
@@ -105,6 +108,22 @@ export function PurchaseOrderTable({
       case "draft":
       default:
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+    }
+  };
+
+  const handleViewPdf = (po: PurchaseOrder) => {
+    if (po.pdf_link) {
+      setPreviewPdfUrl(po.pdf_link);
+      setShowPdfPreview(true);
+    } else if (onViewPdf) {
+      onViewPdf(po);
+    }
+  };
+
+  const handlePdfSuccess = (poId: string, url: string) => {
+    const updatedPO = purchaseOrders.find(po => po.id === poId);
+    if (updatedPO) {
+      updatedPO.pdf_link = url;
     }
   };
 
@@ -184,12 +203,12 @@ export function PurchaseOrderTable({
                     <TableCell className="text-right">{formatCurrency(po.balance || 0)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
-                        {po.pdf_link && (
+                        {po.pdf_link ? (
                           <>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onViewPdf?.(po)}
+                              onClick={() => handleViewPdf(po)}
                               className="h-8 w-8 p-0"
                             >
                               <FileTextIcon className="h-4 w-4" />
@@ -205,6 +224,21 @@ export function PurchaseOrderTable({
                               <span className="sr-only">Download PDF</span>
                             </Button>
                           </>
+                        ) : (
+                          <PDFGenerationButton
+                            documentType="purchaseOrder"
+                            documentId={po.id}
+                            download={true}
+                            showPreview={false}
+                            onSuccess={(url) => handlePdfSuccess(po.id, url)}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            showLabel={false}
+                          >
+                            <FileTextIcon className="h-4 w-4" />
+                            <span className="sr-only">Generate PDF</span>
+                          </PDFGenerationButton>
                         )}
                       </div>
                     </TableCell>
@@ -263,6 +297,15 @@ export function PurchaseOrderTable({
           </TableBody>
         </Table>
       </div>
+      
+      {showPdfPreview && previewPdfUrl && (
+        <PDFPreviewModal
+          pdfUrl={previewPdfUrl}
+          isOpen={showPdfPreview}
+          onClose={() => setShowPdfPreview(false)}
+          title="Purchase Order PDF"
+        />
+      )}
     </div>
   );
 }
