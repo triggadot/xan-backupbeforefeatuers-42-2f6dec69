@@ -9,6 +9,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      account_balance_update_queue: {
+        Row: {
+          created_at: string
+          id: number
+          rowid_accounts: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          rowid_accounts: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          rowid_accounts?: string
+        }
+        Relationships: []
+      }
       gl_accounts: {
         Row: {
           account_name: string | null
@@ -16,12 +34,14 @@ export type Database = {
           balance: number | null
           client_type: string | null
           created_at: string | null
+          customer_balance: number | null
           date_added_client: string | null
           email_of_who_added: string | null
           glide_row_id: string | null
           id: string
           photo: string | null
           updated_at: string | null
+          vendor_balance: number | null
         }
         Insert: {
           account_name?: string | null
@@ -29,12 +49,14 @@ export type Database = {
           balance?: number | null
           client_type?: string | null
           created_at?: string | null
+          customer_balance?: number | null
           date_added_client?: string | null
           email_of_who_added?: string | null
           glide_row_id?: string | null
           id?: string
           photo?: string | null
           updated_at?: string | null
+          vendor_balance?: number | null
         }
         Update: {
           account_name?: string | null
@@ -42,12 +64,14 @@ export type Database = {
           balance?: number | null
           client_type?: string | null
           created_at?: string | null
+          customer_balance?: number | null
           date_added_client?: string | null
           email_of_who_added?: string | null
           glide_row_id?: string | null
           id?: string
           photo?: string | null
           updated_at?: string | null
+          vendor_balance?: number | null
         }
         Relationships: []
       }
@@ -417,6 +441,7 @@ export type Database = {
           invoice_uid: string | null
           notes: string | null
           payment_status: string | null
+          processed: string | null
           rowid_accounts: string | null
           submitted_timestamp: string | null
           supabase_pdf_url: string | null
@@ -436,6 +461,7 @@ export type Database = {
           invoice_uid?: string | null
           notes?: string | null
           payment_status?: string | null
+          processed?: string | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
           supabase_pdf_url?: string | null
@@ -455,6 +481,7 @@ export type Database = {
           invoice_uid?: string | null
           notes?: string | null
           payment_status?: string | null
+          processed?: string | null
           rowid_accounts?: string | null
           submitted_timestamp?: string | null
           supabase_pdf_url?: string | null
@@ -536,6 +563,7 @@ export type Database = {
           samples: boolean | null
           samples_or_fronted: boolean | null
           terms_for_fronted_product: string | null
+          total_cost: number | null
           total_qty_purchased: number | null
           total_units_behind_sample: number | null
           updated_at: string | null
@@ -564,6 +592,7 @@ export type Database = {
           samples?: boolean | null
           samples_or_fronted?: boolean | null
           terms_for_fronted_product?: string | null
+          total_cost?: number | null
           total_qty_purchased?: number | null
           total_units_behind_sample?: number | null
           updated_at?: string | null
@@ -592,6 +621,7 @@ export type Database = {
           samples?: boolean | null
           samples_or_fronted?: boolean | null
           terms_for_fronted_product?: string | null
+          total_cost?: number | null
           total_qty_purchased?: number | null
           total_units_behind_sample?: number | null
           updated_at?: string | null
@@ -1222,6 +1252,22 @@ export type Database = {
       }
     }
     Functions: {
+      backfill_all_vendor_balances: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      backfill_main_account_balances: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      calculate_customer_balance_for_account: {
+        Args: { p_glide_row_id: string }
+        Returns: number
+      }
+      calculate_vendor_balance_for_account: {
+        Args: { p_glide_row_id: string }
+        Returns: number
+      }
       debug_media_message_errors: {
         Args: { p_correlation_id?: string }
         Returns: {
@@ -1265,10 +1311,6 @@ export type Database = {
       gl_admin_execute_sql: {
         Args: { sql_query: string }
         Returns: Json
-      }
-      gl_calculate_account_balance: {
-        Args: { account_id: string }
-        Returns: number
       }
       gl_calculate_product_inventory: {
         Args: { product_id: string }
@@ -1428,123 +1470,6 @@ export type Database = {
         Args: { account_type: string }
         Returns: boolean
       }
-      md_check_media_group_content: {
-        Args: {
-          p_media_group_id: string
-          p_message_id: string
-          p_correlation_id: string
-        }
-        Returns: Json
-      }
-      md_create_pg_notify_listener: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      md_debug_media_message_handling: {
-        Args: {
-          p_telegram_message_id: number
-          p_chat_id: number
-          p_file_unique_id: string
-          p_media_data: Json
-        }
-        Returns: Json
-      }
-      md_delete_media_from_storage: {
-        Args: { p_storage_path: string }
-        Returns: boolean
-      }
-      md_delete_telegram_message: {
-        Args: { p_telegram_message_id: number; p_chat_id: number }
-        Returns: {
-          deleted_messages: number
-          deleted_other_messages: number
-          deleted_audit_logs: number
-          deleted_media_files: number
-        }[]
-      }
-      md_force_resync_media_group: {
-        Args: { p_media_group_id: string }
-        Returns: Json
-      }
-      md_get_media_group_sync_stats: {
-        Args: { p_media_group_id: string }
-        Returns: {
-          media_group_id: string
-          total_messages: number
-          synced_messages: number
-          unsynced_messages: number
-          messages_with_captions: number
-          has_valid_source: boolean
-        }[]
-      }
-      md_handle_duplicate_media_message: {
-        Args: {
-          p_file_unique_id: string
-          p_chat_id: number
-          p_telegram_message_id: number
-          p_media_data: Json
-        }
-        Returns: string
-      }
-      md_mark_media_group_sync_completed: {
-        Args: {
-          p_media_group_id: string
-          p_source_message_id: string
-          p_correlation_id?: string
-        }
-        Returns: Json
-      }
-      md_parse_caption_product_info: {
-        Args: { p_caption: string }
-        Returns: Json
-      }
-      md_process_message_caption: {
-        Args: { p_message_id: string }
-        Returns: Json
-      }
-      md_process_message_caption_by_id: {
-        Args: { p_message_id: string }
-        Returns: Json
-      }
-      md_sync_delayed_media_groups: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          synced_count: number
-          error_count: number
-          details: Json
-        }[]
-      }
-      md_sync_media_group: {
-        Args: { p_media_group_id: string; p_correlation_id?: string }
-        Returns: Json
-      }
-      md_sync_media_group_content: {
-        Args: {
-          p_media_group_id: string
-          p_source_message_id?: string
-          p_correlation_id?: string
-        }
-        Returns: Json
-      }
-      parse_caption_product_info: {
-        Args: { p_caption: string }
-        Returns: Json
-      }
-      process_message_caption: {
-        Args: { p_message_id: string }
-        Returns: Json
-      }
-      process_unprocessed_captions: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          processed_count: number
-          error_count: number
-        }[]
-      }
-      process_webhook_event: {
-        Args: { p_event_id: string }
-        Returns: undefined
-      }
       refresh_all_materialized_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1557,16 +1482,13 @@ export type Database = {
         Args: { view_name: string }
         Returns: undefined
       }
-      reprocess_all_captions: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
+      update_account_customer_balance: {
+        Args: { p_glide_row_id: string }
+        Returns: undefined
       }
-      reprocess_all_message_captions: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          processed_count: number
-          error_count: number
-        }[]
+      update_account_vendor_balance: {
+        Args: { p_glide_row_id: string }
+        Returns: undefined
       }
       update_estimate_totals: {
         Args: { estimate_id: string }
