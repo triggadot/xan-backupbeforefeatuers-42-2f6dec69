@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,54 +9,39 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
+
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
 }
 
-/**
- * Displays the details of a single invoice, including line items.
- */
 const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   invoice
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   
-  // Calculate subtotal if tax information is available
   const subtotal = invoice.tax_amount ? (invoice.total_amount || 0) - (invoice.tax_amount || 0) : invoice.total_amount || 0;
-
-  // Calculate item count
   const itemCount = invoice.lines?.length || 0;
 
-  // PDF operations
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
-  const {
-    generatePDF,
-    loading
-  } = usePDFOperations();
+  const { generatePDF, loading } = usePDFOperations();
 
-  // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
     try {
-      // Get account_uid from account, if available
       const accountUid = invoice.account?.accounts_uid || 'NOACC';
-
-      // Format the date as MMDDYY
       let dateString = 'NODATE';
       if (invoice.invoice_order_date) {
         const invoiceDate = new Date(invoice.invoice_order_date);
         dateString = format(invoiceDate, 'MMddyy');
       }
-
-      // Create the formatted invoice number
       return `INV#${accountUid}${dateString}`;
     } catch (err) {
       console.error('Error formatting invoice number:', err);
       return invoice.id?.substring(0, 8) || 'Unknown';
     }
   }, [invoice]);
-  return <Card className="w-full max-w-4xl mx-auto">
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
           {invoice.invoice_uid || "No Invoice ID"}
@@ -69,9 +53,8 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
       <CardContent>
         <div className="flex justify-between items-center mb-6">
           <div>
-            
             <p className="text-gray-500">
-              {invoice.gl_accounts?.account_name || invoice.account?.accounts_uid || 'No Account UID'}
+              {`${invoice.gl_accounts?.account_name || invoice.account?.accounts_uid || 'No Account'} (${invoice.account?.accounts_uid || 'N/A'})`}
               {invoice.gl_accounts?.balance !== undefined && <span className="ml-2">
                   <AmountDisplay amount={invoice.gl_accounts.balance} variant="auto" showLabel={true} className="text-sm" />
                 </span>}
@@ -95,8 +78,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
               </Badge>
             </p>
           </div>
-          
-          
           
         </div>
 
@@ -150,6 +131,8 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
             <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
           </div>}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default InvoiceDetailView;
