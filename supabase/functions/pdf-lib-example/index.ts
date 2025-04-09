@@ -3,7 +3,7 @@
 // https://docs.supabase.com/docs/guides/functions/deno-runtime
 
 import { serve } from "std/http/server.ts";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "https://cdn.skypack.dev/pdf-lib@1.17.1?dts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
