@@ -54,7 +54,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
         <div className="flex justify-between items-center mb-6">
           <div>
             <p className="text-gray-500">
-              {`${invoice.gl_accounts?.account_name || invoice.account?.accounts_uid || 'No Account'} (${invoice.account?.accounts_uid || 'N/A'})`}
+              {`Customer: ${invoice.account?.accounts_uid || 'N/A'}`}
               {invoice.gl_accounts?.balance !== undefined && <span className="ml-2">
                   <AmountDisplay amount={invoice.gl_accounts.balance} variant="auto" showLabel={true} className="text-sm" />
                 </span>}
