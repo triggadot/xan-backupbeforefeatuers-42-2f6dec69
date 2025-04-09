@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,30 +23,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   const {
     toast
   } = useToast();
-  const statusColor = () => {
-    switch (invoice.payment_status?.toLowerCase()) {
-      case 'paid':
-        return 'success';
-      // Green
-      case 'partial':
-        // Updated from 'partially paid' or similar
-        return 'warning';
-      // Yellow
-      case 'unpaid':
-        return 'destructive';
-      // Red
-      case 'credit':
-        // New status
-        return 'info';
-      // Blue (assuming 'info' variant exists)
-      case 'draft': // Explicitly handle draft
-      default:
-        // Default includes draft and any unexpected values
-        return 'secondary';
-      // Gray
-    }
-  };
-
+  
   // Calculate subtotal if tax information is available
   const subtotal = invoice.tax_amount ? (invoice.total_amount || 0) - (invoice.tax_amount || 0) : invoice.total_amount || 0;
 
@@ -82,19 +60,18 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   return <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-2xl font-bold">
-          {formattedInvoiceNumber}
-          {invoice.glide_row_id}
+          {invoice.invoice_uid || "No Invoice ID"}
         </CardTitle>
-        <Badge variant={statusColor()} className="text-xs font-semibold uppercase">
-          {(invoice.payment_status || 'draft').toUpperCase()}
-        </Badge>
+        <div className="text-sm text-gray-500">
+          {formatDate(invoice.invoice_order_date) || "No Date"}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center mb-6">
           <div>
             
             <p className="text-gray-500">
-              {invoice.gl_accounts?.account_name || 'No Account'}
+              {invoice.gl_accounts?.account_name || invoice.account?.accounts_uid || 'No Account UID'}
               {invoice.gl_accounts?.balance !== undefined && <span className="ml-2">
                   <AmountDisplay amount={invoice.gl_accounts.balance} variant="auto" showLabel={true} className="text-sm" />
                 </span>}
@@ -109,8 +86,14 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
         {/* Invoice Details */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-500">Invoice Date</h3>
-            <p className="text-gray-900">{formatDate(invoice.invoice_order_date)}</p>
+            <h3 className="text-sm font-medium text-gray-500">Payment Status</h3>
+            <p className="text-gray-900">
+              <Badge variant={invoice.payment_status?.toLowerCase() === 'paid' ? 'success' : 
+                               invoice.payment_status?.toLowerCase() === 'partial' ? 'warning' : 
+                               invoice.payment_status?.toLowerCase() === 'credit' ? 'info' : 'destructive'}>
+                {(invoice.payment_status || 'DRAFT').toUpperCase()}
+              </Badge>
+            </p>
           </div>
           
           
