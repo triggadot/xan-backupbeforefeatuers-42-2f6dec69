@@ -37,29 +37,31 @@ export function useInvoices(): UseInvoicesReturn {
       console.log("Raw invoice data:", invoiceData);
 
       // Initialize transformed invoices with empty lines array
-      const transformedInvoices = invoiceData.map((invoice: any) => ({
-        id: invoice.id,
-        glide_row_id: invoice.glide_row_id,
-        rowid_accounts: invoice.rowid_accounts,
-        invoice_order_date: invoice.invoice_order_date,
-        created_timestamp: invoice.created_timestamp,
-        submitted_timestamp: invoice.submitted_timestamp,
-        processed: invoice.processed,
-        user_email: invoice.user_email,
-        notes: invoice.notes,
-        doc_glideforeverlink: invoice.doc_glideforeverlink,
-        created_at: invoice.created_at,
-        updated_at: invoice.updated_at,
-        total_amount: Number(invoice.total_amount) || 0,
-        total_paid: Number(invoice.total_paid) || 0,
-        balance: Number(invoice.balance) || 0,
-        payment_status: invoice.payment_status || 'DRAFT',
-        tax_rate: Number(invoice.tax_rate) || 0,
-        tax_amount: Number(invoice.tax_amount) || 0,
-        due_date: invoice.due_date,
-        lines: [], // Initialize with empty lines array
-        account: undefined // We'll add account data next
-      }));
+      const transformedInvoices = invoiceData.map((invoice: any) => {
+        return {
+          id: invoice.id,
+          glide_row_id: invoice.glide_row_id,
+          rowid_accounts: invoice.rowid_accounts,
+          invoice_order_date: invoice.invoice_order_date,
+          created_timestamp: invoice.created_timestamp,
+          submitted_timestamp: invoice.submitted_timestamp,
+          processed: invoice.processed,
+          user_email: invoice.user_email,
+          notes: invoice.notes,
+          doc_glideforeverlink: invoice.doc_glideforeverlink,
+          created_at: invoice.created_at,
+          updated_at: invoice.updated_at,
+          total_amount: Number(invoice.total_amount) || 0,
+          total_paid: Number(invoice.total_paid) || 0,
+          balance: Number(invoice.balance) || 0,
+          payment_status: invoice.payment_status || 'DRAFT',
+          tax_rate: Number(invoice.tax_rate) || 0,
+          tax_amount: Number(invoice.tax_amount) || 0,
+          due_date: invoice.due_date,
+          lines: [], // Initialize with empty lines array
+          account: undefined // We'll add account data next
+        };
+      });
 
       // Now, let's get all the accounts
       const { data: accountData, error: accountError } = await supabase

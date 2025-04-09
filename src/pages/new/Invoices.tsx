@@ -10,6 +10,8 @@ import { useInvoices } from '@/hooks/invoices';
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [sortColumn, setSortColumn] = useState<keyof InvoiceWithAccount | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const { invoices, isLoading, error } = useInvoices();
 
@@ -25,6 +27,17 @@ const Invoices = () => {
     }
   }, [error, toast]);
 
+  const handleSort = (column: keyof InvoiceWithAccount) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column is clicked again
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch = 
       invoice.rowid_accounts?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,6 +49,29 @@ const Invoices = () => {
       invoice.payment_status?.toLowerCase() === selectedStatus.toLowerCase();
     
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    if (!sortColumn) return 0;
+
+    let aValue: any;
+    let bValue: any;
+
+    aValue = a[sortColumn];
+    bValue = b[sortColumn];
+
+    let comparison = 0;
+    if (aValue < bValue) {
+      comparison = -1;
+    } else if (aValue > bValue) {
+      comparison = 1;
+    }
+    
+    if (sortColumn === 'invoice_order_date') {
+      const dateA = aValue ? new Date(aValue).getTime() : 0;
+      const dateB = bValue ? new Date(bValue).getTime() : 0;
+      comparison = dateA - dateB;
+    }
+
+    return sortDirection === 'asc' ? comparison : comparison * -1;
   });
 
   const handleExportPDF = () => {
@@ -46,12 +82,14 @@ const Invoices = () => {
     // Implement PDF export functionality
   };
 
+  // Updated status options to match DATABASE statuses
   const statusOptions = [
-    { value: 'all', label: 'All Invoices' },
-    { value: 'draft', label: 'Drafts' },
-    { value: 'unpaid', label: 'Unpaid' },
-    { value: 'paid', label: 'Paid' },
-    { value: 'partial', label: 'Partial' },
+    { value: 'all', label: 'All Statuses' },
+    { value: 'draft', label: 'Draft' },        // Database status
+    { value: 'paid', label: 'Paid' },         // Database status
+    { value: 'partial', label: 'Partial' },      // Database status
+    { value: 'unpaid', label: 'Unpaid' },       // Database status
+    { value: 'credit', label: 'Credit' },       // Database status (Balance < 0)
   ];
 
   // Calculate summary metrics
@@ -140,29 +178,14 @@ const Invoices = () => {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-2" aria-label="Tabs">
-              <button type="button" className="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600 active">
-                All Invoices
-              </button>
-              <button type="button" className="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600">
-                Recent
-              </button>
-              <button type="button" className="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600">
-                Pending
-              </button>
-              <button type="button" className="hs-tab-active:font-semibold hs-tab-active:border-blue-600 hs-tab-active:text-blue-600 py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-blue-600">
-                Overdue
-              </button>
-            </nav>
-          </div>
-
           {/* Invoice List */}
           <div className="mt-6">
             <InvoiceList 
               invoices={filteredInvoices} 
               isLoading={isLoading} 
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
             />
           </div>
         </div>

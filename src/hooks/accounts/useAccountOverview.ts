@@ -83,7 +83,7 @@ export function useAccountOverview(accountId: string) {
           .from('gl_invoices')
           .select('*')
           .eq('rowid_accounts', account.glide_row_id)
-          .or('payment_status.eq.pending,payment_status.eq.overdue,payment_status.is.null');
+          .neq('balance', 0); // Fetch invoices where balance is not zero
         
         if (invoicesError) throw invoicesError;
         let unpaidInvoices = unpaidInvoicesData || [];

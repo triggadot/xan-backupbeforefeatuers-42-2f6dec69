@@ -1,17 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon } from 'lucide-react';
+import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, ArrowUpDownIcon } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/utils/use-toast';
 import { InvoiceWithAccount } from '@/types/new/invoice';
-import { format } from 'date-fns'; // Added import for format from date-fns
+import { format } from 'date-fns';
+
+type SortableColumn = keyof Pick<InvoiceWithAccount, 'invoice_order_date' | 'total_amount' | 'payment_status' | 'account'> | 'account.name';
+type SortDirection = 'asc' | 'desc';
 
 interface InvoiceListProps {
   invoices: InvoiceWithAccount[];
   isLoading: boolean;
+  sortColumn: SortableColumn | null;
+  sortDirection: SortDirection;
+  onSort: (column: SortableColumn) => void;
 }
 
-const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading }) => {
+const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColumn, sortDirection, onSort }) => {
   const { toast } = useToast();
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   
@@ -116,11 +122,38 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading }) => {
                 </div>
               </div>
             </th>
-            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Customer</th>
-            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Date</th>
-            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Amount</th>
-            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+              <button type="button" onClick={() => onSort('account.name')} className="px-0">
+                Account
+                {sortColumn === 'account.name' && (
+                  <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+                )}
+              </button>
+            </th>
+            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+              <button type="button" onClick={() => onSort('invoice_order_date')} className="px-0">
+                Date
+                {sortColumn === 'invoice_order_date' && (
+                  <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+                )}
+              </button>
+            </th>
+            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+              <button type="button" onClick={() => onSort('total_amount')} className="px-0 text-right">
+                Total Amount
+                {sortColumn === 'total_amount' && (
+                  <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+                )}
+              </button>
+            </th>
+            <th scope="col" className="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase">
+              <button type="button" onClick={() => onSort('payment_status')} className="px-0">
+                Status
+                {sortColumn === 'payment_status' && (
+                  <ArrowUpDownIcon className="ml-2 h-4 w-4" />
+                )}
+              </button>
+            </th>
             <th scope="col" className="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase">Actions</th>
           </tr>
         </thead>
@@ -171,13 +204,17 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading }) => {
               <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(invoice.invoice_order_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(invoice.total_amount)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
-                <span className={`inline-flex items-center gap-1.5 py-0.5 px-2 rounded-full text-xs font-medium ${
-                  invoice.payment_status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' :
-                  invoice.payment_status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  invoice.payment_status?.toLowerCase() === 'overdue' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
+                {/* Updated badge logic for DATABASE statuses */}
+                <span className={`inline-flex items-center gap-1.5 py-0.5 px-2 rounded-full text-xs font-medium ${ 
+                  invoice.payment_status?.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-500' :
+                  invoice.payment_status?.toLowerCase() === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-500' :
+                  invoice.payment_status?.toLowerCase() === 'unpaid' ? 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-500' :
+                  invoice.payment_status?.toLowerCase() === 'credit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-500' :
+                  // Default for 'draft' or unknown
+                  'bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-500'
                 }`}>
-                  {invoice.payment_status || 'Draft'}
+                  <span className="w-1.5 h-1.5 inline-block rounded-full bg-current"></span>
+                  {invoice.payment_status || 'Unknown'} 
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">

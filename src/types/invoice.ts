@@ -34,7 +34,7 @@ export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount
   customerId: string;
   customerName: string;
   invoiceDate: Date;
-  status: 'draft' | 'unpaid' | 'paid' | 'partial';
+  status: 'draft' | 'unpaid' | 'paid' | 'partial' | 'credit';
   total_paid: number;
   balance: number;
   lineItems?: InvoiceLineItem[];
@@ -71,7 +71,7 @@ export interface InvoiceWithCustomer {
   customerName: string;
   invoiceDate: Date;
   dueDate: Date;
-  status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
+  status: 'draft' | 'unpaid' | 'paid' | 'partial' | 'credit';
   amount: number;
   amountPaid: number;
   balance: number;

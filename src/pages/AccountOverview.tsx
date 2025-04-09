@@ -105,20 +105,20 @@ const AccountOverview: React.FC = () => {
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="unpaid-invoices" className="w-full">
+      <Tabs defaultValue="open-invoices" className="w-full">
         <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="unpaid-invoices">Unpaid Invoices</TabsTrigger>
+          <TabsTrigger value="open-invoices">Open Invoices</TabsTrigger>
           <TabsTrigger value="sample-estimates">Sample Estimates</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="credits">Credits</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="unpaid-invoices" className="mt-0">
+        <TabsContent value="open-invoices" className="mt-0">
           <Card>
             <CardHeader>
-              <CardTitle>Unpaid Invoices</CardTitle>
+              <CardTitle>Open Invoices</CardTitle>
               <CardDescription>
-                All pending and overdue invoices for this account.
+                All invoices with a non-zero balance (including unpaid and overpaid).
               </CardDescription>
             </CardHeader>
             <CardContent>

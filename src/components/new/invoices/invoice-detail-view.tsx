@@ -23,13 +23,16 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({ invoice }) => {
   const statusColor = () => {
     switch (invoice.payment_status?.toLowerCase()) {
       case 'paid':
-        return 'success';
-      case 'overdue':
-        return 'destructive';
-      case 'pending':
-        return 'warning';
-      default:
-        return 'secondary';
+        return 'success'; // Green
+      case 'partial': // Updated from 'partially paid' or similar
+        return 'warning'; // Yellow
+      case 'unpaid':
+        return 'destructive'; // Red
+      case 'credit': // New status
+        return 'info'; // Blue (assuming 'info' variant exists)
+      case 'draft': // Explicitly handle draft
+      default: // Default includes draft and any unexpected values
+        return 'secondary'; // Gray
     }
   };
 

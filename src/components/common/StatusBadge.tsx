@@ -22,6 +22,8 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
         return "success";
       case "partial":
         return "warning";
+      case "credit":
+        return "primary"; // Added case for credit
       // Purchase order statuses
       case "pending":
         return "secondary";
@@ -52,6 +54,8 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
         return "Paid";
       case "partial":
         return "Partially Paid";
+      case "credit":
+        return "Credit"; // Added case for credit
       case "pending":
         return "Pending";
       case "complete":

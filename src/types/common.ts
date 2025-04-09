@@ -4,21 +4,25 @@
 import { LucideIcon } from 'lucide-react';
 
 export type EntityStatus = 
-  // Invoice statuses
+  // Status types shared across entities
   | 'draft'
+  | 'active'
+  | 'inactive'
+  | 'archived'
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'completed'
+  | 'cancelled'
+  // Invoice specific statuses
   | 'unpaid'
   | 'paid'
   | 'partial'
-  // Purchase order statuses
-  | 'pending'
-  | 'complete'
-  | 'received'
-  // Estimate statuses
-  | 'converted'
-  // Generic statuses
-  | 'active'
-  | 'inactive'
-  | 'archived';
+  | 'credit'
+  | 'void'
+  // Estimate specific statuses
+  | 'sent'
+  | 'converted';
 
 export interface EntityBase {
   id: string;
