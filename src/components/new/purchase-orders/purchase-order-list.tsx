@@ -7,17 +7,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { PurchaseOrder } from '@/types/purchaseOrder';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { DocumentType } from '@/types/documents';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
@@ -34,7 +29,8 @@ const PurchaseOrderList = ({
 }: PurchaseOrderListProps) => {
   const { toast } = useToast();
   const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<string[]>([]);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const isBatchProcessing = isPdfLoading;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -52,11 +48,31 @@ const PurchaseOrderList = ({
     }
   };
 
-  const handleDownloadPdf = (id: string) => {
-    toast({
-      title: 'Download started',
-      description: 'Your purchase order PDF is being prepared for download.',
-    });
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      toast({
+        title: 'Download Started',
+        description: 'Your purchase order PDF is being prepared for download.',
+      });
+      
+      // Generate the PDF and get the URL
+      const pdfUrl = await generatePDF(DocumentType.PURCHASE_ORDER, id, true);
+      
+      if (!pdfUrl) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      toast({
+        title: 'Download Complete',
+        description: 'Your purchase order PDF has been downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'There was an error generating the PDF.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSharePurchaseOrder = (id: string) => {
@@ -71,30 +87,27 @@ const PurchaseOrderList = ({
       return;
     }
 
-    setIsBatchProcessing(true);
     const processingToast = toast({
       title: 'Batch PDF Generation Started',
       description: `Processing ${selectedPurchaseOrders.length} purchase order(s)... Please wait.`,
-      duration: 999999,
+      duration: 999999, // Keep toast open until dismissed
     });
 
-    const itemsToProcess = selectedPurchaseOrders.map(id => ({ id, type: 'purchaseOrder' }));
-
     try {
-      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
-        body: JSON.stringify({ items: itemsToProcess }),
-      });
-
-      processingToast.dismiss();
-
-      if (error) {
-        throw error;
+      // Process each purchase order using the batchGeneratePDF function
+      let successCount = 0;
+      let failureCount = 0;
+      
+      for (const purchaseOrderId of selectedPurchaseOrders) {
+        const success = await batchGeneratePDF(DocumentType.PURCHASE_ORDER, purchaseOrderId);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
       }
 
-      type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
-      const results: BatchResultItem[] = data?.results || [];
-      const successCount = results.filter((r) => r.success).length;
-      const failureCount = results.length - successCount;
+      processingToast.dismiss();
 
       toast({
         title: 'Batch PDF Generation Complete',
@@ -103,14 +116,10 @@ const PurchaseOrderList = ({
         duration: 5000,
       });
 
-      if (failureCount > 0) {
-        console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
-      }
-      
+      // Clear selection after processing
       setSelectedPurchaseOrders([]);
-
     } catch (error) {
-      console.error('Error calling batch-generate-and-store-pdfs function:', error);
+      console.error('Error during batch PDF generation:', error);
       processingToast.dismiss();
       toast({
         title: 'Batch PDF Generation Failed',
@@ -118,8 +127,6 @@ const PurchaseOrderList = ({
         variant: 'destructive',
         duration: 5000,
       });
-    } finally {
-      setIsBatchProcessing(false);
     }
   };
 

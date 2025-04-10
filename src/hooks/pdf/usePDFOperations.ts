@@ -7,8 +7,12 @@ import { generateAndStorePurchaseOrderPDF } from '@/lib/pdf/purchase-order-pdf';
 import { generateAndStoreProductPDF } from '@/lib/pdf/product-pdf';
 import { PDFOperationResult } from '@/lib/pdf/common';
 import { supabase } from '@/integrations/supabase/client';
-
-export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate' | 'product';
+import { 
+  DocumentType, 
+  getBatchDocumentTypeKey, 
+  getStorageDocumentTypeKey, 
+  normalizeDocumentType 
+} from '@/types/documents';
 
 /**
  * Hook for PDF operations including generation, storage, and downloading
@@ -105,13 +109,8 @@ export const usePDFOperations = () => {
     setIsServerProcessing(true);
 
     try {
-      // Map document type to the expected API format
-      const typeMap: Record<DocumentType, string> = {
-        invoice: 'invoice',
-        purchaseOrder: 'purchaseOrder',
-        estimate: 'estimate',
-        product: 'product'
-      };
+      // Use the batch document type key from our standardized mapping
+      const batchTypeKey = getBatchDocumentTypeKey(documentType);
 
       // Call the batch-generate-and-store-pdfs edge function
       const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
@@ -119,7 +118,7 @@ export const usePDFOperations = () => {
           items: [
             {
               id: documentId,
-              type: typeMap[documentType]
+              type: batchTypeKey
             }
           ]
         }
@@ -225,17 +224,12 @@ export const usePDFOperations = () => {
         reader.onerror = (error) => reject(error);
       });
       
-      // Map document type to the expected API format
-      const typeMap: Record<DocumentType, string> = {
-        invoice: 'invoice',
-        purchaseOrder: 'purchase-order',
-        estimate: 'estimate',
-        product: 'product'
-      };
+      // Use the storage document type key from our standardized mapping
+      const storageTypeKey = getStorageDocumentTypeKey(documentType);
       
       const { data, error } = await supabase.functions.invoke('store-pdf', {
         body: {
-          documentType: typeMap[documentType],
+          documentType: storageTypeKey,
           documentId,
           pdfBase64: base64Data,
           fileName: `${documentType}_${documentId}.pdf`

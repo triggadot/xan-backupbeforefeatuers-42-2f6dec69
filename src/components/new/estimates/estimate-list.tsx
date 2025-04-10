@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, FileTextIcon } from 'lucide-react'; // Added FileTextIcon
+import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, FileTextIcon } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/utils/use-toast';
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import { Button } from '@/components/ui/button'; // Import Button component
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { EstimateWithDetails } from '@/types/estimate';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { DocumentType } from '@/types/documents';
 
 interface EstimateListProps {
   estimates: EstimateWithDetails[];
@@ -25,7 +26,8 @@ export const EstimateList: React.FC<EstimateListProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedEstimates, setSelectedEstimates] = useState<string[]>([]);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false); // State for batch processing
+  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const isBatchProcessing = isPdfLoading;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -43,13 +45,31 @@ export const EstimateList: React.FC<EstimateListProps> = ({
     }
   };
 
-  const handleDownloadPdf = (id: string) => {
-    toast({
-      title: 'Download Started',
-      description: 'Your estimate PDF is being prepared for download.',
-    });
-    // Implement PDF download functionality
-    // You can use the glide_pdf_url field from your database if available
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      toast({
+        title: 'Download Started',
+        description: 'Your estimate PDF is being prepared for download.',
+      });
+      
+      // Generate the PDF and get the URL
+      const pdfUrl = await generatePDF(DocumentType.ESTIMATE, id, true);
+      
+      if (!pdfUrl) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      toast({
+        title: 'Download Complete',
+        description: 'Your estimate PDF has been downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'There was an error generating the PDF.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleShareEstimate = (id: string) => {
@@ -66,31 +86,27 @@ export const EstimateList: React.FC<EstimateListProps> = ({
       return;
     }
 
-    setIsBatchProcessing(true);
     const processingToast = toast({
       title: 'Batch PDF Generation Started',
       description: `Processing ${selectedEstimates.length} estimate(s)... Please wait.`,
       duration: 999999, // Keep toast open until dismissed
     });
 
-    const itemsToProcess = selectedEstimates.map(id => ({ id, type: 'estimate' })); // Set type to 'estimate'
-
     try {
-      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
-        body: JSON.stringify({ items: itemsToProcess }),
-      });
-
-      processingToast.dismiss(); // Dismiss loading toast
-
-      if (error) {
-        throw error;
+      // Process each estimate using the batchGeneratePDF function
+      let successCount = 0;
+      let failureCount = 0;
+      
+      for (const estimateId of selectedEstimates) {
+        const success = await batchGeneratePDF(DocumentType.ESTIMATE, estimateId);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
       }
 
-      // Process results from the function
-      type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
-      const results: BatchResultItem[] = data?.results || [];
-      const successCount = results.filter((r) => r.success).length;
-      const failureCount = results.length - successCount;
+      processingToast.dismiss();
 
       toast({
         title: 'Batch PDF Generation Complete',
@@ -99,24 +115,17 @@ export const EstimateList: React.FC<EstimateListProps> = ({
         duration: 5000,
       });
 
-      if (failureCount > 0) {
-        console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
-      }
-      
       // Clear selection after processing
-      setSelectedEstimates([]); 
-
+      setSelectedEstimates([]);
     } catch (error) {
-      console.error('Error calling batch-generate-and-store-pdfs function:', error);
-      processingToast.dismiss(); // Dismiss loading toast on error too
+      console.error('Error during batch PDF generation:', error);
+      processingToast.dismiss();
       toast({
         title: 'Batch PDF Generation Failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
         variant: 'destructive',
         duration: 5000,
       });
-    } finally {
-      setIsBatchProcessing(false);
     }
   };
   // --- End Batch PDF Generation Handler ---

@@ -1,12 +1,13 @@
-import { Button } from '@/components/ui/button'; // Import Button component
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/utils/use-toast';
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { format } from 'date-fns';
-import { ArrowUpDownIcon, DownloadIcon, EyeIcon, FileTextIcon, PencilIcon, ShareIcon } from 'lucide-react'; // Added FileTextIcon
+import { ArrowUpDownIcon, DownloadIcon, EyeIcon, FileTextIcon, PencilIcon, ShareIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { DocumentType } from '@/types/documents';
 
 type SortableColumn = keyof Pick<InvoiceWithAccount, 'invoice_order_date' | 'total_amount' | 'payment_status' | 'account'> | 'account.name';
 type SortDirection = 'asc' | 'desc';
@@ -22,7 +23,8 @@ interface InvoiceListProps {
 const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColumn, sortDirection, onSort }) => {
   const { toast } = useToast();
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false); // State for batch processing
+  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const isBatchProcessing = isPdfLoading;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -40,14 +42,31 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
     }
   };
 
-  const handleDownloadPdf = (id: string) => {
-    toast({
-      title: 'Download Started',
-      description: 'Your invoice PDF is being prepared for download.',
-    });
-    // TODO: Connect this to the actual download+background store logic
-    // Likely call generateAndStoreInvoicePDF(id, true) from '@/lib/pdf/invoice-pdf'
-    console.log("Placeholder: Download PDF for invoice", id);
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      toast({
+        title: 'Download Started',
+        description: 'Your invoice PDF is being prepared for download.',
+      });
+      
+      // Generate the PDF and get the URL
+      const pdfUrl = await generatePDF(DocumentType.INVOICE, id, true);
+      
+      if (!pdfUrl) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      toast({
+        title: 'Download Complete',
+        description: 'Your invoice PDF has been downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'There was an error generating the PDF.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleShareInvoice = (id: string) => {
@@ -65,32 +84,27 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
       return;
     }
 
-    setIsBatchProcessing(true);
     const processingToast = toast({
       title: 'Batch PDF Generation Started',
       description: `Processing ${selectedInvoices.length} invoice(s)... Please wait.`,
       duration: 999999, // Keep toast open until dismissed
     });
 
-    const itemsToProcess = selectedInvoices.map(id => ({ id, type: 'invoice' }));
-
     try {
-      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
-        body: JSON.stringify({ items: itemsToProcess }),
-      });
-
-      processingToast.dismiss(); // Dismiss loading toast
-
-      if (error) {
-        throw error;
+      // Process each invoice one by one using the batchGeneratePDF function
+      let successCount = 0;
+      let failureCount = 0;
+      
+      for (const invoiceId of selectedInvoices) {
+        const success = await batchGeneratePDF(DocumentType.INVOICE, invoiceId);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
       }
 
-      // Process results from the function
-      // Define a type for the result item
-      type BatchResultItem = { id: string; type: string; success: boolean; url?: string; error?: string };
-      const results: BatchResultItem[] = data?.results || [];
-      const successCount = results.filter((r) => r.success).length;
-      const failureCount = results.length - successCount;
+      processingToast.dismiss();
 
       toast({
         title: 'Batch PDF Generation Complete',
@@ -99,24 +113,17 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
         duration: 5000,
       });
 
-      if (failureCount > 0) {
-        console.error('Batch PDF Generation Failures:', results.filter((r) => !r.success));
-      }
-      
       // Clear selection after processing
-      setSelectedInvoices([]); 
-
+      setSelectedInvoices([]);
     } catch (error) {
-      console.error('Error calling batch-generate-and-store-pdfs function:', error);
-      processingToast.dismiss(); // Dismiss loading toast on error too
+      console.error('Error during batch PDF generation:', error);
+      processingToast.dismiss();
       toast({
         title: 'Batch PDF Generation Failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
         variant: 'destructive',
         duration: 5000,
       });
-    } finally {
-      setIsBatchProcessing(false);
     }
   };
   // --- End Batch PDF Generation Handler ---
