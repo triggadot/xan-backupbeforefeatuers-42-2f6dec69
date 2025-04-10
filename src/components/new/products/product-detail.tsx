@@ -8,6 +8,7 @@ import { ProductCrudActions } from '@/components/products/ProductCrudActions';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@tremor/react';
 
 interface ProductDetailProps {
   /**
@@ -227,6 +228,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
             <Tab>Related Estimates ({product.estimateLines?.length || 0})</Tab>
             {product.purchaseOrder && <Tab>Purchase Order</Tab>}
             <Tab>Vendor Payments</Tab>
+            <Tab>Documents</Tab>
           </TabList>
           
           <TabPanels>
@@ -312,7 +314,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
               </div>
             </TabPanel>
             
-            {product.purchaseOrder ? (
+            {product.purchaseOrder && (
               <TabPanel>
                 <div className="mt-4">
                   <Card>
@@ -325,7 +327,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
                           </Link>
                         </Text>
                       </div>
-                      <Badge color={product.purchaseOrder.balance === 0 ? 'green' : 'yellow'}>
+                      <Badge variant={product.purchaseOrder.balance === 0 ? 'success' : 'warning'}>
                         {product.purchaseOrder.balance === 0 ? 'Paid' : 'Outstanding'}
                       </Badge>
                     </div>
@@ -372,144 +374,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
                     </div>
                   </Card>
                 </div>
-                <div className="mt-4">
-                  <Title>Purchase Order Details</Title>
-                  <Grid numItemsMd={2} className="gap-6 mt-4">
-                    <Card decoration="left" decorationColor="indigo">
-                      <Text>Purchase Order ID</Text>
-                      <Metric className="mt-1">{product.purchaseOrder.purchase_order_uid || 'N/A'}</Metric>
-                      {product.purchaseOrder.po_date && (
-                        <Text className="mt-2">Date: {formatDate(product.purchaseOrder.po_date)}</Text>
-                      )}
-                    </Card>
-                    <Card decoration="left" decorationColor="indigo">
-                      <Text>Payment Status</Text>
-                      <Metric className="mt-1">{product.purchaseOrder.payment_status || 'N/A'}</Metric>
-                      <div className="mt-2 flex justify-between">
-                        <Text>Total: {formatCurrency(product.purchaseOrder.total_amount || 0)}</Text>
-                        <Text>Balance: {formatCurrency(product.purchaseOrder.balance || 0)}</Text>
-                      </div>
-                    </Card>
-                  </Grid>
-                </div>
               </TabPanel>
             )}
-            <TabPanel>
-              <div className="mt-4">
-                {product.vendorPayments && product.vendorPayments.length > 0 ? (
-                  <Table className="mt-4">
-                    <TableHead>
-                      <TableRow>
-                        <TableHeaderCell>Payment Date</TableHeaderCell>
-                        <TableHeaderCell>Amount</TableHeaderCell>
-                        <TableHeaderCell>Vendor</TableHeaderCell>
-                        <TableHeaderCell>Purchase Order</TableHeaderCell>
-                        <TableHeaderCell>Notes</TableHeaderCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {product.vendorPayments.map((payment) => (
-                        <TableRow key={payment.id}>
-                          <TableCell>{formatDate(payment.date_of_payment)}</TableCell>
-                          <TableCell>{formatCurrency(payment.payment_amount || 0)}</TableCell>
-                          <TableCell>{payment.account?.account_name || 'N/A'}</TableCell>
-                          <TableCell>
-                            {payment.purchaseOrder && (
-                              <Link to={`/purchase-orders/${payment.purchaseOrder.glide_row_id}`} className="text-blue-600 hover:underline">
-                                {payment.purchaseOrder.po_uid || 'PO-' + payment.purchaseOrder.id.substring(0, 8)}
-                              </Link>
-      <Card className="mt-6">
-        <TabGroup>
-          <TabList>
-            <Tab>Related Invoices</Tab>
-            <Tab>Related Estimates</Tab>
-            <Tab>Vendor Payments</Tab>
-            <Tab>Documents</Tab>
-            {product.purchaseOrder && <Tab>Purchase Order</Tab>}
-          </TabList>
-          
-          <TabPanels>
-            <TabPanel>
-              <div className="mt-4">
-                <Title>Related Invoices</Title>
-                {product.invoiceLines && product.invoiceLines.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {product.invoiceLines.map((line, index) => (
-                      <li key={index} className="text-sm border-b border-gray-100 pb-2">
-                        <div className="flex justify-between">
-                          <span>
-                            Invoice #{line.invoice?.invoice_uid || 'N/A'}
-                            {line.invoice?.account && (
-                              <span className="text-gray-500 ml-1">({line.invoice.account.account_name})</span>
-                            )}
-                          </span>
-                          <span className="font-medium">{formatCurrency(line.line_amt || 0)}</span>
-                        </div>
-                        {line.invoice && (
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>{formatShortDate(line.invoice.invoice_date)}</span>
-                            <span>{line.invoice.status || 'Unknown'}</span>
-                            {line.invoice.supabase_pdf_url && (
-                              <a 
-                                href={line.invoice.supabase_pdf_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                View PDF
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <Text className="text-sm text-gray-500">No related invoices</Text>
-                )}
-              </div>
-            </TabPanel>
-            
-            <TabPanel>
-              <div className="mt-4">
-                <Title>Related Estimates</Title>
-                {product.estimateLines && product.estimateLines.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {product.estimateLines.map((line, index) => (
-                      <li key={index} className="text-sm border-b border-gray-100 pb-2">
-                        <div className="flex justify-between">
-                          <span>
-                            Estimate #{line.estimate?.estimate_uid || 'N/A'}
-                            {line.estimate?.account && (
-                              <span className="text-gray-500 ml-1">({line.estimate.account.account_name})</span>
-                            )}
-                          </span>
-                          <span className="font-medium">{formatCurrency(line.line_amt || 0)}</span>
-                        </div>
-                        {line.estimate && (
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>{formatShortDate(line.estimate.estimate_date)}</span>
-                            <span>{line.estimate.status || 'Unknown'}</span>
-                            {line.estimate.supabase_pdf_url && (
-                              <a 
-                                href={line.estimate.supabase_pdf_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                View PDF
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <Text className="text-sm text-gray-500">No related estimates</Text>
-                )}
-              </div>
-            </TabPanel>
             
             <TabPanel>
               <div className="mt-4">
@@ -530,13 +396,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
                         {product.vendorPayments.map((payment, index) => (
                           <tr key={index}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatShortDate(payment.payment_date)}
+                              {formatShortDate(payment.date_of_payment)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {payment.account?.account_name || 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {payment.purchaseOrder?.purchase_order_uid || 'N/A'}
+                              {payment.purchaseOrder ? (
+                                <Link to={`/purchase-orders/${payment.purchaseOrder.glide_row_id}`} className="text-blue-600 hover:underline">
+                                  {payment.purchaseOrder.po_uid || 'PO-' + payment.purchaseOrder.id.substring(0, 8)}
+                                </Link>
+                              ) : 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                               {formatCurrency(payment.payment_amount || 0)}
@@ -660,46 +530,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
                 </div>
               </div>
             </TabPanel>
-            
-            {product.purchaseOrder && (
-              <TabPanel>
-                <div className="mt-4">
-                  <Title>Purchase Order Details</Title>
-                  <Grid numItemsMd={2} className="gap-6 mt-4">
-                    <Card decoration="left" decorationColor="indigo">
-                      <Text>Purchase Order ID</Text>
-                      <Metric className="mt-1">{product.purchaseOrder.purchase_order_uid || 'N/A'}</Metric>
-                      {product.purchaseOrder.purchase_order_date && (
-                        <Text className="mt-2">Date: {formatDate(product.purchaseOrder.purchase_order_date)}</Text>
-                      )}
-                    </Card>
-                    <Card decoration="left" decorationColor="indigo">
-                      <Text>Payment Status</Text>
-                      <Metric className="mt-1">{product.purchaseOrder.payment_status || 'N/A'}</Metric>
-                      <div className="mt-2 flex justify-between">
-                        <Text>Total: {formatCurrency(product.purchaseOrder.total_amount || 0)}</Text>
-                        {product.purchaseOrder.balance !== undefined && (
-                          <Text>Balance: {formatCurrency(product.purchaseOrder.balance)}</Text>
-                        )}
-                      </div>
-                    </Card>
-                  </Grid>
-                  
-                  {product.purchaseOrder.supabase_pdf_url && (
-                    <div className="mt-6">
-                      <a 
-                        href={product.purchaseOrder.supabase_pdf_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex w-full justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        View Purchase Order PDF
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </TabPanel>
-            )}
           </TabPanels>
         </TabGroup>
       </Card>

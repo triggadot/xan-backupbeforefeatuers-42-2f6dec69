@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NewTransactionDialog from "./NewTransactionDialog";
@@ -72,8 +73,8 @@ export default function FinancialActions({ className }: FinancialActionsProps) {
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="space-y-3">
-          {financialActions.map((action, index) => (
-            {action.label === "New Transaction" ? (
+          {financialActions.map((action, index) => 
+            action.label === "New Transaction" ? (
               <NewTransactionDialog 
                 key={index}
                 buttonVariant="ghost" 
@@ -87,22 +88,21 @@ export default function FinancialActions({ className }: FinancialActionsProps) {
                 className="w-full justify-start h-auto py-3 px-4 hover:bg-muted group"
                 onClick={() => navigate(action.route)}
               >
-            
-              <div className="flex items-center gap-3">
-                <div className={`${action.color} p-2 rounded-full bg-background border`}>
-                  {action.icon}
+                <div className="flex items-center gap-3">
+                  <div className={`${action.color} p-2 rounded-full bg-background border`}>
+                    {action.icon}
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-sm">{action.label}</div>
+                    <div className="text-xs text-muted-foreground">{action.description}</div>
+                  </div>
+                  <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Plus className="h-4 w-4" />
+                  </div>
                 </div>
-                <div className="text-left">
-                  <div className="font-medium text-sm">{action.label}</div>
-                  <div className="text-xs text-muted-foreground">{action.description}</div>
-                </div>
-                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Plus className="h-4 w-4" />
-                </div>
-              </div>
-            </Button>
-            )}
-          ))}
+              </Button>
+            )
+          )}
         </div>
       </CardContent>
     </Card>
