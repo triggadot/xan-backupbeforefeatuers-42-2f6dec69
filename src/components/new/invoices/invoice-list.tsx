@@ -23,7 +23,7 @@ interface InvoiceListProps {
 const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColumn, sortDirection, onSort }) => {
   const { toast } = useToast();
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
-  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
   const isBatchProcessing = isPdfLoading;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +78,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
     console.log("Placeholder: Share invoice", id);
   };
 
-  // --- Batch PDF Generation Handler ---
+  /**
+   * Handles batch generation of PDF documents for selected invoices using
+   * the new pdf-backend edge function.
+   * 
+   * Processes all selected invoices in a single batch request for better efficiency.
+   */
   const handleBatchGeneratePdfs = async () => {
     if (selectedInvoices.length === 0 || isBatchProcessing) {
       return;
@@ -91,18 +96,11 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
     });
 
     try {
-      // Process each invoice one by one using the batchGeneratePDF function
-      let successCount = 0;
-      let failureCount = 0;
-      
-      for (const invoiceId of selectedInvoices) {
-        const success = await batchGeneratePDF(DocumentType.INVOICE, invoiceId);
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      }
+      // Process all invoices in a single batch request using the new pdf-backend function
+      const { success: successCount, failed: failureCount } = await batchGenerateMultiplePDFs(
+        DocumentType.INVOICE, 
+        selectedInvoices
+      );
 
       processingToast.dismiss();
 

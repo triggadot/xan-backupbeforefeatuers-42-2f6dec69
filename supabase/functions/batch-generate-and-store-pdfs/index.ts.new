@@ -1,0 +1,457 @@
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+import { 
+  BatchPDFItem, 
+  BatchPDFItemResult, 
+  BatchPDFResult,
+  DocumentType,
+  documentTypeConfig
+} from './shared-types';
+import {
+  formatCurrency,
+  formatDate,
+  formatShortDate,
+  normalizeDocumentType,
+  adaptDataForSharedGenerator,
+  generateFileName,
+  getStorageFolderPath,
+  getPdfUrlField
+} from './pdf-adapter';
+
+console.log('Batch Generate and Store PDFs function booting up');
+
+// Import the shared PDF generator code by using dynamic import
+// This is a workaround since we can't directly import from a relative path in Deno
+// In a real implementation, this would be imported from a package or a URL
+async function loadPdfGenerator() {
+  // In a real implementation, this would load from a URL or package
+  // For now, we'll stub this function since we can't directly import frontend code in Deno
+  
+  // Placeholder for the shared PDF generator module
+  return {
+    // These functions would be imported from the shared module in a real implementation
+    generateInvoicePDF: (invoice: any) => {
+      // Would call the actual implementation from shared-pdf-generator.ts
+      console.log('Generating invoice PDF using shared generator');
+      // Return a mock PDF
+      return mockGeneratePdf('INVOICE', invoice);
+    },
+    generatePurchaseOrderPDF: (purchaseOrder: any) => {
+      console.log('Generating purchase order PDF using shared generator');
+      // Return a mock PDF
+      return mockGeneratePdf('PURCHASE_ORDER', purchaseOrder);
+    },
+    generateEstimatePDF: (estimate: any) => {
+      console.log('Generating estimate PDF using shared generator');
+      // Return a mock PDF
+      return mockGeneratePdf('ESTIMATE', estimate);
+    }
+  };
+}
+
+// Mock PDF generation for demonstration
+// In a real implementation, this would use the actual shared PDF generator
+function mockGeneratePdf(type: string, data: any): Uint8Array {
+  console.log(`Mock generating ${type} PDF for ${data.id || 'unknown'}`);
+  // Create a simple PDF-like data structure (just for demo)
+  const encoder = new TextEncoder();
+  return encoder.encode(`PDF ${type} for ${JSON.stringify(data, null, 2)}`);
+}
+
+// Generate a PDF for the given document
+async function generatePDF(normalizedType: DocumentType, data: any): Promise<Uint8Array | null> {
+  try {
+    console.log(`Generating ${normalizedType} PDF for ID: ${data.id || data.glide_row_id || 'unknown'}`);
+    
+    // Adapt the data for the shared PDF generator
+    const adaptedData = adaptDataForSharedGenerator(normalizedType, data);
+    
+    // Load the PDF generator module
+    const pdfGenerator = await loadPdfGenerator();
+    
+    // Generate the PDF based on document type
+    switch (normalizedType) {
+      case DocumentType.INVOICE:
+        return pdfGenerator.generateInvoicePDF(adaptedData);
+      case DocumentType.PURCHASE_ORDER:
+        return pdfGenerator.generatePurchaseOrderPDF(adaptedData);
+      case DocumentType.ESTIMATE:
+        return pdfGenerator.generateEstimatePDF(adaptedData);
+      default:
+        console.error(`Unsupported document type: ${normalizedType}`);
+        return null;
+    }
+  } catch (error) {
+    console.error(`Error generating PDF for ${normalizedType}:`, error);
+    return null;
+  }
+}
+
+// Fetch document data with all related information using the Glidebase pattern
+async function fetchDocumentWithRelations(supabase: any, documentType: DocumentType, documentId: string): Promise<any | null> {
+  try {
+    const config = documentTypeConfig[documentType];
+    if (!config) {
+      throw new Error(`No configuration found for document type: ${documentType}`);
+    }
+
+    console.log(`Fetching ${documentType} with ID: ${documentId}`);
+
+    // 1. Fetch the main document
+    const { data: documentData, error: fetchError } = await supabase
+      .from(config.tableName)
+      .select('*')
+      .eq('id', documentId)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw new Error(
+        `Database error fetching ${documentType} ${documentId}: ${fetchError.message}`,
+      );
+    }
+    if (!documentData) {
+      throw new Error(
+        `${documentType} with ID ${documentId} not found in table ${config.tableName}.`,
+      );
+    }
+
+    // --- Glidebase Pattern: Fetch related data MANUALLY ---
+
+    // 2. Fetch Account Data
+    const accountRowId = documentData[config.accountRefField];
+    let accountData = null;
+    if (accountRowId) {
+      const { data: account, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*')
+        .eq('glide_row_id', accountRowId)
+        .maybeSingle();
+
+      if (accountError) {
+        console.warn(`Error fetching account for ${accountRowId}:`, accountError.message);
+      } else if (account) {
+        accountData = account;
+      }
+    }
+
+    // 3. Fetch Line Items (if applicable)
+    let lineItems = [];
+    if (config.linesTableName) {
+      // Special case for purchase orders, which use gl_products directly
+      if (documentType === DocumentType.PURCHASE_ORDER) {
+        const { data: products, error: productsError } = await supabase
+          .from('gl_products')
+          .select('*')
+          .eq('rowid_purchase_orders', documentData.glide_row_id);
+
+        if (productsError) {
+          console.warn(`Error fetching products for PO ${documentId}:`, productsError.message);
+        } else if (products) {
+          lineItems = products;
+        }
+      } else {
+        // For invoices and estimates, use the standard line items tables
+        const lineRefField = documentType === DocumentType.INVOICE 
+          ? 'rowid_invoices' 
+          : 'rowid_estimates';
+        
+        const { data: lines, error: linesError } = await supabase
+          .from(config.linesTableName)
+          .select('*')
+          .eq(lineRefField, documentData.glide_row_id);
+
+        if (linesError) {
+          console.warn(`Error fetching lines for ${documentType} ${documentId}:`, linesError.message);
+        } else if (lines) {
+          // For invoice and estimate lines, fetch related products
+          for (const line of lines) {
+            if (line.rowid_products) {
+              const { data: product, error: productError } = await supabase
+                .from('gl_products')
+                .select('*')
+                .eq('glide_row_id', line.rowid_products)
+                .maybeSingle();
+                
+              if (!productError && product) {
+                line.gl_products = product;
+              }
+            }
+          }
+          lineItems = lines;
+        }
+      }
+    }
+
+    // 4. Fetch Additional Relations if any
+    let additionalData = {};
+    if (config.additionalRelations) {
+      for (const relation of config.additionalRelations) {
+        const { data: relatedItems, error: relationError } = await supabase
+          .from(relation.tableName)
+          .select('*')
+          .eq(relation.referenceField, documentData.glide_row_id);
+
+        if (relationError) {
+          console.warn(`Error fetching ${relation.tableName} for ${documentType} ${documentId}:`, relationError.message);
+        } else if (relatedItems) {
+          // Use a normalized name based on the table name
+          const normalizedName = relation.tableName.replace('gl_', '');
+          additionalData[normalizedName] = relatedItems;
+        }
+      }
+    }
+
+    // 5. Combine all data
+    return {
+      ...documentData,
+      // If using invoice_lines or estimate_lines naming convention
+      ...(documentType === DocumentType.INVOICE 
+        ? { invoice_lines: lineItems } 
+        : documentType === DocumentType.ESTIMATE
+          ? { estimate_lines: lineItems }
+          : { products: lineItems }),
+      account: accountData,
+      ...additionalData
+    };
+  } catch (error) {
+    console.error(`Error fetching ${documentType} ${documentId}:`, error);
+    return null;
+  }
+}
+
+// Store a PDF in Supabase Storage
+async function storePDF(
+  supabase: any,
+  pdfBytes: Uint8Array,
+  fileName: string,
+  folderPath: string
+): Promise<string | null> {
+  try {
+    // Upload the PDF to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from('documents')
+      .upload(`${folderPath}/${fileName}`, pdfBytes, {
+        contentType: 'application/pdf',
+        upsert: true
+      });
+
+    if (uploadError) {
+      throw new Error(`Error uploading PDF: ${uploadError.message}`);
+    }
+
+    // Get public URL for the uploaded file
+    const { data: publicUrlData } = await supabase
+      .storage
+      .from('documents')
+      .getPublicUrl(`${folderPath}/${fileName}`);
+
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      throw new Error('Failed to get public URL for uploaded PDF');
+    }
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('Error storing PDF:', error);
+    return null;
+  }
+}
+
+// Update the database record with the PDF URL
+async function updateDatabaseWithPdfUrl(
+  supabase: any,
+  documentType: DocumentType,
+  documentId: string,
+  pdfUrl: string
+): Promise<boolean> {
+  try {
+    const config = documentTypeConfig[documentType];
+    const pdfUrlField = getPdfUrlField(documentType);
+
+    const { error: updateError } = await supabase
+      .from(config.tableName)
+      .update({ [pdfUrlField]: pdfUrl })
+      .eq('id', documentId);
+
+    if (updateError) {
+      throw new Error(`Error updating ${documentType} record: ${updateError.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error updating database with PDF URL:`, error);
+    return false;
+  }
+}
+
+// Process a single item in the batch
+async function processItem(
+  supabase: any,
+  item: BatchPDFItem
+): Promise<BatchPDFItemResult> {
+  console.log(`Processing item: ${JSON.stringify(item)}`);
+  
+  // Default result with failure
+  const result: BatchPDFItemResult = {
+    id: item.id,
+    type: item.type,
+    success: false,
+    error: '',
+    url: null
+  };
+
+  try {
+    // 1. Normalize the document type
+    const normalizedType = normalizeDocumentType(item.type);
+    result.type = normalizedType; // Update type to normalized version
+
+    // 2. Fetch document data with all related information
+    const documentData = await fetchDocumentWithRelations(supabase, normalizedType, item.id);
+    if (!documentData) {
+      result.error = `Failed to fetch document data for ${normalizedType} ${item.id}`;
+      return result;
+    }
+
+    // 3. Generate the PDF
+    const pdfBytes = await generatePDF(normalizedType, documentData);
+    if (!pdfBytes) {
+      result.error = `Failed to generate PDF for ${normalizedType} ${item.id}`;
+      return result;
+    }
+
+    // 4. Generate filename and get storage folder
+    const fileName = generateFileName(normalizedType, documentData);
+    const folderPath = getStorageFolderPath(normalizedType);
+
+    // 5. Store the PDF in Supabase Storage
+    const pdfUrl = await storePDF(supabase, pdfBytes, fileName, folderPath);
+    if (!pdfUrl) {
+      result.error = `Failed to store PDF for ${normalizedType} ${item.id}`;
+      return result;
+    }
+
+    // 6. Update the database record with the PDF URL
+    const updated = await updateDatabaseWithPdfUrl(supabase, normalizedType, item.id, pdfUrl);
+    if (!updated) {
+      result.error = `Failed to update database with PDF URL for ${normalizedType} ${item.id}`;
+      return result;
+    }
+
+    // Success!
+    result.success = true;
+    result.url = pdfUrl;
+    return result;
+  } catch (error) {
+    console.error(`Error processing item ${item.id}:`, error);
+    result.error = error.message || 'Unknown error';
+    return result;
+  }
+}
+
+// Main server handler
+serve(async (req: Request) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    // Ensure environment variables are set
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error(
+        'Missing environment variables SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
+      );
+    }
+
+    // Create Supabase client with service role
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Log project information
+    const projectId = "swrfsullhirscyxqneay"; // Hard-coded for logging
+    console.log(`Executing Edge Function in project: ${projectId}`);
+
+    // Parse request body
+    if (!req.body) {
+      throw new Error("Request has no body.");
+    }
+    
+    const { items } = await req.json();
+    if (!Array.isArray(items)) {
+      throw new Error("Request body must contain an 'items' array.");
+    }
+    
+    if (items.length === 0) {
+      console.log("Received empty 'items' array. Nothing to process.");
+      return new Response(JSON.stringify({ results: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
+    console.log(`Processing batch of ${items.length} items.`);
+    
+    // Process items sequentially to avoid overwhelming resources
+    const results: BatchPDFItemResult[] = [];
+    const errors: string[] = [];
+    
+    for (const item of items) {
+      try {
+        // Validate basic item structure
+        if (!item || typeof item !== 'object' || !item.id || !item.type) {
+          console.warn('Skipping invalid item in batch:', item);
+          results.push({ 
+            id: item?.id || 'unknown', 
+            type: item?.type || 'unknown', 
+            success: false, 
+            error: 'Invalid item format (missing id or type)', 
+            url: null 
+          });
+          continue;
+        }
+
+        // Process the item
+        const result = await processItem(supabaseAdmin, item);
+        results.push(result);
+        
+        if (!result.success) {
+          errors.push(`Error processing ${result.type} ${result.id}: ${result.error}`);
+        }
+      } catch (itemError) {
+        console.error('Critical error processing item:', itemError);
+        results.push({ 
+          id: item?.id || 'unknown', 
+          type: item?.type || 'unknown', 
+          success: false, 
+          error: itemError.message || 'Critical processing error', 
+          url: null 
+        });
+        errors.push(`Critical error: ${itemError.message}`);
+      }
+    }
+
+    // Prepare the response
+    const response: BatchPDFResult = {
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+      success: errors.length === 0
+    };
+
+    // Return the response
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  } catch (error) {
+    console.error('Error in batch PDF generation:', error);
+    return new Response(JSON.stringify({
+      error: error.message || 'Unknown error',
+      success: false
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
+  }
+});

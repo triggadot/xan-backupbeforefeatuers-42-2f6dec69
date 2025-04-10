@@ -10,7 +10,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { PDFGenerationButton } from '@/components/pdf/PDFGenerationButton';
+import { PDFActions } from '@/components/pdf/PDFActions';
 
 interface PurchaseOrderDetailViewProps {
   purchaseOrder: PurchaseOrder | null;
@@ -25,6 +25,7 @@ const PurchaseOrderDetailView = ({
 }: PurchaseOrderDetailViewProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Initialize with the current PDF URL, but we'll always regenerate when viewing/downloading
   const [pdfUrl, setPdfUrl] = useState<string | null>(purchaseOrder?.supabase_pdf_url || null);
   
   useEffect(() => {
@@ -204,16 +205,15 @@ const PurchaseOrderDetailView = ({
               Edit
             </Button>
             
-            <PDFGenerationButton 
+            <PDFActions 
               documentType="purchaseOrder" 
-              documentId={purchaseOrder.id} 
-              download={true}
-              showPreview={true}
-              onSuccess={handlePDFSuccess}
-              onError={handlePDFError}
+              document={purchaseOrder} 
               variant="outline" 
               size="sm"
-              showLabel={true}
+              showLabels={true}
+              forceRegenerate={true}
+              overwriteExisting={true}
+              onPDFGenerated={(url) => setPdfUrl(url)}
             />
             
             <Button variant="outline" size="sm" onClick={handlePrintInvoice} className="flex items-center gap-1">

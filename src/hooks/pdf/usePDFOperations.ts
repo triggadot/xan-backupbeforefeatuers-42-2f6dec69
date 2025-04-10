@@ -92,12 +92,12 @@ export const usePDFOperations = () => {
   };
 
   /**
-   * Request server-side batch generation of PDFs using the edge function
-   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * Request server-side batch generation of PDFs using the new pdf-backend edge function
+   * @param documentType The type of document (invoice, purchaseOrder, estimate)
    * @param documentId The document ID to generate the PDF from
    * @returns Promise resolving to a boolean indicating success
    */
-  const batchGeneratePDF = async (
+  const batchGeneratePDFNew = async (
     documentType: DocumentType,
     documentId: string
   ): Promise<boolean> => {
@@ -109,40 +109,109 @@ export const usePDFOperations = () => {
     setIsServerProcessing(true);
 
     try {
-      // Use the batch document type key from our standardized mapping
-      const batchTypeKey = getBatchDocumentTypeKey(documentType);
+      // Convert our frontend document type to the backend document type
+      const backendDocumentType = normalizeDocumentType(documentType);
 
-      // Call the batch-generate-and-store-pdfs edge function
-      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
+      // Call the new pdf-backend edge function with forceRegenerate flag
+      const { data, error } = await supabase.functions.invoke('pdf-backend', {
         body: {
-          items: [
-            {
-              id: documentId,
-              type: batchTypeKey
-            }
-          ]
+          action: 'generate',
+          documentType: backendDocumentType,
+          documentId: documentId,
+          forceRegenerate: true, // Always regenerate the PDF even if it exists
+          overwriteExisting: true // Always overwrite existing files in storage
         }
       });
 
       if (error) {
-        console.error('Error calling batch PDF generation:', error);
-        throw new Error(`Failed to request batch generation: ${error.message}`);
+        console.error('Error calling pdf-backend generation:', error);
+        throw new Error(`Failed to generate PDF: ${error.message}`);
       }
 
-      console.log('Batch PDF generation response:', data);
+      if (data?.error) {
+        console.error('PDF backend returned error:', data.error);
+        throw new Error(`PDF generation failed: ${data.error}`);
+      }
+
+      console.log('PDF generation response:', data);
       return true;
     } catch (error) {
-      console.error(`Error requesting batch ${documentType} PDF generation:`, 
+      console.error(`Error requesting PDF generation for ${documentType}:`, 
         error instanceof Error 
           ? { message: error.message, stack: error.stack } 
           : String(error)
       );
       toast({
-        title: 'Batch PDF Request Failed',
+        title: 'PDF Generation Failed',
         description: error instanceof Error ? error.message : 'There was an error requesting PDF generation.',
         variant: 'destructive',
       });
       return false;
+    } finally {
+      setIsServerProcessing(false);
+    }
+  };
+
+  /**
+   * Request batch generation of PDFs for multiple documents using the pdf-backend function
+   * @param documentType The type of documents (invoice, purchaseOrder, estimate)
+   * @param documentIds Array of document IDs to generate PDFs for
+   * @returns Promise resolving to an object with success and failure counts
+   */
+  const batchGenerateMultiplePDFs = async (
+    documentType: DocumentType,
+    documentIds: string[]
+  ): Promise<{ success: number; failed: number }> => {
+    if (!documentIds.length) {
+      console.error('No document IDs provided for batch PDF generation');
+      return { success: 0, failed: 0 };
+    }
+
+    setIsServerProcessing(true);
+
+    try {
+      // Convert our frontend document type to the backend document type
+      const backendDocumentType = normalizeDocumentType(documentType);
+
+      // Call the new pdf-backend edge function with batch processing
+      // and force regeneration/overwrite settings
+      const { data, error } = await supabase.functions.invoke('pdf-backend', {
+        body: {
+          action: 'generate-batch',
+          documentType: backendDocumentType,
+          documentIds: documentIds,
+          forceRegenerate: true, // Always regenerate PDFs even if they exist
+          overwriteExisting: true // Always overwrite existing files in storage
+        }
+      });
+
+      if (error) {
+        console.error('Error calling pdf-backend batch generation:', error);
+        throw new Error(`Failed to batch generate PDFs: ${error.message}`);
+      }
+
+      if (data?.error) {
+        console.error('PDF backend returned error:', data.error);
+        throw new Error(`Batch PDF generation failed: ${data.error}`);
+      }
+
+      console.log('Batch PDF generation response:', data);
+      return { 
+        success: data?.success || 0, 
+        failed: data?.failed || 0 
+      };
+    } catch (error) {
+      console.error(`Error requesting batch PDF generation for ${documentType}:`, 
+        error instanceof Error 
+          ? { message: error.message, stack: error.stack } 
+          : String(error)
+      );
+      toast({
+        title: 'Batch PDF Generation Failed',
+        description: error instanceof Error ? error.message : 'There was an error requesting batch PDF generation.',
+        variant: 'destructive',
+      });
+      return { success: 0, failed: documentIds.length };
     } finally {
       setIsServerProcessing(false);
     }
@@ -203,7 +272,13 @@ export const usePDFOperations = () => {
     }
   };
 
-  // Store PDF in Supabase storage
+  /**
+   * Store PDF in Supabase storage
+   * @param documentType Type of document (invoice, purchaseOrder, estimate, product)
+   * @param documentId The ID of the document
+   * @param pdfBlob The PDF file as a Blob
+   * @returns URL of the stored PDF or null if storage fails
+   */
   const storePDF = async (
     documentType: DocumentType,
     documentId: string,
@@ -255,9 +330,69 @@ export const usePDFOperations = () => {
     }
   };
 
+  /**
+   * Request server-side batch generation of PDFs using the legacy edge function
+   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * @param documentId The document ID to generate the PDF from
+   * @returns Promise resolving to a boolean indicating success
+   * @deprecated Use batchGeneratePDFNew instead which utilizes the new pdf-backend function
+   */
+  const batchGeneratePDF = async (
+    documentType: DocumentType,
+    documentId: string
+  ): Promise<boolean> => {
+    if (!documentId) {
+      console.error('No document ID provided for batch PDF generation');
+      return false;
+    }
+
+    setIsServerProcessing(true);
+
+    try {
+      // Use the batch document type key from our standardized mapping
+      const batchTypeKey = getBatchDocumentTypeKey(documentType);
+
+      // Call the batch-generate-and-store-pdfs edge function
+      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
+        body: {
+          items: [
+            {
+              id: documentId,
+              type: batchTypeKey
+            }
+          ]
+        }
+      });
+
+      if (error) {
+        console.error('Error calling batch PDF generation:', error);
+        throw new Error(`Failed to request batch generation: ${error.message}`);
+      }
+
+      console.log('Batch PDF generation response:', data);
+      return true;
+    } catch (error) {
+      console.error(`Error requesting batch ${documentType} PDF generation:`, 
+        error instanceof Error 
+          ? { message: error.message, stack: error.stack } 
+          : String(error)
+      );
+      toast({
+        title: 'Batch PDF Request Failed',
+        description: error instanceof Error ? error.message : 'There was an error requesting PDF generation.',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsServerProcessing(false);
+    }
+  };
+
   return {
     generatePDF,
     batchGeneratePDF,
+    batchGeneratePDFNew,
+    batchGenerateMultiplePDFs,
     downloadPDF,
     storePDF,
     isGenerating,

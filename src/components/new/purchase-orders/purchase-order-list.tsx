@@ -29,7 +29,7 @@ const PurchaseOrderList = ({
 }: PurchaseOrderListProps) => {
   const { toast } = useToast();
   const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<string[]>([]);
-  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
   const isBatchProcessing = isPdfLoading;
 
   const handleSelectAll = (checked: boolean) => {
@@ -82,6 +82,12 @@ const PurchaseOrderList = ({
     });
   };
 
+  /**
+   * Handles batch generation of PDF documents for selected purchase orders using
+   * the new pdf-backend edge function.
+   * 
+   * Processes all selected purchase orders in a single batch request for better efficiency.
+   */
   const handleBatchGeneratePdfs = async () => {
     if (selectedPurchaseOrders.length === 0 || isBatchProcessing) {
       return;
@@ -94,18 +100,11 @@ const PurchaseOrderList = ({
     });
 
     try {
-      // Process each purchase order using the batchGeneratePDF function
-      let successCount = 0;
-      let failureCount = 0;
-      
-      for (const purchaseOrderId of selectedPurchaseOrders) {
-        const success = await batchGeneratePDF(DocumentType.PURCHASE_ORDER, purchaseOrderId);
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      }
+      // Process all purchase orders in a single batch request using the new pdf-backend function
+      const { success: successCount, failed: failureCount } = await batchGenerateMultiplePDFs(
+        DocumentType.PURCHASE_ORDER, 
+        selectedPurchaseOrders
+      );
 
       processingToast.dismiss();
 

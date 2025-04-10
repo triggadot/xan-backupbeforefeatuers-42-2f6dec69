@@ -334,60 +334,77 @@ export async function generateAndStoreEstimatePDF(
       resolve(blob);
     });
     
-    const filename = generateFilename(
-      'EST',
-      estimate.estimate_uid?.replace(/^EST#/, '') || estimate.id,
-      estimate.estimate_date || new Date()
-    );
+    // Use the Supabase-generated estimate_uid directly for the filename
+    const filename = estimate.estimate_uid 
+      ? `${estimate.estimate_uid}.pdf`
+      : generateFilename('EST', estimate.id);
     
-    if (download) {
-      try {
-        saveAs(pdfBlob, filename);
-        console.log(`PDF downloaded successfully: ${filename}`);
-
-        const storePdfInBackground = async () => {
-          try {
-            const reader = new FileReader();
-            reader.readAsDataURL(pdfBlob);
-            const base64Data = await new Promise<string>((resolve, reject) => {
-              reader.onloadend = () => {
-                const base64String = (reader.result as string)?.split(',')[1];
-                if (base64String) {
-                  resolve(base64String);
-                } else {
-                  reject(new Error('Failed to read blob as base64'));
-                }
-              };
-              reader.onerror = (error) => reject(error);
-            });
-
-            console.log(`Invoking store-pdf for estimate ID: ${estimate.id}`);
-            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
-              body: JSON.stringify({
-                id: estimate.id,
-                type: 'estimate',
-                pdfData: base64Data,
-                fileName: filename,
-              }),
-            });
-
-            if (functionError) {
-              console.error(`Error calling store-pdf function for estimate ${estimate.id}:`, functionError);
-            } else {
-              console.log(`Successfully triggered background storage for estimate ${estimate.id}`);
-            }
-          } catch (bgError) {
-            console.error(`Error during background PDF storage for estimate ${estimate.id}:`, bgError);
+    // First store the PDF in Supabase regardless of download option
+    try {
+      // Convert Blob to Base64
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = (reader.result as string)?.split(',')[1];
+          if (base64String) {
+            resolve(base64String);
+          } else {
+            reject(new Error('Failed to read blob as base64'));
           }
         };
+        reader.onerror = (error) => reject(error);
+      });
 
-        storePdfInBackground();
-      } catch (downloadError) {
-        console.error('Error handling estimate PDF download:', 
-          downloadError instanceof Error 
-            ? JSON.stringify({ message: downloadError.message, stack: downloadError.stack }, null, 2) 
-            : String(downloadError)
-        );
+      // Invoke the correct Edge Function
+      console.log(`Invoking store-pdf for estimate ID: ${estimate.id}`);
+      const { data: storageData, error: functionError } = await supabase.functions.invoke('store-pdf', {
+        body: JSON.stringify({
+          documentType: 'estimate',
+          documentId: estimate.id,
+          pdfBase64: base64Data,
+          fileName: filename,
+        }),
+      });
+
+      if (functionError) {
+        console.error(`Error calling store-pdf function for estimate ${estimate.id}:`, functionError);
+      } else {
+        console.log(`Successfully stored PDF for estimate ${estimate.id}`, storageData);
+        
+        // Update database with PDF URL if available from storage function
+        if (storageData?.url) {
+          const { error: updateError } = await supabase
+            .from('gl_estimates')
+            .update({ supabase_pdf_url: storageData.url })
+            .eq('id', estimate.id);
+            
+          if (updateError) {
+            console.error(`Error updating estimate with PDF URL: ${updateError.message}`);
+          }
+        }
+      }
+      
+      // Handle download separately after attempting storage
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error:', dlError);
+        }
+      }
+    } catch (storageError) {
+      console.error(`Error during PDF storage for estimate ${estimate.id}:`, storageError);
+      
+      // If storage fails but download was requested, still try to download
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully despite storage error: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error after storage failure:', dlError);
+        }
       }
     }
     

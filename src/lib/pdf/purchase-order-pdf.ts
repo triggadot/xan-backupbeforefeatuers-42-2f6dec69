@@ -497,69 +497,80 @@ export async function generateAndStorePurchaseOrderPDF(
       resolve(blob);
     });
     
-    // Generate filename
-    const filename = generateFilename(
-      'PO',
-      purchaseOrder.purchase_order_uid?.replace(/^PO#/, '') || purchaseOrder.id
-    );
+    // Use the Supabase-generated purchase_order_uid directly for the filename
+    const filename = purchaseOrder.purchase_order_uid 
+      ? `${purchaseOrder.purchase_order_uid}.pdf`
+      : generateFilename('PO', purchaseOrder.id);
     
-    // If download is requested, trigger download directly
-    if (download) {
-      try {
-        saveAs(pdfBlob, filename);
-        console.log(`PDF downloaded successfully: ${filename}`);
-
-        // --- Start Background Storage ---
-        // Asynchronously store the PDF in Supabase after download starts
-        const storePdfInBackground = async () => {
-          try {
-            // Convert Blob to Base64
-            const reader = new FileReader();
-            reader.readAsDataURL(pdfBlob);
-            const base64Data = await new Promise<string>((resolve, reject) => {
-              reader.onloadend = () => {
-                const base64String = (reader.result as string)?.split(',')[1];
-                if (base64String) {
-                  resolve(base64String);
-                } else {
-                  reject(new Error('Failed to read blob as base64'));
-                }
-              };
-              reader.onerror = (error) => reject(error);
-            });
-
-            // Invoke the Edge Function
-            console.log(`Invoking generate-pdf for purchase order ID: ${purchaseOrder.id}`);
-            const { error: functionError } = await supabase.functions.invoke('generate-pdf', {
-              body: {
-                id: purchaseOrder.id,
-                type: 'purchaseorder'
-              },
-            });
-
-            if (functionError) {
-              console.error(`Error calling generate-pdf function for PO ${purchaseOrder.id}:`, functionError);
-            } else {
-              console.log(`Successfully triggered background storage for PO ${purchaseOrder.id}`);
-            }
-          } catch (bgError) {
-            console.error(`Error during background PDF storage for PO ${purchaseOrder.id}:`, bgError);
+    // First store the PDF in Supabase regardless of download option
+    try {
+      // Convert Blob to Base64
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = (reader.result as string)?.split(',')[1];
+          if (base64String) {
+            resolve(base64String);
+          } else {
+            reject(new Error('Failed to read blob as base64'));
           }
         };
+        reader.onerror = (error) => reject(error);
+      });
 
-        storePdfInBackground(); // Fire and forget
-        // --- End Background Storage ---
+      // Invoke the correct Edge Function
+      console.log(`Invoking store-pdf for purchase order ID: ${purchaseOrder.id}`);
+      const { data: storageData, error: functionError } = await supabase.functions.invoke('store-pdf', {
+        body: JSON.stringify({
+          documentType: 'purchase-order',
+          documentId: purchaseOrder.id,
+          pdfBase64: base64Data,
+          fileName: filename,
+        }),
+      });
 
-      } catch (downloadError) {
-        console.error('Error handling purchaseOrder PDF download:', 
-          downloadError instanceof Error 
-            ? JSON.stringify({ message: downloadError.message, stack: downloadError.stack }, null, 2) 
-            : String(downloadError)
-        );
-        // Continue even if download fails
+      if (functionError) {
+        console.error(`Error calling store-pdf function for purchase order ${purchaseOrder.id}:`, functionError);
+      } else {
+        console.log(`Successfully stored PDF for purchase order ${purchaseOrder.id}`, storageData);
+        
+        // Update database with PDF URL if available from storage function
+        if (storageData?.url) {
+          const { error: updateError } = await supabase
+            .from('gl_purchase_orders')
+            .update({ supabase_pdf_url: storageData.url })
+            .eq('id', purchaseOrder.id);
+            
+          if (updateError) {
+            console.error(`Error updating purchase order with PDF URL: ${updateError.message}`);
+          }
+        }
+      }
+      
+      // Handle download separately after attempting storage
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error:', dlError);
+        }
+      }
+    } catch (storageError) {
+      console.error(`Error during PDF storage for purchase order ${purchaseOrder.id}:`, storageError);
+      
+      // If storage fails but download was requested, still try to download
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully despite storage error: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error after storage failure:', dlError);
+        }
       }
     }
-    
+
     // Create a temporary URL for the blob
     const blobUrl = URL.createObjectURL(pdfBlob);
     

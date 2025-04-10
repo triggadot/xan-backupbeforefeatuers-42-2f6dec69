@@ -5,13 +5,14 @@
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **UI Component Libraries**:
-  - Shadcn UI for base components
-  - Preline UI for business components
+  - Shadcn UI for base and business components
   - Tremor for dashboards and data visualization
 - **State Management**: React Context and Hooks
 - **Data Fetching**: TanStack Query (react-query)
 - **Form Handling**: React Hook Form with Zod validation
-- **PDF Handling**: jsPDF, jszip, file-saver
+- **PDF Handling for Frontend**: jsPDF, jszip, file-saver
+- **PDF Handling for Backend**: pdf-lib; USING EDGE FUNCTIONS
+
 
 ## Backend Stack
 - **Database**: Supabase PostgreSQL (Project ID: swrfsullhirscyxqneay)

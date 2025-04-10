@@ -161,10 +161,11 @@ async function handleSingleDocument(supabaseAdmin, payload) {
   }
   
   // Map table to document type for the generate-pdf function
+  // Using 'purchase-order' with hyphen for consistency across the application
   const tableToTypeMap = {
     'gl_invoices': 'invoice',
     'gl_estimates': 'estimate',
-    'gl_purchase_orders': 'purchaseorder'
+    'gl_purchase_orders': 'purchase-order'
   };
   
   const documentType = tableToTypeMap[payload.table];

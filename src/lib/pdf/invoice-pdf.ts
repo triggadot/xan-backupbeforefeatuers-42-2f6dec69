@@ -259,53 +259,75 @@ export async function generateAndStoreInvoicePDF(
     const pdfDoc = generateInvoicePDF(invoice);
     const pdfBlob = pdfDoc.output('blob');
     
+    // Use the Supabase-generated invoice_uid directly for the filename
     const filename = invoice.invoice_uid 
-      ? `${invoice.invoice_uid}-${formatShortDate(invoice.invoice_date || new Date(), 'YYYYMMDD')}.pdf`
-      : generateFilename('INV', invoice.id || id, invoice.invoice_date || new Date());
+      ? `${invoice.invoice_uid}.pdf`
+      : generateFilename('INV', invoice.id || id);
     
-    if (download) {
-      try {
-        saveAs(pdfBlob, filename);
-
-        const storePdfInBackground = async () => {
-          try {
-            const reader = new FileReader();
-            reader.readAsDataURL(pdfBlob);
-            const base64Data = await new Promise<string>((resolve, reject) => {
-              reader.onloadend = () => {
-                const base64String = (reader.result as string)?.split(',')[1];
-                if (base64String) {
-                  resolve(base64String);
-                } else {
-                  reject(new Error('Failed to read blob as base64'));
-                }
-              };
-              reader.onerror = (error) => reject(error);
-            });
-
-            console.log(`Invoking store-pdf for invoice ID: ${invoice.id}`);
-            const { error: functionError } = await supabase.functions.invoke('store-pdf', {
-              body: JSON.stringify({
-                id: invoice.id,
-                type: 'invoice',
-                pdfData: base64Data,
-                fileName: filename,
-              }),
-            });
-
-            if (functionError) {
-              console.error(`Error calling store-pdf function for invoice ${invoice.id}:`, functionError);
-            } else {
-              console.log(`Successfully triggered background storage for invoice ${invoice.id}`);
-            }
-          } catch (bgError) {
-            console.error(`Error during background PDF storage for invoice ${invoice.id}:`, bgError);
+    // First store the PDF in Supabase regardless of download option
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64String = (reader.result as string)?.split(',')[1];
+          if (base64String) {
+            resolve(base64String);
+          } else {
+            reject(new Error('Failed to read blob as base64'));
           }
         };
+        reader.onerror = (error) => reject(error);
+      });
 
-        storePdfInBackground();
-      } catch (error) {
-        console.error('Download error:', error);
+      console.log(`Invoking store-pdf for invoice ID: ${invoice.id}`);
+      const { data: storageData, error: functionError } = await supabase.functions.invoke('store-pdf', {
+        body: JSON.stringify({
+          documentType: 'invoice',
+          documentId: invoice.id,
+          pdfBase64: base64Data,
+          fileName: filename,
+        }),
+      });
+
+      if (functionError) {
+        console.error(`Error calling store-pdf function for invoice ${invoice.id}:`, functionError);
+      } else {
+        console.log(`Successfully stored PDF for invoice ${invoice.id}`, storageData);
+        
+        // Update database with PDF URL if available from storage function
+        if (storageData?.url) {
+          const { error: updateError } = await supabase
+            .from('gl_invoices')
+            .update({ supabase_pdf_url: storageData.url })
+            .eq('id', invoice.id);
+            
+          if (updateError) {
+            console.error(`Error updating invoice with PDF URL: ${updateError.message}`);
+          }
+        }
+      }
+      
+      // Handle download separately after attempting storage
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error:', dlError);
+        }
+      }
+    } catch (storageError) {
+      console.error(`Error during PDF storage for invoice ${invoice.id}:`, storageError);
+      
+      // If storage fails but download was requested, still try to download
+      if (download) {
+        try {
+          saveAs(pdfBlob, filename);
+          console.log(`PDF downloaded successfully despite storage error: ${filename}`);
+        } catch (dlError) {
+          console.error('Download error after storage failure:', dlError);
+        }
       }
     }
     

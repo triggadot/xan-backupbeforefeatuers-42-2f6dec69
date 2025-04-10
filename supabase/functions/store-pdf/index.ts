@@ -26,8 +26,11 @@ serve(async (req: Request) => {
     const { documentType, documentId, pdfBase64, fileName } = await req.json();
     
     if (!documentType || !documentId || !pdfBase64) {
-      throw new Error('Missing required parameters');
+      throw new Error('Missing required parameters: documentType, documentId, and pdfBase64 are required');
     }
+    
+    console.log(`Processing PDF storage: type=${documentType}, id=${documentId}, filename=${fileName || 'not provided'}`);
+    
     
     // Map document type to storage folder name
     const folderMap: Record<string, string> = {
@@ -39,12 +42,79 @@ serve(async (req: Request) => {
     
     const folder = folderMap[documentType] || 'misc';
     
-    // Generate safe file name if not provided
-    const safeName = fileName || 
-      `${documentType}_${documentId}_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`;
+    // Use the provided fileName or fetch the document UID and use that as the filename
+    let safeName = fileName;
+    
+    if (!safeName) {
+      // If no fileName provided, we need to fetch the document to get its UID
+      console.log(`No filename provided, will try to get document UID for ${documentType} ID ${documentId}`);
+      
+      try {
+        const tableName = folderMap[documentType] ? 
+          `gl_${folderMap[documentType].replace(/-/g, '_')}` : '';
+        
+        if (tableName) {
+          // First try by UUID
+          const { data, error } = await supabase
+            .from(tableName)
+            .select('*')
+            .eq('id', documentId)
+            .maybeSingle();
+          
+          if (data) {
+            // Get the appropriate UID field based on document type
+            const uidField = documentType === 'invoice' ? 'invoice_uid' : 
+                            documentType === 'purchase-order' ? 'purchase_order_uid' : 
+                            documentType === 'estimate' ? 'estimate_uid' : 
+                            '';
+            
+            if (uidField && data[uidField]) {
+              safeName = `${data[uidField]}.pdf`;
+              console.log(`Using document UID as filename: ${safeName}`);
+            }
+          } else {
+            // Try by glide_row_id
+            const { data: glideData, error: glideError } = await supabase
+              .from(tableName)
+              .select('*')
+              .eq('glide_row_id', documentId)
+              .maybeSingle();
+              
+            if (glideData) {
+              // Get the appropriate UID field
+              const uidField = documentType === 'invoice' ? 'invoice_uid' : 
+                              documentType === 'purchase-order' ? 'purchase_order_uid' : 
+                              documentType === 'estimate' ? 'estimate_uid' : 
+                              '';
+              
+              if (uidField && glideData[uidField]) {
+                safeName = `${glideData[uidField]}.pdf`;
+                console.log(`Using document UID as filename: ${safeName}`);
+              }
+            }
+          }
+        }
+      } catch (lookupError) {
+        console.warn(`Error looking up document UID: ${lookupError.message}`);
+      }
+      
+      // If we still don't have a safeName, fall back to a simple format
+      if (!safeName) {
+        const prefix = documentType === 'invoice' ? 'INV#' :
+                      documentType === 'purchase-order' ? 'PO#' :
+                      documentType === 'estimate' ? 'EST#' :
+                      documentType === 'product' ? 'PROD#' :
+                      'DOC#';
+                      
+        safeName = `${prefix}${documentId}.pdf`;
+        console.log(`Using fallback filename: ${safeName}`);
+      }
+    }
     
     // Decode base64 string to Uint8Array for storage
     const pdfBinary = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+    
+    console.log(`Decoded PDF binary data, size: ${pdfBinary.length} bytes`);
     
     // Store the PDF in the bucket
     const { data, error: uploadError } = await supabase.storage
@@ -91,22 +161,43 @@ serve(async (req: Request) => {
     }
     
     if (tableName) {
-      const { error: updateError } = await supabase
+      // First try to update by UUID id
+      const { data: updateData, error: updateError } = await supabase
         .from(tableName)
         .update({ supabase_pdf_url: publicUrl })
-        .eq('id', documentId);
+        .eq('id', documentId)
+        .select('id');
       
-      if (updateError) {
-        console.error(`Error updating ${tableName}:`, updateError);
-        // We'll continue even if the database update fails, as we still have the PDF
+      // If no rows were updated by id, try updating by glide_row_id
+      if (updateError || !updateData || updateData.length === 0) {
+        console.log(`No records updated using id=${documentId}, trying glide_row_id lookup`);
+        
+        const { data: glideData, error: glideError } = await supabase
+          .from(tableName)
+          .update({ supabase_pdf_url: publicUrl })
+          .eq('glide_row_id', documentId)
+          .select('id, glide_row_id');
+        
+        if (glideError || !glideData || glideData.length === 0) {
+          console.error(`Error updating ${tableName} by glide_row_id:`, glideError || 'No records found');
+          // Continue execution even if both update attempts fail
+        } else {
+          console.log(`Successfully updated ${tableName} using glide_row_id match:`, glideData);
+        }
+      } else {
+        console.log(`Successfully updated ${tableName} using id match:`, updateData);
       }
     }
     
-    // Return success response with URL
+    // Return success response with URL and additional metadata
     return new Response(
       JSON.stringify({
         success: true,
         url: publicUrl,
+        documentType,
+        documentId,
+        fileName: safeName,
+        storagePath: `${folder}/${safeName}`,
         message: `PDF successfully stored for ${documentType} ${documentId}`
       }),
       {

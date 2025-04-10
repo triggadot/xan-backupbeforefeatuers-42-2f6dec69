@@ -42,7 +42,7 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
   // Calculate total quantity
   const totalQuantity = estimate.estimateLines?.reduce((total, line) => total + (Number(line.qty_sold) || 0), 0) || 0;
 
-  // PDF operations
+  // PDF operations - always regenerate when viewing/downloading to ensure latest data
   const { generatePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
   const [pdfUrl, setPdfUrl] = useState<string | null>(estimate.supabase_pdf_url || null);
 
@@ -202,6 +202,8 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
                 variant="outline"
                 size="default"
                 showLabels={true}
+                forceRegenerate={true}
+                overwriteExisting={true}
                 onPDFGenerated={(url) => setPdfUrl(url)}
               />
             </div>

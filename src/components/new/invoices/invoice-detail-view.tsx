@@ -53,6 +53,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   const itemCount = invoice.lines?.length || 0;
 
   // PDF operations
+  // Initialize with the current PDF URL, but we'll always regenerate when viewing/downloading
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
   const {
     generatePDF,
@@ -101,7 +102,16 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
           </div>
           
           <div className="flex space-x-2">
-            <PDFActions documentType="invoice" document={invoice} variant="outline" size="sm" showLabels={true} onPDFGenerated={url => setPdfUrl(url)} />
+            <PDFActions 
+              documentType="invoice" 
+              document={invoice} 
+              variant="outline" 
+              size="sm" 
+              showLabels={true} 
+              forceRegenerate={true} 
+              overwriteExisting={true} 
+              onPDFGenerated={url => setPdfUrl(url)} 
+            />
           </div>
         </div>
 

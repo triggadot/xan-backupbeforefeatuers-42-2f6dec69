@@ -590,21 +590,30 @@ serve(async (req: Request) => {
       console.log(`Generated PDF for ${type} ${id}`);
 
       // 3. Upload PDF to Supabase Storage with clean UID-based naming
-      let fileName = ''; // Default fallback
+      let fileName = '';
       
       // Use exactly the document UID without prefixing with document type
       if (type === 'invoice' && documentData.invoice_uid) {
         fileName = `${documentData.invoice_uid}.pdf`;
+        console.log(`Using invoice_uid for filename: ${fileName}`);
       } 
       else if (type === 'estimate' && documentData.estimate_uid) {
         fileName = `${documentData.estimate_uid}.pdf`;
+        console.log(`Using estimate_uid for filename: ${fileName}`);
       }
-      else if (type === 'purchaseorder' && documentData.purchase_order_uid) {
+      else if ((type === 'purchase-order' || type === 'purchaseOrder') && documentData.purchase_order_uid) {
         fileName = `${documentData.purchase_order_uid}.pdf`;
+        console.log(`Using purchase_order_uid for filename: ${fileName}`);
       }
       else {
-        // Fallback if no UID is found
-        fileName = `${id}.pdf`;
+        // If no document UID found, use a consistent fallback format matching other implementations
+        const prefix = type === 'invoice' ? 'INV#' :
+                      (type === 'purchase-order' || type === 'purchaseOrder') ? 'PO#' :
+                      type === 'estimate' ? (documentData.is_a_sample ? 'SMP#' : 'EST#') :
+                      'DOC#';
+                      
+        fileName = `${prefix}${id}.pdf`;
+        console.log(`Using fallback filename: ${fileName}`);
       }
       
       // Store files in type-specific folders

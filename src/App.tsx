@@ -24,6 +24,10 @@ import NewInvoices from '@/pages/new/Invoices';
 import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
 import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
 import ProductsPage from '@/pages/new/Products';
+import ExpensesPage from '@/pages/expenses';
+import ExpenseDetailPage from '@/pages/expenses/[id]';
+import CreateExpensePage from '@/pages/expenses/new';
+import EditExpensePage from '@/pages/expenses/[id]/edit';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (
@@ -190,6 +194,39 @@ function App() {
             element={
               <ProtectedRoute>
                 <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Expense Routes */}
+          <Route 
+            path="expenses" 
+            element={
+              <ProtectedRoute>
+                <ExpensesPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="expenses/new" 
+            element={
+              <ProtectedRoute>
+                <CreateExpensePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="expenses/:id" 
+            element={
+              <ProtectedRoute>
+                <ExpenseDetailPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="expenses/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <EditExpensePage />
               </ProtectedRoute>
             } 
           />

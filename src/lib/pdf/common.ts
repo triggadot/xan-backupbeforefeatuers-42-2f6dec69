@@ -118,13 +118,26 @@ export function addAccountDetails(doc: any, title: string, accountName: string, 
  * @param id Document ID or UID (e.g., "12345" or "INV#BNC03125")
  * @returns Generated filename using just the document UID
  */
-export function generateFilename(prefix: string, id: string, date?: Date | string): string {
-  // If ID already has a prefix like INV#, EST#, or PO#, use it as is
-  if (/^(INV|EST|PO)#/i.test(id)) {
+/**
+ * Legacy filename generator for PDF documents
+ * 
+ * This function is maintained for backward compatibility only.
+ * New code should directly use document UIDs (invoice_uid, purchase_order_uid, estimate_uid)
+ * in the format `${document.document_uid}.pdf`
+ * 
+ * @param prefix - Document type prefix (INV, EST, PO, etc.)
+ * @param id - Document ID (uuid or other identifier)
+ * @param date - Unused parameter kept for backward compatibility
+ * @param accountId - Unused parameter kept for backward compatibility
+ * @returns Simple filename with prefix and ID
+ */
+export function generateFilename(prefix: string, id: string, date?: Date | string, accountId?: string): string {
+  // If the ID already includes a prefix, use it as is
+  if (/^(INV|EST|PO|SMP)#.+/i.test(id)) {
     return `${id}.pdf`;
   }
   
-  // Otherwise use the provided prefix and ID
+  // Simple format: prefix#id.pdf
   return `${prefix}#${id}.pdf`;
 }
 

@@ -43,39 +43,37 @@ export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
   // Loading state combines all possible loading states
   const loading = isLoading || pdfLoading;
 
-  // Handle PDF download
+  /**
+   * Handles PDF download by always generating a fresh PDF to ensure data is current
+   * Uses the pdf-backend edge function to generate and download the PDF
+   */
   const handleDownloadPDF = async () => {
     if (!document) return;
     try {
       setIsLoading(true);
       toast({
         title: 'PDF Download',
-        description: 'Preparing your PDF...'
+        description: 'Generating and preparing your PDF...'
       });
 
-      // Use existing PDF URL or generate a new one
-      let url = document.supabase_pdf_url;
-      if (!url) {
-        // Generate new PDF if none exists
-        console.log(`No existing PDF found, generating new ${documentType} PDF`);
-        const result = await generatePDF(documentType, document.id || document.glide_row_id, true);
-        if (result.success && result.url) {
-          url = result.url;
-          if (onPDFGenerated) {
-            onPDFGenerated(url);
-          }
-        } else {
-          throw new Error(result.error || 'Failed to generate PDF');
+      // Always generate a fresh PDF to ensure it reflects current data
+      console.log(`Generating fresh ${documentType} PDF for download`);
+      const documentId = document.id || document.glide_row_id;
+      const result = await generatePDF(documentType, documentId, true);
+      
+      if (result.success && result.url) {
+        // Call the callback with the new PDF URL if provided
+        if (onPDFGenerated) {
+          onPDFGenerated(result.url);
         }
+        
+        toast({
+          title: 'PDF Downloaded',
+          description: 'Your PDF has been downloaded successfully.'
+        });
       } else {
-        console.log(`Using existing ${documentType} PDF URL:`, url);
-        // Download the existing PDF
-        await downloadPDF(url, getFileName());
+        throw new Error(result.error || 'Failed to generate PDF');
       }
-      toast({
-        title: 'PDF Downloaded',
-        description: 'Your PDF has been downloaded successfully.'
-      });
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({
@@ -111,6 +109,11 @@ export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
   };
 
   // Handle PDF generation
+  /**
+   * Handles PDF generation using the new PDF backend
+   * This function generates a new PDF document through the pdf-backend edge function
+   * and updates the document's supabase_pdf_url field
+   */
   const handleGeneratePDF = async () => {
     if (!document) return;
     try {
@@ -119,14 +122,20 @@ export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
         title: 'Generating PDF',
         description: 'Creating your PDF...'
       });
-      const result = await generatePDF(documentType, document.id || document.glide_row_id);
+      
+      // Use document.id as the primary identifier, falling back to glide_row_id if needed
+      const documentId = document.id || document.glide_row_id;
+      const result = await generatePDF(documentType, documentId);
+      
       if (result.success && result.url) {
+        // Call the callback with the new PDF URL if provided
         if (onPDFGenerated) {
           onPDFGenerated(result.url);
         }
+        
         toast({
           title: 'PDF Generated',
-          description: 'Your PDF has been successfully created.'
+          description: 'Your PDF has been successfully created and stored.'
         });
       } else {
         throw new Error(result.error || 'Failed to generate PDF');
@@ -143,31 +152,36 @@ export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
     }
   };
 
-  // Handle PDF view
+  /**
+   * Handles PDF viewing by always generating a fresh PDF to ensure data is current
+   * Uses the pdf-backend edge function to generate the PDF for preview
+   */
   const handleViewPDF = async () => {
     if (!document) return;
     try {
       setIsLoading(true);
+      toast({
+        title: 'Preparing PDF Preview',
+        description: 'Generating fresh PDF with current data...'
+      });
 
-      // Use existing PDF URL or generate a new one
-      let url = document.supabase_pdf_url;
-      if (!url) {
-        // Generate new PDF if none exists
-        console.log(`No existing PDF found, generating new ${documentType} PDF for preview`);
-        const result = await generatePDF(documentType, document.id || document.glide_row_id);
-        if (result.success && result.url) {
-          url = result.url;
-          if (onPDFGenerated) {
-            onPDFGenerated(url);
-          }
-        } else {
-          throw new Error(result.error || 'Failed to generate PDF');
+      // Always generate a fresh PDF to ensure it reflects current data
+      console.log(`Generating fresh ${documentType} PDF for preview`);
+      const documentId = document.id || document.glide_row_id;
+      const result = await generatePDF(documentType, documentId);
+      
+      if (result.success && result.url) {
+        // Call the callback with the new PDF URL if provided
+        if (onPDFGenerated) {
+          onPDFGenerated(result.url);
         }
+        
+        // Open the preview
+        setPreviewUrl(result.url);
+        setIsPreviewOpen(true);
+      } else {
+        throw new Error(result.error || 'Failed to generate PDF');
       }
-
-      // Open the preview
-      setPreviewUrl(url);
-      setIsPreviewOpen(true);
     } catch (error) {
       console.error('Error viewing PDF:', error);
       toast({

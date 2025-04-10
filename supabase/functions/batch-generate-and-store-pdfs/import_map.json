@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.5.31",
+    "pdf-lib": "https://cdn.skypack.dev/pdf-lib@1.17.1?dts",
+    "std/http/server": "https://deno.land/std@0.177.0/http/server.ts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}

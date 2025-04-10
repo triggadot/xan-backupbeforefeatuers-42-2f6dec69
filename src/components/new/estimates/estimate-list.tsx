@@ -26,7 +26,7 @@ export const EstimateList: React.FC<EstimateListProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedEstimates, setSelectedEstimates] = useState<string[]>([]);
-  const { batchGeneratePDF, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
   const isBatchProcessing = isPdfLoading;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +80,13 @@ export const EstimateList: React.FC<EstimateListProps> = ({
     // Implement estimate sharing functionality
   };
 
-  // --- Batch PDF Generation Handler ---
+  /**
+   * Handles batch generation of PDF documents for selected estimates using
+   * the new pdf-backend edge function.
+   * 
+   * Processes all selected estimates in a single batch request for better efficiency
+   * and updates the supabase_pdf_url field in the database.
+   */
   const handleBatchGeneratePdfs = async () => {
     if (selectedEstimates.length === 0 || isBatchProcessing) {
       return;
@@ -93,18 +99,11 @@ export const EstimateList: React.FC<EstimateListProps> = ({
     });
 
     try {
-      // Process each estimate using the batchGeneratePDF function
-      let successCount = 0;
-      let failureCount = 0;
-      
-      for (const estimateId of selectedEstimates) {
-        const success = await batchGeneratePDF(DocumentType.ESTIMATE, estimateId);
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      }
+      // Process all estimates in a single batch request using the new pdf-backend function
+      const { success: successCount, failed: failureCount } = await batchGenerateMultiplePDFs(
+        DocumentType.ESTIMATE, 
+        selectedEstimates
+      );
 
       processingToast.dismiss();
 
