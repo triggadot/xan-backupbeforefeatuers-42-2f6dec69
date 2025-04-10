@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import type { 
   Tables, 
@@ -231,6 +232,67 @@ export async function fetchPurchaseOrderProducts(
   }
 
   return products || [];
+}
+
+/**
+ * Fetches vendor payments for a purchase order
+ * @param purchaseOrderGlideId The glide_row_id of the purchase order
+ * @returns Array of vendor payments
+ */
+export async function fetchPurchaseOrderPayments(
+  purchaseOrderGlideId: string
+): Promise<Tables['gl_vendor_payments'][]> {
+  const { data: payments, error } = await supabase
+    .from('gl_vendor_payments')
+    .select('*')
+    .eq('rowid_purchase_orders', purchaseOrderGlideId);
+
+  if (error) {
+    console.error('Error fetching purchase order payments:', error);
+    throw error;
+  }
+
+  return payments || [];
+}
+
+/**
+ * Fetches complete purchase order data with all relationships
+ * @param purchaseOrderGlideId The glide_row_id of the purchase order
+ * @returns Complete purchase order data with vendor, products, and payments
+ */
+export async function fetchCompletePurchaseOrder(purchaseOrderGlideId: string) {
+  try {
+    // Get the purchase order
+    const { data: purchaseOrder, error: poError } = await supabase
+      .from('gl_purchase_orders')
+      .select('*')
+      .eq('glide_row_id', purchaseOrderGlideId)
+      .single();
+
+    if (poError) throw poError;
+    if (!purchaseOrder) return null;
+
+    // Get vendor account
+    const account = purchaseOrder.rowid_accounts 
+      ? await fetchAccountByGlideId(purchaseOrder.rowid_accounts)
+      : null;
+
+    // Get products for this purchase order
+    const products = await fetchPurchaseOrderProducts(purchaseOrderGlideId);
+
+    // Get payments for this purchase order
+    const payments = await fetchPurchaseOrderPayments(purchaseOrderGlideId);
+
+    return {
+      purchaseOrder,
+      account,
+      products,
+      payments
+    };
+  } catch (error) {
+    console.error('Error in fetchCompletePurchaseOrder:', error);
+    throw error;
+  }
 }
 
 /**

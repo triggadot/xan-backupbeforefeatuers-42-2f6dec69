@@ -4,6 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 
+/**
+ * Hook for creating and updating purchase orders in the database
+ */
 export function usePurchaseOrderMutation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -114,9 +117,59 @@ export function usePurchaseOrderMutation() {
     }
   };
 
+  /**
+   * Generate a PDF for a purchase order
+   * 
+   * @param purchaseOrderId - The glide_row_id of the purchase order
+   * @returns The URL of the generated PDF
+   */
+  const generatePDF = async (purchaseOrderId: string): Promise<string> => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // Call the Supabase Edge Function to generate the PDF
+      const response = await fetch(
+        'https://swrfsullhirscyxqneay.supabase.co/functions/v1/generate-purchase-order-pdf',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ poId: purchaseOrderId }),
+        }
+      );
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate PDF');
+      }
+      
+      toast({
+        title: 'PDF Generated',
+        description: 'Purchase order PDF has been generated successfully.'
+      });
+      
+      return result.url;
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to generate PDF',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     createPurchaseOrder,
     updatePurchaseOrder,
+    generatePDF,
     isLoading,
     error
   };
