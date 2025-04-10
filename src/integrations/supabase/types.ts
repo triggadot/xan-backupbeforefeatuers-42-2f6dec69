@@ -912,6 +912,84 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_generation_failures: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_type: string
+          error_message: string | null
+          first_attempt: string
+          id: number
+          last_attempt: string
+          next_attempt: string
+          requires_manual_intervention: boolean
+          resolved: boolean
+          retry_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_type: string
+          error_message?: string | null
+          first_attempt?: string
+          id?: number
+          last_attempt?: string
+          next_attempt?: string
+          requires_manual_intervention?: boolean
+          resolved?: boolean
+          retry_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          error_message?: string | null
+          first_attempt?: string
+          id?: number
+          last_attempt?: string
+          next_attempt?: string
+          requires_manual_intervention?: boolean
+          resolved?: boolean
+          retry_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pdf_generation_logs: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_type: string
+          error_message: string | null
+          id: number
+          success: boolean | null
+          trigger_source: string
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_type: string
+          error_message?: string | null
+          id?: number
+          success?: boolean | null
+          trigger_source: string
+          trigger_type: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          error_message?: string | null
+          id?: number
+          success?: boolean | null
+          trigger_source?: string
+          trigger_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1016,6 +1094,106 @@ export type Database = {
       }
     }
     Views: {
+      balance_sheet_view: {
+        Row: {
+          accounts_payable: number | null
+          accounts_receivable: number | null
+          balance_sheet_date: string | null
+          current_ratio: number | null
+          customer_payments_in_transit: number | null
+          debt_ratio: number | null
+          debt_to_equity_ratio: number | null
+          intangible_assets: number | null
+          inventory_value: number | null
+          long_term_debt: number | null
+          owner_contributions: number | null
+          owner_withdrawals: number | null
+          property_and_equipment: number | null
+          retained_earnings: number | null
+          total_assets: number | null
+          total_current_assets: number | null
+          total_current_liabilities: number | null
+          total_equity: number | null
+          total_liabilities: number | null
+          total_liabilities_and_equity: number | null
+          total_non_current_assets: number | null
+          total_non_current_liabilities: number | null
+          unpaid_purchase_orders: number | null
+          working_capital: number | null
+        }
+        Relationships: []
+      }
+      budget_variance_analysis_view: {
+        Row: {
+          budget_amount: number | null
+          comparison_period_end: string | null
+          comparison_period_start: string | null
+          current_amount: number | null
+          current_period_end: string | null
+          current_period_start: string | null
+          metric: string | null
+          performance: string | null
+          variance_amount: number | null
+          variance_percent: number | null
+        }
+        Relationships: []
+      }
+      cash_flow_statement_view: {
+        Row: {
+          beginning_cash_balance: number | null
+          change_in_accounts_payable: number | null
+          change_in_accounts_receivable: number | null
+          change_in_inventory: number | null
+          customer_payments_received: number | null
+          end_date: string | null
+          ending_cash_balance: number | null
+          expenses_paid: number | null
+          loan_proceeds: number | null
+          loan_repayments: number | null
+          net_cash_from_financing_activities: number | null
+          net_cash_from_investing_activities: number | null
+          net_cash_from_operating_activities: number | null
+          net_change_in_cash: number | null
+          owner_contributions: number | null
+          owner_withdrawals: number | null
+          purchase_of_equipment: number | null
+          sale_of_investments: number | null
+          start_date: string | null
+          vendor_payments_made: number | null
+        }
+        Relationships: []
+      }
+      financial_ratios_view: {
+        Row: {
+          accounts_receivable_turnover: number | null
+          current_accounts_payable: number | null
+          current_accounts_receivable: number | null
+          current_assets: number | null
+          current_inventory: number | null
+          current_liabilities: number | null
+          current_period_cogs: number | null
+          current_period_expenses: number | null
+          current_period_gross_profit: number | null
+          current_period_net_profit: number | null
+          current_period_revenue: number | null
+          current_ratio: number | null
+          gross_profit_growth_pct: number | null
+          gross_profit_margin_pct: number | null
+          inventory_turnover: number | null
+          net_profit_growth_pct: number | null
+          net_profit_margin_pct: number | null
+          period_end_date: string | null
+          period_start_date: string | null
+          previous_period_cogs: number | null
+          previous_period_expenses: number | null
+          previous_period_gross_profit: number | null
+          previous_period_net_profit: number | null
+          previous_period_revenue: number | null
+          quick_ratio: number | null
+          revenue_growth_pct: number | null
+        }
+        Relationships: []
+      }
       gl_mapping_status: {
         Row: {
           app_name: string | null
@@ -1240,6 +1418,23 @@ export type Database = {
         }
         Relationships: []
       }
+      profitability_analysis_view: {
+        Row: {
+          analysis_type: string | null
+          current_receivable_balance: number | null
+          entity_category: string | null
+          entity_id: string | null
+          entity_name: string | null
+          gross_profit: number | null
+          gross_profit_margin_pct: number | null
+          invoice_count: string | null
+          product_count: string | null
+          total_cost: number | null
+          total_quantity_sold: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
       scheduled_processing_stats: {
         Row: {
           error_count: number | null
@@ -1294,6 +1489,27 @@ export type Database = {
       generate_po_uid: {
         Args: { account_uid: string; po_date: string }
         Returns: string
+      }
+      get_manual_intervention_failures: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          document_id: string
+          document_type: string
+          error_message: string | null
+          first_attempt: string
+          id: number
+          last_attempt: string
+          next_attempt: string
+          requires_manual_intervention: boolean
+          resolved: boolean
+          retry_count: number
+          updated_at: string
+        }[]
+      }
+      get_pdf_coverage_stats: {
+        Args: { p_table_name: string; p_document_type: string }
+        Returns: Json
       }
       get_public_tables: {
         Args: Record<PropertyKey, never>
@@ -1474,6 +1690,14 @@ export type Database = {
         Args: { account_type: string }
         Returns: boolean
       }
+      log_pdf_generation_failure: {
+        Args: {
+          p_document_type: string
+          p_document_id: string
+          p_error_message: string
+        }
+        Returns: undefined
+      }
       refresh_all_materialized_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1484,6 +1708,10 @@ export type Database = {
       }
       refresh_materialized_view_secure: {
         Args: { view_name: string }
+        Returns: undefined
+      }
+      reset_pdf_generation_failure: {
+        Args: { p_document_type: string; p_document_id: string }
         Returns: undefined
       }
       update_account_customer_balance: {

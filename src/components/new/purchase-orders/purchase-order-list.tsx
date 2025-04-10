@@ -1,11 +1,9 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, RefreshCw, Trash2, FileTextIcon } from 'lucide-react';
+import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, Trash2, FileTextIcon, MoreHorizontal } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/utils/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
 import { PurchaseOrder } from '@/types/purchaseOrder';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 import { DocumentType } from '@/types/documents';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
@@ -28,6 +34,7 @@ const PurchaseOrderList = ({
   onDelete
 }: PurchaseOrderListProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<string[]>([]);
   const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
   const isBatchProcessing = isPdfLoading;
@@ -82,12 +89,6 @@ const PurchaseOrderList = ({
     });
   };
 
-  /**
-   * Handles batch generation of PDF documents for selected purchase orders using
-   * the new pdf-backend edge function.
-   * 
-   * Processes all selected purchase orders in a single batch request for better efficiency.
-   */
   const handleBatchGeneratePdfs = async () => {
     if (selectedPurchaseOrders.length === 0 || isBatchProcessing) {
       return;
@@ -170,6 +171,109 @@ const PurchaseOrderList = ({
     );
   }
 
+  // Mobile card view for purchase orders
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            {selectedPurchaseOrders.length > 0 ? 
+              `${selectedPurchaseOrders.length} selected` : 
+              `${purchaseOrders.length} purchase orders`
+            }
+          </div>
+          {selectedPurchaseOrders.length > 0 && (
+            <Button
+              onClick={handleBatchGeneratePdfs}
+              disabled={isBatchProcessing}
+              size="sm"
+              variant="secondary"
+            >
+              <FileTextIcon className="mr-2 h-4 w-4" />
+              {isBatchProcessing ? 'Processing...' : `Generate PDFs`}
+            </Button>
+          )}
+        </div>
+        
+        <div className="space-y-3">
+          {purchaseOrders.map((purchaseOrder) => (
+            <Card key={purchaseOrder.id} className="overflow-hidden">
+              <div className="flex items-start p-4">
+                <Checkbox 
+                  checked={selectedPurchaseOrders.includes(purchaseOrder.id)}
+                  onCheckedChange={(checked) => handleSelectPurchaseOrder(purchaseOrder.id, !!checked)}
+                  className="mt-1 mr-3"
+                />
+                <div className="flex-1 min-w-0" onClick={() => onViewPurchaseOrder?.(purchaseOrder)}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold truncate">
+                        {purchaseOrder.number || `PO-${purchaseOrder.id.slice(0, 8)}`}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {purchaseOrder.date ? formatDate(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                      </p>
+                    </div>
+                    <Badge variant={getStatusBadgeVariant(purchaseOrder.status)}>
+                      {purchaseOrder.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-sm font-medium">{purchaseOrder.vendorName || (purchaseOrder.vendor?.account_name || 'N/A')}</p>
+                    <p className="font-bold mt-1">{formatCurrency(purchaseOrder.total_amount)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex border-t divide-x">
+                <Link 
+                  to={`/purchase-orders/${purchaseOrder.id}`} 
+                  className="flex-1 p-3 text-center text-sm font-medium hover:bg-muted"
+                >
+                  <EyeIcon className="h-4 w-4 mx-auto mb-1" />
+                  View
+                </Link>
+                <Link 
+                  to={`/purchase-orders/${purchaseOrder.id}/edit`}
+                  className="flex-1 p-3 text-center text-sm font-medium hover:bg-muted"
+                >
+                  <PencilIcon className="h-4 w-4 mx-auto mb-1" />
+                  Edit
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex-1 p-3 text-center text-sm font-medium hover:bg-muted">
+                      <MoreHorizontal className="h-4 w-4 mx-auto mb-1" />
+                      More
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => handleDownloadPdf(purchaseOrder.id)}>
+                      <DownloadIcon className="h-4 w-4 mr-2" />
+                      Download PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSharePurchaseOrder(purchaseOrder.id)}>
+                      <ShareIcon className="h-4 w-4 mr-2" />
+                      Share
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDelete?.(purchaseOrder.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop table view
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -218,7 +322,7 @@ const PurchaseOrderList = ({
                   </TableCell>
                   <TableCell>
                     <Link to={`/purchase-orders/${purchaseOrder.id}`} className="text-gray-700 hover:text-gray-900">
-                      {purchaseOrder.date ? format(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                      {purchaseOrder.date ? formatDate(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
                     </Link>
                   </TableCell>
                   <TableCell>

@@ -9,10 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Container } from '@/components/ui/container';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { motion } from 'framer-motion';
+import { Card } from '@/components/ui/card';
 
 const PurchaseOrders = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<PurchaseOrderFilters>({});
   
@@ -146,47 +151,89 @@ const PurchaseOrders = () => {
     }
   };
 
+  // Use motion for smooth transitions when data loads
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 24 }
+    }
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-        <div className="flex space-x-2">
-          <Button onClick={checkDatabase} variant="outline" size="sm">
-            Check Database
-          </Button>
-          <Button onClick={fetchPurchaseOrders} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={handleCreatePurchaseOrder} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Purchase Order
-          </Button>
+    <Container mobileBottomSpace>
+      <motion.div 
+        className="space-y-6 pb-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <motion.h1 
+            className="text-2xl sm:text-3xl font-bold tracking-tight"
+            variants={itemVariants}
+          >
+            Purchase Orders
+          </motion.h1>
+          <motion.div 
+            className="flex flex-wrap gap-2 w-full sm:w-auto"
+            variants={itemVariants}
+          >
+            {!isMobile && (
+              <Button onClick={checkDatabase} variant="outline" size="sm">
+                Check Database
+              </Button>
+            )}
+            <Button onClick={fetchPurchaseOrders} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={handleCreatePurchaseOrder} size="sm" className="sm:ml-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              New Purchase Order
+            </Button>
+          </motion.div>
         </div>
-      </div>
-      
-      <PurchaseOrderStats purchaseOrders={purchaseOrders} isLoading={isLoading} />
-      
-      <div className="flex justify-between items-center">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            type="search"
-            placeholder="Search purchase orders..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={handleSearchChange}
+        
+        <motion.div variants={itemVariants}>
+          <PurchaseOrderStats purchaseOrders={purchaseOrders} isLoading={isLoading} />
+        </motion.div>
+        
+        <motion.div 
+          className="flex justify-between items-center"
+          variants={itemVariants}
+        >
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              type="search"
+              placeholder="Search purchase orders..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={handleSearchChange}
+            />
+          </div>
+        </motion.div>
+        
+        <motion.div variants={itemVariants}>
+          <PurchaseOrderList 
+            purchaseOrders={filteredPurchaseOrders} 
+            isLoading={isLoading} 
+            onViewPurchaseOrder={handleViewPurchaseOrder}
+            onDelete={handleDeletePurchaseOrder}
           />
-        </div>
-      </div>
-      
-      <PurchaseOrderList 
-        purchaseOrders={filteredPurchaseOrders} 
-        isLoading={isLoading} 
-        onViewPurchaseOrder={handleViewPurchaseOrder}
-        onDelete={handleDeletePurchaseOrder}
-      />
-    </div>
+        </motion.div>
+      </motion.div>
+    </Container>
   );
 };
 

@@ -1,139 +1,113 @@
-import * as React from "react"
-import { BREAKPOINTS, Breakpoint, useActiveBreakpoint, useBreakpoint } from "./use-mobile"
 
-type ResponsiveValue<T> = {
-  xs?: T
-  sm?: T
-  md?: T
-  lg?: T
-  xl?: T
-  "2xl"?: T
-  base: T
+import { useEffect, useState } from "react";
+import { useIsMobile } from "./use-mobile";
+
+type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+
+/**
+ * Responsive component to conditionally show content based on breakpoint
+ * Only renders children when the current viewport is at the specified breakpoint or above
+ */
+export function ShowAt({ 
+  children, 
+  breakpoint = "md", 
+  below = false 
+}: { 
+  children: React.ReactNode; 
+  breakpoint: Breakpoint;
+  below?: boolean;
+}) {
+  const matches = useBreakpoint(breakpoint, below);
+  return matches ? <>{children}</> : null;
 }
 
 /**
- * Hook to get a value based on the current breakpoint
- * @param responsiveValue Object with values for different breakpoints
- * @returns The value for the current breakpoint
+ * Responsive component to conditionally hide content based on breakpoint
+ * Only renders children when the current viewport is below the specified breakpoint
  */
-export function useResponsiveValue<T>(responsiveValue: ResponsiveValue<T>): T {
-  const activeBreakpoint = useActiveBreakpoint()
+export function HideAt({ 
+  children, 
+  breakpoint = "md", 
+  below = false 
+}: { 
+  children: React.ReactNode; 
+  breakpoint: Breakpoint;
+  below?: boolean;
+}) {
+  const matches = useBreakpoint(breakpoint, below);
+  return !matches ? <>{children}</> : null;
+}
+
+/**
+ * Hook to detect if the current viewport matches the specified breakpoint
+ * 
+ * @param breakpoint - The breakpoint to check ("xs", "sm", "md", "lg", "xl", "2xl")
+ * @param below - If true, matches when viewport is below the breakpoint
+ *               If false, matches when viewport is at or above the breakpoint
+ * @returns boolean indicating if the viewport matches the criteria
+ */
+export function useBreakpoint(breakpoint: Breakpoint, below = false): boolean {
+  const [matches, setMatches] = useState<boolean>(false);
   
-  // Find the closest defined breakpoint
-  const getValueForBreakpoint = (): T => {
-    const breakpointOrder: Breakpoint[] = ["2xl", "xl", "lg", "md", "sm", "xs"]
-    const activeIndex = breakpointOrder.indexOf(activeBreakpoint)
+  useEffect(() => {
+    const breakpoints = {
+      xs: 480,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      "2xl": 1536
+    };
     
-    // Look from current breakpoint down to find a defined value
-    for (let i = activeIndex; i < breakpointOrder.length; i++) {
-      const bp = breakpointOrder[i]
-      if (responsiveValue[bp] !== undefined) {
-        return responsiveValue[bp] as T
+    const query = below
+      ? `(max-width: ${breakpoints[breakpoint] - 1}px)`
+      : `(min-width: ${breakpoints[breakpoint]}px)`;
+    
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
+    
+    const handleResize = (e: MediaQueryListEvent) => {
+      setMatches(e.matches);
+    };
+    
+    mediaQuery.addEventListener("change", handleResize);
+    return () => mediaQuery.removeEventListener("change", handleResize);
+  }, [breakpoint, below]);
+  
+  return matches;
+}
+
+/**
+ * Hook to return the current active breakpoint name
+ * @returns the current active breakpoint name
+ */
+export function useActiveBreakpoint(): Breakpoint {
+  const [activeBreakpoint, setActiveBreakpoint] = useState<Breakpoint>("md");
+  
+  useEffect(() => {
+    const breakpoints: [Breakpoint, number][] = [
+      ["2xl", 1536],
+      ["xl", 1280],
+      ["lg", 1024],
+      ["md", 768],
+      ["sm", 640],
+      ["xs", 0]
+    ];
+    
+    const handleResize = () => {
+      const width = window.innerWidth;
+      for (const [name, size] of breakpoints) {
+        if (width >= size) {
+          setActiveBreakpoint(name);
+          break;
+        }
       }
-    }
+    };
     
-    // Fallback to base value
-    return responsiveValue.base
-  }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   
-  return getValueForBreakpoint()
+  return activeBreakpoint;
 }
-
-/**
- * Render different components based on breakpoint
- */
-export function Responsive<T>({
-  children,
-  fallback,
-}: {
-  children: (bp: Breakpoint) => React.ReactNode
-  fallback?: React.ReactNode
-}) {
-  const [isClient, setIsClient] = React.useState(false)
-  const activeBreakpoint = useActiveBreakpoint()
-
-  React.useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Handle SSR - render fallback or nothing on server
-  if (!isClient) {
-    return fallback || null
-  }
-
-  return <>{children(activeBreakpoint)}</>
-}
-
-/**
- * Show content only at specified breakpoints
- */
-export function ShowAt({
-  breakpoint,
-  below = false,
-  above = false,
-  children,
-}: {
-  breakpoint: Breakpoint
-  below?: boolean
-  above?: boolean
-  children: React.ReactNode
-}) {
-  const belowBreakpoint = useBreakpoint(breakpoint)
-  const activeBreakpoint = useActiveBreakpoint()
-  const breakpointValue = BREAKPOINTS[breakpoint]
-  const currentValue = BREAKPOINTS[activeBreakpoint]
-  
-  // At exact breakpoint
-  if (!below && !above && breakpoint === activeBreakpoint) {
-    return <>{children}</>
-  }
-  
-  // Below or at the specified breakpoint
-  if (below && belowBreakpoint) {
-    return <>{children}</>
-  }
-  
-  // Above the specified breakpoint
-  if (above && currentValue > breakpointValue) {
-    return <>{children}</>
-  }
-  
-  return null
-}
-
-/**
- * Hide content at specified breakpoints
- */
-export function HideAt({
-  breakpoint,
-  below = false,
-  above = false,
-  children,
-}: {
-  breakpoint: Breakpoint
-  below?: boolean
-  above?: boolean
-  children: React.ReactNode
-}) {
-  const belowBreakpoint = useBreakpoint(breakpoint)
-  const activeBreakpoint = useActiveBreakpoint()
-  const breakpointValue = BREAKPOINTS[breakpoint]
-  const currentValue = BREAKPOINTS[activeBreakpoint]
-  
-  // At exact breakpoint
-  if (!below && !above && breakpoint === activeBreakpoint) {
-    return null
-  }
-  
-  // Below or at the specified breakpoint
-  if (below && belowBreakpoint) {
-    return null
-  }
-  
-  // Above the specified breakpoint
-  if (above && currentValue > breakpointValue) {
-    return null
-  }
-  
-  return <>{children}</>
-} 
