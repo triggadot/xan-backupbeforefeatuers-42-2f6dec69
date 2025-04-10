@@ -1,3 +1,4 @@
+
 /**
  * Document types supported for PDF generation in the application
  * 

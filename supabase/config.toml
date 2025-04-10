@@ -1,3 +1,4 @@
+
 project_id = "swrfsullhirscyxqneay"
 
 [functions.glsync]
@@ -13,4 +14,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.auto-generate-pdf]
+verify_jwt = false
+
+[functions.generate-purchase-order-pdf]
 verify_jwt = false

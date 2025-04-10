@@ -1301,6 +1301,10 @@ export type Database = {
           table_name: string
         }[]
       }
+      get_supabase_function_url: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_table_columns: {
         Args: { table_name: string }
         Returns: {
