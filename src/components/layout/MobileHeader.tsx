@@ -1,3 +1,4 @@
+
 import { ModeToggle } from "@/components/mode-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -23,18 +24,18 @@ function MobileHeader({ className }: MobileHeaderProps) {
 
   return (
     <motion.header 
-      className={`sticky top-0 z-50 flex h-14 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 ${className}`}
+      className={`sticky top-0 z-50 flex h-12 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 ${className}`}
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {showBackButton ? (
           <Button
             variant="ghost"
             size="icon"
             aria-label="Go back"
-            className="active:scale-95 transition-transform mr-1"
+            className="active:scale-95 transition-transform"
             onClick={() => window.history.back()}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -53,7 +54,7 @@ function MobileHeader({ className }: MobileHeaderProps) {
             </SheetTrigger>
             
             <SheetContent side="left" className="p-0 w-[85%] max-w-[300px] sm:max-w-xs">
-              <div className="flex justify-between items-center p-4 border-b">
+              <div className="flex justify-between items-center p-3 border-b">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
                   <span className="font-semibold">Billow</span>
@@ -73,31 +74,31 @@ function MobileHeader({ className }: MobileHeaderProps) {
           </Sheet>
         )}
         
-        <Link to="/" className="flex items-center gap-2 text-primary font-semibold transition-colors hover:opacity-80">
-          <BarChart3 className="h-5 w-5" />
+        <Link to="/" className="flex items-center gap-1.5 text-primary font-semibold transition-colors hover:opacity-80">
+          <BarChart3 className="h-4.5 w-4.5" />
           <span>Billow</span>
         </Link>
       </div>
       
       <div className="flex-1" />
       
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1">
         {showSearch ? (
           <div className="animate-fade-in flex items-center bg-muted/50 rounded-full pr-2 mr-1">
             <input 
               type="text" 
               placeholder="Search..." 
-              className="h-9 bg-transparent border-none focus:outline-none px-3 py-2 w-[120px] sm:w-[160px] text-sm"
+              className="h-8 bg-transparent border-none focus:outline-none px-2.5 py-1.5 w-[100px] sm:w-[160px] text-xs"
               autoFocus
               onBlur={() => setShowSearch(false)}
             />
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-6 w-6"
               onClick={() => setShowSearch(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         ) : (
@@ -105,10 +106,10 @@ function MobileHeader({ className }: MobileHeaderProps) {
             variant="ghost" 
             size="icon" 
             aria-label="Search"
-            className="active:scale-95 transition-transform rounded-full touch-manipulation"
+            className="active:scale-95 transition-transform rounded-full touch-manipulation h-7 w-7"
             onClick={() => setShowSearch(true)}
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-4 w-4" />
           </Button>
         )}
         
@@ -116,14 +117,14 @@ function MobileHeader({ className }: MobileHeaderProps) {
           variant="ghost" 
           size="icon" 
           aria-label="Notifications"
-          className="active:scale-95 transition-transform rounded-full touch-manipulation"
+          className="active:scale-95 transition-transform rounded-full touch-manipulation h-7 w-7"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="h-4 w-4" />
         </Button>
         
-        <ModeToggle />
+        <ModeToggle iconOnly={true} />
         
-        <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all touch-manipulation">
+        <Avatar className="h-7 w-7 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all touch-manipulation">
           <AvatarImage src="https://github.com/shadcn.png" alt="@user" />
           <AvatarFallback>SC</AvatarFallback>
         </Avatar>

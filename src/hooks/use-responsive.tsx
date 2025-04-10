@@ -1,113 +1,149 @@
 
-import { useEffect, useState } from "react";
-import { useIsMobile } from "./use-mobile";
+import * as React from "react";
+import { BREAKPOINTS, Breakpoint } from "./use-mobile";
 
-type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-
-/**
- * Responsive component to conditionally show content based on breakpoint
- * Only renders children when the current viewport is at the specified breakpoint or above
- */
-export function ShowAt({ 
-  children, 
-  breakpoint = "md", 
-  below = false 
-}: { 
-  children: React.ReactNode; 
+type ResponsiveProps = {
+  children: React.ReactNode;
   breakpoint: Breakpoint;
+  above?: boolean;
   below?: boolean;
-}) {
-  const matches = useBreakpoint(breakpoint, below);
-  return matches ? <>{children}</> : null;
-}
+};
 
 /**
- * Responsive component to conditionally hide content based on breakpoint
- * Only renders children when the current viewport is below the specified breakpoint
- */
-export function HideAt({ 
-  children, 
-  breakpoint = "md", 
-  below = false 
-}: { 
-  children: React.ReactNode; 
-  breakpoint: Breakpoint;
-  below?: boolean;
-}) {
-  const matches = useBreakpoint(breakpoint, below);
-  return !matches ? <>{children}</> : null;
-}
-
-/**
- * Hook to detect if the current viewport matches the specified breakpoint
+ * Component that conditionally renders children based on viewport width
+ * in relation to a specified breakpoint
  * 
- * @param breakpoint - The breakpoint to check ("xs", "sm", "md", "lg", "xl", "2xl")
- * @param below - If true, matches when viewport is below the breakpoint
- *               If false, matches when viewport is at or above the breakpoint
- * @returns boolean indicating if the viewport matches the criteria
+ * @example
+ * // Show content only on mobile (below md breakpoint)
+ * <ShowAt breakpoint="md" below>
+ *   Mobile content
+ * </ShowAt>
+ * 
+ * @example
+ * // Hide content on mobile (below md breakpoint)
+ * <HideAt breakpoint="md" below>
+ *   Desktop content
+ * </HideAt>
  */
-export function useBreakpoint(breakpoint: Breakpoint, below = false): boolean {
-  const [matches, setMatches] = useState<boolean>(false);
-  
-  useEffect(() => {
-    const breakpoints = {
-      xs: 480,
-      sm: 640,
-      md: 768,
-      lg: 1024,
-      xl: 1280,
-      "2xl": 1536
-    };
-    
-    const query = below
-      ? `(max-width: ${breakpoints[breakpoint] - 1}px)`
-      : `(min-width: ${breakpoints[breakpoint]}px)`;
-    
-    const mediaQuery = window.matchMedia(query);
-    setMatches(mediaQuery.matches);
-    
-    const handleResize = (e: MediaQueryListEvent) => {
-      setMatches(e.matches);
-    };
-    
-    mediaQuery.addEventListener("change", handleResize);
-    return () => mediaQuery.removeEventListener("change", handleResize);
-  }, [breakpoint, below]);
-  
-  return matches;
-}
+export function ShowAt({ children, breakpoint, above, below }: ResponsiveProps) {
+  const [shouldRender, setShouldRender] = React.useState<boolean>(false);
 
-/**
- * Hook to return the current active breakpoint name
- * @returns the current active breakpoint name
- */
-export function useActiveBreakpoint(): Breakpoint {
-  const [activeBreakpoint, setActiveBreakpoint] = useState<Breakpoint>("md");
-  
-  useEffect(() => {
-    const breakpoints: [Breakpoint, number][] = [
-      ["2xl", 1536],
-      ["xl", 1280],
-      ["lg", 1024],
-      ["md", 768],
-      ["sm", 640],
-      ["xs", 0]
-    ];
-    
-    const handleResize = () => {
+  React.useEffect(() => {
+    const checkBreakpoint = () => {
       const width = window.innerWidth;
-      for (const [name, size] of breakpoints) {
-        if (width >= size) {
-          setActiveBreakpoint(name);
-          break;
-        }
+      const breakpointValue = BREAKPOINTS[breakpoint];
+
+      if (above) {
+        setShouldRender(width >= breakpointValue);
+      } else if (below) {
+        setShouldRender(width < breakpointValue);
+      } else {
+        // Default: at this exact breakpoint
+        setShouldRender(
+          width >= breakpointValue && 
+          width < (BREAKPOINTS as any)[
+            Object.keys(BREAKPOINTS)[
+              Object.keys(BREAKPOINTS).indexOf(breakpoint) + 1
+            ] || "9999"
+          ]
+        );
       }
     };
+
+    checkBreakpoint();
+    window.addEventListener('resize', checkBreakpoint);
     
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  
-  return activeBreakpoint;
+    return () => window.removeEventListener('resize', checkBreakpoint);
+  }, [breakpoint, above, below]);
+
+  return shouldRender ? <>{children}</> : null;
+}
+
+/**
+ * Component that conditionally hides children based on viewport width
+ * in relation to a specified breakpoint
+ */
+export function HideAt({ children, breakpoint, above, below }: ResponsiveProps) {
+  const [shouldRender, setShouldRender] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    const checkBreakpoint = () => {
+      const width = window.innerWidth;
+      const breakpointValue = BREAKPOINTS[breakpoint];
+
+      if (above) {
+        setShouldRender(width < breakpointValue);
+      } else if (below) {
+        setShouldRender(width >= breakpointValue);
+      } else {
+        // Default: hide at this exact breakpoint
+        setShouldRender(
+          !(width >= breakpointValue && 
+          width < (BREAKPOINTS as any)[
+            Object.keys(BREAKPOINTS)[
+              Object.keys(BREAKPOINTS).indexOf(breakpoint) + 1
+            ] || "9999"
+          ])
+        );
+      }
+    };
+
+    checkBreakpoint();
+    window.addEventListener('resize', checkBreakpoint);
+    
+    return () => window.removeEventListener('resize', checkBreakpoint);
+  }, [breakpoint, above, below]);
+
+  return shouldRender ? <>{children}</> : null;
+}
+
+/**
+ * Hook to get value based on current breakpoint
+ * 
+ * @example
+ * // Get different padding based on screen size
+ * const padding = useResponsiveValue({
+ *   xs: 2,
+ *   sm: 4,
+ *   md: 6,
+ *   lg: 8,
+ *   xl: 10,
+ *   "2xl": 12,
+ * });
+ */
+export function useResponsiveValue<T>(
+  breakpointValues: Partial<Record<Breakpoint, T>> & { base?: T }
+): T {
+  const [value, setValue] = React.useState<T>(
+    (breakpointValues.base || breakpointValues.xs || Object.values(breakpointValues)[0]) as T
+  );
+
+  React.useEffect(() => {
+    const updateValue = () => {
+      const width = window.innerWidth;
+      
+      // Get sorted breakpoints
+      const sortedBreakpoints = Object.keys(BREAKPOINTS)
+        .map(key => ({ key, value: BREAKPOINTS[key as Breakpoint] }))
+        .sort((a, b) => b.value - a.value);
+      
+      // Find the largest breakpoint that is less than or equal to the current width
+      for (const { key } of sortedBreakpoints) {
+        if (width >= BREAKPOINTS[key as Breakpoint] && breakpointValues[key as Breakpoint] !== undefined) {
+          setValue(breakpointValues[key as Breakpoint] as T);
+          return;
+        }
+      }
+      
+      // Fallback to base or xs
+      setValue((breakpointValues.base || breakpointValues.xs || Object.values(breakpointValues)[0]) as T);
+    };
+
+    updateValue();
+    window.addEventListener('resize', updateValue);
+    
+    return () => window.removeEventListener('resize', updateValue);
+  }, [breakpointValues]);
+
+  return value;
 }

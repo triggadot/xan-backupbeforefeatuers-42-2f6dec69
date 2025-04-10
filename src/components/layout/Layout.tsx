@@ -1,3 +1,4 @@
+
 import { Container } from "@/components/ui/container";
 import { MobileNav } from "@/components/ui/mobile-nav";
 import { SidebarContent, SidebarProvider } from "@/components/ui/sidebar";
@@ -17,7 +18,7 @@ const Layout = () => {
   const isMobile = useBreakpoint('md');
 
   // Responsive container classes based on screen size
-  const containerClasses = "container px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-20 md:pb-8";
+  const containerClasses = "py-3 md:py-4 lg:py-6 pb-20 md:pb-6";
   
   // Navigation items for mobile bottom nav
   const navItems = [
@@ -53,7 +54,7 @@ const Layout = () => {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            <Container mobileBottomSpace>
+            <Container mobileBottomSpace fluid={isMobile}>
               <Suspense fallback={
                 <div className="flex justify-center items-center h-64">
                   <Spinner size="lg" />
@@ -67,7 +68,7 @@ const Layout = () => {
           </motion.main>
           
           {/* Mobile bottom navigation */}
-          <MobileNav items={navItems} />
+          <MobileNav items={navItems} compact={isMobile} />
         </SidebarContent>
       </div>
       <Toaster />

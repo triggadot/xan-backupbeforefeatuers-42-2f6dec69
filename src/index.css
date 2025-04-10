@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,6 +91,16 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  .text-2xs {
+    font-size: 0.625rem;
+    line-height: 0.75rem;
+  }
+  
+  .h-4\.5, .w-4\.5 {
+    height: 1.125rem;
+    width: 1.125rem;
   }
 }
 
@@ -202,4 +211,38 @@
 
 .skeleton {
   @apply animate-shimmer bg-gradient-to-r from-transparent via-muted/50 to-transparent bg-[length:1000px_100%];
+}
+
+/* Mobile optimized spacing */
+.touch-optimized > * {
+  @apply touch-manipulation active:scale-95 transition-transform;
+}
+
+/* Optimized mobile container */
+.mobile-container {
+  @apply px-3 sm:px-4 md:px-6;
+}
+
+/* Optimized mobile spacing */
+.mobile-spacing {
+  @apply space-y-3 sm:space-y-4 md:space-y-6;
+}
+
+.mobile-spacing-x {
+  @apply space-x-2 sm:space-x-3 md:space-x-4;
+}
+
+/* Mobile card with less padding */
+.mobile-card {
+  @apply p-3 sm:p-4 md:p-6;
+}
+
+/* Optimize form spacing for mobile */
+.mobile-form-control {
+  @apply mb-3 sm:mb-4;
+}
+
+/* Compact content for mobile */
+.mobile-compact {
+  @apply text-sm leading-tight sm:text-base sm:leading-normal;
 }

@@ -68,12 +68,12 @@ export default function FinancialActions({ className }: FinancialActionsProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="p-4">
+      <CardHeader className="p-3 sm:p-4">
         <CardTitle className="text-base font-medium">Financial Actions</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="space-y-3">
-          {financialActions.map((action, index) => 
+      <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+        <div className="space-y-2 sm:space-y-3">
+          {financialActions.map((action, index) => (
             action.label === "New Transaction" ? (
               <NewTransactionDialog 
                 key={index}
@@ -85,11 +85,11 @@ export default function FinancialActions({ className }: FinancialActionsProps) {
               <Button
                 key={index}
                 variant="ghost"
-                className="w-full justify-start h-auto py-3 px-4 hover:bg-muted group"
+                className="w-full justify-start h-auto py-2.5 px-3 hover:bg-muted group"
                 onClick={() => navigate(action.route)}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`${action.color} p-2 rounded-full bg-background border`}>
+                <div className="flex items-center gap-2.5">
+                  <div className={`${action.color} p-1.5 rounded-full bg-background border`}>
                     {action.icon}
                   </div>
                   <div className="text-left">
@@ -102,7 +102,7 @@ export default function FinancialActions({ className }: FinancialActionsProps) {
                 </div>
               </Button>
             )
-          )}
+          ))}
         </div>
       </CardContent>
     </Card>

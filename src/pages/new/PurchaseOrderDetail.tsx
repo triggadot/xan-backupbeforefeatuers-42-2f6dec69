@@ -36,9 +36,9 @@ const PurchaseOrderDetail = () => {
 
   if (isLoading) {
     return (
-      <Container mobileBottomSpace>
+      <Container fluid mobileBottomSpace>
         <motion.div 
-          className="flex justify-center items-center min-h-[40vh]" 
+          className="flex justify-center items-center min-h-[30vh]" 
           initial="hidden"
           animate="visible"
           variants={fadeIn}
@@ -51,9 +51,9 @@ const PurchaseOrderDetail = () => {
 
   if (error) {
     return (
-      <Container mobileBottomSpace>
+      <Container fluid mobileBottomSpace>
         <motion.div 
-          className="bg-destructive/10 p-4 rounded-md text-destructive mt-4"
+          className="bg-destructive/10 p-3 rounded-md text-destructive mt-3"
           initial="hidden"
           animate="visible"
           variants={fadeIn}
@@ -66,9 +66,9 @@ const PurchaseOrderDetail = () => {
 
   if (!purchaseOrder) {
     return (
-      <Container mobileBottomSpace>
+      <Container fluid mobileBottomSpace>
         <motion.div 
-          className="bg-muted p-4 rounded-md text-muted-foreground mt-4"
+          className="bg-muted p-3 rounded-md text-muted-foreground mt-3"
           initial="hidden"
           animate="visible"
           variants={fadeIn}
@@ -80,11 +80,12 @@ const PurchaseOrderDetail = () => {
   }
 
   return (
-    <Container mobileBottomSpace>
+    <Container fluid mobileBottomSpace>
       <motion.div
         initial="hidden"
         animate="visible"
         variants={fadeIn}
+        className="mobile-spacing"
       >
         {purchaseOrder && (
           <PurchaseOrderDetailView
