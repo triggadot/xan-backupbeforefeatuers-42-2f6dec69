@@ -54,6 +54,19 @@ export interface Product extends EntityBase {
 }
 
 /**
+ * Extended product interface that includes all relationships
+ */
+export interface ProductDetail extends Product {
+  // Related entities
+  vendor?: Account;
+  purchaseOrder?: PurchaseOrder;
+  invoiceLines?: ProductInvoiceLine[];
+  estimateLines?: ProductEstimateLine[];
+  vendorPayments?: ProductVendorPayment[];
+  supabase_pdf_url?: string | null;
+}
+
+/**
  * Represents a line item in an invoice that references a product
  */
 export interface ProductInvoiceLine {
@@ -73,6 +86,9 @@ export interface ProductInvoiceLine {
   unitPrice?: number; // Alias for unit_price
   productName?: string;
   invoiceUid?: string;
+  
+  // Related entity
+  invoice?: Invoice;
 }
 
 /**
@@ -95,6 +111,9 @@ export interface ProductEstimateLine {
   unitPrice?: number; // Alias for unit_price
   productName?: string;
   estimateUid?: string;
+  
+  // Related entity
+  estimate?: Estimate;
 }
 
 /**
@@ -106,15 +125,19 @@ export interface ProductVendorPayment {
   rowid_products: string;
   rowid_accounts: string;
   rowid_purchase_orders?: string;
-  amount: number;
-  payment_date: Date;
-  notes?: string;
+  payment_amount: number;
+  date_of_payment: Date;
+  vendor_purchase_note?: string;
   
   // Derived fields for UI
   productId?: string; // Alias for rowid_products
   vendorId?: string; // Alias for rowid_accounts
   purchaseOrderId?: string; // Alias for rowid_purchase_orders
-  paymentDate?: Date; // Alias for payment_date
+  paymentDate?: Date; // Alias for date_of_payment
+  
+  // Related entities
+  account?: Account;
+  purchaseOrder?: PurchaseOrder;
 }
 
 /**

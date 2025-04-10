@@ -14,6 +14,11 @@ interface ProductPDFActionsProps {
   productId: string;
   
   /**
+   * The name of the product for PDF filename
+   */
+  productName?: string;
+  
+  /**
    * The URL of an existing PDF, if available
    */
   existingPdfUrl?: string | null;
@@ -47,6 +52,7 @@ interface ProductPDFActionsProps {
  */
 export function ProductPDFActions({
   productId,
+  productName = 'Product',
   existingPdfUrl = null,
   showAllActions = true,
   className = ''
@@ -57,7 +63,25 @@ export function ProductPDFActions({
   const [showShareModal, setShowShareModal] = React.useState(false);
   
   // Use our custom PDF operations hook
-  const { downloadPDF } = usePDFOperations();
+  const { downloadPDF, checkExistingPDF } = usePDFOperations();
+  
+  // Check for existing PDF URL if none was provided
+  React.useEffect(() => {
+    const fetchPdfUrl = async () => {
+      if (!existingPdfUrl) {
+        try {
+          const { data } = await checkExistingPDF('product', productId);
+          if (data?.supabase_pdf_url) {
+            setPdfUrl(data.supabase_pdf_url);
+          }
+        } catch (error) {
+          console.error('Error checking for existing PDF:', error);
+        }
+      }
+    };
+    
+    fetchPdfUrl();
+  }, [productId, existingPdfUrl, checkExistingPDF]);
   
   /**
    * Handle PDF generation success
@@ -80,7 +104,7 @@ export function ProductPDFActions({
     }
     
     try {
-      await downloadPDF(pdfUrl, `Product_${productId}.pdf`);
+      await downloadPDF(pdfUrl, `${productName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({

@@ -10,6 +10,7 @@ export * from './useProductMutation';
 export * from './useProductVendors';
 export * from './useProductStock';
 export * from './useInventoryReport';
+export * from './useUnpaidInventory';
 
 // Backward compatibility exports
 export { useProducts as useFetchProducts } from './useProducts';

@@ -1,4 +1,5 @@
-import { ProductDetail, ProductForm } from '@/components/new/products';
+import { ProductDetail } from '@/components/new/products';
+import { ProductForm } from '@/components/new/products/product-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -68,13 +69,13 @@ const ProductDetailPage: React.FC = () => {
   };
 
   // Prepare vendors list for the form
-  const vendors = product?.account 
-    ? [{ id: product.account.glide_row_id, name: product.account.account_name || 'Unknown Vendor' }] 
+  const vendors = product?.vendor 
+    ? [{ id: product.vendor.glide_row_id, name: product.vendor.account_name || 'Unknown Vendor' }] 
     : [];
 
   // Prepare purchase orders list for the form
-  const purchaseOrders = product?.purchase_order
-    ? [{ id: product.purchase_order.glide_row_id, uid: product.purchase_order.po_uid || 'PO-' + product.purchase_order.glide_row_id }]
+  const purchaseOrders = product?.purchaseOrder
+    ? [{ id: product.purchaseOrder.glide_row_id, uid: product.purchaseOrder.po_uid || 'PO-' + product.purchaseOrder.id.substring(0, 8) }]
     : [];
 
   if (isLoading && !isNew) {

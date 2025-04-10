@@ -1,154 +1,97 @@
-
-import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import React from 'react';
 
 type GridDensity = 'loose' | 'normal' | 'tight';
 type GridResponsiveness = 'adaptive' | 'fixed';
 
-interface ResponsiveGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'animate'> {
-  columns?: {
-    xs?: number;
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-  };
-  gap?: {
-    x?: number;
-    y?: number;
-  } | number;
-  density?: GridDensity;
-  type?: GridResponsiveness;
-  animate?: boolean;
-  staggerChildren?: boolean;
-  staggerDelay?: number;
+type Breakpoints = {
+  xs?: number;
+  sm?: number;
+  md?: number;
+  lg?: number;
+  xl?: number;
+  '2xl'?: number;
+};
+
+interface ResponsiveGridProps extends React.HTMLAttributes<HTMLDivElement> {
+  columns: Breakpoints;
+  gap?: number | Breakpoints;
+  children: React.ReactNode;
 }
 
-const columnDefaults = {
-  xs: 1,
-  sm: 2,
-  md: 3,
-  lg: 3,
-  xl: 4,
-};
+interface GridItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+  span?: number | Breakpoints;
+}
 
-const densityMap: Record<GridDensity, string> = {
-  loose: 'gap-8',
-  normal: 'gap-6',
-  tight: 'gap-4',
-};
+/**
+ * A responsive grid component that allows for different column counts at different breakpoints
+ */
+export function ResponsiveGrid({
+  columns,
+  gap = 4,
+  className,
+  children,
+  ...props
+}: ResponsiveGridProps) {
+  // Convert gap to class names
+  const gapClasses = typeof gap === 'number' 
+    ? `gap-${gap}` 
+    : [
+        gap.xs && `gap-${gap.xs}`,
+        gap.sm && `sm:gap-${gap.sm}`,
+        gap.md && `md:gap-${gap.md}`,
+        gap.lg && `lg:gap-${gap.lg}`,
+        gap.xl && `xl:gap-${gap.xl}`,
+        gap['2xl'] && `2xl:gap-${gap['2xl']}`,
+      ].filter(Boolean).join(' ');
 
-export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
-  ({ 
-    children, 
-    className, 
-    columns = columnDefaults, 
-    gap, 
-    density = 'normal', 
-    type = 'adaptive',
-    animate = false,
-    staggerChildren = false,
-    staggerDelay = 0.05,
-    ...props 
-  }, ref) => {
-    // Determine the gap classes
-    let gapClasses = '';
-    if (typeof gap === 'number') {
-      gapClasses = `gap-${gap}`;
-    } else if (gap) {
-      const xGap = gap.x !== undefined ? `gap-x-${gap.x}` : '';
-      const yGap = gap.y !== undefined ? `gap-y-${gap.y}` : '';
-      gapClasses = `${xGap} ${yGap}`.trim();
-    } else {
-      gapClasses = densityMap[density];
-    }
+  // Convert columns to grid-template-columns class names
+  const colClasses = [
+    columns.xs && `grid-cols-${columns.xs}`,
+    columns.sm && `sm:grid-cols-${columns.sm}`,
+    columns.md && `md:grid-cols-${columns.md}`,
+    columns.lg && `lg:grid-cols-${columns.lg}`,
+    columns.xl && `xl:grid-cols-${columns.xl}`,
+    columns['2xl'] && `2xl:grid-cols-${columns['2xl']}`,
+  ].filter(Boolean).join(' ');
 
-    // Determine grid-template-columns classes based on responsive breakpoints
-    const columnsClasses = type === 'adaptive' 
-      ? `grid-cols-${columns.xs || 1} sm:grid-cols-${columns.sm || 2} md:grid-cols-${columns.md || 3} lg:grid-cols-${columns.lg || 3} xl:grid-cols-${columns.xl || 4}`
-      : `grid-cols-${columns.xs || 1}`;
+  return (
+    <div
+      className={cn('grid', colClasses, gapClasses, className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
 
-    const baseClasses = `grid ${gapClasses} ${columnsClasses}`;
+/**
+ * A grid item that can span multiple columns
+ */
+export function GridItem({
+  span,
+  className,
+  children,
+  ...props
+}: GridItemProps) {
+  // Convert span to class names
+  const spanClasses = 
+    !span ? '' :
+    typeof span === 'number'
+      ? `col-span-${span}`
+      : [
+          span.xs && `col-span-${span.xs}`,
+          span.sm && `sm:col-span-${span.sm}`,
+          span.md && `md:col-span-${span.md}`,
+          span.lg && `lg:col-span-${span.lg}`,
+          span.xl && `xl:col-span-${span.xl}`,
+          span['2xl'] && `2xl:col-span-${span['2xl']}`,
+        ].filter(Boolean).join(' ');
 
-    if (animate) {
-      const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: { 
-          opacity: 1,
-          transition: { 
-            staggerChildren: staggerChildren ? staggerDelay : 0 
-          }
-        }
-      };
-
-      const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { 
-          opacity: 1, 
-          y: 0,
-          transition: { type: 'spring', stiffness: 100, damping: 10 }
-        }
-      };
-
-      // Create a new array of children with motion.div wrappers if animate is true
-      const animatedChildren = React.Children.map(children, (child, index) => {
-        if (!React.isValidElement(child)) return child;
-        
-        return (
-          <motion.div
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-            transition={{ delay: staggerChildren ? index * staggerDelay : 0 }}
-          >
-            {child}
-          </motion.div>
-        );
-      });
-
-      // Fix TypeScript error by correctly typing the props
-      return (
-        <motion.div
-          ref={ref}
-          className={cn(baseClasses, className)}
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          {...props as any} // Use type assertion to avoid complex type issues
-        >
-          {animatedChildren}
-        </motion.div>
-      );
-    }
-
-    return (
-      <div 
-        ref={ref}
-        className={cn(baseClasses, className)}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-
-ResponsiveGrid.displayName = 'ResponsiveGrid';
-
-// Item component to be used within the grid
-export const GridItem = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ children, className, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={cn("h-full w-full", className)}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-
-GridItem.displayName = 'GridItem';
+  return (
+    <div className={cn(spanClasses, className)} {...props}>
+      {children}
+    </div>
+  );
+}

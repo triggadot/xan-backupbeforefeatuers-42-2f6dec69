@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useInventoryReport } from '@/hooks/products/useInventoryReport';
-import { Card, CardContent, Title, Text, Grid, Col, BarList, DonutChart, DateRangePicker, Badge, BadgeDelta, ProgressBar, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@tremor/react';
+import { Card, Title, Text, Grid, Col, BarList, DonutChart, DateRangePicker, Badge, BadgeDelta, ProgressBar, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@tremor/react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -168,8 +168,7 @@ export const ProductInventoryReport: React.FC = () => {
       </div>
 
       {/* Filters Section */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      <Card className="mb-6 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Search */}
             <div className="relative">
@@ -260,7 +259,6 @@ export const ProductInventoryReport: React.FC = () => {
               </Badge>
             )}
           </div>
-        </CardContent>
       </Card>
 
       <Grid numItemsMd={2} numItemsLg={4} className="gap-6 mb-6">

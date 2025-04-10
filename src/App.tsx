@@ -8,6 +8,7 @@ import Index from '@/pages/Index';
 import MappingView from '@/pages/MappingView';
 import ModernDashboard from '@/pages/ModernDashboard';
 import NotFound from '@/pages/NotFound';
+import ResponsiveExamples from '@/pages/ResponsiveExamples';
 import SidebarDemo from '@/pages/SidebarDemo';
 import Sync from '@/pages/Sync';
 import TableDemo from '@/pages/TableDemo';
@@ -15,19 +16,21 @@ import { Route, Routes } from 'react-router-dom';
 
 // Import our pages
 import AccountDetail from '@/pages/AccountDetail';
-import Accounts from '@/pages/Accounts';
 import AccountOverview from '@/pages/AccountOverview';
+import Accounts from '@/pages/Accounts';
+import ExpensesPage from '@/pages/expenses';
+import ExpenseDetailPage from '@/pages/expenses/[id]';
+import EditExpensePage from '@/pages/expenses/[id]/edit';
+import CreateExpensePage from '@/pages/expenses/new';
 import EstimateDetailPage from '@/pages/new/EstimateDetail';
 import NewEstimates from '@/pages/new/Estimates';
 import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
 import NewInvoices from '@/pages/new/Invoices';
+import ProductsPage from '@/pages/new/Products';
+import ProductDetailPage from '@/pages/new/ProductDetail';
 import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
 import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
-import ProductsPage from '@/pages/new/Products';
-import ExpensesPage from '@/pages/expenses';
-import ExpenseDetailPage from '@/pages/expenses/[id]';
-import CreateExpensePage from '@/pages/expenses/new';
-import EditExpensePage from '@/pages/expenses/[id]/edit';
+import UnpaidInventoryPage from '@/pages/products/UnpaidInventory';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (
@@ -52,6 +55,10 @@ function App() {
                 <ModernDashboard />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="responsive-examples" 
+            element={<ResponsiveExamples />} 
           />
           <Route 
             path="accounts" 
@@ -153,7 +160,7 @@ function App() {
             path="products/:id" 
             element={
               <ProtectedRoute>
-                <PlaceholderPage />
+                <ProductDetailPage />
               </ProtectedRoute>
             } 
           />
@@ -162,6 +169,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="unpaid-inventory" 
+            element={
+              <ProtectedRoute>
+                <UnpaidInventoryPage />
               </ProtectedRoute>
             } 
           />

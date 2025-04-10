@@ -177,9 +177,11 @@ export const usePDFOperations = () => {
       // and force regeneration/overwrite settings
       const { data, error } = await supabase.functions.invoke('pdf-backend', {
         body: {
-          action: 'generate-batch',
-          documentType: backendDocumentType,
-          documentIds: documentIds,
+          action: 'batch',  // Changed from 'generate-batch' to 'batch' to match the backend expectation
+          items: documentIds.map(id => ({
+            type: backendDocumentType,
+            id: id
+          })),
           forceRegenerate: true, // Always regenerate PDFs even if they exist
           overwriteExisting: true // Always overwrite existing files in storage
         }
