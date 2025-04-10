@@ -2,7 +2,86 @@
 
 ## Overview
 
-The PDF generation system has been refactored to work with the current database schema, specifically utilizing `rowid_` and `glide_row_id` fields instead of foreign keys. The system follows a modular approach with separate modules for different document types (invoices, estimates, purchase orders, and products) and leverages Supabase edge functions for server-side PDF generation and storage. It now includes automated PDF generation for documents with null URLs, database triggers for automatic updates, enhanced error handling with a robust retry mechanism, and comprehensive logging.
+The PDF generation system has been refactored to work with the current database schema, specifically utilizing `rowid_` and `glide_row_id` fields instead of foreign keys. The system follows a modular approach with separate modules for different document types (invoices, estimates, purchase orders, and products) and leverages Supabase edge functions for server-side PDF generation and storage. 
+
+The system now features **fully automated PDF generation** with database triggers that automatically initiate PDF generation when documents are created or updated. It includes a sophisticated error handling system with exponential backoff retry mechanisms, comprehensive logging, and a monitoring dashboard for tracking PDF generation metrics and managing failures.
+
+## Automated PDF Generation System
+
+### Database Triggers
+
+The system uses PostgreSQL triggers to automatically initiate PDF generation when documents are created or updated:
+
+```sql
+-- Trigger function that calls the PDF backend when documents are updated
+CREATE OR REPLACE FUNCTION trigger_pdf_generation()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_document_type TEXT;
+  v_payload JSONB;
+BEGIN
+  -- Determine document type based on table
+  CASE TG_TABLE_NAME
+    WHEN 'gl_invoices' THEN v_document_type := 'invoice';
+    WHEN 'gl_estimates' THEN v_document_type := 'estimate';
+    WHEN 'gl_purchase_orders' THEN v_document_type := 'purchase_order';
+  END CASE;
+  
+  -- Create payload and call PDF backend
+  v_payload := jsonb_build_object(
+    'action', 'trigger',
+    'documentType', v_document_type,
+    'documentId', NEW.id
+  );
+  
+  -- Call webhook asynchronously
+  PERFORM http_post(...);
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Error Handling and Retry Mechanism
+
+The system implements a sophisticated error handling approach with exponential backoff for retries:
+
+1. **Failure Tracking**: All PDF generation failures are logged in the `pdf_generation_failures` table
+2. **Exponential Backoff**: Retry intervals increase with each attempt (5min → 15min → 30min → 1hr → ...)
+3. **Manual Intervention**: After 10 failed attempts, the system flags the failure for manual resolution
+4. **Admin Interface**: Dedicated UI for reviewing and resolving failures
+
+```sql
+-- Function for logging failures with exponential backoff
+CREATE OR REPLACE FUNCTION log_pdf_generation_failure(
+  p_document_type TEXT,
+  p_document_id TEXT,
+  p_error_message TEXT
+) RETURNS VOID AS $$
+BEGIN
+  -- Implementation with exponential backoff calculation
+  v_backoff_minutes := LEAST(5 * POWER(2, v_retry_count - 1), 1440);
+  -- Update retry count and next attempt time
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Scheduled Jobs
+
+The system uses pg_cron to schedule important maintenance tasks:
+
+1. **Periodic Scanning**: Checks for documents with null PDF URLs every 30 minutes
+2. **Retry Processing**: Attempts to retry failed generations every 10 minutes
+3. **Log Cleanup**: Removes old logs and resolved failures to maintain database performance
+
+### Monitoring Dashboard
+
+A comprehensive monitoring dashboard provides insights into PDF generation metrics:
+
+1. **Document Coverage**: Percentage of documents with generated PDFs
+2. **Success Rates**: Success/failure statistics for recent PDF generations
+3. **Document Type Breakdown**: Metrics segmented by document type (invoices, estimates, purchase orders)
+4. **Filtering Options**: Time range and document type filtering for focused analysis
 
 ## Architecture
 
@@ -24,10 +103,11 @@ The PDF generation system has been refactored to work with the current database 
    - `scheduled-pdf-generation`: Handles scheduled scanning and automatic PDF generation
 
 3. **Database Components**
-   - Database triggers on table inserts/updates
-   - Scheduled functions via pg_cron
-   - PDF generation tracking tables
-   - Failure tracking and retry scheduling
+   - Database triggers on table inserts/updates for automatic PDF generation
+   - Scheduled functions via pg_cron for periodic scanning and retry processing
+   - PDF generation tracking tables with comprehensive logging
+   - Failure tracking with exponential backoff retry scheduling
+   - Row-level security policies for secure access control
 
 4. **Storage**
    - PDFs are stored in Supabase Storage buckets
@@ -42,6 +122,14 @@ The PDF generation system is organized into document-specific modules:
 - `src/lib/pdf/estimate-pdf.ts`: Estimate-specific PDF generation logic
 - `src/lib/pdf/purchase-order-pdf.ts`: Purchase order-specific PDF generation logic
 - `src/lib/pdf/product-pdf.ts`: Product-specific PDF generation logic
+
+### Automation and Error Handling Components
+
+- `supabase/functions/pdf-backend/retry-handler.ts`: Handles retry logic for failed PDF generations
+- `src/hooks/usePDFFailures.ts`: React hook for managing PDF generation failures
+- `src/hooks/usePDFMonitoring.ts`: Hook for monitoring PDF generation statistics
+- `src/components/new/pdf/pdf-failures-manager.tsx`: UI component for managing PDF failures
+- `src/pages/admin/pdf-management.tsx`: Admin page for PDF system management
 
 ### PDF Generation Flow
 
