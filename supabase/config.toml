@@ -1,4 +1,3 @@
-
 project_id = "swrfsullhirscyxqneay"
 
 [functions.glsync]
@@ -11,4 +10,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.batch-generate-and-store-pdfs]
+verify_jwt = false
+
+[functions.auto-generate-pdf]
 verify_jwt = false

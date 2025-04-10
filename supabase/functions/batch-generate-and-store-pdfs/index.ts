@@ -780,7 +780,11 @@ serve(async (req: Request) => {
     for (const item of items) {
       const { id, type } = item;
       
+      // Start with a default result
+      let itemResult = { id, type, success: false, error: '', url: null };
+      
       try {
+        // Define these variables inside the try block as they're only used here
         // Normalize the document type
         const normalizedType = normalizeDocumentType(type);
         const config = documentTypeConfig[normalizedType];
@@ -788,20 +792,10 @@ serve(async (req: Request) => {
         if (!id || !config) {
           throw new Error(`Invalid item data or unsupported document type: ${type}`);
         }
-      } catch (error) {
-        console.error('Invalid item:', { id, type, error: error.message });
-        results.push({ 
-          id, 
-          type, 
-          success: false, 
-          error: error.message
-        });
-        continue; // Skip to next item
-      }
-      
-      let itemResult = { id, type: normalizedType, success: false, error: '', url: null };
-
-      try {
+        
+        // Update the result with the normalized type
+        itemResult.type = normalizedType;
+        
         console.log(`Processing ${normalizedType} with ID: ${id}`);
 
         // 1. Fetch document data - explicitly list columns to avoid relationship navigation
@@ -1065,7 +1059,7 @@ serve(async (req: Request) => {
 
         // 5. Update Database Record
         const { error: updateError } = await supabaseAdmin
-          .from(tableName)
+          .from(config.tableName)
           .update({ supabase_pdf_url: publicUrl })
           .eq('id', id);
 
@@ -1098,7 +1092,7 @@ serve(async (req: Request) => {
               glideRowId: documentData.glide_row_id,
               documentUid: documentData.invoice_uid || documentData.estimate_uid || documentData.purchase_order_uid,
               pdfUrl: publicUrl,
-              tableUpdated: tableName,
+              tableUpdated: config.tableName,
               storageKey: storageKey,
               fromFunction: 'batch-generate-and-store-pdfs'
             };
@@ -1127,7 +1121,7 @@ serve(async (req: Request) => {
         itemResult = { ...itemResult, success: true, url: publicUrl };
       } catch (error) {
         console.error(
-          `Error processing ${normalizedType} ${id}:`,
+          `Error processing document ${id}:`,
           error.message || error,
         );
         itemResult = { ...itemResult, success: false, error: error.message };
