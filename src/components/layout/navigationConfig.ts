@@ -117,6 +117,11 @@ export const navigationConfig: NavigationConfig = {
           icon: "database",
         },
         {
+          title: "PDF Management",
+          href: "/admin/pdf-management",
+          icon: "fileText",
+        },
+        {
           title: "Settings",
           href: "/settings",
           icon: "settings",

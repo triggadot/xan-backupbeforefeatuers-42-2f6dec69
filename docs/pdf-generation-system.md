@@ -628,21 +628,48 @@ const generatePDFViaEdgeFunction = async (type: string, id: string) => {
 
 ### Auto-Triggering PDF Generation
 
-The `auto-generate-pdf` edge function is triggered automatically by database webhooks when:
+The PDF generation system has multiple automatic triggering mechanisms:
 
-1. New documents are inserted into relevant tables
-2. Existing documents are updated and their status changes to a relevant state (e.g., 'approved', 'sent')
+1. **Database Triggers**: When documents are inserted or updated in relevant tables (gl_invoices, gl_estimates, gl_purchase_orders), database triggers automatically call the PDF backend function via webhook.
 
-For example, when an invoice status changes from 'draft' to 'sent', the PDF will be automatically generated and the `supabase_pdf_url` field will be updated.
+2. **Scheduled Scanning**: A scheduled function runs at regular intervals to identify and process documents with null `supabase_pdf_url` fields.
 
-## Error Handling and Fallbacks
+3. **Manual Regeneration**: Users can force regeneration of PDFs from the UI even if a PDF URL already exists.
 
-The PDF generation system includes comprehensive error handling:
+When a document is processed, the system generates the PDF, stores it in Supabase storage, and updates the `supabase_pdf_url` field with the public URL.
 
-1. **Client-Side**: Uses the `PDFErrorType` enum to categorize errors and provide meaningful messages
-2. **Edge Functions**: Provides detailed error responses with appropriate HTTP status codes
-3. **Retry Logic**: The batch generator includes retry mechanisms for failed generations
-4. **Fallbacks**: If PDF generation fails, the system will attempt to use cached versions when available
+## Automated Retry System and Error Handling
+
+The PDF generation system includes a sophisticated error handling and retry mechanism:
+
+### Error Categorization and Handling
+
+1. **Error Types**: Uses the `PDFErrorType` enum to categorize errors (validation, database, authentication, generation, storage)
+2. **Structured Responses**: Edge functions return standardized error responses with appropriate HTTP status codes
+3. **Comprehensive Logging**: All errors are logged with request IDs for traceability
+
+### Automated Retry Mechanism
+
+1. **Failure Tracking**: Failed PDF generations are recorded in the `pdf_generation_failures` table with detailed error information
+2. **Exponential Backoff**: Retries use an exponential backoff strategy:
+   - Initial retry after 5 minutes
+   - Subsequent retries at increasing intervals (15, 30, 60, 120, 240, 480, 960 minutes)
+   - Maximum interval capped at 24 hours
+
+3. **Scheduled Processing**: A cron job runs every 10 minutes to check for and retry failed generations
+4. **Manual Intervention**: After 10 failed attempts, items are flagged for manual intervention
+5. **Automatic Resolution**: When a PDF is successfully generated, its failure record is marked as resolved
+
+### Failure Management
+
+1. **Monitoring**: The system maintains statistics on success/failure rates of PDF generation
+2. **Cleanup**: Resolved failure records are automatically purged after 30 days
+3. **Manual Reset**: Administrators can manually reset failure counters for specific documents
+
+### Fallback Strategies
+
+1. **Cache Utilization**: If a new generation fails but a previous PDF exists, the system can retain the existing PDF
+2. **On-Demand Generation**: The UI provides fallback options for manual generation when automated processes fail
 
 ## Performance Optimization
 
