@@ -122,6 +122,11 @@ export const navigationConfig: NavigationConfig = {
           icon: "fileText",
         },
         {
+          title: "Responsive UI",
+          href: "/responsive-examples",
+          icon: "layout",
+        },
+        {
           title: "Settings",
           href: "/settings",
           icon: "settings",

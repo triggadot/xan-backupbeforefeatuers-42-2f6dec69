@@ -1,9 +1,9 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Package, ShoppingBag, AlertCircle, BarChart, Settings, ChevronLeft, ChevronRight, RefreshCw, Link as LinkIcon, Table, History, ClipboardList, Database } from "lucide-react";
 import { Button } from '@/components/ui/button';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from '@/hooks/utils/use-mobile';
+import { AlertCircle, BarChart, ChevronLeft, ChevronRight, ClipboardList, Database, FileText, History, Layout, LayoutDashboard, Link as LinkIcon, Package, RefreshCw, Settings, ShoppingBag, Table, Users } from "lucide-react";
+import { Link, useLocation } from 'react-router-dom';
 import { navigationConfig } from './navigationConfig';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 export function AppSidebar() {
   const {
     state,
@@ -29,7 +29,8 @@ export function AppSidebar() {
       table: Table,
       history: History,
       clipboardList: ClipboardList,
-      database: Database
+      database: Database,
+      layout: Layout
     };
     const IconComponent = iconMap[iconName] || AlertCircle;
     return <IconComponent className="h-4 w-4" />;

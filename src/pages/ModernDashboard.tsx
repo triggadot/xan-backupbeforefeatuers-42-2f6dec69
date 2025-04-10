@@ -1,364 +1,220 @@
-import React, { useEffect } from 'react';
-import { useBusinessDashboard } from '@/hooks/dashboard';
-import { Button } from '@/components/ui/button';
-import { 
-  Grid, 
-  Col, 
-  Card, 
-  Title, 
-  Text, 
-  Tab, 
-  TabGroup, 
-  TabList, 
-  TabPanel, 
-  TabPanels,
-  Flex,
-  Metric,
-  ProgressBar
-} from '@tremor/react';
-import { 
-  RefreshCw, 
-  BarChart2, 
-  FileText, 
-  ShoppingBag, 
-  Users, 
-  ChevronRight
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-// Import our modern dashboard components
 import BusinessMetricsCard from '@/components/dashboard/modern/BusinessMetricsCard';
-import StatusMetricsCard from '@/components/dashboard/modern/StatusMetricsCard';
-import UnpaidInventoryCard from '@/components/dashboard/modern/UnpaidInventoryCard';
+import FinancialActions from '@/components/dashboard/modern/FinancialActions';
+import FinancialSummaryCard from '@/components/dashboard/modern/FinancialSummaryCard';
+import NewTransactionDialog from '@/components/dashboard/modern/NewTransactionDialog';
+import QuickTransferCard from '@/components/dashboard/modern/QuickTransferCard';
+import RecentTransactionsTable from '@/components/dashboard/modern/RecentTransactionsTable';
+import TransactionChart from '@/components/dashboard/modern/TransactionChart';
+import { Button } from '@/components/ui/button';
+import { Container } from '@/components/ui/container';
+import { GridItem, ResponsiveGrid } from '@/components/ui/responsive-grid';
+import { useBreakpoint } from '@/hooks/use-mobile';
+import { ShowAt } from '@/hooks/use-responsive';
+import { formatCurrency } from '@/lib/dashboard/analytics';
+import { useBusinessMetrics, useChartData, useContacts, useFinancialMetrics, useRecentTransactions } from '@/lib/dashboard/hooks';
+import {
+  CreditCard,
+  DollarSign,
+  Loader2,
+  TrendingUp,
+  Users
+} from 'lucide-react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ModernDashboard() {
+  const isMobile = useBreakpoint('md');
+  const [timeFilter, setTimeFilter] = useState('30d');
+  const queryClient = useQueryClient();
+  
+  // Fetch real data using hooks - these now use our Supabase SQL functions
   const { 
-    metrics, 
-    statusMetrics, 
-    unpaidInventory,
-    isLoading, 
-    error, 
-    fetchDashboardData 
-  } = useBusinessDashboard();
-
-  // Fetch dashboard data on component mount
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    data: businessMetrics,
+    isLoading: isLoadingMetrics
+  } = useBusinessMetrics();
+  
+  const {
+    data: chartData,
+    isLoading: isLoadingChart
+  } = useChartData(12); // Show a full year of data
+  
+  const {
+    data: transactions,
+    isLoading: isLoadingTransactions
+  } = useRecentTransactions(10, timeFilter);
+  
+  const {
+    data: financialMetrics,
+    isLoading: isLoadingFinancials
+  } = useFinancialMetrics();
+  
+  const {
+    data: contacts,
+    isLoading: isLoadingContacts
+  } = useContacts(5);
+  
+  // Calculated metrics
+  const totalRevenue = financialMetrics?.find(m => m.label === 'Revenue')?.value || 0;
+  const paidInvoices = financialMetrics?.find(m => m.label === 'Revenue')?.secondaryValue || 0;
+  const collectionRate = totalRevenue > 0 ? Math.round((paidInvoices / totalRevenue) * 100) : 0;
+  
+  const handleQuickTransfer = async (contactId: string, amount: number) => {
+    console.log(`Transfer $${amount} to contact ${contactId}`);
+    // In a real implementation, this would call the Supabase functions API to process the transfer
+    return new Promise<void>(resolve => setTimeout(resolve, 1000));
+  };
 
   return (
-    <div className="container py-8 space-y-8">
-      {/* Header with refresh button */}
-      <div className="flex items-center justify-between">
+    <Container>
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Overview of your business operations and financial metrics
           </p>
         </div>
-        <Button 
-          onClick={fetchDashboardData} 
-          variant="outline" 
-          className="flex items-center gap-2"
-          disabled={isLoading}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh Data
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <NewTransactionDialog onTransactionAdded={() => {
+            // Refetch data after transaction added
+            queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+            queryClient.invalidateQueries({ queryKey: ['financialMetrics'] });
+            queryClient.invalidateQueries({ queryKey: ['businessMetrics'] });
+          }} />
+        </div>
       </div>
-
-      {/* Error message if data fetch failed */}
-      {error && (
-        <Card className="bg-destructive/10 border-destructive">
-          <Flex>
-            <div>
-              <Title className="text-destructive">Error Loading Dashboard</Title>
-              <Text>{error}</Text>
+      
+      {/* Top Metrics */}
+      <ResponsiveGrid
+        columns={{ xs: 1, sm: 2, lg: 3, xl: 4 }}
+        gap={4}
+        className="mb-6"
+      >
+        <GridItem>
+          <BusinessMetricsCard
+            title="Total Balance"
+            value={isLoadingMetrics ? 0 : businessMetrics?.totalBalance || 0}
+            formatter={formatCurrency}
+            change={businessMetrics?.growthRate || 0}
+            icon={<DollarSign className="h-4 w-4" />}
+            className={isLoadingMetrics ? "opacity-70" : ""}
+          />
+          {isLoadingMetrics && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-            <Button 
-              onClick={fetchDashboardData} 
-              variant="outline" 
-              className="flex items-center gap-2"
-            >
-              Try Again
-            </Button>
-          </Flex>
-        </Card>
-      )}
-
-      {/* Loading indicator */}
-      {isLoading && !metrics && (
-        <Card>
-          <Text>Loading dashboard data...</Text>
-          <ProgressBar value={100} color="indigo" className="mt-3" />
-        </Card>
-      )}
-
-      {/* Main dashboard content */}
-      <TabGroup>
-        <TabList>
-          <Tab icon={BarChart2}>Overview</Tab>
-          <Tab icon={FileText}>Documents</Tab>
-          <Tab icon={ShoppingBag}>Inventory</Tab>
-          <Tab icon={Users}>Accounts</Tab>
-        </TabList>
-        
-        <TabPanels>
-          {/* Overview Tab */}
-          <TabPanel>
-            <div className="mt-6 space-y-6">
-              {/* Business Metrics Card */}
-              <BusinessMetricsCard 
-                metrics={metrics} 
-                isLoading={isLoading} 
-              />
-              
-              {/* Status Metrics Card */}
-              <StatusMetricsCard 
-                statusMetrics={statusMetrics} 
-                isLoading={isLoading} 
-              />
-              
-              {/* Unpaid Inventory Card */}
-              <UnpaidInventoryCard 
-                samples={unpaidInventory.samples} 
-                fronted={unpaidInventory.fronted}
-                totalValue={unpaidInventory.totalValue}
-                isLoading={isLoading} 
-              />
+          )}
+        </GridItem>
+        <GridItem>
+          <BusinessMetricsCard
+            title="Active Customer Accounts"
+            value={isLoadingMetrics ? 0 : businessMetrics?.activeCustomers || 0}
+            change={collectionRate}
+            secondaryText={`${collectionRate}% collection rate`}
+            icon={<Users className="h-4 w-4" />}
+            className={isLoadingMetrics ? "opacity-70" : ""}
+          />
+          {isLoadingMetrics && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          </TabPanel>
-          
-          {/* Documents Tab */}
-          <TabPanel>
-            <Grid numItemsLg={3} className="mt-6 gap-6">
-              {/* Invoices Section */}
-              <Card decoration="top" decorationColor="blue">
-                <Flex justifyContent="between" alignItems="center">
-                  <Title>Invoices</Title>
-                  <FileText className="h-5 w-5 text-blue-500" />
-                </Flex>
-                <div className="mt-4">
-                  <Text>Total Invoices</Text>
-                  <Metric>{metrics?.total_invoices || 0}</Metric>
-                </div>
-                <div className="mt-4">
-                  <Text>Total Revenue</Text>
-                  <Metric>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(metrics?.total_invoice_amount || 0)}
-                  </Metric>
-                </div>
-                <div className="mt-4">
-                  <Text>Outstanding Balance</Text>
-                  <Metric>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(metrics?.total_outstanding_balance || 0)}
-                  </Metric>
-                </div>
-                <div className="mt-6">
-                  <Link 
-                    to="/invoices" 
-                    className="inline-flex items-center text-blue-500 hover:underline"
-                  >
-                    View All Invoices
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </div>
-              </Card>
-              
-              {/* Estimates Section */}
-              <Card decoration="top" decorationColor="amber">
-                <Flex justifyContent="between" alignItems="center">
-                  <Title>Estimates</Title>
-                  <FileText className="h-5 w-5 text-amber-500" />
-                </Flex>
-                <div className="mt-4">
-                  <Text>Total Estimates</Text>
-                  <Metric>{metrics?.total_estimates || 0}</Metric>
-                </div>
-                <div className="mt-4">
-                  <Text>Conversion Rate</Text>
-                  <Metric>
-                    {statusMetrics.find(m => m.category === 'estimates')?.paid_count || 0} converted
-                  </Metric>
-                </div>
-                <div className="mt-6">
-                  <Link 
-                    to="/estimates" 
-                    className="inline-flex items-center text-amber-500 hover:underline"
-                  >
-                    View All Estimates
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </div>
-              </Card>
-              
-              {/* Purchase Orders Section */}
-              <Card decoration="top" decorationColor="indigo">
-                <Flex justifyContent="between" alignItems="center">
-                  <Title>Purchase Orders</Title>
-                  <FileText className="h-5 w-5 text-indigo-500" />
-                </Flex>
-                <div className="mt-4">
-                  <Text>Total Purchase Orders</Text>
-                  <Metric>{metrics?.total_purchase_orders || 0}</Metric>
-                </div>
-                <div className="mt-4">
-                  <Text>Total Purchases</Text>
-                  <Metric>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(metrics?.total_purchase_amount || 0)}
-                  </Metric>
-                </div>
-                <div className="mt-4">
-                  <Text>Outstanding Balance</Text>
-                  <Metric>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(metrics?.total_purchase_balance || 0)}
-                  </Metric>
-                </div>
-                <div className="mt-6">
-                  <Link 
-                    to="/purchase-orders" 
-                    className="inline-flex items-center text-indigo-500 hover:underline"
-                  >
-                    View All Purchase Orders
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </div>
-              </Card>
-            </Grid>
-          </TabPanel>
-          
-          {/* Inventory Tab */}
-          <TabPanel>
-            <div className="mt-6 space-y-6">
-              <Card>
-                <Flex justifyContent="between" alignItems="center">
-                  <div>
-                    <Title>Inventory Overview</Title>
-                    <Text>Products, samples, and fronted inventory</Text>
-                  </div>
-                  <ShoppingBag className="h-6 w-6 text-gray-500" />
-                </Flex>
-                
-                <Grid numItemsLg={3} className="mt-6 gap-6">
-                  <Card decoration="left" decorationColor="green">
-                    <Title>Products</Title>
-                    <Metric>{metrics?.total_products || 0}</Metric>
-                    <div className="mt-4">
-                      <Link 
-                        to="/products" 
-                        className="inline-flex items-center text-green-500 hover:underline"
-                      >
-                        View All Products
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </div>
-                  </Card>
-                  
-                  <Card decoration="left" decorationColor="violet">
-                    <Title>Samples</Title>
-                    <Metric>{unpaidInventory.samples.length}</Metric>
-                    <Text>Value: {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(unpaidInventory.samples.reduce((sum, item) => sum + item.unpaid_value, 0))}</Text>
-                    <div className="mt-4">
-                      <Link 
-                        to="/unpaid-inventory" 
-                        className="inline-flex items-center text-violet-500 hover:underline"
-                      >
-                        View All Samples
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </div>
-                  </Card>
-                  
-                  <Card decoration="left" decorationColor="indigo">
-                    <Title>Fronted</Title>
-                    <Metric>{unpaidInventory.fronted.length}</Metric>
-                    <Text>Value: {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    }).format(unpaidInventory.fronted.reduce((sum, item) => sum + item.unpaid_value, 0))}</Text>
-                    <div className="mt-4">
-                      <Link 
-                        to="/unpaid-inventory" 
-                        className="inline-flex items-center text-indigo-500 hover:underline"
-                      >
-                        View All Fronted Items
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </div>
-                  </Card>
-                </Grid>
-              </Card>
-              
-              <UnpaidInventoryCard 
-                samples={unpaidInventory.samples} 
-                fronted={unpaidInventory.fronted}
-                totalValue={unpaidInventory.totalValue}
-                isLoading={isLoading} 
-              />
+          )}
+        </GridItem>
+        <GridItem>
+          <BusinessMetricsCard
+            title="Monthly Revenue"
+            value={isLoadingMetrics ? 0 : businessMetrics?.monthlyRevenue || 0}
+            formatter={formatCurrency}
+            change={businessMetrics?.growthRate || 0}
+            icon={<CreditCard className="h-4 w-4" />}
+            className={isLoadingMetrics ? "opacity-70" : ""}
+          />
+          {isLoadingMetrics && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          </TabPanel>
-          
-          {/* Accounts Tab */}
-          <TabPanel>
-            <div className="mt-6 space-y-6">
-              <Card>
-                <Flex justifyContent="between" alignItems="center">
-                  <div>
-                    <Title>Account Overview</Title>
-                    <Text>Customers and vendors</Text>
-                  </div>
-                  <Users className="h-6 w-6 text-gray-500" />
-                </Flex>
-                
-                <Grid numItemsLg={2} className="mt-6 gap-6">
-                  <Card decoration="left" decorationColor="blue">
-                    <Title>Customers</Title>
-                    <Metric>{metrics?.total_customers || 0}</Metric>
-                    <div className="mt-4">
-                      <Link 
-                        to="/accounts?type=customer" 
-                        className="inline-flex items-center text-blue-500 hover:underline"
-                      >
-                        View All Customers
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </div>
-                  </Card>
-                  
-                  <Card decoration="left" decorationColor="amber">
-                    <Title>Vendors</Title>
-                    <Metric>{metrics?.total_vendors || 0}</Metric>
-                    <div className="mt-4">
-                      <Link 
-                        to="/accounts?type=vendor" 
-                        className="inline-flex items-center text-amber-500 hover:underline"
-                      >
-                        View All Vendors
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </div>
-                  </Card>
-                </Grid>
-              </Card>
+          )}
+        </GridItem>
+        <GridItem>
+          <BusinessMetricsCard
+            title="Total Products"
+            value={isLoadingMetrics ? 0 : businessMetrics?.totalProducts || 0}
+            change={businessMetrics?.growthRate || 0}
+            icon={<TrendingUp className="h-4 w-4" />}
+            className={isLoadingMetrics ? "opacity-70" : ""}
+          />
+          {isLoadingMetrics && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
-    </div>
+          )}
+        </GridItem>
+      </ResponsiveGrid>
+      
+      {/* Charts and Financial Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 relative">
+          <TransactionChart 
+            data={chartData || []} 
+            className="h-full"
+          />
+          {isLoadingChart && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="relative">
+            <FinancialActions className="h-full" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Quick Transfer */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <div className="relative">
+          <QuickTransferCard
+            contacts={contacts || []}
+            onTransfer={handleQuickTransfer}
+            className="h-full"
+          />
+          {isLoadingContacts && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Lower Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 relative">
+          <RecentTransactionsTable
+            transactions={transactions || []}
+            onViewAll={() => console.log('View all transactions')}
+            onTimeChange={setTimeFilter}
+            selectedTime={timeFilter}
+            isLoading={isLoadingTransactions}
+          />
+        </div>
+        <div className="relative">
+          <FinancialSummaryCard
+            metrics={financialMetrics || []}
+            onTimeChange={setTimeFilter}
+            selectedTime={timeFilter}
+            isLoading={isLoadingFinancials}
+          />
+        </div>
+      </div>
+      
+      {/* Mobile quick actions */}
+      <ShowAt breakpoint="sm" below>
+        <div className="fixed bottom-20 right-4 z-40">
+          <Button className="h-14 w-14 rounded-full shadow-lg" size="icon">
+            <TrendingUp className="h-6 w-6" />
+          </Button>
+        </div>
+      </ShowAt>
+    </Container>
   );
 }
