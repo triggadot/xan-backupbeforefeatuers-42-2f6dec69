@@ -4,10 +4,10 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { Account } from '@/types/accountNew';
 
 /**
- * Hook for fetching accounts with calculated balances
+ * Hook for fetching accounts with balances directly from the accounts table
  * Uses the Glidebase pattern where relationships use rowid_ fields referencing glide_row_id values
  * 
- * @returns Object containing accounts data with proper balances
+ * @returns Object containing accounts data with balances from the accounts table
  */
 export function useAccountsWithBalances() {
   const { toast } = useToast();
@@ -16,7 +16,7 @@ export function useAccountsWithBalances() {
     queryKey: ['accounts-with-balances'],
     queryFn: async () => {
       try {
-        // Fetch accounts
+        // Fetch accounts with balance field
         const { data: accounts, error: accountsError } = await supabase
           .from('gl_accounts')
           .select('*')
@@ -24,34 +24,10 @@ export function useAccountsWithBalances() {
         
         if (accountsError) throw accountsError;
         
-        // Fetch all invoices to calculate balances
-        const { data: invoices, error: invoicesError } = await supabase
-          .from('gl_invoices')
-          .select('id, rowid_accounts, total_amount, total_paid');
-        
-        if (invoicesError) throw invoicesError;
-        
-        // Map accounts and calculate balances
+        // Map accounts and use balance directly from the account record
         const accountsWithBalances = accounts.map((account) => {
-          // Find all invoices for this account
-          const accountInvoices = invoices.filter(
-            invoice => invoice.rowid_accounts === account.glide_row_id
-          );
           
-          // Calculate balance
-          const totalInvoiceAmount = accountInvoices.reduce(
-            (sum, invoice) => sum + (invoice.total_amount || 0), 
-            0
-          );
-          
-          const totalPaid = accountInvoices.reduce(
-            (sum, invoice) => sum + (invoice.total_paid || 0), 
-            0
-          );
-          
-          const balance = totalInvoiceAmount - totalPaid;
-          
-          // Create account object with calculated balance
+          // Create account object with balance directly from the account
           return {
             id: account.id,
             glide_row_id: account.glide_row_id || '',
@@ -66,7 +42,7 @@ export function useAccountsWithBalances() {
             address: '',
             notes: '',
             status: 'active',
-            balance: balance,
+            balance: account.balance || 0, // Use balance directly from the account record
             created_at: account.created_at || '',
             updated_at: account.updated_at || '',
             photo: account.photo

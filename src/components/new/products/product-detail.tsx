@@ -5,6 +5,8 @@ import { Card, Title, Text, Grid, Col, Metric, Badge, Tab, TabGroup, TabList, Ta
 import { Spinner } from '@/components/ui/spinner';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { ProductImageGallery } from './product-image-gallery';
+import { ProductStock } from './product-stock';
+import { ProductFinance } from './product-finance';
 
 interface ProductDetailProps {
   productId: string;
@@ -179,6 +181,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId, onBack 
           </Card>
         </Col>
       </Grid>
+
+      {/* Stock & Finance Sections */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
+        <ProductStock productId={product.glide_row_id} />
+        <ProductFinance productId={product.glide_row_id} />
+      </div>
 
       <Card>
         <TabGroup>

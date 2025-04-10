@@ -250,7 +250,7 @@ export function useAccountOverview(accountId: string) {
         if (creditsError) throw creditsError;
         const credits = creditsData || [];
         
-        // Calculate totals
+        // Calculate totals for UI display purposes
         const totalUnpaid = unpaidInvoices?.reduce(
           (sum, invoice) => sum + (invoice.balance || 0), 
           0
@@ -268,7 +268,8 @@ export function useAccountOverview(accountId: string) {
           0
         ) || 0;
         
-        const totalBalance = totalUnpaid - totalPaid - totalCredits;
+        // Use the balance directly from the account record instead of calculating it
+        const totalBalance = account.balance || 0;
         
         // Map account data to expected format
         const mappedAccount: Account = {
@@ -287,7 +288,7 @@ export function useAccountOverview(accountId: string) {
           updated_at: account.updated_at,
           glide_row_id: account.glide_row_id,
           accounts_uid: account.accounts_uid,
-          balance: totalBalance,
+          balance: account.balance || 0, // Use balance directly from account record
           photo: account.photo
         };
         

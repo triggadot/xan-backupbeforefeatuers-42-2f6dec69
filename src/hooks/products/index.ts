@@ -8,6 +8,8 @@ export * from './useProducts';
 export * from './useProductDetail';
 export * from './useProductMutation';
 export * from './useProductVendors';
+export * from './useProductStock';
+export * from './useInventoryReport';
 
 // Backward compatibility exports
 export { useProducts as useFetchProducts } from './useProducts';
