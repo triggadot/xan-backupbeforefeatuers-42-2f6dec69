@@ -1,9 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from '@/hooks/utils/use-mobile';
-import { AlertCircle, BarChart, ChevronLeft, ChevronRight, ClipboardList, Database, FileText, History, Layout, LayoutDashboard, Link as LinkIcon, Package, RefreshCw, Settings, ShoppingBag, Table, Users } from "lucide-react";
+import { AlertCircle, BarChart, ChevronLeft, ChevronRight, ClipboardList, Database, FileText, History, Layout, LayoutDashboard, Link as LinkIcon, Package, Receipt, RefreshCw, Settings, ShoppingBag, Table, Users } from "lucide-react";
 import { Link, useLocation } from 'react-router-dom';
 import { navigationConfig } from './navigationConfig';
+
 export function AppSidebar() {
   const {
     state,
@@ -30,11 +31,13 @@ export function AppSidebar() {
       history: History,
       clipboardList: ClipboardList,
       database: Database,
-      layout: Layout
+      layout: Layout,
+      receipt: Receipt
     };
     const IconComponent = iconMap[iconName] || AlertCircle;
     return <IconComponent className="h-4 w-4" />;
   };
+
   return <Sidebar variant={isMobile ? "floating" : "sidebar"} collapsible="icon" className="border-r border-border bg-sidebar">
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">

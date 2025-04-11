@@ -1,3 +1,4 @@
+
 /**
  * Type definitions for the expenses module
  */
@@ -28,6 +29,7 @@ export interface GlExpense {
  * Form data structure for creating or updating expenses
  */
 export interface ExpenseFormData {
+  id?: string;
   notes: string;
   amount: number;
   category: string;
@@ -70,3 +72,25 @@ export const EXPENSE_CATEGORIES = [
   'Rent',
   'Other'
 ];
+
+/**
+ * Expense status options
+ */
+export enum ExpenseStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  PROCESSED = 'processed'
+}
+
+/**
+ * Summary data for expenses
+ */
+export interface ExpenseSummaryData {
+  totalAmount: number;
+  categoryBreakdown: Record<string, number>;
+  thisMonth: number;
+  lastMonth: number;
+  monthlyChange: number;
+  monthlyChangePercent: number;
+}
