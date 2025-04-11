@@ -53,23 +53,34 @@ src/
    - Vendor balance calculated as `(Sum of related gl_purchase_orders.balance * -1)`
    - Balances updated via database triggers when related records change
 
-3. **Payment Relationship Architecture** (Partially Implemented):
-   - Three primary payment tables with common pattern but entity-specific implementations:
-     - `gl_customer_payments`: For invoice payments from customers
-     - `gl_vendor_payments`: For purchase order payments to vendors
-     - `gl_customer_credits`: For estimate credits to customers
-   - Common fields across payment tables:
-     - `id`: UUID primary key
-     - `glide_row_id`: Unique string identifier for Glide synchronization
-     - `payment_amount`: Numeric field for payment value
-     - `date_of_payment`: Timestamp for payment date
-     - `rowid_accounts`: Reference to customer/vendor account
-   - Parent document references:
-     - `gl_customer_payments.rowid_invoices`: Links payment to invoice
-     - `gl_vendor_payments.rowid_purchase_orders`: Links payment to purchase order
-     - `gl_customer_credits.rowid_estimates`: Links credit to estimate
-   - Current Status:
-     - ✅ Basic UI components for payment entry exist
+3. **Payment Relationship Architecture**
+
+The system manages financial relationships through a set of interconnected tables and processes:
+
+1. **Core Payment Tables**:
+   - `gl_customer_payments`: Records payments from customers against invoices
+   - `gl_vendor_payments`: Records payments to vendors against purchase orders
+   - `gl_customer_credits`: Records credit notes issued to customers
+
+2. **Payment Processing Workflow**:
+   - Create payment against invoice/purchase order
+   - Calculate remaining balance
+   - Update invoice/purchase order status
+   - Generate receipt/confirmation
+
+3. **Implementation Status**: Partially implemented
+   - Basic tables and UI components in place
+   - Payment CRUD operations functional through `useInvoicePayments` hook
+   - Payment form and history UI components implemented
+   - Payment status visualization (paid, partially paid, unpaid)
+   - Client-side balance calculations working
+
+4. **Implementation Gaps**:
+   - No automatic balance recalculation at database level
+   - Missing integration with accounting ledgers
+   - Incomplete bidirectional sync for payments
+   - No comprehensive financial reconciliation
+   - Lack of payment reporting and analytics
      - ✅ Payment data structures are defined
      - ✅ Basic CRUD operations for payments implemented
      - ❌ Missing automatic balance recalculation across entities

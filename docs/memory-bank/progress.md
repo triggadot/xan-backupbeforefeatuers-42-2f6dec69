@@ -67,13 +67,26 @@
    - Enhancing PDF sharing and downloading
 
 6. 🔄 Completing payment, expense, and product management functionality:
-   - Adding automatic balance calculation across related entities
-   - Implementing complete expense categorization and reporting
-   - Developing inventory tracking for products:
-     - Stock level management
-     - Inventory movement tracking
-     - Purchase and sales integration
-   - Building financial summary dashboard with payment reconciliation
+   - **Payment Improvements**:
+     - Adding automatic database-level balance recalculation for invoices and purchase orders
+     - Implementing payment status tracking and update triggers
+     - Developing comprehensive financial reconciliation system
+     - Creating payment reporting and analytics
+     - Implementing bidirectional sync for payments via n8n
+   
+   - **Expense Management Enhancements**:
+     - Integrating expenses with financial reporting system
+     - Creating connection between expenses and vendor payments
+     - Implementing expense approval workflow
+     - Adding expense categorization for financial reporting
+     - Including expenses in bidirectional sync architecture
+   
+   - **Product Inventory System**:
+     - Implementing real inventory tracking based on actual product movement
+     - Creating stock level adjustments triggered by invoices and purchase orders
+     - Adding inventory alerts and reordering functionality
+     - Developing comprehensive inventory analytics and reporting
+     - Verifying bidirectional sync for product inventory
 
 ## Pending Tasks
 1. 📝 Complete bidirectional sync for remaining entities:
