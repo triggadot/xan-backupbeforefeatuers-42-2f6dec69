@@ -53,7 +53,36 @@ src/
    - Vendor balance calculated as `(Sum of related gl_purchase_orders.balance * -1)`
    - Balances updated via database triggers when related records change
 
-3. **Data Fetching Pattern**:
+3. **Payment Relationship Architecture** (Partially Implemented):
+   - Three primary payment tables with common pattern but entity-specific implementations:
+     - `gl_customer_payments`: For invoice payments from customers
+     - `gl_vendor_payments`: For purchase order payments to vendors
+     - `gl_customer_credits`: For estimate credits to customers
+   - Common fields across payment tables:
+     - `id`: UUID primary key
+     - `glide_row_id`: Unique string identifier for Glide synchronization
+     - `payment_amount`: Numeric field for payment value
+     - `date_of_payment`: Timestamp for payment date
+     - `rowid_accounts`: Reference to customer/vendor account
+   - Parent document references:
+     - `gl_customer_payments.rowid_invoices`: Links payment to invoice
+     - `gl_vendor_payments.rowid_purchase_orders`: Links payment to purchase order
+     - `gl_customer_credits.rowid_estimates`: Links credit to estimate
+   - Current Status:
+     - ✅ Basic UI components for payment entry exist
+     - ✅ Payment data structures are defined
+     - ✅ Basic CRUD operations for payments implemented
+     - ❌ Missing automatic balance recalculation across entities
+     - ❌ Incomplete implementation of payment status tracking
+     - ❌ Missing financial reconciliation functionality
+   - Required Implementation:
+     - Invoice balance updates when payments are added/edited/deleted
+     - Purchase order balance updates for vendor payments
+     - Estimate credits properly affecting customer account balances
+     - Comprehensive financial reporting and reconciliation
+     - System-wide consistency checks for payment data
+
+4. **Data Fetching Pattern**:
    - Cannot use Supabase's implicit foreign key joins
    - Manually joining data through multi-step process:
      1. Fetch primary data first
@@ -85,7 +114,7 @@ src/
      }
      ```
 
-4. **PDF System Architecture**:
+5. **PDF System Architecture**:
    - Document-specific PDF modules:
      - `src/lib/pdf/invoice-pdf.ts`
      - `src/lib/pdf/estimate-pdf.ts`
@@ -112,3 +141,44 @@ src/
    - Table-specific sync functions for data processing
    - Cleanup functions to fix inconsistencies and re-enable constraints
    - Comprehensive logging throughout the sync process
+
+## Supabase-Glide Synchronization Architecture
+
+1. **Bidirectional Sync System**:
+   - **Glide to Supabase**: Already implemented and working
+     - Uses `gl_mappings` table to define field mappings between systems
+     - Synchronizes via edge functions interacting with Glide API
+   - **Supabase to Glide**: Being implemented using n8n as intermediary
+     - Webhook-based trigger system for Supabase events
+     - n8n workflows for data transformation and API calls
+     - Edge function for webhook processing and logging
+
+2. **Database Infrastructure**:
+   - **Core Tables**:
+     - `gl_mappings`: Defines relationships between Glide and Supabase tables
+     - `gl_connections`: Stores Glide API credentials and settings
+     - `gl_sync_logs`: Records sync operations and results
+     - `gl_sync_errors`: Stores error information for failed operations
+   - **n8n-specific Tables** (being implemented):
+     - `gl_id_mappings`: Maps Supabase IDs to Glide Row IDs
+     - `gl_webhook_config`: Stores webhook URLs and configurations
+     - `gl_rate_limits`: Manages API rate limits to prevent overload
+
+3. **n8n Workflow Structure**:
+   - **Webhook Trigger**: Receives payload from Supabase edge function
+   - **Entity/Operation Router**: Routes by entity type and operation type
+   - **Data Transformation**: Maps fields based on stored configurations
+   - **Glide API Interaction**: Sends properly formatted API requests
+   - **Response Handling**: Processes results and returns to edge function
+
+4. **Edge Function Architecture**:
+   - Webhook configuration management
+   - Authentication and security handling
+   - Rate limiting and batching
+   - Error recovery and logging
+
+5. **Frontend Integration**:
+   - `useSyncedCrud` hook for synchronized CRUD operations
+   - Status indicators during sync operations
+   - Error handling and retry capabilities
+   - Admin dashboard for monitoring sync status
