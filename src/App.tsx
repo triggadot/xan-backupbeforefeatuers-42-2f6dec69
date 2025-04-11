@@ -1,3 +1,4 @@
+
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/layout/Layout';
@@ -12,7 +13,6 @@ import ResponsiveExamples from '@/pages/ResponsiveExamples';
 import SidebarDemo from '@/pages/SidebarDemo';
 import Sync from '@/pages/Sync';
 import TableDemo from '@/pages/TableDemo';
-import { Route, Routes } from 'react-router-dom';
 
 // Import our pages
 import AccountDetail from '@/pages/AccountDetail';
@@ -31,6 +31,11 @@ import ProductDetailPage from '@/pages/new/ProductDetail';
 import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
 import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
 import UnpaidInventoryPage from '@/pages/products/UnpaidInventory';
+
+// Import our new card-based invoice pages
+import InvoiceCardPage from '@/pages/invoices/InvoiceCardPage';
+import InvoiceCardDetailPage from '@/pages/invoices/InvoiceCardDetailPage';
+import { Route, Routes } from 'react-router-dom';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (
@@ -113,6 +118,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <PlaceholderPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="invoice-cards" 
+            element={
+              <ProtectedRoute>
+                <InvoiceCardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="invoice-cards/:id" 
+            element={
+              <ProtectedRoute>
+                <InvoiceCardDetailPage />
               </ProtectedRoute>
             } 
           />

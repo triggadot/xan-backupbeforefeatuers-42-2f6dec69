@@ -1583,6 +1583,23 @@ export type Database = {
           total_outstanding_balance: number
         }[]
       }
+      gl_get_monthly_revenue: {
+        Args: { months_back: number }
+        Returns: {
+          month: string
+          revenue: number
+          expenses: number
+        }[]
+      }
+      gl_get_purchase_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_po_count: number
+          open_po_count: number
+          total_po_amount: number
+          open_po_amount: number
+        }[]
+      }
       gl_get_purchase_order_metrics: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1590,6 +1607,19 @@ export type Database = {
           total_purchase_amount: number
           total_payments_made: number
           total_purchase_balance: number
+        }[]
+      }
+      gl_get_recent_transactions: {
+        Args: { days_back: number; limit_count: number }
+        Returns: {
+          id: string
+          transaction_date: string
+          description: string
+          amount: number
+          transaction_type: string
+          entity_type: string
+          entity_id: string
+          account_name: string
         }[]
       }
       gl_get_sync_errors: {
