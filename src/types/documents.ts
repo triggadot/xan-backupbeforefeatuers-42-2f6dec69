@@ -42,21 +42,32 @@ export interface DocumentTypeMapping {
  * // Returns 'invoice'
  * ```
  */
+/**
+ * Document type mappings for different operations in the system
+ * Standardized to match backend expectations
+ * 
+ * @example
+ * ```ts
+ * // Get batch key for invoice
+ * const batchKey = DOCUMENT_TYPE_MAPPINGS[DocumentType.INVOICE].batchKey;
+ * // Returns 'invoice'
+ * ```
+ */
 export const DOCUMENT_TYPE_MAPPINGS: Record<DocumentType, DocumentTypeMapping> = {
   [DocumentType.INVOICE]: {
-    batchKey: 'invoice',
+    batchKey: 'invoice', // Must match backend DocumentType.INVOICE value
     storageKey: 'invoice',
     urlKey: 'invoice',
     displayName: 'Invoice'
   },
   [DocumentType.PURCHASE_ORDER]: {
-    batchKey: 'purchaseOrder',
+    batchKey: 'purchaseorder', // Updated to match backend DocumentType.PURCHASE_ORDER value
     storageKey: 'purchase-order',
     urlKey: 'purchase-order',
     displayName: 'Purchase Order'
   },
   [DocumentType.ESTIMATE]: {
-    batchKey: 'estimate',
+    batchKey: 'estimate', // Must match backend DocumentType.ESTIMATE value
     storageKey: 'estimate',
     urlKey: 'estimate',
     displayName: 'Estimate'
@@ -82,19 +93,45 @@ export const DOCUMENT_TYPE_MAPPINGS: Record<DocumentType, DocumentTypeMapping> =
  * ```
  */
 export function normalizeDocumentType(type: string): DocumentType {
-  // Convert to lowercase for case-insensitive comparison
-  const normalizedType = type.toLowerCase();
+  if (!type) {
+    throw new Error('Document type cannot be empty');
+  }
 
-  // Handle various formats of purchase order
+  // Convert to lowercase and trim for case-insensitive comparison
+  const normalizedType = type.toLowerCase().trim();
+
+  // Handle specific cases for different document types with special handling
+  // for consistent normalization with backend
+  
+  // Invoice variations
+  if (normalizedType === 'invoice' || normalizedType === 'invoices') {
+    return DocumentType.INVOICE;
+  }
+  
+  // Purchase order variations
   if (
     normalizedType === 'purchaseorder' ||
     normalizedType === 'purchase-order' ||
-    normalizedType === 'purchase_order'
+    normalizedType === 'purchase_order' ||
+    normalizedType === 'purchaseorders' ||
+    normalizedType === 'purchase-orders' ||
+    normalizedType === 'purchase_orders' ||
+    normalizedType === 'po'
   ) {
     return DocumentType.PURCHASE_ORDER;
   }
+  
+  // Estimate variations
+  if (normalizedType === 'estimate' || normalizedType === 'estimates') {
+    return DocumentType.ESTIMATE;
+  }
+  
+  // Product variations
+  if (normalizedType === 'product' || normalizedType === 'products') {
+    return DocumentType.PRODUCT;
+  }
 
-  // Find matching enum value
+  // Find matching enum value as fallback
   const match = Object.values(DocumentType).find(
     docType => docType.toLowerCase() === normalizedType
   );
@@ -103,7 +140,7 @@ export function normalizeDocumentType(type: string): DocumentType {
     return match as DocumentType;
   }
 
-  // Fallback or error handling
+  // Error if no match found
   throw new Error(`Unsupported document type: ${type}`);
 }
 

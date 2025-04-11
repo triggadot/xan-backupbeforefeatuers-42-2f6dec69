@@ -291,137 +291,157 @@ async function handleSingleDocumentGeneration(supabaseAdmin, data) {
  * 
  * @param {any} supabaseAdmin - Supabase client with admin privileges
  * @param {Object} data - Request data
- * @param {string} data.documentType - Type of document for all items (invoice, estimate, purchaseorder)
- * @param {string[]} data.documentIds - Array of document IDs to generate
+ * @param {string} [data.documentType] - Type of document for all items (invoice, estimate, purchaseorder)
+ * @param {string[]} [data.documentIds] - Array of document IDs to generate
+ * @param {Array<{type: string, id: string}>} [data.items] - Alternative format: Array of items with type and id
  * @param {boolean} [data.forceRegenerate=false] - Whether to regenerate PDFs even if they exist
  * @param {boolean} [data.overwriteExisting=false] - Whether to overwrite existing PDFs in storage
- * @returns {Promise<Response>} HTTP response
+ * @returns {Promise<Response>} HTTP response with standardized format containing results and summary
  */
 async function handleBatchGeneration(supabaseAdmin, data) {
-  // Check different possible formats for batch data
-  if (data.documentType && Array.isArray(data.documentIds) && data.documentIds.length > 0) {
-    // Handle the newer format with documentType and documentIds array
-    const { 
-      documentType, 
-      documentIds, 
-      forceRegenerate = false, 
-      overwriteExisting = false 
-    } = data;
-    
-    console.log(`Processing batch generation for ${documentIds.length} ${documentType} documents`);
-    console.log(`Force regenerate: ${forceRegenerate}, Overwrite existing: ${overwriteExisting}`);
-    
-    const results = [];
-    let successCount = 0;
-    let failedCount = 0;
-    
-    // Process documentIds sequentially
-    for (const documentId of documentIds) {
-      try {
-        // Process individual document using single document handler with force/overwrite flags
-        const response = await handleSingleDocumentGeneration(supabaseAdmin, {
-          documentType,
-          documentId,
-          forceRegenerate,
-          overwriteExisting
-        });
-        
-        const result = await response.json();
-        results.push(result);
-        
-        if (result.success) {
-          successCount++;
-        } else {
-          failedCount++;
-        }
-      } catch (error) {
-        failedCount++;
-        results.push({
-          success: false,
-          documentId,
-          documentType,
-          error: error.message || 'Error processing document'
-        });
-      }
-    }
-    
-    return new Response(
-      JSON.stringify({
-        success: true,
-        results,
-        summary: {
-          total: documentIds.length,
-          success: successCount,
-          failed: failedCount
-        }
-      }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-  }
+  // Extract common parameters regardless of format
+  const forceRegenerate = data.forceRegenerate ?? false;
+  const overwriteExisting = data.overwriteExisting ?? false;
   
-  // Handle legacy format with items array
-  if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-    throw new Error('Missing or invalid batch data. Requires either "items" array or "documentType" with "documentIds" array');
-  }
+  // Use the normalizeDocumentType function imported at the top of the file
   
-  // Extract force/overwrite flags from top level
-  const forceRegenerate = data.forceRegenerate || false;
-  const overwriteExisting = data.overwriteExisting || false;
-  
-  console.log(`Processing batch generation for ${data.items.length} documents (legacy format)`);
-  console.log(`Force regenerate: ${forceRegenerate}, Overwrite existing: ${overwriteExisting}`);
-  
+  // Initialize result tracking variables
   const results = [];
   let successCount = 0;
   let failedCount = 0;
-  
-  // Process items sequentially
-  for (const item of data.items) {
+  let documentsToProcess = [];
+  let batchType = '';
+
+  // Determine which format is being used and standardize processing approach
+  if (data.documentType && Array.isArray(data.documentIds) && data.documentIds.length > 0) {
+    // Format 1: documentType + documentIds array (newer format)
+    const { documentType, documentIds } = data;
+    batchType = 'new format';
+    
+    // Standardize to common processing format with explicitly normalized document type
     try {
-      if (!item.type || !item.id) {
+      const normalizedType = normalizeDocumentType(documentType);
+      documentsToProcess = documentIds.map(id => ({ 
+        type: normalizedType, 
+        id 
+      }));
+      console.log(`Normalized document type from ${documentType} to ${normalizedType}`);
+    } catch (error) {
+      console.error(`Error normalizing document type ${documentType}:`, error);
+      throw new Error(`Invalid document type: ${documentType}`);
+    }
+    
+    console.log(`Processing batch generation for ${documentIds.length} ${documentType} documents (new format)`);
+    
+    // Special logging for invoice type which has experienced issues
+    if (documentType === 'invoice') {
+      console.log(`⚠️ Processing INVOICE batch generation with ${documentIds.length} documents - this type has shown issues previously`);
+    }
+  } 
+  else if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+    // Format 2: items array with {type, id} objects (legacy format)
+    batchType = 'legacy format';
+    documentsToProcess = data.items;
+    console.log(`Processing batch generation for ${data.items.length} documents (legacy format)`);
+    
+    // Count and log document types for debugging
+    const typeCounts = {};
+    data.items.forEach(item => {
+      typeCounts[item.type] = (typeCounts[item.type] || 0) + 1;
+    });
+    
+    console.log('Document type breakdown:', typeCounts);
+    
+    // Special logging for invoice type which has experienced issues
+    if (typeCounts['invoice'] > 0) {
+      console.log(`⚠️ Processing INVOICE batch generation with ${typeCounts['invoice']} documents in legacy format`);
+    }
+  }
+  else {
+    // Neither format is valid
+    throw new Error('Missing or invalid batch data. Requires either "items" array or "documentType" with "documentIds" array');
+  }
+  
+  console.log(`Force regenerate: ${forceRegenerate}, Overwrite existing: ${overwriteExisting}`);
+  
+  // Process all documents sequentially using the same logic for either format
+  for (const doc of documentsToProcess) {
+    try {
+      // Validate required fields
+      if (!doc.type || !doc.id) {
         failedCount++;
         results.push({
           success: false,
-          error: 'Missing type or id in item',
-          item
+          error: 'Missing type or id in document',
+          documentType: doc.type || 'unknown',
+          documentId: doc.id || 'unknown'
         });
         continue;
       }
       
-      // Process individual document (reusing single document logic)
-      const response = await handleSingleDocumentGeneration(supabaseAdmin, {
-        documentType: item.type,
-        documentId: item.id,
-        forceRegenerate,
-        overwriteExisting
-      });
+      // Special handling for invoice type due to previous issues
+      if (doc.type === 'invoice') {
+        console.log(`Processing invoice document ${doc.id} in batch`);
+      }
+      
+      // Process individual document using single document handler with normalized type
+      let response;
+      try {
+        // Ensure consistent document type format by explicitly normalizing
+        const normalizedType = normalizeDocumentType(doc.type);
+        
+        // Only log if normalization changed the type
+        if (normalizedType !== doc.type) {
+          console.log(`Normalized document type from ${doc.type} to ${normalizedType} for document ${doc.id}`);
+        }
+        
+        response = await handleSingleDocumentGeneration(supabaseAdmin, {
+          documentType: normalizedType,
+          documentId: doc.id,
+          forceRegenerate,
+          overwriteExisting
+        });
+      } catch (error) {
+        throw new Error(`Invalid document type ${doc.type} for document ${doc.id}: ${error.message}`);
+      }
       
       const result = await response.json();
       results.push(result);
       
       if (result.success) {
         successCount++;
+        console.log(`Successfully processed ${doc.type} ${doc.id}`);
       } else {
         failedCount++;
+        console.error(`Failed to process ${doc.type} ${doc.id}: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       failedCount++;
+      console.error(`Exception processing ${doc.type || 'unknown'} ${doc.id || 'unknown'}:`, error);
+      
       results.push({
         success: false,
-        documentId: item.id,
-        documentType: item.type,
-        error: error.message || 'Error processing item'
+        documentId: doc.id,
+        documentType: doc.type,
+        error: error.message || 'Error processing document'
       });
     }
   }
   
+  // Return standardized response format with consistent structure regardless of input format
   return new Response(
     JSON.stringify({
       success: true,
-      results
+      results,
+      summary: {
+        total: documentsToProcess.length,
+        success: successCount,
+        failed: failedCount,
+        batchType
+      },
+      // Include top-level counters for backward compatibility
+      failed: failedCount,
+      success: successCount
     }),
     { 
       status: 200,

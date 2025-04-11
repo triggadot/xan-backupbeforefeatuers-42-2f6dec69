@@ -109,42 +109,37 @@ export const usePDFOperations = () => {
     setIsServerProcessing(true);
 
     try {
-      // Convert our frontend document type to the proper backend format using standardized mapping
-      // Using getBatchDocumentTypeKey ensures we send exactly what the backend expects
-      const backendDocumentType = getBatchDocumentTypeKey(documentType);
-      console.log(`Using batch document type key: ${backendDocumentType} for document type: ${documentType}`);
+      // Convert our frontend document type to the expected backend format
+      // Use getBatchDocumentTypeKey instead of normalizeDocumentType for consistent formatting
+      const batchTypeKey = getBatchDocumentTypeKey(documentType);
+      console.log(`Using batch document type key: ${batchTypeKey} for document type: ${documentType}`);
 
-      // Call the new pdf-backend edge function with forceRegenerate flag
+      // Call the pdf-backend edge function
       const { data, error } = await supabase.functions.invoke('pdf-backend', {
         body: {
           action: 'generate',
-          documentType: backendDocumentType,
-          documentId: documentId,
-          forceRegenerate: true, // Always regenerate the PDF even if it exists
-          overwriteExisting: true // Always overwrite existing files in storage
+          documentType: batchTypeKey,
+          documentId,
+          forceRegenerate: true,
+          overwriteExisting: true
         }
       });
 
       if (error) {
         console.error('Error calling pdf-backend generation:', error);
-        throw new Error(`Failed to generate PDF: ${error.message}`);
-      }
-
-      if (data?.error) {
-        console.error('PDF backend returned error:', data.error);
-        throw new Error(`PDF generation failed: ${data.error}`);
+        throw new Error(`Failed to request batch generation: ${error.message}`);
       }
 
       console.log('PDF generation response:', data);
-      return true;
+      return data?.success ?? false;
     } catch (error) {
-      console.error(`Error requesting PDF generation for ${documentType}:`, 
+      console.error(`Error requesting batch ${documentType} PDF generation:`, 
         error instanceof Error 
           ? { message: error.message, stack: error.stack } 
           : String(error)
       );
       toast({
-        title: 'PDF Generation Failed',
+        title: 'Batch PDF Request Failed',
         description: error instanceof Error ? error.message : 'There was an error requesting PDF generation.',
         variant: 'destructive',
       });
@@ -245,39 +240,40 @@ export const usePDFOperations = () => {
    */
   const downloadPDF = async (url: string, fileName: string): Promise<void> => {
     try {
-      // Check if this is a blob URL (starts with blob:)
-      if (url.startsWith('blob:')) {
-        // For blob URLs, we need to fetch the blob and then save it
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        
-        // Use FileSaver.js to save the file
-        saveAs(blob, fileName);
-      } else {
-        // For regular URLs (http/https), fetch and save
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        
-        // Use FileSaver.js to save the file
-        saveAs(blob, fileName);
+      if (!url) {
+        throw new Error('No URL provided for download');
       }
       
-      toast({
-        title: 'PDF Downloaded',
-        description: 'Your PDF has been downloaded successfully.',
-      });
-      
-      console.log(`PDF downloaded successfully: ${fileName}`);
+      // If it's a Supabase storage URL, we need to get signed URL to download
+      if (url.includes('storage.googleapis.com') || url.includes('supabase.co/storage')) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        saveAs(blob, fileName);
+      } else {
+        const { data, error } = await supabase.functions.invoke('pdf-download', {
+          body: { url }
+        });
+        
+        if (error) {
+          throw new Error(`Failed to download PDF: ${error.message}`);
+        }
+        
+        if (!data?.pdf) {
+          throw new Error('No PDF data returned from server');
+        }
+        
+        // Convert base64 to Blob
+        const byteCharacters = atob(data.pdf);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Save the blob as a file
+        saveAs(blob, fileName);
+      }
     } catch (error) {
       console.error('Error downloading PDF:', 
         error instanceof Error 
@@ -289,7 +285,6 @@ export const usePDFOperations = () => {
         description: error instanceof Error ? error.message : 'There was an error downloading the PDF.',
         variant: 'destructive',
       });
-      throw new Error(`Error downloading PDF: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
