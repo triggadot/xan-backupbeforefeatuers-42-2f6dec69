@@ -2,7 +2,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useInvoiceDetail } from '@/hooks/invoices';
-import { InvoiceCardDetail } from '@/components/invoices/InvoiceCardDetail';
+import { InvoiceCardDetail } from '@/components/invoices/cards';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 

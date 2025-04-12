@@ -1,4 +1,3 @@
-
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/layout/Layout';
@@ -233,7 +232,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* Expense Routes */}
           <Route 
             path="expenses" 
             element={
