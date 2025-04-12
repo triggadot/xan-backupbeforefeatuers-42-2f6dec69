@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/utils/use-toast';
+import { InvoiceWithAccount } from '@/types/new/invoice';
 
 const InvoiceCardPage: React.FC = () => {
   const { invoices, isLoading } = useInvoices();
@@ -38,8 +39,30 @@ const InvoiceCardPage: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState('all');
   const { toast } = useToast();
 
+  // Convert old invoice types to new invoice types for rendering
+  const convertedInvoices: InvoiceWithAccount[] = invoices.map(invoice => ({
+    id: invoice.id,
+    glide_row_id: invoice.glideRowId || invoice.glide_row_id || '',
+    rowid_accounts: invoice.customerId || invoice.rowid_accounts || '',
+    invoice_order_date: invoice.invoiceDate ? invoice.invoiceDate.toISOString() : invoice.invoice_order_date || '',
+    created_timestamp: invoice.createdAt ? invoice.createdAt.toISOString() : invoice.created_at || '',
+    submitted_timestamp: '',
+    user_email: '',
+    notes: invoice.notes || '',
+    doc_glideforeverlink: '',
+    created_at: invoice.createdAt ? invoice.createdAt.toISOString() : invoice.created_at || '',
+    updated_at: invoice.updatedAt ? invoice.updatedAt.toISOString() : invoice.updated_at || '',
+    total_amount: invoice.total_amount || invoice.total || 0,
+    total_paid: invoice.total_paid || invoice.amountPaid || 0,
+    balance: invoice.balance || 0,
+    payment_status: invoice.status || invoice.payment_status || 'draft',
+    invoice_uid: invoice.invoiceNumber || invoice.invoice_uid || '',
+    account: invoice.account,
+    lines: []
+  }));
+
   // Apply filters
-  const filteredInvoices = invoices.filter(invoice => {
+  const filteredInvoices = convertedInvoices.filter(invoice => {
     // Search filter
     const matchesSearch = 
       (invoice.account?.account_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,7 +154,7 @@ const InvoiceCardPage: React.FC = () => {
       </div>
 
       {/* Status Summary Cards */}
-      <InvoiceStatusSummary invoices={invoices} selectedStatus={statusFilter} onSelectStatus={setStatusFilter} />
+      <InvoiceStatusSummary invoices={convertedInvoices} selectedStatus={statusFilter} onSelectStatus={setStatusFilter} />
 
       {/* Filters */}
       <Card className="p-4">

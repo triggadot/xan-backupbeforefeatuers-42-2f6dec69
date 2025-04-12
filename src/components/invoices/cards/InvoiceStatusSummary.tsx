@@ -1,8 +1,10 @@
 
-import React from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { CheckCircle, AlertCircle, Clock, FileText, CircleDollarSign } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { InvoiceWithAccount } from '@/types/new/invoice';
 
 interface InvoiceStatusSummaryProps {
   invoices: InvoiceWithAccount[];
@@ -10,85 +12,131 @@ interface InvoiceStatusSummaryProps {
   onSelectStatus: (status: string) => void;
 }
 
-export const InvoiceStatusSummary: React.FC<InvoiceStatusSummaryProps> = ({ 
+export const InvoiceStatusSummary: React.FC<InvoiceStatusSummaryProps> = ({
   invoices,
   selectedStatus,
-  onSelectStatus 
+  onSelectStatus
 }) => {
-  // Calculate status metrics
-  const allCount = invoices.length;
-  const allTotal = invoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  
-  const paidInvoices = invoices.filter(invoice => invoice.payment_status?.toLowerCase() === 'paid');
-  const paidCount = paidInvoices.length;
-  const paidTotal = paidInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  
-  const unpaidInvoices = invoices.filter(invoice => invoice.payment_status?.toLowerCase() === 'unpaid');
-  const unpaidCount = unpaidInvoices.length;
-  const unpaidTotal = unpaidInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  
-  const partialInvoices = invoices.filter(invoice => invoice.payment_status?.toLowerCase() === 'partial');
-  const partialCount = partialInvoices.length;
-  const partialTotal = partialInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-  
-  const draftInvoices = invoices.filter(invoice => invoice.payment_status?.toLowerCase() === 'draft');
-  const draftCount = draftInvoices.length;
-  const draftTotal = draftInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+  const stats = useMemo(() => {
+    const total = invoices.length;
+    const paid = invoices.filter(inv => inv.payment_status?.toLowerCase() === 'paid').length;
+    const unpaid = invoices.filter(inv => inv.payment_status?.toLowerCase() === 'unpaid').length;
+    const partial = invoices.filter(inv => inv.payment_status?.toLowerCase() === 'partial').length;
+    const draft = invoices.filter(inv => inv.payment_status?.toLowerCase() === 'draft').length;
+    
+    const totalAmount = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    const paidAmount = invoices
+      .filter(inv => inv.payment_status?.toLowerCase() === 'paid')
+      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    const unpaidAmount = invoices
+      .filter(inv => ['unpaid', 'partial'].includes(inv.payment_status?.toLowerCase() || ''))
+      .reduce((sum, inv) => sum + (inv.balance || 0), 0);
+    
+    return {
+      total, paid, unpaid, partial, draft,
+      totalAmount, paidAmount, unpaidAmount
+    };
+  }, [invoices]);
   
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
       <Card 
-        className={`cursor-pointer transition-colors ${selectedStatus === 'all' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md", 
+          selectedStatus === 'all' && "border-primary shadow-sm"
+        )}
         onClick={() => onSelectStatus('all')}
       >
-        <CardContent className="p-4 flex flex-col">
-          <span className="text-sm text-muted-foreground">All Invoices</span>
-          <span className="text-2xl font-bold mt-1">{allCount}</span>
-          <span className="text-sm font-medium mt-1">{formatCurrency(allTotal)}</span>
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <div className="flex items-center mb-1">
+              <FileText className="h-4 w-4 mr-2 text-gray-500" />
+              <span className="text-sm font-medium">All</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(stats.totalAmount)}</p>
+          </div>
+          <CircleDollarSign className="h-10 w-10 text-gray-200" />
         </CardContent>
       </Card>
-
+      
       <Card 
-        className={`cursor-pointer transition-colors ${selectedStatus === 'paid' ? 'border-emerald-500 bg-emerald-50' : 'hover:border-emerald-500/50'}`}
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md", 
+          selectedStatus === 'paid' && "border-green-500 shadow-sm"
+        )}
         onClick={() => onSelectStatus('paid')}
       >
-        <CardContent className="p-4 flex flex-col">
-          <span className="text-sm text-muted-foreground">Paid</span>
-          <span className="text-2xl font-bold mt-1 text-emerald-600">{paidCount}</span>
-          <span className="text-sm font-medium mt-1">{formatCurrency(paidTotal)}</span>
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <div className="flex items-center mb-1">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              <span className="text-sm font-medium">Paid</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.paid}</p>
+            <p className="text-xs text-green-600">{formatCurrency(stats.paidAmount)}</p>
+          </div>
+          <CheckCircle className="h-10 w-10 text-green-100" />
         </CardContent>
       </Card>
-
+      
       <Card 
-        className={`cursor-pointer transition-colors ${selectedStatus === 'unpaid' ? 'border-red-500 bg-red-50' : 'hover:border-red-500/50'}`}
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md", 
+          selectedStatus === 'unpaid' && "border-red-500 shadow-sm"
+        )}
         onClick={() => onSelectStatus('unpaid')}
       >
-        <CardContent className="p-4 flex flex-col">
-          <span className="text-sm text-muted-foreground">Unpaid</span>
-          <span className="text-2xl font-bold mt-1 text-red-600">{unpaidCount}</span>
-          <span className="text-sm font-medium mt-1">{formatCurrency(unpaidTotal)}</span>
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <div className="flex items-center mb-1">
+              <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
+              <span className="text-sm font-medium">Unpaid</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.unpaid}</p>
+            <p className="text-xs text-red-600">{formatCurrency(stats.unpaidAmount)}</p>
+          </div>
+          <AlertCircle className="h-10 w-10 text-red-100" />
         </CardContent>
       </Card>
-
+      
       <Card 
-        className={`cursor-pointer transition-colors ${selectedStatus === 'partial' ? 'border-amber-500 bg-amber-50' : 'hover:border-amber-500/50'}`}
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md", 
+          selectedStatus === 'partial' && "border-amber-500 shadow-sm"
+        )}
         onClick={() => onSelectStatus('partial')}
       >
-        <CardContent className="p-4 flex flex-col">
-          <span className="text-sm text-muted-foreground">Partial</span>
-          <span className="text-2xl font-bold mt-1 text-amber-600">{partialCount}</span>
-          <span className="text-sm font-medium mt-1">{formatCurrency(partialTotal)}</span>
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <div className="flex items-center mb-1">
+              <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+              <span className="text-sm font-medium">Partial</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.partial}</p>
+            <p className="text-xs text-amber-600">Partially Paid</p>
+          </div>
+          <AlertCircle className="h-10 w-10 text-amber-100" />
         </CardContent>
       </Card>
-
+      
       <Card 
-        className={`cursor-pointer transition-colors ${selectedStatus === 'draft' ? 'border-blue-500 bg-blue-50' : 'hover:border-blue-500/50'}`}
+        className={cn(
+          "cursor-pointer transition-all hover:shadow-md", 
+          selectedStatus === 'draft' && "border-gray-500 shadow-sm"
+        )}
         onClick={() => onSelectStatus('draft')}
       >
-        <CardContent className="p-4 flex flex-col">
-          <span className="text-sm text-muted-foreground">Draft</span>
-          <span className="text-2xl font-bold mt-1 text-blue-600">{draftCount}</span>
-          <span className="text-sm font-medium mt-1">{formatCurrency(draftTotal)}</span>
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <div className="flex items-center mb-1">
+              <Clock className="h-4 w-4 mr-2 text-gray-500" />
+              <span className="text-sm font-medium">Draft</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.draft}</p>
+            <p className="text-xs text-muted-foreground">In Progress</p>
+          </div>
+          <Clock className="h-10 w-10 text-gray-100" />
         </CardContent>
       </Card>
     </div>

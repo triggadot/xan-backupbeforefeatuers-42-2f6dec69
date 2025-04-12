@@ -1703,22 +1703,42 @@ export type Database = {
         Row: {
           config: Json
           created_at: string | null
+          high_confidence_threshold: number | null
           id: string
+          medium_confidence_threshold: number | null
           updated_at: string | null
+          use_ai_assistance: boolean | null
+          webhook_id: string | null
         }
         Insert: {
           config?: Json
           created_at?: string | null
+          high_confidence_threshold?: number | null
           id?: string
+          medium_confidence_threshold?: number | null
           updated_at?: string | null
+          use_ai_assistance?: boolean | null
+          webhook_id?: string | null
         }
         Update: {
           config?: Json
           created_at?: string | null
+          high_confidence_threshold?: number | null
           id?: string
+          medium_confidence_threshold?: number | null
           updated_at?: string | null
+          use_ai_assistance?: boolean | null
+          webhook_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_matching_config_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1833,6 +1853,104 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      webhook_config: {
+        Row: {
+          auth_token: string | null
+          created_at: string | null
+          description: string | null
+          enabled: boolean | null
+          endpoint_url: string
+          event_types: string[] | null
+          headers: Json | null
+          id: string
+          name: string
+          retry_count: number | null
+          timeout_seconds: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auth_token?: string | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          endpoint_url: string
+          event_types?: string[] | null
+          headers?: Json | null
+          id?: string
+          name: string
+          retry_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auth_token?: string | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          endpoint_url?: string
+          event_types?: string[] | null
+          headers?: Json | null
+          id?: string
+          name?: string
+          retry_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      webhook_log: {
+        Row: {
+          attempt_count: number | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          next_retry_at: string | null
+          payload: Json | null
+          response_body: string | null
+          response_status: number | null
+          success: boolean | null
+          webhook_id: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          next_retry_at?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          webhook_id?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          next_retry_at?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_log_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2477,7 +2595,7 @@ export type Database = {
         Returns: undefined
       }
       match_message_to_products: {
-        Args: { p_message_id: string; p_auto_match_threshold?: number }
+        Args: { p_message_id: string; p_confidence_override?: Json }
         Returns: Json
       }
       refresh_all_materialized_views: {
@@ -2499,6 +2617,14 @@ export type Database = {
       reset_pdf_generation_failure: {
         Args: { p_document_type: string; p_document_id: string }
         Returns: undefined
+      }
+      send_product_matching_webhook: {
+        Args: {
+          p_message_id: string
+          p_match_data: Json
+          p_confidence_level: Database["public"]["Enums"]["confidence_level"]
+        }
+        Returns: Json
       }
       update_account_customer_balance: {
         Args: { p_glide_row_id: string }
@@ -2591,6 +2717,7 @@ export type Database = {
     Enums: {
       account_type: "Customer" | "Vendor" | "Customer & Vendor"
       approval_status: "pending" | "approved" | "rejected" | "auto_matched"
+      confidence_level: "high" | "medium" | "low"
       match_type: "exact" | "fuzzy" | "manual" | "auto"
       message_operation_type:
         | "message_create"
@@ -2739,6 +2866,7 @@ export const Constants = {
     Enums: {
       account_type: ["Customer", "Vendor", "Customer & Vendor"],
       approval_status: ["pending", "approved", "rejected", "auto_matched"],
+      confidence_level: ["high", "medium", "low"],
       match_type: ["exact", "fuzzy", "manual", "auto"],
       message_operation_type: [
         "message_create",
