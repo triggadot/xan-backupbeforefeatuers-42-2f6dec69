@@ -1899,6 +1899,56 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_implementation_details: {
+        Row: {
+          callback_function: string | null
+          created_at: string | null
+          data_schema: Json | null
+          entity_table: string | null
+          id: string
+          implementation_priority: number | null
+          implementation_status: string | null
+          notes: string | null
+          trigger_function: string | null
+          updated_at: string | null
+          webhook_id: string | null
+        }
+        Insert: {
+          callback_function?: string | null
+          created_at?: string | null
+          data_schema?: Json | null
+          entity_table?: string | null
+          id?: string
+          implementation_priority?: number | null
+          implementation_status?: string | null
+          notes?: string | null
+          trigger_function?: string | null
+          updated_at?: string | null
+          webhook_id?: string | null
+        }
+        Update: {
+          callback_function?: string | null
+          created_at?: string | null
+          data_schema?: Json | null
+          entity_table?: string | null
+          id?: string
+          implementation_priority?: number | null
+          implementation_status?: string | null
+          notes?: string | null
+          trigger_function?: string | null
+          updated_at?: string | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_implementation_details_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_log: {
         Row: {
           attempt_count: number | null
@@ -2295,6 +2345,21 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_integration_checklist: {
+        Row: {
+          callback_function: string | null
+          description: string | null
+          enabled: boolean | null
+          entity_table: string | null
+          event_types: string[] | null
+          implementation_priority: number | null
+          implementation_status: string | null
+          notes: string | null
+          trigger_function: string | null
+          webhook_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       approve_product_from_queue: {
@@ -2596,6 +2661,16 @@ export type Database = {
       }
       match_message_to_products: {
         Args: { p_message_id: string; p_confidence_override?: Json }
+        Returns: Json
+      }
+      process_ai_matching_result: {
+        Args: {
+          p_queue_id: string
+          p_action: string
+          p_product_id?: string
+          p_confidence_score?: number
+          p_ai_reasoning?: string
+        }
         Returns: Json
       }
       refresh_all_materialized_views: {
