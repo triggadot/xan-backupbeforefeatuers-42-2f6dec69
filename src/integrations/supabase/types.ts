@@ -2784,6 +2784,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      xdelo_process_caption_workflow: {
+        Args: {
+          p_message_id: string
+          p_correlation_id: string
+          p_force?: boolean
+        }
+        Returns: Json
+      }
+      xdelo_sync_media_group_content: {
+        Args: {
+          p_source_message_id: string
+          p_media_group_id: string
+          p_correlation_id?: string
+          p_force_sync?: boolean
+          p_sync_edit_history?: boolean
+        }
+        Returns: Json
+      }
       xdelo_update_product_matching_config: {
         Args: { p_config: Json }
         Returns: Json

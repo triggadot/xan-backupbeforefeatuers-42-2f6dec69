@@ -1,28 +1,12 @@
 
-import React from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useInvoicePayments } from '@/hooks/invoices/useInvoicePayments';
-import { useState, useEffect } from 'react';
-import { CreditCard, AlertCircle, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { supabase } from '@/lib/supabase';
+import { InvoiceWithAccount } from '@/types/new/invoice';
+import { CreditCard, DollarSign } from 'lucide-react';
+import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoicePaymentsDialogProps {
   invoice: InvoiceWithAccount;
@@ -32,153 +16,120 @@ interface InvoicePaymentsDialogProps {
 
 interface Payment {
   id: string;
-  date: string;
-  amount: number;
-  method: string;
-  notes?: string;
+  payment_amount: number;
+  date_of_payment: string;
+  type_of_payment?: string;
+  payment_note?: string;
+  rowid_invoices: string;
+  rowid_accounts: string;
+  created_at: string;
+  // For display purposes
+  method?: string;
 }
 
-export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({ 
-  invoice, 
-  open, 
-  onClose 
-}) => {
+export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({ invoice, open, onClose }) => {
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   useEffect(() => {
-    const fetchPayments = async () => {
-      if (!open) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch payments related to this invoice from Supabase
-        const { supabase } = await import('@/integrations/supabase/client');
-        
-        const { data, error } = await supabase
-          .from('gl_customer_payments')
-          .select('*')
-          .eq('rowid_invoices', invoice.glide_row_id);
-          
-        if (error) throw error;
-        
-        // Format the payments data
-        const formattedPayments = data.map(payment => ({
-          id: payment.id,
-          date: payment.date_of_payment,
-          amount: Number(payment.payment_amount) || 0,
-          method: payment.type_of_payment || 'Unknown',
-          notes: payment.payment_note
-        }));
-        
-        setPayments(formattedPayments);
-      } catch (err) {
-        console.error('Error fetching payments:', err);
-        setError('Failed to load payment history');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPayments();
-  }, [open, invoice.glide_row_id]);
+    if (open && invoice) {
+      fetchPayments();
+    }
+  }, [open, invoice]);
   
-  // Calculate total paid
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const isPaidInFull = totalPaid >= (invoice.total_amount || 0);
+  const fetchPayments = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('gl_customer_payments')
+        .select('*')
+        .eq('rowid_invoices', invoice.glide_row_id);
+      
+      if (error) throw error;
+      
+      // Enhance payment data for display
+      const enhancedPayments = data.map(payment => ({
+        ...payment,
+        method: payment.type_of_payment || 'Other'
+      }));
+      
+      setPayments(enhancedPayments);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+      setIsLoading(false);
+    }
+  };
+  
   const invoiceNumber = invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`;
   
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Payment History
+            Payments for Invoice #{invoiceNumber}
           </DialogTitle>
-          <DialogDescription>
-            Showing payments for invoice #{invoiceNumber}
-          </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <Card className="p-4 text-center">
-            <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-            <p className="text-lg font-bold">{formatCurrency(invoice.total_amount || 0)}</p>
-          </Card>
-          <Card className="p-4 text-center">
-            <p className="text-sm text-muted-foreground mb-1">Paid</p>
-            <p className={`text-lg font-bold ${isPaidInFull ? 'text-emerald-600' : 'text-amber-500'}`}>
-              {formatCurrency(totalPaid)}
-            </p>
-          </Card>
-        </div>
-        
-        {isPaidInFull && (
-          <div className="bg-emerald-50 text-emerald-800 rounded-md p-3 flex items-center gap-2 text-sm mb-4">
-            <CheckCircle className="h-5 w-5" />
-            <div>
-              <p className="font-medium">Paid in full</p>
-              <p className="text-xs">This invoice has been fully paid</p>
+        <div className="space-y-6">
+          {/* Summary */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col bg-gray-50 p-3 rounded">
+              <span className="text-xs text-muted-foreground">Total Amount</span>
+              <span className="font-medium">{formatCurrency(invoice.total_amount || 0)}</span>
+            </div>
+            
+            <div className="flex flex-col bg-gray-50 p-3 rounded">
+              <span className="text-xs text-muted-foreground">Paid</span>
+              <span className="font-medium text-green-600">{formatCurrency(invoice.total_paid || 0)}</span>
+            </div>
+            
+            <div className="flex flex-col bg-gray-50 p-3 rounded">
+              <span className="text-xs text-muted-foreground">Balance</span>
+              <span className={`font-medium ${invoice.balance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                {formatCurrency(invoice.balance || 0)}
+              </span>
             </div>
           </div>
-        )}
-        
-        {!isPaidInFull && invoice.total_amount > 0 && (
-          <div className="bg-amber-50 text-amber-800 rounded-md p-3 flex items-center gap-2 text-sm mb-4">
-            <AlertCircle className="h-5 w-5" />
-            <div>
-              <p className="font-medium">Outstanding Balance</p>
-              <p className="text-xs">Remaining: {formatCurrency((invoice.total_amount || 0) - totalPaid)}</p>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex-1 overflow-hidden">
-          {loading ? (
-            <div className="h-full flex items-center justify-center">
+          
+          {/* Payments Table */}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-48">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : error ? (
-            <div className="bg-red-50 text-red-800 rounded-md p-4 text-center">
-              <AlertCircle className="h-5 w-5 mx-auto mb-2" />
-              <p>{error}</p>
-            </div>
           ) : payments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No payments have been recorded for this invoice</p>
+            <div className="text-center p-8 border rounded-md bg-gray-50">
+              <DollarSign className="h-10 w-10 mx-auto text-gray-400" />
+              <p className="mt-2 text-gray-500">No payments recorded for this invoice.</p>
             </div>
           ) : (
-            <ScrollArea className="h-[280px]">
+            <div className="border rounded-md overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead>Method</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payments.map(payment => (
                     <TableRow key={payment.id}>
-                      <TableCell>{formatDate(payment.date)}</TableCell>
+                      <TableCell>{formatDate(payment.date_of_payment)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {payment.method}
-                        </Badge>
+                        <AmountDisplay amount={payment.payment_amount} variant="success" />
                       </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(payment.amount)}
-                      </TableCell>
+                      <TableCell>{payment.method}</TableCell>
+                      <TableCell>{payment.payment_note || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           )}
         </div>
       </DialogContent>
