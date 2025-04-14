@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
-import { DocumentType, normalizeDocumentType, PDFErrorType, createPDFError } from './types.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1?target=deno&importMap=https://swrfsullhirscyxqneay.supabase.co/storage/v1/import-map';
+// Import types from our local types file
+import { DocumentType, normalizeDocumentType, PDFError } from './types.ts';
 import { generatePDF } from './pdf-generator.ts';
 import { fetchDocumentData } from './data-fetcher.ts';
 import { storePDF, updateDocumentWithPdfUrl } from './storage-handler.ts';
@@ -28,45 +28,12 @@ console.log('PDF Backend Function booting up');
  *    - Process PDF generation from database triggers
  *    - Accepts Supabase's webhook format with record data
  */
-// Define CORS headers
+// Define CORS headers for the function
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Error handling wrapper function
-async function handleRequest(req, handler) {
-  try {
-    return await handler(req);
-  } catch (error) {
-    console.error('Error handling request:', error);
-    
-    // Determine appropriate status code based on error type
-    let statusCode = 500;
-    if (error.type === 'VALIDATION_ERROR') {
-      statusCode = 400;
-    } else if (error.type === 'AUTHENTICATION_ERROR') {
-      statusCode = 401;
-    } else if (error.type === 'AUTHORIZATION_ERROR') {
-      statusCode = 403;
-    } else if (error.type === 'NOT_FOUND_ERROR') {
-      statusCode = 404;
-    }
-    
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'An unexpected error occurred',
-        errorType: error.type || 'UNKNOWN_ERROR',
-        timestamp: new Date().toISOString()
-      }),
-      { 
-        status: statusCode,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-  }
-}
 
 // Add a wrapper for consistent error handling
 async function handleRequest(req: Request, handler: (req: Request) => Promise<Response>): Promise<Response> {
@@ -93,13 +60,13 @@ async function handleRequest(req: Request, handler: (req: Request) => Promise<Re
     
     if (error.type) {
       errorType = error.type;
-      if (error.type === PDFErrorType.VALIDATION_ERROR) {
+      if (error.type === PDFError.VALIDATION_ERROR) {
         statusCode = 400;
-      } else if (error.type === PDFErrorType.AUTHENTICATION_ERROR) {
+      } else if (error.type === PDFError.AUTHENTICATION_ERROR) {
         statusCode = 401;
-      } else if (error.type === PDFErrorType.AUTHORIZATION_ERROR) {
+      } else if (error.type === PDFError.AUTHORIZATION_ERROR) {
         statusCode = 403;
-      } else if (error.type === PDFErrorType.NOT_FOUND_ERROR) {
+      } else if (error.type === PDFError.NOT_FOUND_ERROR) {
         statusCode = 404;
       }
     }
@@ -662,3 +629,52 @@ async function handleDatabaseTrigger(supabaseAdmin, data) {
     );
   }
 }
+
+// Main handler that processes all incoming requests
+async function mainHandler(req: Request): Promise<Response> {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
+  // Get Supabase admin client
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  // Process request based on path and method
+  const url = new URL(req.url);
+  const path = url.pathname.split('/').pop();
+
+  if (req.method === 'POST') {
+    const data = await req.json();
+
+    // Determine action based on path or data
+    if (path === 'scan' || data.action === 'scan') {
+      return await handlePdfScan(supabaseAdmin, data);
+    } else if (path === 'batch' || data.action === 'batch') {
+      return await handleBatchGeneration(supabaseAdmin, data);
+    } else if (path === 'webhook' || data.action === 'webhook') {
+      return await handleDatabaseTrigger(supabaseAdmin, data);
+    } else if (path === 'generate' || data.action === 'generate' || data.documentType) {
+      return await handleSingleDocumentGeneration(supabaseAdmin, data);
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Invalid action', success: false }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ error: 'Method not allowed', success: false }),
+    { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Expose the function to Deno
+serve(req => handleRequest(req, mainHandler));

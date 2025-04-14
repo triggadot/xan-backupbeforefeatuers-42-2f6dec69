@@ -12,6 +12,33 @@ export enum DocumentType {
 }
 
 /**
+ * Error types for PDF generation operations
+ * @enum {string}
+ */
+export enum PDFError {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
+  NOT_FOUND_ERROR = 'NOT_FOUND_ERROR',
+  GENERATION_ERROR = 'GENERATION_ERROR',
+  STORAGE_ERROR = 'STORAGE_ERROR',
+  DATABASE_ERROR = 'DATABASE_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+}
+
+/**
+ * Create a standardized PDF error object
+ * @param {string} message - Error message
+ * @param {PDFError} type - Error type from PDFError enum
+ * @returns {Error & {type: PDFError}} Extended error object
+ */
+export function createPDFError(message: string, type: PDFError = PDFError.UNKNOWN_ERROR): Error & {type: PDFError} {
+  const error = new Error(message);
+  (error as Error & {type: PDFError}).type = type;
+  return error as Error & {type: PDFError};
+}
+
+/**
  * Document type configuration for database interactions and storage
  * @interface DocumentTypeConfig
  */
@@ -166,10 +193,10 @@ export interface PDFOperationResult {
 }
 
 /**
- * Interface for PDF error
- * @interface PDFError
+ * Interface for PDF error result
+ * @interface PDFErrorResult
  */
-export interface PDFError extends PDFOperationResult {
+export interface PDFErrorResult extends PDFOperationResult {
   success: false;
   error: string;
   message?: string;
