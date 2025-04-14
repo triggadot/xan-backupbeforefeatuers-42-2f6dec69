@@ -27,6 +27,66 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_messages: {
+        Row: {
+          analyzed_content: Json | null
+          caption: string | null
+          deleted_at: string | null
+          deleted_from_telegram: boolean | null
+          deleted_via_telegram: boolean | null
+          deletion_error: string | null
+          file_id: string | null
+          file_unique_id: string | null
+          id: string
+          media_group_id: string | null
+          message_caption_id: string | null
+          mime_type: string | null
+          original_message_id: string
+          public_url: string | null
+          telegram_data: Json | null
+          telegram_message_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          deleted_at?: string | null
+          deleted_from_telegram?: boolean | null
+          deleted_via_telegram?: boolean | null
+          deletion_error?: string | null
+          file_id?: string | null
+          file_unique_id?: string | null
+          id?: string
+          media_group_id?: string | null
+          message_caption_id?: string | null
+          mime_type?: string | null
+          original_message_id: string
+          public_url?: string | null
+          telegram_data?: Json | null
+          telegram_message_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          deleted_at?: string | null
+          deleted_from_telegram?: boolean | null
+          deleted_via_telegram?: boolean | null
+          deletion_error?: string | null
+          file_id?: string | null
+          file_unique_id?: string | null
+          id?: string
+          media_group_id?: string | null
+          message_caption_id?: string | null
+          mime_type?: string | null
+          original_message_id?: string
+          public_url?: string | null
+          telegram_data?: Json | null
+          telegram_message_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       gl_accounts: {
         Row: {
           account_name: string | null
@@ -686,39 +746,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gl_relationship_mappings: {
-        Row: {
-          created_at: string | null
-          id: string
-          relationship_type: string
-          source_column: string
-          source_table: string
-          target_column: string
-          target_table: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          relationship_type: string
-          source_column: string
-          source_table: string
-          target_column: string
-          target_table: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          relationship_type?: string
-          source_column?: string
-          source_table?: string
-          target_column?: string
-          target_table?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       gl_shipping_records: {
         Row: {
           box_sizes: string | null
@@ -912,6 +939,498 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          analyzed_content: Json | null
+          caption: string | null
+          caption_data: Json | null
+          chat_id: number | null
+          chat_title: string | null
+          chat_type: Database["public"]["Enums"]["telegram_chat_type"] | null
+          correlation_id: string | null
+          created_at: string
+          deleted_from_telegram: boolean | null
+          duplicate_reference_id: string | null
+          duration: number | null
+          edit_count: number | null
+          edit_date: string | null
+          edit_history: Json | null
+          edited_channel_post: boolean | null
+          error_code: string | null
+          error_message: string | null
+          extension: string | null
+          file_id: string | null
+          file_id_expires_at: string | null
+          file_size: number | null
+          file_unique_id: string | null
+          forward_chain: Json[] | null
+          forward_count: number | null
+          forward_date: string | null
+          forward_from: Json | null
+          forward_from_chat: Json | null
+          forward_info: Json | null
+          glide_row_id: string | null
+          group_caption_synced: boolean | null
+          group_first_message_time: string | null
+          group_last_message_time: string | null
+          group_message_count: string | null
+          height: number | null
+          id: string
+          is_channel_post: string | null
+          is_duplicate: boolean | null
+          is_edit: boolean | null
+          is_edited: boolean | null
+          is_edited_channel_post: boolean | null
+          is_forward: boolean | null
+          is_forward_from: string | null
+          is_forwarded: string | null
+          is_forwarded_from: string | null
+          is_miscellaneous_item: boolean | null
+          is_original_caption: boolean | null
+          last_error_at: string | null
+          last_processing_attempt: string | null
+          last_synced_at: string | null
+          match_type: Database["public"]["Enums"]["match_type"] | null
+          media_group_id: string | null
+          media_group_sync: boolean | null
+          media_type: string | null
+          message_caption_id: string | null
+          message_data: Json | null
+          message_date: string | null
+          message_type: string | null
+          message_url: string | null
+          mime_type: string | null
+          mime_type_original: string | null
+          needs_redownload: boolean | null
+          notes: string | null
+          old_analyzed_content: Json | null
+          old_notes: string | null
+          old_product_code: string | null
+          old_product_name: string | null
+          old_product_quantity: number | null
+          old_purchase_date: string | null
+          old_vendor_uid: string | null
+          original_file_id: string | null
+          original_message_id: string | null
+          processing_attempts: number | null
+          processing_completed_at: string | null
+          processing_error: string | null
+          processing_started_at: string | null
+          processing_state: Database["public"]["Enums"]["processing_state_type"]
+          product_code: string | null
+          product_match_confidence: number | null
+          product_match_date: string | null
+          product_match_status: string | null
+          product_name: string | null
+          product_quantity: number | null
+          product_sku: string | null
+          public_url: string | null
+          purchase_date: string | null
+          purchase_order_uid: string | null
+          redownload_attempts: number | null
+          redownload_completed_at: string | null
+          redownload_flagged_at: string | null
+          redownload_reason: string | null
+          redownload_strategy: string | null
+          retry_count: number | null
+          storage_exists: boolean | null
+          storage_path: string | null
+          storage_path_standardized: boolean | null
+          sync_attempt: number | null
+          telegram_data: Json | null
+          telegram_message_id: number | null
+          text: string | null
+          trigger_source: string | null
+          update_id: string | null
+          updated_at: string
+          user_id: string | null
+          vendor_uid: string | null
+          width: number | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          caption_data?: Json | null
+          chat_id?: number | null
+          chat_title?: string | null
+          chat_type?: Database["public"]["Enums"]["telegram_chat_type"] | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean | null
+          duplicate_reference_id?: string | null
+          duration?: number | null
+          edit_count?: number | null
+          edit_date?: string | null
+          edit_history?: Json | null
+          edited_channel_post?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          extension?: string | null
+          file_id?: string | null
+          file_id_expires_at?: string | null
+          file_size?: number | null
+          file_unique_id?: string | null
+          forward_chain?: Json[] | null
+          forward_count?: number | null
+          forward_date?: string | null
+          forward_from?: Json | null
+          forward_from_chat?: Json | null
+          forward_info?: Json | null
+          glide_row_id?: string | null
+          group_caption_synced?: boolean | null
+          group_first_message_time?: string | null
+          group_last_message_time?: string | null
+          group_message_count?: string | null
+          height?: number | null
+          id?: string
+          is_channel_post?: string | null
+          is_duplicate?: boolean | null
+          is_edit?: boolean | null
+          is_edited?: boolean | null
+          is_edited_channel_post?: boolean | null
+          is_forward?: boolean | null
+          is_forward_from?: string | null
+          is_forwarded?: string | null
+          is_forwarded_from?: string | null
+          is_miscellaneous_item?: boolean | null
+          is_original_caption?: boolean | null
+          last_error_at?: string | null
+          last_processing_attempt?: string | null
+          last_synced_at?: string | null
+          match_type?: Database["public"]["Enums"]["match_type"] | null
+          media_group_id?: string | null
+          media_group_sync?: boolean | null
+          media_type?: string | null
+          message_caption_id?: string | null
+          message_data?: Json | null
+          message_date?: string | null
+          message_type?: string | null
+          message_url?: string | null
+          mime_type?: string | null
+          mime_type_original?: string | null
+          needs_redownload?: boolean | null
+          notes?: string | null
+          old_analyzed_content?: Json | null
+          old_notes?: string | null
+          old_product_code?: string | null
+          old_product_name?: string | null
+          old_product_quantity?: number | null
+          old_purchase_date?: string | null
+          old_vendor_uid?: string | null
+          original_file_id?: string | null
+          original_message_id?: string | null
+          processing_attempts?: number | null
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_state?: Database["public"]["Enums"]["processing_state_type"]
+          product_code?: string | null
+          product_match_confidence?: number | null
+          product_match_date?: string | null
+          product_match_status?: string | null
+          product_name?: string | null
+          product_quantity?: number | null
+          product_sku?: string | null
+          public_url?: string | null
+          purchase_date?: string | null
+          purchase_order_uid?: string | null
+          redownload_attempts?: number | null
+          redownload_completed_at?: string | null
+          redownload_flagged_at?: string | null
+          redownload_reason?: string | null
+          redownload_strategy?: string | null
+          retry_count?: number | null
+          storage_exists?: boolean | null
+          storage_path?: string | null
+          storage_path_standardized?: boolean | null
+          sync_attempt?: number | null
+          telegram_data?: Json | null
+          telegram_message_id?: number | null
+          text?: string | null
+          trigger_source?: string | null
+          update_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vendor_uid?: string | null
+          width?: number | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          caption?: string | null
+          caption_data?: Json | null
+          chat_id?: number | null
+          chat_title?: string | null
+          chat_type?: Database["public"]["Enums"]["telegram_chat_type"] | null
+          correlation_id?: string | null
+          created_at?: string
+          deleted_from_telegram?: boolean | null
+          duplicate_reference_id?: string | null
+          duration?: number | null
+          edit_count?: number | null
+          edit_date?: string | null
+          edit_history?: Json | null
+          edited_channel_post?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          extension?: string | null
+          file_id?: string | null
+          file_id_expires_at?: string | null
+          file_size?: number | null
+          file_unique_id?: string | null
+          forward_chain?: Json[] | null
+          forward_count?: number | null
+          forward_date?: string | null
+          forward_from?: Json | null
+          forward_from_chat?: Json | null
+          forward_info?: Json | null
+          glide_row_id?: string | null
+          group_caption_synced?: boolean | null
+          group_first_message_time?: string | null
+          group_last_message_time?: string | null
+          group_message_count?: string | null
+          height?: number | null
+          id?: string
+          is_channel_post?: string | null
+          is_duplicate?: boolean | null
+          is_edit?: boolean | null
+          is_edited?: boolean | null
+          is_edited_channel_post?: boolean | null
+          is_forward?: boolean | null
+          is_forward_from?: string | null
+          is_forwarded?: string | null
+          is_forwarded_from?: string | null
+          is_miscellaneous_item?: boolean | null
+          is_original_caption?: boolean | null
+          last_error_at?: string | null
+          last_processing_attempt?: string | null
+          last_synced_at?: string | null
+          match_type?: Database["public"]["Enums"]["match_type"] | null
+          media_group_id?: string | null
+          media_group_sync?: boolean | null
+          media_type?: string | null
+          message_caption_id?: string | null
+          message_data?: Json | null
+          message_date?: string | null
+          message_type?: string | null
+          message_url?: string | null
+          mime_type?: string | null
+          mime_type_original?: string | null
+          needs_redownload?: boolean | null
+          notes?: string | null
+          old_analyzed_content?: Json | null
+          old_notes?: string | null
+          old_product_code?: string | null
+          old_product_name?: string | null
+          old_product_quantity?: number | null
+          old_purchase_date?: string | null
+          old_vendor_uid?: string | null
+          original_file_id?: string | null
+          original_message_id?: string | null
+          processing_attempts?: number | null
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_state?: Database["public"]["Enums"]["processing_state_type"]
+          product_code?: string | null
+          product_match_confidence?: number | null
+          product_match_date?: string | null
+          product_match_status?: string | null
+          product_name?: string | null
+          product_quantity?: number | null
+          product_sku?: string | null
+          public_url?: string | null
+          purchase_date?: string | null
+          purchase_order_uid?: string | null
+          redownload_attempts?: number | null
+          redownload_completed_at?: string | null
+          redownload_flagged_at?: string | null
+          redownload_reason?: string | null
+          redownload_strategy?: string | null
+          retry_count?: number | null
+          storage_exists?: boolean | null
+          storage_path?: string | null
+          storage_path_standardized?: boolean | null
+          sync_attempt?: number | null
+          telegram_data?: Json | null
+          telegram_message_id?: number | null
+          text?: string | null
+          trigger_source?: string | null
+          update_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vendor_uid?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_message_caption"
+            columns: ["message_caption_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_message_caption_id_fkey"
+            columns: ["message_caption_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      "null.gl_relationship_mapping": {
+        Row: {
+          created_at: string | null
+          id: string
+          relationship_type: string
+          source_column: string
+          source_table: string
+          target_column: string
+          target_table: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          relationship_type: string
+          source_column: string
+          source_table: string
+          target_column: string
+          target_table: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          relationship_type?: string
+          source_column?: string
+          source_table?: string
+          target_column?: string
+          target_table?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      other_messages: {
+        Row: {
+          analyzed_content: Json | null
+          chat_id: number
+          chat_title: string | null
+          chat_type: Database["public"]["Enums"]["telegram_chat_type"]
+          correlation_id: string | null
+          created_at: string
+          edit_count: number | null
+          edit_date: string | null
+          edit_history: Json | null
+          error_message: string | null
+          forward_info: Json | null
+          id: string
+          is_edited: boolean
+          is_forward: boolean | null
+          last_error_at: string | null
+          message_data: Json | null
+          message_date: string | null
+          message_text: string | null
+          message_type: string
+          message_url: string | null
+          notes: string | null
+          old_analyzed_content: Json | null
+          processing_completed_at: string | null
+          processing_correlation_id: string | null
+          processing_error: string | null
+          processing_started_at: string | null
+          processing_state: Database["public"]["Enums"]["processing_state_type"]
+          product_code: string | null
+          product_name: string | null
+          product_quantity: number | null
+          purchase_date: string | null
+          retry_count: number | null
+          telegram_data: Json | null
+          telegram_message_id: number
+          updated_at: string
+          user_id: string | null
+          vendor_uid: string | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          chat_id: number
+          chat_title?: string | null
+          chat_type: Database["public"]["Enums"]["telegram_chat_type"]
+          correlation_id?: string | null
+          created_at?: string
+          edit_count?: number | null
+          edit_date?: string | null
+          edit_history?: Json | null
+          error_message?: string | null
+          forward_info?: Json | null
+          id?: string
+          is_edited?: boolean
+          is_forward?: boolean | null
+          last_error_at?: string | null
+          message_data?: Json | null
+          message_date?: string | null
+          message_text?: string | null
+          message_type: string
+          message_url?: string | null
+          notes?: string | null
+          old_analyzed_content?: Json | null
+          processing_completed_at?: string | null
+          processing_correlation_id?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_state?: Database["public"]["Enums"]["processing_state_type"]
+          product_code?: string | null
+          product_name?: string | null
+          product_quantity?: number | null
+          purchase_date?: string | null
+          retry_count?: number | null
+          telegram_data?: Json | null
+          telegram_message_id: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_uid?: string | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          chat_id?: number
+          chat_title?: string | null
+          chat_type?: Database["public"]["Enums"]["telegram_chat_type"]
+          correlation_id?: string | null
+          created_at?: string
+          edit_count?: number | null
+          edit_date?: string | null
+          edit_history?: Json | null
+          error_message?: string | null
+          forward_info?: Json | null
+          id?: string
+          is_edited?: boolean
+          is_forward?: boolean | null
+          last_error_at?: string | null
+          message_data?: Json | null
+          message_date?: string | null
+          message_text?: string | null
+          message_type?: string
+          message_url?: string | null
+          notes?: string | null
+          old_analyzed_content?: Json | null
+          processing_completed_at?: string | null
+          processing_correlation_id?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_state?: Database["public"]["Enums"]["processing_state_type"]
+          product_code?: string | null
+          product_name?: string | null
+          product_quantity?: number | null
+          purchase_date?: string | null
+          retry_count?: number | null
+          telegram_data?: Json | null
+          telegram_message_id?: number
+          updated_at?: string
+          user_id?: string | null
+          vendor_uid?: string | null
+        }
+        Relationships: []
+      }
       pdf_generation_failures: {
         Row: {
           created_at: string
@@ -990,6 +1509,237 @@ export type Database = {
         }
         Relationships: []
       }
+      product_approval_queue: {
+        Row: {
+          analyzed_content: Json | null
+          best_match_product_id: string | null
+          best_match_reasons: Json | null
+          best_match_score: number | null
+          caption_data: Json | null
+          created_at: string | null
+          id: string
+          message_id: string | null
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name: string | null
+          suggested_purchase_date: string | null
+          suggested_purchase_order_uid: string | null
+          suggested_vendor_uid: string | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          best_match_product_id?: string | null
+          best_match_reasons?: Json | null
+          best_match_score?: number | null
+          caption_data?: Json | null
+          created_at?: string | null
+          id?: string
+          message_id?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name?: string | null
+          suggested_purchase_date?: string | null
+          suggested_purchase_order_uid?: string | null
+          suggested_vendor_uid?: string | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          best_match_product_id?: string | null
+          best_match_reasons?: Json | null
+          best_match_score?: number | null
+          caption_data?: Json | null
+          created_at?: string | null
+          id?: string
+          message_id?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name?: string | null
+          suggested_purchase_date?: string | null
+          suggested_purchase_order_uid?: string | null
+          suggested_vendor_uid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_approval_queue_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_approval_queue_archive: {
+        Row: {
+          analyzed_content: Json | null
+          archived_at: string | null
+          best_match_product_id: string | null
+          best_match_reasons: Json | null
+          best_match_score: number | null
+          caption_data: Json | null
+          created_at: string | null
+          id: string
+          message_id: string | null
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name: string | null
+          suggested_purchase_date: string | null
+          suggested_purchase_order_uid: string | null
+          suggested_vendor_uid: string | null
+        }
+        Insert: {
+          analyzed_content?: Json | null
+          archived_at?: string | null
+          best_match_product_id?: string | null
+          best_match_reasons?: Json | null
+          best_match_score?: number | null
+          caption_data?: Json | null
+          created_at?: string | null
+          id?: string
+          message_id?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name?: string | null
+          suggested_purchase_date?: string | null
+          suggested_purchase_order_uid?: string | null
+          suggested_vendor_uid?: string | null
+        }
+        Update: {
+          analyzed_content?: Json | null
+          archived_at?: string | null
+          best_match_product_id?: string | null
+          best_match_reasons?: Json | null
+          best_match_score?: number | null
+          caption_data?: Json | null
+          created_at?: string | null
+          id?: string
+          message_id?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["approval_status"]
+          suggested_product_name?: string | null
+          suggested_purchase_date?: string | null
+          suggested_purchase_order_uid?: string | null
+          suggested_vendor_uid?: string | null
+        }
+        Relationships: []
+      }
+      product_matches: {
+        Row: {
+          confidence: number
+          created_at: string | null
+          id: string
+          match_date: string | null
+          match_details: Json | null
+          match_type: string
+          message_id: string
+          product_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string | null
+          id?: string
+          match_date?: string | null
+          match_details?: Json | null
+          match_type?: string
+          message_id: string
+          product_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string | null
+          id?: string
+          match_date?: string | null
+          match_details?: Json | null
+          match_type?: string
+          message_id?: string
+          product_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_matches_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_matches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "gl_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_matches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "gl_unpaid_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_matches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_product_vendor_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_matching_config: {
+        Row: {
+          config: Json
+          created_at: string | null
+          high_confidence_threshold: number | null
+          id: string
+          medium_confidence_threshold: number | null
+          updated_at: string | null
+          use_ai_assistance: boolean | null
+          webhook_id: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string | null
+          high_confidence_threshold?: number | null
+          id?: string
+          medium_confidence_threshold?: number | null
+          updated_at?: string | null
+          use_ai_assistance?: boolean | null
+          webhook_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          high_confidence_threshold?: number | null
+          id?: string
+          medium_confidence_threshold?: number | null
+          updated_at?: string | null
+          use_ai_assistance?: boolean | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_matching_config_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1011,86 +1761,246 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          bot_token: string | null
+          id: string
+          product_matching_config: Json | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          bot_token?: string | null
+          id: string
+          product_matching_config?: Json | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          bot_token?: string | null
+          id?: string
+          product_matching_config?: Json | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       unified_audit_logs: {
         Row: {
           chat_id: number | null
           correlation_id: string | null
           entity_id: string | null
-          entity_type: string | null
           error_message: string | null
+          event_data: string | null
+          event_message: string | null
           event_timestamp: string
-          event_type: string
+          event_type: string | null
           id: string
-          message_id: string | null
+          message_type: string | null
           metadata: Json | null
           new_state: Json | null
+          operation_type:
+            | Database["public"]["Enums"]["message_operation_type"]
+            | null
           previous_state: Json | null
+          source_message_id: string | null
+          target_message_id: string | null
           telegram_message_id: number | null
+          user_id: string | null
         }
         Insert: {
           chat_id?: number | null
           correlation_id?: string | null
           entity_id?: string | null
-          entity_type?: string | null
           error_message?: string | null
+          event_data?: string | null
+          event_message?: string | null
           event_timestamp?: string
-          event_type: string
+          event_type?: string | null
           id?: string
-          message_id?: string | null
+          message_type?: string | null
           metadata?: Json | null
           new_state?: Json | null
+          operation_type?:
+            | Database["public"]["Enums"]["message_operation_type"]
+            | null
           previous_state?: Json | null
+          source_message_id?: string | null
+          target_message_id?: string | null
           telegram_message_id?: number | null
+          user_id?: string | null
         }
         Update: {
           chat_id?: number | null
           correlation_id?: string | null
           entity_id?: string | null
-          entity_type?: string | null
           error_message?: string | null
+          event_data?: string | null
+          event_message?: string | null
           event_timestamp?: string
-          event_type?: string
+          event_type?: string | null
           id?: string
-          message_id?: string | null
+          message_type?: string | null
           metadata?: Json | null
           new_state?: Json | null
+          operation_type?:
+            | Database["public"]["Enums"]["message_operation_type"]
+            | null
           previous_state?: Json | null
+          source_message_id?: string | null
+          target_message_id?: string | null
           telegram_message_id?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
-      webhook_events: {
+      webhook_config: {
         Row: {
-          correlation_id: string | null
-          created_at: string
+          auth_token: string | null
+          created_at: string | null
+          description: string | null
+          enabled: boolean | null
+          endpoint_url: string
+          event_types: string[] | null
+          headers: Json | null
+          id: string
+          name: string
+          retry_count: number | null
+          timeout_seconds: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auth_token?: string | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          endpoint_url: string
+          event_types?: string[] | null
+          headers?: Json | null
+          id?: string
+          name: string
+          retry_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auth_token?: string | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          endpoint_url?: string
+          event_types?: string[] | null
+          headers?: Json | null
+          id?: string
+          name?: string
+          retry_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      webhook_implementation_details: {
+        Row: {
+          callback_function: string | null
+          created_at: string | null
+          data_schema: Json | null
+          entity_table: string | null
+          id: string
+          implementation_priority: number | null
+          implementation_status: string | null
+          notes: string | null
+          trigger_function: string | null
+          updated_at: string | null
+          webhook_id: string | null
+        }
+        Insert: {
+          callback_function?: string | null
+          created_at?: string | null
+          data_schema?: Json | null
+          entity_table?: string | null
+          id?: string
+          implementation_priority?: number | null
+          implementation_status?: string | null
+          notes?: string | null
+          trigger_function?: string | null
+          updated_at?: string | null
+          webhook_id?: string | null
+        }
+        Update: {
+          callback_function?: string | null
+          created_at?: string | null
+          data_schema?: Json | null
+          entity_table?: string | null
+          id?: string
+          implementation_priority?: number | null
+          implementation_status?: string | null
+          notes?: string | null
+          trigger_function?: string | null
+          updated_at?: string | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_implementation_details_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_log: {
+        Row: {
+          attempt_count: number | null
+          completed_at: string | null
+          created_at: string | null
           error_message: string | null
           event_type: string
           id: string
-          payload: Json
-          processed_at: string | null
-          status: string
+          next_retry_at: string | null
+          payload: Json | null
+          response_body: string | null
+          response_status: number | null
+          success: boolean | null
+          webhook_id: string | null
         }
         Insert: {
-          correlation_id?: string | null
-          created_at?: string
+          attempt_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
           error_message?: string | null
           event_type: string
           id?: string
-          payload: Json
-          processed_at?: string | null
-          status?: string
+          next_retry_at?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          webhook_id?: string | null
         }
         Update: {
-          correlation_id?: string | null
-          created_at?: string
+          attempt_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
           error_message?: string | null
           event_type?: string
           id?: string
-          payload?: Json
-          processed_at?: string | null
-          status?: string
+          next_retry_at?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          webhook_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "webhook_log_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1435,18 +2345,27 @@ export type Database = {
         }
         Relationships: []
       }
-      scheduled_processing_stats: {
+      webhook_integration_checklist: {
         Row: {
-          error_count: number | null
-          event_type: string | null
-          last_run: string | null
-          recent_metadata: Json[] | null
-          total_runs: number | null
+          callback_function: string | null
+          description: string | null
+          enabled: boolean | null
+          entity_table: string | null
+          event_types: string[] | null
+          implementation_priority: number | null
+          implementation_status: string | null
+          notes: string | null
+          trigger_function: string | null
+          webhook_name: string | null
         }
         Relationships: []
       }
     }
     Functions: {
+      approve_product_from_queue: {
+        Args: { p_queue_id: string; p_product_id: string; p_user_id?: string }
+        Returns: Json
+      }
       backfill_all_vendor_balances: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1509,6 +2428,18 @@ export type Database = {
       }
       get_pdf_coverage_stats: {
         Args: { p_table_name: string; p_document_type: string }
+        Returns: Json
+      }
+      get_potential_product_matches: {
+        Args: { p_message_id: string; p_limit?: number; p_min_score?: number }
+        Returns: Json
+      }
+      get_product_approval_queue: {
+        Args: {
+          p_status?: Database["public"]["Enums"]["approval_status"]
+          p_limit?: number
+          p_offset?: number
+        }
         Returns: Json
       }
       get_public_tables: {
@@ -1583,6 +2514,23 @@ export type Database = {
           total_outstanding_balance: number
         }[]
       }
+      gl_get_monthly_revenue: {
+        Args: { months_back: number }
+        Returns: {
+          month: string
+          revenue: number
+          expenses: number
+        }[]
+      }
+      gl_get_purchase_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_po_count: number
+          open_po_count: number
+          total_po_amount: number
+          open_po_amount: number
+        }[]
+      }
       gl_get_purchase_order_metrics: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1590,6 +2538,19 @@ export type Database = {
           total_purchase_amount: number
           total_payments_made: number
           total_purchase_balance: number
+        }[]
+      }
+      gl_get_recent_transactions: {
+        Args: { days_back: number; limit_count: number }
+        Returns: {
+          id: string
+          transaction_date: string
+          description: string
+          amount: number
+          transaction_type: string
+          entity_type: string
+          entity_id: string
+          account_name: string
         }[]
       }
       gl_get_sync_errors: {
@@ -1698,6 +2659,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      match_message_to_products: {
+        Args: { p_message_id: string; p_confidence_override?: Json }
+        Returns: Json
+      }
+      process_ai_matching_result: {
+        Args: {
+          p_queue_id: string
+          p_action: string
+          p_product_id?: string
+          p_confidence_score?: number
+          p_ai_reasoning?: string
+        }
+        Returns: Json
+      }
       refresh_all_materialized_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1710,9 +2685,21 @@ export type Database = {
         Args: { view_name: string }
         Returns: undefined
       }
+      reject_product_from_queue: {
+        Args: { p_queue_id: string; p_reason?: string; p_user_id?: string }
+        Returns: Json
+      }
       reset_pdf_generation_failure: {
         Args: { p_document_type: string; p_document_id: string }
         Returns: undefined
+      }
+      send_product_matching_webhook: {
+        Args: {
+          p_message_id: string
+          p_match_data: Json
+          p_confidence_level: Database["public"]["Enums"]["confidence_level"]
+        }
+        Returns: Json
       }
       update_account_customer_balance: {
         Args: { p_glide_row_id: string }
@@ -1747,9 +2734,94 @@ export type Database = {
         Args: { po_id: string }
         Returns: undefined
       }
+      upsert_media_message: {
+        Args: {
+          p_analyzed_content?: Json
+          p_caption?: string
+          p_caption_data?: Json
+          p_chat_id?: number
+          p_correlation_id?: string
+          p_extension?: string
+          p_file_id?: string
+          p_file_unique_id?: string
+          p_forward_info?: Json
+          p_media_group_id?: string
+          p_media_type?: string
+          p_message_data?: Json
+          p_mime_type?: string
+          p_old_analyzed_content?: Json
+          p_processing_error?: string
+          p_processing_state?: string
+          p_public_url?: string
+          p_storage_path?: string
+          p_telegram_message_id?: number
+          p_user_id?: number
+          p_is_edited?: boolean
+          p_additional_updates?: Json
+        }
+        Returns: string
+      }
+      upsert_text_message: {
+        Args: {
+          p_telegram_message_id: number
+          p_chat_id: number
+          p_telegram_data: Json
+          p_message_text?: string
+          p_message_type?: string
+          p_chat_type?: string
+          p_chat_title?: string
+          p_forward_info?: Json
+          p_processing_state?: string
+          p_correlation_id?: string
+        }
+        Returns: string
+      }
+      x_sync_pending_media_groups: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      xdelo_get_product_matching_config: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      xdelo_process_caption_workflow: {
+        Args: {
+          p_message_id: string
+          p_correlation_id: string
+          p_force?: boolean
+        }
+        Returns: Json
+      }
+      xdelo_sync_media_group_content: {
+        Args: {
+          p_source_message_id: string
+          p_media_group_id: string
+          p_correlation_id?: string
+          p_force_sync?: boolean
+          p_sync_edit_history?: boolean
+        }
+        Returns: Json
+      }
+      xdelo_update_product_matching_config: {
+        Args: { p_config: Json }
+        Returns: Json
+      }
     }
     Enums: {
       account_type: "Customer" | "Vendor" | "Customer & Vendor"
+      approval_status: "pending" | "approved" | "rejected" | "auto_matched"
+      confidence_level: "high" | "medium" | "low"
+      match_type: "exact" | "fuzzy" | "manual" | "auto"
+      message_operation_type:
+        | "message_create"
+        | "message_update"
+        | "message_delete"
+        | "message_forward"
+        | "message_edit"
+        | "media_redownload"
+        | "caption_change"
+        | "media_change"
+        | "group_sync"
       message_processing_state:
         | "pending"
         | "extracting"
@@ -1764,6 +2836,12 @@ export type Database = {
         | "completed"
         | "error"
         | "no_caption"
+      telegram_chat_type:
+        | "private"
+        | "group"
+        | "supergroup"
+        | "channel"
+        | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1880,6 +2958,20 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["Customer", "Vendor", "Customer & Vendor"],
+      approval_status: ["pending", "approved", "rejected", "auto_matched"],
+      confidence_level: ["high", "medium", "low"],
+      match_type: ["exact", "fuzzy", "manual", "auto"],
+      message_operation_type: [
+        "message_create",
+        "message_update",
+        "message_delete",
+        "message_forward",
+        "message_edit",
+        "media_redownload",
+        "caption_change",
+        "media_change",
+        "group_sync",
+      ],
       message_processing_state: [
         "pending",
         "extracting",
@@ -1895,6 +2987,13 @@ export const Constants = {
         "completed",
         "error",
         "no_caption",
+      ],
+      telegram_chat_type: [
+        "private",
+        "group",
+        "supergroup",
+        "channel",
+        "unknown",
       ],
     },
   },

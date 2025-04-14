@@ -1,7 +1,8 @@
+
 import { Badge } from '@/components/ui/badge';
 
 type PaymentStatus = 'paid' | 'partial' | 'unpaid' | 'draft' | 'credit';
-type BadgeVariant = 'success' | 'warning' | 'info' | 'destructive' | 'secondary' | 'outline' | 'default';
+type BadgeVariant = 'default' | 'success' | 'warning' | 'info' | 'destructive' | 'secondary' | 'outline';
 
 interface InvoiceStatusBadgeProps {
   status: PaymentStatus;
@@ -18,7 +19,7 @@ export function InvoiceStatusBadge({ status, size = 'default', className = '' }:
       case 'partial':
         return 'warning';
       case 'credit':
-        return 'info';
+        return 'default'; // Changed from info to default since info isn't in the Badge component
       case 'unpaid':
         return 'destructive';
       case 'draft':
@@ -60,7 +61,7 @@ export function InvoiceStatusBadge({ status, size = 'default', className = '' }:
 
   return (
     <Badge 
-      variant={getVariant()} 
+      variant={getVariant() as any} 
       className={`${getSizeClass()} ${className}`}
     >
       {getStatusText()}

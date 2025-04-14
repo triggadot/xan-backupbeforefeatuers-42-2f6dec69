@@ -1,3 +1,4 @@
+
 export enum InvoiceStatus {
   DRAFT = 'draft',
   UNPAID = 'unpaid',
@@ -22,6 +23,16 @@ export interface Invoice {
   total_paid: number | null;
   balance: number | null;
   payment_status: string | null;
+  invoice_uid?: string | null;
+  // Add missing properties from error messages
+  status?: string; // Used in AccountDetailView
+  date?: string; // Used in AccountDetailView
+  amount?: number; // Used in AccountDetailView
+  number?: string; // Used in AccountDetailView
+  tax_rate?: number; // Used in useInvoiceDetail
+  tax_amount?: number; // Used in useInvoiceDetail
+  due_date?: string; // Used in components
+  supabase_pdf_url?: string; // Used in some components
 }
 
 export interface InvoiceLine {
@@ -40,6 +51,7 @@ export interface InvoiceLine {
   updated_at: string | null;
   line_total: number | null;
   product?: any; 
+  product_name_display?: string | null; // Added missing property
 }
 
 export interface InvoiceWithLines extends Invoice {
@@ -56,8 +68,35 @@ export interface Account {
   balance: number | null;
   created_at: string | null;
   updated_at: string | null;
+  // Add missing properties from error messages
+  account_name?: string | null;
+  account_email?: string | null;
+  account_phone?: string | null;
+  product_count?: number;
+  account_type?: string;
 }
 
 export interface InvoiceWithAccount extends InvoiceWithLines {
   account?: Account;
+  // Add missing properties from error messages
+  invoice_date?: string; // Used in FinancialSummary
+  invoice_number?: string; // Used in FinancialSummary
+  gl_accounts?: any; // Used in some components
+}
+
+// Add this mapping function to normalize invoice fields
+export function normalizeInvoiceFields(invoice: Invoice): InvoiceWithAccount {
+  if (!invoice) return {} as InvoiceWithAccount;
+
+  return {
+    ...invoice,
+    // Map common field names to expected properties
+    number: invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`,
+    date: invoice.invoice_order_date,
+    invoice_date: invoice.invoice_order_date,
+    invoice_number: invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`,
+    amount: invoice.total_amount,
+    status: invoice.payment_status,
+    lines: [], // Ensure lines exist as an empty array by default
+  } as InvoiceWithAccount;
 }

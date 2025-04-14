@@ -1,70 +1,65 @@
+
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
 
+/**
+ * Combines class names with proper handling of tailwind classes
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(amount);
-};
-
-export const formatDate = (date: Date | string | undefined) => {
-  if (!date) return '';
-  
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(dateObj.getTime())) return '';
-  
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(dateObj);
-};
-
-export const formatPhoneNumber = (phoneNumber: string) => {
-  if (!phoneNumber) return '';
-  
-  // Remove all non-numeric characters
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // Format as (XXX) XXX-XXXX if 10 digits
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+/**
+ * Format a date string to a readable format
+ */
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  try {
+    return format(new Date(date), "MMM d, yyyy");
+  } catch (e) {
+    console.error("Error formatting date:", e);
+    return "Invalid date";
   }
-  
-  // Otherwise, just return the original string
-  return phoneNumber;
-};
+}
 
-export const truncateText = (text: string, maxLength: number) => {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-};
+/**
+ * Format a number as a currency string
+ */
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return "$0.00";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
-export const generateRandomId = () => {
-  return Math.random().toString(36).substring(2, 15);
-};
+/**
+ * Format a number with commas
+ */
+export function formatNumber(num: number | null | undefined): string {
+  if (num === null || num === undefined) return "0";
+  return new Intl.NumberFormat("en-US").format(num);
+}
 
-export const debounce = <T extends (...args: any[]) => any>(
-  func: T, 
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout | null = null;
-  
-  return function(...args: Parameters<T>) {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
+/**
+ * Format a percentage
+ */
+export function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "0%";
+  return `${(value * 100).toFixed(1)}%`;
+}
 
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+/**
+ * Format a date string to a short format (e.g., Jan 1)
+ */
+export function formatShortDate(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  try {
+    return format(new Date(date), "MMM d");
+  } catch (e) {
+    console.error("Error formatting short date:", e);
+    return "Invalid";
+  }
+}
