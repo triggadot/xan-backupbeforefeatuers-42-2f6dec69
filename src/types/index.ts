@@ -262,3 +262,6 @@ export interface ColumnDef {
 // Export all sync-related types from the unified file
 export * from './glsync.unified';
 
+// Export all PDF-related types from the unified file
+export * from './pdf.unified';
+
