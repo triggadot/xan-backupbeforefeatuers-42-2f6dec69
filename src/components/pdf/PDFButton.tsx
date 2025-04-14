@@ -1,11 +1,7 @@
-import React, { useState } from 'react';
-import { Button, ButtonProps } from '@/components/ui/button';
-import { FileText, Share, Download, Loader2 } from 'lucide-react';
-import { triggerPDFGeneration } from '@/lib/pdf-utils';
-import { PDFPreviewModal } from './PDFPreviewModal';
-import { PDFShareModal } from './PDFShareModal';
-import { useToast } from '@/hooks/utils/use-toast';
-import { LegacyDocumentTypeString } from '@/types/pdf.unified';
+import React from 'react';
+import { ButtonProps } from '@/components/ui/button';
+import { StandardPDFButton } from './StandardPDFButton';
+import { DocumentType as UnifiedDocumentType, LegacyDocumentTypeString } from '@/types/pdf.unified';
 
 /**
  * @deprecated Use LegacyDocumentTypeString from pdf.unified.ts instead
@@ -41,156 +37,57 @@ export function PDFButton({
   className = '',
   ...props
 }: PDFButtonProps) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(document?.supabase_pdf_url || null);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
+  // Log deprecation warning in development
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        'PDFButton is deprecated. Please use StandardPDFButton from @/components/pdf/StandardPDFButton instead. ' +
+        'This component will be removed in a future update.'
+      );
+    }
+  }, []);
 
-  // Get the appropriate icon based on the action
-  const getIcon = () => {
-    if (isLoading) return <Loader2 className="h-4 w-4 animate-spin" />;
-    
+  // Convert legacy document type to new DocumentType enum
+  const convertedDocumentType = (() => {
+    switch (documentType) {
+      case 'invoice': return UnifiedDocumentType.INVOICE;
+      case 'estimate': return UnifiedDocumentType.ESTIMATE;
+      case 'purchase-order': 
+      case 'purchase_order': 
+      case 'purchaseOrder': 
+        return UnifiedDocumentType.PURCHASE_ORDER;
+      default: return UnifiedDocumentType.INVOICE;
+    }
+  })();
+
+  // Convert legacy action to new action type
+  const convertedAction = (() => {
     switch (action) {
-      case 'view':
-        return <FileText className="h-4 w-4" />;
-      case 'share':
-        return <Share className="h-4 w-4" />;
-      case 'download':
-        return <Download className="h-4 w-4" />;
-      case 'generate':
-        return <FileText className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
+      case 'view': return 'view';
+      case 'share': return 'share';
+      case 'download': return 'download';
+      case 'generate': return 'regenerate';
+      default: return 'view';
     }
-  };
+  })();
 
-  // Get the appropriate label based on the action
-  const getLabel = () => {
-    if (!showLabel) return null;
-    
-    switch (action) {
-      case 'view':
-        return 'View PDF';
-      case 'share':
-        return 'Share PDF';
-      case 'download':
-        return 'Download PDF';
-      case 'generate':
-        return 'Generate PDF';
-      default:
-        return 'PDF';
-    }
-  };
+  // Extract document ID from the document object
+  const documentId = document?.id || document?.glide_row_id || '';
 
-  // Handle the button click based on the action
-  const handleClick = async () => {
-    // If the document doesn't have a PDF URL or we're regenerating, generate one
-    if (!pdfUrl || action === 'generate') {
-      setIsLoading(true);
-      try {
-        // Use triggerPDFGeneration to generate PDF on the server
-        const forceRegenerate = action === 'generate';
-        const url = await triggerPDFGeneration(
-          documentType,
-          document,
-          forceRegenerate
-        );
-        
-        if (url) {
-          setPdfUrl(url);
-          
-          // Call the onPDFGenerated callback if provided
-          if (onPDFGenerated) {
-            onPDFGenerated(url);
-          }
-          
-          // Show success toast
-          toast({
-            title: 'PDF Generated',
-            description: 'The PDF has been successfully generated on the server.',
-          });
-          
-          // Perform the action with the new PDF URL
-          handleActionWithUrl(url);
-          
-          // Also update the document with the new PDF URL if not already set
-          if (document && 'supabase_pdf_url' in document && !document.supabase_pdf_url) {
-            document.supabase_pdf_url = url;
-          }
-        } else {
-          throw new Error('Failed to generate PDF');
-        }
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        toast({
-          title: 'PDF Generation Failed',
-          description: 'There was an error generating the PDF. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // If we already have a PDF URL, perform the action directly
-      handleActionWithUrl(pdfUrl);
-    }
-  };
-
-  // Handle the action with an existing PDF URL
-  const handleActionWithUrl = (url: string) => {
-    switch (action) {
-      case 'view':
-        setShowPreviewModal(true);
-        break;
-      case 'share':
-        setShowShareModal(true);
-        break;
-      case 'download':
-        // Open the URL in a new tab for download
-        window.open(url, '_blank');
-        break;
-      default:
-        // For 'generate' action, we've already generated the PDF
-        break;
-    }
-  };
-
+  // Render the StandardPDFButton with converted props
   return (
-    <>
-      <Button
-        variant={variant}
-        size={size}
-        onClick={handleClick}
-        disabled={disabled || isLoading}
-        className={className}
-        {...props}
-      >
-        {getIcon()}
-        {getLabel() && <span className="ml-2">{getLabel()}</span>}
-      </Button>
-
-      {/* PDF Preview Modal */}
-      {showPreviewModal && pdfUrl && (
-        <PDFPreviewModal
-          pdfUrl={pdfUrl}
-          documentType={documentType}
-          document={document}
-          isOpen={showPreviewModal}
-          onClose={() => setShowPreviewModal(false)}
-        />
-      )}
-
-      {/* PDF Share Modal */}
-      {showShareModal && pdfUrl && (
-        <PDFShareModal
-          pdfUrl={pdfUrl}
-          documentType={documentType}
-          document={document}
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
-    </>
+    <StandardPDFButton
+      documentType={convertedDocumentType}
+      documentId={documentId}
+      document={document}
+      variant={variant}
+      size={size}
+      action={convertedAction}
+      onPDFGenerated={onPDFGenerated}
+      disabled={disabled}
+      showLabel={showLabel}
+      className={className}
+      {...props}
+    />
   );
 }

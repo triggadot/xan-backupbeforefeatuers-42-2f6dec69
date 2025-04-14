@@ -137,7 +137,7 @@ export function StandardPDFButton({
   };
   
   // Get modal title
-  const getModalTitle = () => {
+  const getModalTitle = (): string => {
     if (title) return title;
     
     const titles: Record<DocumentType, string> = {
@@ -146,11 +146,11 @@ export function StandardPDFButton({
       [DocumentType.PURCHASE_ORDER]: 'Purchase Order PDF'
     };
     
-    return titles[documentType] || `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} PDF`;
+    return titles[documentType] || `${documentType.toString().charAt(0).toUpperCase() + documentType.toString().slice(1)} PDF`;
   };
   
   // Handle client-side PDF generation
-  const handleClientGeneration = async (downloadFile: boolean = action === 'download') => {
+  const handleClientGeneration = async (downloadFile: boolean = action === 'download', temporaryAction?: 'view' | 'share' | 'download' | 'generate' | 'regenerate') => {
     try {
       const options = {
         ...pdfOptions,
@@ -173,11 +173,12 @@ export function StandardPDFButton({
           description: 'The PDF has been successfully generated.',
         });
         
-        // Handle the action
+        // Handle the action based on the temporary action or the component action prop
+        const effectiveAction = temporaryAction || action;
         if (!downloadFile) {
-          if (action === 'view' || action === 'generate' || action === 'regenerate') {
+          if (effectiveAction === 'view' || effectiveAction === 'generate' || effectiveAction === 'regenerate') {
             setShowPreview(true);
-          } else if (action === 'share') {
+          } else if (effectiveAction === 'share') {
             setShowShare(true);
           }
         }
@@ -313,52 +314,39 @@ export function StandardPDFButton({
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={() => {
-              const tempAction = action;
-              action = 'view';
-              handleClientGeneration(false);
-              action = tempAction;
+              // Use a temporary action type for view operation
+              handleClientGeneration(false, 'view');
             }}>
               <FileText className="h-4 w-4 mr-2" />
               View PDF
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={() => {
-              const tempAction = action;
-              action = 'download';
-              handleClientGeneration(true);
-              action = tempAction;
+              // Use a temporary action type for download operation
+              handleClientGeneration(true, 'download');
             }}>
               <Download className="h-4 w-4 mr-2" />
               Download PDF
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={() => {
-              const tempAction = action;
-              action = 'share';
-              handleClientGeneration(false);
-              action = tempAction;
+              // Use a temporary action type for share operation
+              handleClientGeneration(false, 'share');
             }}>
               <Share className="h-4 w-4 mr-2" />
               Share PDF
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={() => {
-              const tempAction = action;
-              action = 'regenerate';
-              handleClientGeneration(false);
-              action = tempAction;
+              // Use a temporary action type for regenerate operation
+              handleClientGeneration(false, 'regenerate');
             }}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Regenerate PDF
             </DropdownMenuItem>
             
             {allowServerGeneration && (
-              <DropdownMenuItem onClick={() => {
-                const tempAction = action;
-                action = 'server';
-                handleServerGeneration();
-                action = tempAction;
-              }}>
+              <DropdownMenuItem onClick={handleServerGeneration}>
                 <Upload className="h-4 w-4 mr-2" />
                 Generate & Store on Server
               </DropdownMenuItem>
