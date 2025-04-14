@@ -8,12 +8,13 @@ import { ArrowDownCircle, ArrowUpCircle, Loader2, RefreshCcw } from 'lucide-reac
 
 interface Transaction {
   id: string;
-  date: string;
+  transaction_date: string;
   description: string;
   amount: number;
-  type: 'deposit' | 'withdrawal' | 'transfer';
-  status: 'completed' | 'pending' | 'failed';
-  note?: string; // Additional field for transaction notes
+  transaction_type: string;
+  entity_type: string;
+  entity_id: string;
+  account_name?: string;
 }
 
 interface RecentTransactionsTableProps {
@@ -43,16 +44,16 @@ export default function RecentTransactionsTable({
   const isMobile = useBreakpoint('md');
   
   // Map transaction type to icon
-  const getTypeIcon = (type: Transaction['type']) => {
+  const getTypeIcon = (type: Transaction['transaction_type']) => {
     switch (type) {
-      case 'deposit':
+      case 'payment':
         return <ArrowDownCircle className="h-4 w-4 text-emerald-500" />;
-      case 'withdrawal':
+      case 'invoice':
+        return <ArrowDownCircle className="h-4 w-4 text-blue-500" />;
+      case 'purchase_order':
         return <ArrowUpCircle className="h-4 w-4 text-rose-500" />;
-      case 'transfer':
-        return <RefreshCcw className="h-4 w-4 text-blue-500" />;
       default:
-        return null;
+        return <RefreshCcw className="h-4 w-4 text-gray-500" />;
     }
   };
   
@@ -69,26 +70,28 @@ export default function RecentTransactionsTable({
   };
   
   // Format amount
-  const formatAmount = (amount: number, type: Transaction['type']) => {
+  const formatAmount = (amount: number) => {
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(Math.abs(amount));
     
-    return type === 'deposit' ? formatted : `-${formatted}`;
+    return amount >= 0 ? formatted : `-${formatted}`;
   };
   
-  // Get status badge
-  const getStatusBadge = (status: Transaction['status']) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">Completed</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Pending</Badge>;
-      case 'failed':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800">Failed</Badge>;
+  // Get type badge based on transaction and entity type
+  const getTypeBadge = (transaction: Transaction) => {
+    switch (transaction.entity_type) {
+      case 'invoice':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Invoice</Badge>;
+      case 'purchase_order':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800">Purchase</Badge>;
+      case 'customer_payment':
+        return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">Payment In</Badge>;
+      case 'vendor_payment':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Payment Out</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{transaction.entity_type}</Badge>;
     }
   };
 
@@ -115,10 +118,10 @@ export default function RecentTransactionsTable({
               <tr className="border-b">
                 <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Date</th>
                 {!isMobile && (
-                  <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Account</th>
                 )}
                 <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Amount</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Type</th>
               </tr>
             </thead>
             <tbody>
@@ -160,15 +163,15 @@ export default function RecentTransactionsTable({
                   >
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2">
-                        {isMobile && getTypeIcon(transaction.type)}
+                        {isMobile && getTypeIcon(transaction.transaction_type)}
                         <div>
-                          <div className="font-medium text-sm">{formatDate(transaction.date)}</div>
+                          <div className="font-medium text-sm">{formatDate(transaction.transaction_date)}</div>
                           <div className="text-xs text-muted-foreground truncate max-w-[150px]">
                             {transaction.description}
                           </div>
-                          {transaction.note && (
+                          {transaction.account_name && (
                             <div className="text-xs text-muted-foreground italic mt-1 truncate max-w-[180px]">
-                              {transaction.note}
+                              {transaction.account_name}
                             </div>
                           )}
                         </div>
@@ -177,20 +180,20 @@ export default function RecentTransactionsTable({
                     {!isMobile && (
                       <td className="px-4 py-3 align-middle text-sm">
                         <div className="flex items-center gap-2">
-                          {getTypeIcon(transaction.type)}
-                          <span className="capitalize">{transaction.type}</span>
+                          {getTypeIcon(transaction.transaction_type)}
+                          <span className="capitalize">{transaction.account_name || 'Unknown'}</span>
                         </div>
                       </td>
                     )}
                     <td className={cn(
                       "px-4 py-3 align-middle text-sm font-medium",
-                      transaction.type === 'deposit' ? "text-emerald-600 dark:text-emerald-400" : 
-                      transaction.type === 'withdrawal' ? "text-rose-600 dark:text-rose-400" : ""
+                      transaction.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : 
+                      "text-rose-600 dark:text-rose-400"
                     )}>
-                      {formatAmount(transaction.amount, transaction.type)}
+                      {formatAmount(transaction.amount)}
                     </td>
                     <td className="px-4 py-3 align-middle text-right">
-                      {getStatusBadge(transaction.status)}
+                      {getTypeBadge(transaction)}
                     </td>
                   </tr>
                 ))

@@ -58,7 +58,7 @@ export async function fetchFinancialMetrics() {
 
     // Fetch purchase order metrics (expenses)
     const { data: purchaseMetrics, error: purchaseError } = await supabase
-      .rpc('gl_get_purchase_order_metrics');
+      .rpc('gl_get_purchase_metrics');
 
     if (purchaseError) {
       console.error('Error fetching purchase metrics:', purchaseError);
@@ -67,13 +67,13 @@ export async function fetchFinancialMetrics() {
 
     // Extract metrics from the returned data
     const revenue = invoiceMetrics?.[0]?.total_invoice_amount || 0;
-    const expenses = purchaseMetrics?.[0]?.total_purchase_amount || 0;
+    const expenses = purchaseMetrics?.[0]?.total_po_amount || 0;
     const profit = revenue - expenses;
     
     // Also get paid/unpaid details which can be shown in the UI
-    const paidInvoices = invoiceMetrics?.[0]?.paid_invoice_amount || 0;
-    const unpaidInvoices = invoiceMetrics?.[0]?.unpaid_invoice_amount || 0;
-    const pendingExpenses = purchaseMetrics?.[0]?.pending_purchase_amount || 0;
+    const paidInvoices = invoiceMetrics?.[0]?.total_payments_received || 0;
+    const unpaidInvoices = invoiceMetrics?.[0]?.total_outstanding_balance || 0;
+    const pendingExpenses = purchaseMetrics?.[0]?.open_po_amount || 0;
 
     return [
       {
@@ -133,7 +133,7 @@ export async function fetchChartData(months = 8) {
 
     // Transform the data to match the expected format for the chart
     return data.map(item => ({
-      date: item.month_year,
+      date: item.month, // Using the correct property name from the function return type
       Income: item.revenue,
       Expense: item.expenses
     }));
@@ -180,7 +180,24 @@ export async function fetchBusinessMetrics() {
       throw statsError;
     }
 
-    const stats = businessStats?.[0] || {};
+    // Define the type for business stats to match the database function return type
+    interface BusinessStats {
+      total_invoices: number;
+      total_estimates: number;
+      total_purchase_orders: number;
+      total_products: number;
+      total_customers: number;
+      total_vendors: number;
+      total_invoice_amount: number;
+      total_payments_received: number;
+      total_outstanding_balance: number;
+      total_purchase_amount: number;
+      total_payments_made: number;
+      total_purchase_balance: number;
+    }
+    
+    // Use type assertion to provide proper typing
+    const stats = (businessStats?.[0] || {}) as BusinessStats;
     
     // Calculate month-to-date and previous month revenue
     const today = new Date();
