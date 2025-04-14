@@ -8,20 +8,17 @@ import { formatCurrency } from '@/utils/format';
  * This will be rebuilt with proper types in a future update, following the Feature-Based Architecture pattern.
  */
 interface FinancialSummaryProps {
-  accountName?: string;
-  customerBalance: number;
-  vendorBalance: number;
+  invoices?: any[];
+  payments?: any[];
+  credits?: any[];
   totalBalance: number;
-  allInvoices?: any[];
-  allPayments?: any[];
-  allCredits?: any[];
   isPending?: boolean;
 }
 
-const FinancialSummary: React.FC<FinancialSummaryProps> = ({
-  accountName,
-  customerBalance,
-  vendorBalance,
+export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
+  invoices = [],
+  payments = [],
+  credits = [],
   totalBalance,
   isPending = false
 }) => {
@@ -39,15 +36,15 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
           <TabsContent value="balances" className="pt-4 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                <div className="text-sm text-muted-foreground">Customer Balance</div>
-                <div className={`font-semibold text-lg ${customerBalance > 0 ? 'text-green-600' : ''}`}>
-                  {formatCurrency(customerBalance)}
+                <div className="text-sm text-muted-foreground">Open Invoices</div>
+                <div className="font-semibold text-lg">
+                  {invoices?.length || 0}
                 </div>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                <div className="text-sm text-muted-foreground">Vendor Balance</div>
-                <div className={`font-semibold text-lg ${vendorBalance < 0 ? 'text-red-600' : ''}`}>
-                  {formatCurrency(vendorBalance)}
+                <div className="text-sm text-muted-foreground">Recent Payments</div>
+                <div className="font-semibold text-lg">
+                  {payments?.length || 0}
                 </div>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
@@ -70,4 +67,3 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
   );
 };
 
-export default FinancialSummary;

@@ -10,7 +10,7 @@ interface UnpaidInvoicesTableProps {
   invoices: any[];
 }
 
-const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoices }) => {
+export const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoices }) => {
   // Simplified component that doesn't use the problematic AmountDisplay component
   return (
     <Card>
@@ -59,4 +59,3 @@ const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoices }) =
   );
 };
 
-export default UnpaidInvoicesTable;

@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  * The original component had TypeScript errors and will be rebuilt in a future update.
  */
 interface SampleEstimatesTableProps {
-  accountId: string;
+  estimates?: any[];
 }
 
-const SampleEstimatesTable: React.FC<SampleEstimatesTableProps> = ({ accountId }) => {
+export const SampleEstimatesTable: React.FC<SampleEstimatesTableProps> = ({ estimates = [] }) => {
   return (
     <Card>
       <CardHeader>
@@ -25,4 +25,3 @@ const SampleEstimatesTable: React.FC<SampleEstimatesTableProps> = ({ accountId }
   );
 };
 
-export default SampleEstimatesTable;
