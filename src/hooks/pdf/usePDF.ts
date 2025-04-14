@@ -431,6 +431,52 @@ export function usePDF() {
     return triggerServerPDFGeneration(documentType, documentId);
   };
 
+  /**
+   * Check if a document has an existing PDF
+   * 
+   * @param documentType - The type of document
+   * @param documentId - The document ID
+   * @returns Promise resolving to the document data with PDF URL if it exists
+   */
+  const checkExistingPDF = async (
+    documentType: DocumentType | string,
+    documentId: string
+  ): Promise<{ data: Record<string, any> | null; error: Error | null }> => {
+    try {
+      // Standardize the document type
+      const normalizedType = normalizeDocumentType(documentType);
+      
+      // Get the table name from the document type config
+      // For 'product' type, we'll use a specific table
+      let tableName = '';
+      if (documentType === 'product') {
+        tableName = 'gl_products';
+      } else {
+        tableName = documentTypeConfig[normalizedType]?.tableName || '';
+      }
+      
+      if (!tableName) {
+        throw new Error(`Unknown document type: ${documentType}`);
+      }
+      
+      // Fetch the document data
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('id', documentId)
+        .single();
+      
+      if (error) {
+        return { data: null, error: new Error(error.message) };
+      }
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in checkExistingPDF:', error);
+      return { data: null, error: error as Error };
+    }
+  };
+
   return {
     // Core PDF operations
     generatePDF: generateDocumentPDF,
@@ -440,6 +486,7 @@ export function usePDF() {
     storePDF,
     triggerServerPDFGeneration,
     fetchDocumentData,
+    checkExistingPDF,
     
     // Legacy methods for backward compatibility
     batchGeneratePDF: triggerServerPDFGeneration, // Alias for backward compatibility

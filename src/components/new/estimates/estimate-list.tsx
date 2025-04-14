@@ -6,8 +6,8 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { EstimateWithDetails } from '@/types/estimate';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { DocumentType } from '@/types/documents';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 
 interface EstimateListProps {
   estimates: EstimateWithDetails[];
@@ -26,8 +26,8 @@ export const EstimateList: React.FC<EstimateListProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedEstimates, setSelectedEstimates] = useState<string[]>([]);
-  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
-  const isBatchProcessing = isPdfLoading;
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, isGenerating, isBatchGenerating } = usePDF();
+  const isBatchProcessing = isGenerating || isBatchGenerating;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -53,9 +53,9 @@ export const EstimateList: React.FC<EstimateListProps> = ({
       });
       
       // Generate the PDF and get the URL
-      const pdfUrl = await generatePDF(DocumentType.ESTIMATE, id, true);
+      const result = await generatePDF(DocumentType.ESTIMATE, id, { download: true });
       
-      if (!pdfUrl) {
+      if (!result || !result.success || !result.url) {
         throw new Error('Failed to generate PDF');
       }
       
@@ -110,7 +110,7 @@ export const EstimateList: React.FC<EstimateListProps> = ({
       toast({
         title: 'Batch PDF Generation Complete',
         description: `Successfully generated ${successCount} PDF(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}`,
-        variant: failureCount > 0 ? 'warning' : 'default',
+        variant: failureCount > 0 ? 'destructive' : 'default',
         duration: 5000,
       });
 

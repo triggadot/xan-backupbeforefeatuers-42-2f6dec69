@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { PDFActions } from '@/components/pdf/PDFActions';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { Link } from 'react-router-dom';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { DocumentType } from '@/types/documents';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoiceCardDetailProps {
@@ -19,7 +18,7 @@ interface InvoiceCardDetailProps {
 
 export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice }) => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const { generatePDF } = usePDFOperations();
+  const { generatePDF } = usePDF();
 
   // Calculate subtotal if tax information is available
   const subtotal = invoice.total_amount || 0;

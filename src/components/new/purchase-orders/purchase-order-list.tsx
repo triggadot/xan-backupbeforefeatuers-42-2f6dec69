@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EyeIcon, PencilIcon, DownloadIcon, ShareIcon, Trash2, FileTextIcon, MoreHorizontal } from 'lucide-react';
@@ -9,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { DocumentType } from '@/types/documents';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,8 +35,8 @@ const PurchaseOrderList = ({
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedPurchaseOrders, setSelectedPurchaseOrders] = useState<string[]>([]);
-  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
-  const isBatchProcessing = isPdfLoading;
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, isGenerating, isBatchGenerating } = usePDF();
+  const isBatchProcessing = isGenerating || isBatchGenerating;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -63,9 +62,9 @@ const PurchaseOrderList = ({
       });
       
       // Generate the PDF and get the URL
-      const pdfUrl = await generatePDF(DocumentType.PURCHASE_ORDER, id, true);
+      const result = await generatePDF(DocumentType.PURCHASE_ORDER, id, { download: true });
       
-      if (!pdfUrl) {
+      if (!result || !result.success || !result.url) {
         throw new Error('Failed to generate PDF');
       }
       
@@ -112,7 +111,7 @@ const PurchaseOrderList = ({
       toast({
         title: 'Batch PDF Generation Complete',
         description: `Successfully generated ${successCount} PDF(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}`,
-        variant: failureCount > 0 ? 'warning' : 'default',
+        variant: failureCount > 0 ? 'destructive' : 'default',
         duration: 5000,
       });
 
@@ -211,7 +210,7 @@ const PurchaseOrderList = ({
                         {purchaseOrder.number || `PO-${purchaseOrder.id.slice(0, 8)}`}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {purchaseOrder.date ? formatDate(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                        {purchaseOrder.date ? formatDate(purchaseOrder.date) : 'N/A'}
                       </p>
                     </div>
                     <Badge variant={getStatusBadgeVariant(purchaseOrder.status)}>
@@ -294,7 +293,7 @@ const PurchaseOrderList = ({
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox 
-                    checked={selectedPurchaseOrders.length === purchaseOrders.length && purchaseOrders.length > 0}
+                    checked={selectedPurchaseOrders.length === purchaseOrders.length}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -322,7 +321,7 @@ const PurchaseOrderList = ({
                   </TableCell>
                   <TableCell>
                     <Link to={`/purchase-orders/${purchaseOrder.id}`} className="text-gray-700 hover:text-gray-900">
-                      {purchaseOrder.date ? formatDate(new Date(purchaseOrder.date), 'MMM dd, yyyy') : 'N/A'}
+                      {purchaseOrder.date ? formatDate(purchaseOrder.date) : 'N/A'}
                     </Link>
                   </TableCell>
                   <TableCell>

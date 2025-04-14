@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download, Share2 } from 'lucide-react';
 import { StandardPDFButton } from '@/components/pdf/StandardPDFButton';
 import { DocumentType } from '@/types/pdf.unified';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { usePDF } from '@/hooks/pdf/usePDF';
 import { PDFPreviewModal } from '@/components/pdf/PDFPreviewModal';
 import { PDFShareModal } from '@/components/pdf/PDFShareModal';
 import { useToast } from '@/hooks/utils/use-toast';
@@ -63,8 +63,8 @@ export function ProductPDFActions({
   const [showPreviewModal, setShowPreviewModal] = React.useState(false);
   const [showShareModal, setShowShareModal] = React.useState(false);
   
-  // Use our custom PDF operations hook
-  const { downloadPDF, checkExistingPDF } = usePDFOperations();
+  // Use the standardized PDF hook
+  const { downloadPDF, checkExistingPDF } = usePDF();
   
   // Check for existing PDF URL if none was provided
   React.useEffect(() => {

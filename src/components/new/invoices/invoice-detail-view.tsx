@@ -7,8 +7,10 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { PDFActions } from '@/components/pdf/PDFActions';
 import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
+
 interface InvoiceDetailViewProps {
   invoice: InvoiceWithAccount;
 }
@@ -36,7 +38,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
       // Red
       case 'credit':
         // New status
-        return 'info';
+        return 'secondary';
       // Blue (assuming 'info' variant exists)
       case 'draft': // Explicitly handle draft
       default:
@@ -57,8 +59,8 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   const [pdfUrl, setPdfUrl] = useState<string | null>(invoice.supabase_pdf_url || null);
   const {
     generatePDF,
-    loading
-  } = usePDFOperations();
+    isGenerating: loading
+  } = usePDF();
 
   // Generate invoice number using format INV#[account_uid]MMDDYY
   const formattedInvoiceNumber = useMemo(() => {
@@ -103,13 +105,11 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
           
           <div className="flex space-x-2">
             <PDFActions 
-              documentType="invoice" 
+              documentType={DocumentType.INVOICE} 
               document={invoice} 
               variant="outline" 
               size="sm" 
               showLabels={true} 
-              forceRegenerate={true} 
-              overwriteExisting={true} 
               onPDFGenerated={url => setPdfUrl(url)} 
             />
           </div>

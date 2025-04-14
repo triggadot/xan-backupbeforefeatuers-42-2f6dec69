@@ -6,8 +6,8 @@ import { format } from 'date-fns';
 import { ArrowUpDownIcon, DownloadIcon, EyeIcon, FileTextIcon, PencilIcon, ShareIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { DocumentType } from '@/types/documents';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 
 type SortableColumn = keyof Pick<InvoiceWithAccount, 'invoice_order_date' | 'total_amount' | 'payment_status' | 'account'> | 'account.name';
 type SortDirection = 'asc' | 'desc';
@@ -23,8 +23,8 @@ interface InvoiceListProps {
 const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColumn, sortDirection, onSort }) => {
   const { toast } = useToast();
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
-  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, loading: isPdfLoading } = usePDFOperations();
-  const isBatchProcessing = isPdfLoading;
+  const { batchGenerateMultiplePDFs, generatePDF, downloadPDF, isGenerating, isBatchGenerating } = usePDF();
+  const isBatchProcessing = isGenerating || isBatchGenerating;
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -50,9 +50,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
       });
       
       // Generate the PDF and get the URL
-      const pdfUrl = await generatePDF(DocumentType.INVOICE, id, true);
+      const result = await generatePDF(DocumentType.INVOICE, id, { download: true });
       
-      if (!pdfUrl) {
+      if (!result || !result.success || !result.url) {
         throw new Error('Failed to generate PDF');
       }
       
@@ -107,7 +107,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ invoices, isLoading, sortColu
       toast({
         title: 'Batch PDF Generation Complete',
         description: `Successfully generated ${successCount} PDF(s). ${failureCount > 0 ? `${failureCount} failed.` : ''}`,
-        variant: failureCount > 0 ? 'warning' : 'default',
+        variant: failureCount > 0 ? 'destructive' : 'default',
         duration: 5000,
       });
 

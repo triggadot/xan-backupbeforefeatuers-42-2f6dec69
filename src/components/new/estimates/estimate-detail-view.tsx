@@ -17,7 +17,8 @@ import { EstimateWithDetails } from '@/types/estimate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFActions } from '@/components/pdf/PDFActions';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 
 interface EstimateDetailViewProps {
   estimate: EstimateWithDetails;
@@ -43,7 +44,7 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
   const totalQuantity = estimate.estimateLines?.reduce((total, line) => total + (Number(line.qty_sold) || 0), 0) || 0;
 
   // PDF operations - always regenerate when viewing/downloading to ensure latest data
-  const { generatePDF, downloadPDF, isGenerating, isStoring } = usePDFOperations();
+  const { generatePDF, downloadPDF, isGenerating, isStoring } = usePDF();
   const [pdfUrl, setPdfUrl] = useState<string | null>(estimate.supabase_pdf_url || null);
 
   // Generate estimate number using format EST#[account_uid]MMDDYY
@@ -83,19 +84,19 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
       if (!url) {
         // Generate new PDF if none exists
         console.log('No existing PDF found, generating new estimate PDF');
-        url = await generatePDF('estimate', estimate, true); // true = download after generation
+        const result = await generatePDF(DocumentType.ESTIMATE, estimate.id, { download: true });
         
-        if (url) {
-          setPdfUrl(url);
-          console.log('Estimate PDF generated and stored successfully:', url);
-          // Note: downloadPDF is called automatically by generatePDF when the third parameter is true
+        if (result && result.success && result.url) {
+          setPdfUrl(result.url);
+          console.log('Estimate PDF generated and stored successfully:', result.url);
+          // Note: download is handled by the generatePDF function when download option is true
         } else {
           throw new Error('Failed to generate and store estimate PDF');
         }
       } else {
         console.log('Using existing estimate PDF URL:', url);
         // Generate filename based on estimate details
-        const fileName = `Estimate_${estimate.estimate_uid || formattedEstimateNumber}.pdf`;
+        const fileName = `Estimate_${formattedEstimateNumber}.pdf`;
         
         // Download the PDF directly
         await downloadPDF(url, fileName);
@@ -197,14 +198,12 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
             
             <div className="flex space-x-2">
               <PDFActions 
-                documentType="estimate"
-                document={estimate}
-                variant="outline"
-                size="default"
-                showLabels={true}
-                forceRegenerate={true}
-                overwriteExisting={true}
-                onPDFGenerated={(url) => setPdfUrl(url)}
+                documentType={DocumentType.ESTIMATE}
+                document={estimate} 
+                variant="outline" 
+                size="default" 
+                showLabels={true} 
+                onPDFGenerated={url => setPdfUrl(url)} 
               />
             </div>
           </div>

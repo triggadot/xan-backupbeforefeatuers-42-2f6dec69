@@ -143,7 +143,8 @@ export function StandardPDFButton({
     const titles: Record<DocumentType, string> = {
       [DocumentType.INVOICE]: 'Invoice PDF',
       [DocumentType.ESTIMATE]: 'Estimate PDF',
-      [DocumentType.PURCHASE_ORDER]: 'Purchase Order PDF'
+      [DocumentType.PURCHASE_ORDER]: 'Purchase Order PDF',
+      [DocumentType.PRODUCT]: 'Product PDF'
     };
     
     return titles[documentType] || `${documentType.toString().charAt(0).toUpperCase() + documentType.toString().slice(1)} PDF`;
@@ -213,7 +214,11 @@ export function StandardPDFButton({
       
       if (useBatchProcessing) {
         // Use batch processing for multiple documents
-        result = await batchGeneratePDF([{ documentType, documentId }]);
+        const batchResult = await batchGeneratePDF(documentType, documentId);
+        result = {
+          success: batchResult,
+          url: document?.supabase_pdf_url || null
+        };
       } else {
         // Store a single PDF on the server
         result = await storePDF(documentType, documentId);

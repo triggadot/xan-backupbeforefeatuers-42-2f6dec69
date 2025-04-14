@@ -16,13 +16,15 @@ export enum DocumentType {
   ESTIMATE = 'estimate',
   /** Purchase order document type */
   PURCHASE_ORDER = 'purchase_order',  // Standardized to match backend value
+  /** Product document type */
+  PRODUCT = 'product',
 }
 
 /**
  * Legacy document type strings used in older components
  * @type {string[]}
  */
-export type LegacyDocumentTypeString = 'invoice' | 'purchaseOrder' | 'estimate';
+export type LegacyDocumentTypeString = 'invoice' | 'purchaseOrder' | 'estimate' | 'product';
 
 /**
  * Type guard to check if a string is a valid DocumentType
@@ -39,7 +41,7 @@ export function isValidDocumentType(type: string): type is DocumentType {
  * @returns {boolean} True if the type is a valid legacy document type string
  */
 export function isLegacyDocumentTypeString(type: string): type is LegacyDocumentTypeString {
-  return ['invoice', 'purchaseOrder', 'estimate'].includes(type);
+  return ['invoice', 'purchaseOrder', 'estimate', 'product'].includes(type);
 }
 
 /**
@@ -130,6 +132,12 @@ export const documentTypeConfig: Record<DocumentType, DocumentTypeConfig> = {
         referenceField: 'rowid_purchase_orders'
       }
     ]
+  },
+  [DocumentType.PRODUCT]: {
+    tableName: 'gl_products',
+    uidField: 'product_uid',
+    accountRefField: 'rowid_accounts',
+    storageFolder: 'Products',
   }
 };
 
@@ -474,158 +482,6 @@ export interface BatchPDFJob {
 }
 
 /**
- * Creates a standardized error result for PDF operations
- * @param {PDFErrorType} type - The type of error that occurred
- * @param {string} message - Human-readable error message
- * @param {Record<string, any>} [details] - Additional error details
- * @returns {PDFOperationResult} Error result object
- */
-export function createPDFError(type: PDFErrorType, message: string, details?: Record<string, any>): PDFOperationResult {
-  return { 
-    success: false, 
-    error: { type, message, details } 
-  };
-}
-
-/**
- * Standardizes document type format for internal processing
- * @param {string | DocumentType | LegacyDocumentTypeString} type - Document type to normalize
- * @returns {DocumentType} Normalized DocumentType value
- * @throws {Error} If the document type is invalid or unsupported
- */
-export function normalizeDocumentType(type: string | DocumentType | LegacyDocumentTypeString): DocumentType {
-  // Handle null/undefined cases
-  if (!type) {
-    throw new Error('Document type cannot be empty');
-  }
-
-  // If it's already a DocumentType enum value, return it directly
-  if (Object.values(DocumentType).includes(type as DocumentType)) {
-    return type as DocumentType;
-  }
-
-  // Handle string values
-  if (typeof type === 'string') {
-    // Normalize to lowercase without spaces
-    const normalizedType = type.toLowerCase().trim().replace(/\s+/g, '');
-    
-    // Map of various input formats to our enum values
-    const typeMap: Record<string, DocumentType> = {
-      // Invoice variations
-      'invoice': DocumentType.INVOICE,
-      'invoices': DocumentType.INVOICE,
-      
-      // Estimate variations
-      'estimate': DocumentType.ESTIMATE,
-      'estimates': DocumentType.ESTIMATE,
-      
-      // Purchase order variations (including legacy 'purchaseOrder' format)
-      'purchaseorder': DocumentType.PURCHASE_ORDER,
-      'purchaseorders': DocumentType.PURCHASE_ORDER,
-      'purchase-order': DocumentType.PURCHASE_ORDER,
-      'purchase-orders': DocumentType.PURCHASE_ORDER,
-      'purchase_order': DocumentType.PURCHASE_ORDER,
-      'purchase_orders': DocumentType.PURCHASE_ORDER,
-      'po': DocumentType.PURCHASE_ORDER,
-    };
-
-    // Special case for legacy camelCase 'purchaseOrder'
-    if (normalizedType === 'purchaseorder' || type === 'purchaseOrder') {
-      return DocumentType.PURCHASE_ORDER;
-    }
-    
-    // Look up in our map
-    if (typeMap[normalizedType]) {
-      return typeMap[normalizedType];
-    }
-  }
-  
-  // Not found or invalid type
-  throw new Error(`Unsupported document type: ${type}. Must be one of: ${Object.values(DocumentType).join(', ')}`);
-}
-
-/**
- * Converts a DocumentType enum value to its corresponding legacy string format
- * Used for backward compatibility with older components
- * @param {DocumentType} type - The DocumentType enum value to convert
- * @returns {LegacyDocumentTypeString} The legacy string format
- */
-export function toLegacyDocumentTypeString(type: DocumentType): LegacyDocumentTypeString {
-  switch (type) {
-    case DocumentType.INVOICE:
-      return 'invoice';
-    case DocumentType.ESTIMATE:
-      return 'estimate';
-    case DocumentType.PURCHASE_ORDER:
-      return 'purchaseOrder';
-    default:
-      // This should never happen if all enum values are handled
-      const exhaustiveCheck: never = type;
-      throw new Error(`Unhandled document type: ${exhaustiveCheck}`);
-  }
-}
-
-/**
- * Gets the correct backend key format for a document type
- * @param {DocumentType | string} documentType - The document type to convert
- * @returns {string} The backend key format (e.g., 'purchase_order' for PURCHASE_ORDER)
- */
-export function getBackendDocumentTypeKey(documentType: DocumentType | string): string {
-  const normalized = normalizeDocumentType(documentType);
-  return normalized.toLowerCase();
-}
-
-/**
- * Type to map document types to their corresponding interfaces
- */
-export type DocumentTypeMap = {
-  [DocumentType.INVOICE]: Invoice;
-  [DocumentType.PURCHASE_ORDER]: PurchaseOrder;
-  [DocumentType.ESTIMATE]: Estimate;
-};
-
-/**
- * Supported document tables in the database
- * @deprecated Use documentTypeConfig instead for table names
- */
-export type DocumentTable = 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates';
-
-/**
- * Supported storage folders for PDFs
- * @deprecated Use documentTypeConfig instead for storage folders
- */
-export type StorageFolder = 'Invoices' | 'PurchaseOrders' | 'Estimates';
-
-/**
- * PDF job status for batch operations
- */
-export type PDFJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-/**
- * PDF batch job definition
- */
-export interface PDFBatchJob {
-  /** Unique identifier for the batch job */
-  id: string;
-  /** Type of documents in the batch */
-  documentType: DocumentType;
-  /** Array of document IDs to process */
-  documentIds: string[];
-  /** Current status of the batch job */
-  status: PDFJobStatus;
-  /** Progress percentage (0-100) */
-  progress: number;
-  /** Results for each document if available */
-  results?: PDFOperationResult[];
-  /** Creation timestamp */
-  createdAt: Date;
-  /** Last update timestamp */
-  updatedAt: Date;
-  /** Error message if the job failed */
-  error?: string;
-}
-
-/**
  * Document summary for batch operations UI
  */
 export interface DocumentSummary {
@@ -904,4 +760,173 @@ export function getFormattedDocumentDate(
   
   const dateValue = getDocumentProperty(document, datePropertyName, documentType);
   return formatDate(dateValue, format, fallback);
+}
+
+/**
+ * Type to map document types to their corresponding interfaces
+ */
+export type DocumentTypeMap = {
+  [DocumentType.INVOICE]: Invoice;
+  [DocumentType.PURCHASE_ORDER]: PurchaseOrder;
+  [DocumentType.ESTIMATE]: Estimate;
+  [DocumentType.PRODUCT]: {
+    id: string;
+    glide_row_id?: string;
+    product_name?: string;
+    new_product_name?: string;
+    vendor_product_name?: string;
+    display_name?: string;
+    samples?: boolean;
+    fronted?: boolean;
+    category?: string;
+    total_units?: number;
+  };
+};
+
+/**
+ * Supported document tables in the database
+ * @deprecated Use documentTypeConfig instead for table names
+ */
+export type DocumentTable = 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates' | 'gl_products';
+
+/**
+ * Supported storage folders for PDFs
+ * @deprecated Use documentTypeConfig instead for storage folders
+ */
+export type StorageFolder = 'Invoices' | 'PurchaseOrders' | 'Estimates' | 'Products';
+
+/**
+ * PDF job status for batch operations
+ */
+export type PDFJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+/**
+ * PDF batch job definition
+ */
+export interface PDFBatchJob {
+  /** Unique identifier for the batch job */
+  id: string;
+  /** Type of documents in the batch */
+  documentType: DocumentType;
+  /** Array of document IDs to process */
+  documentIds: string[];
+  /** Current status of the batch job */
+  status: PDFJobStatus;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Results for each document if available */
+  results?: PDFOperationResult[];
+  /** Creation timestamp */
+  createdAt: Date;
+  /** Last update timestamp */
+  updatedAt: Date;
+  /** Error message if the job failed */
+  error?: string;
+}
+
+/**
+ * Creates a standardized error result for PDF operations
+ * @param {PDFErrorType} type - The type of error that occurred
+ * @param {string} message - Human-readable error message
+ * @param {Record<string, any>} [details] - Additional error details
+ * @returns {PDFOperationResult} Error result object
+ */
+export function createPDFError(type: PDFErrorType, message: string, details?: Record<string, any>): PDFOperationResult {
+  return { 
+    success: false, 
+    error: { type, message, details } 
+  };
+}
+
+/**
+ * Standardizes document type format for internal processing
+ * @param {string | DocumentType | LegacyDocumentTypeString} type - Document type to normalize
+ * @returns {DocumentType} Normalized DocumentType value
+ * @throws {Error} If the document type is invalid or unsupported
+ */
+export function normalizeDocumentType(type: string | DocumentType | LegacyDocumentTypeString): DocumentType {
+  // Handle null/undefined cases
+  if (!type) {
+    throw new Error('Document type cannot be empty');
+  }
+
+  // If it's already a DocumentType enum value, return it directly
+  if (Object.values(DocumentType).includes(type as DocumentType)) {
+    return type as DocumentType;
+  }
+
+  // Handle string values
+  if (typeof type === 'string') {
+    // Normalize to lowercase without spaces
+    const normalizedType = type.toLowerCase().trim().replace(/\s+/g, '');
+    
+    // Map of various input formats to our enum values
+    const typeMap: Record<string, DocumentType> = {
+      // Invoice variations
+      'invoice': DocumentType.INVOICE,
+      'invoices': DocumentType.INVOICE,
+      
+      // Estimate variations
+      'estimate': DocumentType.ESTIMATE,
+      'estimates': DocumentType.ESTIMATE,
+      
+      // Purchase order variations (including legacy 'purchaseOrder' format)
+      'purchaseorder': DocumentType.PURCHASE_ORDER,
+      'purchaseorders': DocumentType.PURCHASE_ORDER,
+      'purchase-order': DocumentType.PURCHASE_ORDER,
+      'purchase-orders': DocumentType.PURCHASE_ORDER,
+      'purchase_order': DocumentType.PURCHASE_ORDER,
+      'purchase_orders': DocumentType.PURCHASE_ORDER,
+      'po': DocumentType.PURCHASE_ORDER,
+      // Product variations
+      'product': DocumentType.PRODUCT,
+      'products': DocumentType.PRODUCT,
+    };
+
+    // Special case for legacy camelCase 'purchaseOrder'
+    if (normalizedType === 'purchaseorder' || type === 'purchaseOrder') {
+      return DocumentType.PURCHASE_ORDER;
+    }
+    
+    // Look up in our map
+    if (typeMap[normalizedType]) {
+      return typeMap[normalizedType];
+    }
+  }
+  
+  // Not found or invalid type
+  throw new Error(`Unsupported document type: ${type}. Must be one of: ${Object.values(DocumentType).join(', ')}`);
+}
+
+/**
+ * Converts a DocumentType enum value to its corresponding legacy string format
+ * Used for backward compatibility with older components
+ * @param {DocumentType} type - The DocumentType enum value to convert
+ * @returns {LegacyDocumentTypeString} The legacy string format
+ */
+export function toLegacyDocumentTypeString(type: DocumentType): LegacyDocumentTypeString {
+  switch (type) {
+    case DocumentType.INVOICE:
+      return 'invoice';
+    case DocumentType.ESTIMATE:
+      return 'estimate';
+    case DocumentType.PURCHASE_ORDER:
+      return 'purchaseOrder';
+    case DocumentType.PRODUCT:
+      return 'product';
+    default:
+      // This should never happen if all enum values are handled
+      const exhaustiveCheck: never = type;
+      throw new Error(`Unhandled document type: ${exhaustiveCheck}`);
+  }
+}
+
+/**
+ * Gets the correct backend key format for a document type
+ * @param {DocumentType | string} documentType - The document type to convert
+ * @returns {string} The backend key format (e.g., 'purchase_order' for PURCHASE_ORDER)
+ */
+export function getBackendDocumentTypeKey(documentType: DocumentType | string): string {
+  const normalized = normalizeDocumentType(documentType);
+  return normalized.toLowerCase();
 }

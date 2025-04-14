@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Download, Loader2 } from 'lucide-react';
-import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
-import { DocumentType } from '@/types/pdf-utils';
+import { usePDF } from '@/hooks/pdf/usePDF';
+import { DocumentType } from '@/types/pdf.unified';
 
 interface PDFCreatorProps {
   documentType: DocumentType;
@@ -29,18 +29,18 @@ export function PDFCreator({
   className = '',
   onPDFGenerated,
 }: PDFCreatorProps) {
-  const { generatePDF, isGenerating } = usePDFOperations();
+  const { generatePDF, isGenerating } = usePDF();
   const [saveLocally, setSaveLocally] = useState(true);
   const [pdfUrl, setPdfUrl] = useState<string | null>(document?.supabase_pdf_url || null);
 
   // Get document title based on document type
   const getDocumentTitle = () => {
     switch (documentType) {
-      case 'invoice':
+      case DocumentType.INVOICE:
         return `Invoice ${document.invoice_uid || ''}`;
-      case 'purchaseOrder':
+      case DocumentType.PURCHASE_ORDER:
         return `Purchase Order ${document.purchase_order_uid || ''}`;
-      case 'estimate':
+      case DocumentType.ESTIMATE:
         return `Estimate ${document.estimate_uid || ''}`;
       default:
         return 'Document';
@@ -49,10 +49,10 @@ export function PDFCreator({
 
   // Handle PDF generation
   const handleGeneratePDF = async () => {
-    const url = await generatePDF(documentType, document, saveLocally);
-    if (url) {
-      setPdfUrl(url);
-      if (onPDFGenerated) onPDFGenerated(url);
+    const result = await generatePDF(documentType, document.id, { saveLocally });
+    if (result && result.pdfUrl) {
+      setPdfUrl(result.pdfUrl);
+      if (onPDFGenerated) onPDFGenerated(result.pdfUrl);
     }
   };
 
