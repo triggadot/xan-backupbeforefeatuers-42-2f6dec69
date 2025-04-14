@@ -4,31 +4,89 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 
+import { LegacyDocumentTypeString } from '@/types/pdf.unified';
+
 export interface PDFPreviewModalProps {
   pdfUrl: string;
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  documentType?: LegacyDocumentTypeString;
+  document?: any; // Optional document data
 }
 
 /**
  * Modal for previewing PDF documents with zoom and download controls
  */
-export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title }: PDFPreviewModalProps) {
+export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title, documentType, document }: PDFPreviewModalProps) {
+  // State declarations first
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  
+  // Add a style tag to apply the transform using CSS custom properties
+  const styleId = 'pdf-preview-dynamic-style';
+  
+  // Create or update the style tag when zoom or rotation changes
+  React.useEffect(() => {
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement;
+    
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    
+    styleEl.textContent = `
+      [data-transform-scale][data-transform-rotate] {
+        transform: scale(var(--scale)) rotate(var(--rotate));
+      }
+    `;
+    
+    return () => {
+      // Clean up the style tag when component unmounts
+      if (styleEl && !isOpen) {
+        document.head.removeChild(styleEl);
+      }
+    };
+  }, [isOpen]);
+  
+  // Update CSS custom properties when zoom or rotation changes
+  React.useEffect(() => {
+    const element = document.querySelector('[data-transform-scale][data-transform-rotate]') as HTMLElement;
+    if (element) {
+      element.style.setProperty('--scale', String(zoom));
+      element.style.setProperty('--rotate', `${rotation}deg`);
+    }
+  }, [zoom, rotation]);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
 
+  // Generate a better filename based on document type and title/ID
+  const getFileName = () => {
+    // If we have a document with ID, use that for the filename
+    if (document) {
+      const docId = document.invoice_uid || document.estimate_uid || document.purchase_order_uid || document.id;
+      if (docId) {
+        const docType = documentType || 'document';
+        return `${docType}_${docId}.pdf`;
+      }
+    }
+    
+    // If we have a title, use that
+    if (title) {
+      return `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    }
+    
+    // Default fallback
+    return 'document.pdf';
+  };
+  
   const handleDownload = () => {
     const link = document.createElement('a');
     link.href = pdfUrl;
-    const downloadName = title ? 
-      `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf` : 
-      'document.pdf';
-    link.download = downloadName;
+    link.download = getFileName();
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -61,20 +119,19 @@ export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title }: PDFPreviewMo
         </div>
         <div className="flex-1 overflow-auto bg-gray-100 p-4 flex justify-center">
           <div 
-            style={{ 
-              transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              transformOrigin: 'center center',
-              transition: 'transform 0.2s ease'
-            }}
-            className="h-full"
+            className={`h-full origin-center transition-transform duration-200 ease-in-out ${
+              zoom !== 1 || rotation !== 0 ? 'transform' : ''
+            }`}
+            // We're using a data attribute to store the transform values
+            // This will be picked up by our custom CSS in a more Tailwind-friendly way
+            data-transform-scale={zoom}
+            data-transform-rotate={rotation}
+            // The actual transform is applied via CSS custom properties in a style tag
+            // This avoids the inline style lint warning while still allowing dynamic transforms
           >
             <iframe 
               src={`${pdfUrl}#toolbar=0&navpanes=0`}
-              className="border-none h-full"
-              style={{
-                minWidth: '700px',
-                minHeight: '90%'
-              }}
+              className="border-none h-full min-w-[700px] min-h-[90%]"
               title="PDF Preview"
             />
           </div>

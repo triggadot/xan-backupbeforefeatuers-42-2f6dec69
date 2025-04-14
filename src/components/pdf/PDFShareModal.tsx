@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CopyIcon, Mail, Share2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFPreviewModalProps } from './PDFPreviewModal';
+import { LegacyDocumentTypeString } from '@/types/pdf.unified';
 
 export interface PDFShareModalProps extends PDFPreviewModalProps {
   title?: string;
@@ -16,7 +17,7 @@ export interface PDFShareModalProps extends PDFPreviewModalProps {
 /**
  * Modal for sharing PDF documents via various methods (email, link, etc.)
  */
-export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document' }: PDFShareModalProps) {
+export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document', documentType }: PDFShareModalProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('email');
   const [copied, setCopied] = useState(false);
@@ -24,8 +25,18 @@ export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document
   const [subject, setSubject] = useState(`${title || 'Document'} Shared with You`);
   const [emailBody, setEmailBody] = useState('');
   
-  // Safe function to get document type from title or URL
+  // Safe function to get document type from props, title, or URL
   const getDocumentType = (): string => {
+    // If documentType prop is provided, use it (preferred)
+    if (documentType) {
+      // Convert to user-friendly display format
+      if (documentType === 'invoice') return 'invoice';
+      if (documentType === 'purchaseOrder') return 'purchase order';
+      if (documentType === 'estimate') return 'estimate';
+      return documentType;
+    }
+    
+    // Fallback to title-based detection
     if (title) {
       const lowerTitle = title.toLowerCase();
       if (lowerTitle.includes('invoice')) return 'invoice';
@@ -34,6 +45,7 @@ export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document
       return 'document';
     }
     
+    // Fallback to URL-based detection
     if (pdfUrl) {
       const lowerUrl = pdfUrl.toLowerCase();
       if (lowerUrl.includes('invoice')) return 'invoice';

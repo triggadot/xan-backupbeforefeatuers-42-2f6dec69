@@ -5,11 +5,15 @@ import { triggerPDFGeneration } from '@/lib/pdf-utils';
 import { PDFPreviewModal } from './PDFPreviewModal';
 import { PDFShareModal } from './PDFShareModal';
 import { useToast } from '@/hooks/utils/use-toast';
+import { LegacyDocumentTypeString } from '@/types/pdf.unified';
 
-export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate';
+/**
+ * @deprecated Use LegacyDocumentTypeString from pdf.unified.ts instead
+ */
+export type DocumentType = LegacyDocumentTypeString;
 
 interface PDFButtonProps extends Omit<ButtonProps, 'onClick'> {
-  documentType: DocumentType;
+  documentType: LegacyDocumentTypeString;
   document: any; // The document data (invoice, purchase order, or estimate)
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';

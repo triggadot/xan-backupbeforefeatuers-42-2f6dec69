@@ -2,9 +2,18 @@
 
 ## Overview
 
-The PDF generation system has been refactored to work with the current database schema, specifically utilizing `rowid_` and `glide_row_id` fields instead of foreign keys. The system follows a modular approach with separate modules for different document types (invoices, estimates, purchase orders, and products) and leverages Supabase edge functions for server-side PDF generation and storage. 
+The PDF generation system has been standardized to provide a unified, type-safe approach for generating, storing, and managing PDFs. The system follows a modular approach with a single source of truth for type definitions and leverages the `pdf-backend` edge function for all server-side PDF operations.
 
-The system now features **fully automated PDF generation** with database triggers that automatically initiate PDF generation when documents are created or updated. It includes a sophisticated error handling system with exponential backoff retry mechanisms, comprehensive logging, and a monitoring dashboard for tracking PDF generation metrics and managing failures.
+The system features **fully automated PDF generation** with database triggers that automatically initiate PDF generation when documents are created or updated. It includes a sophisticated error handling system with exponential backoff retry mechanisms, comprehensive logging, and a monitoring dashboard for tracking PDF generation metrics and managing failures.
+
+## Key Features
+
+- **Standardized Type System**: Single source of truth for document types and related interfaces
+- **Type Safety**: Strong TypeScript typing with runtime validation
+- **Error Handling**: Comprehensive error tracking and user-friendly notifications
+- **Unified API**: Consistent interface for all PDF operations
+- **Explicit Project ID**: Uses `swrfsullhirscyxqneay` per Glide sync pattern
+- **Modern React Components**: Tailwind CSS-based components with clean APIs
 
 ## Automated PDF Generation System
 
@@ -88,10 +97,11 @@ A comprehensive monitoring dashboard provides insights into PDF generation metri
 ### System Components
 
 1. **Frontend Client Libraries**
-   - Document-specific modules for client-side PDF generation
-   - Batch PDF generation utilities
-   - PDF operations hook for React components
-   - `PDFActions` component for standardized PDF operations
+   - **Type System**: `pdf.unified.ts` - Single source of truth for document types
+   - **Type Utilities**: `pdf.types.ts` - Validation and utility functions
+   - **Service Layer**: `pdf.service.ts` - Core PDF generation service
+   - **React Hook**: `usePDF.ts` - Modern React hook for PDF operations
+   - **UI Components**: `StandardPDFButton.tsx` - Standardized UI components
 
 2. **Edge Functions**
    - `pdf-backend`: Unified edge function with multiple endpoints for all PDF operations
@@ -121,15 +131,26 @@ A comprehensive monitoring dashboard provides insights into PDF generation metri
    - PDFs are stored in Supabase Storage buckets
    - URLs are updated in the original database records
 
-### Document-Specific Modules
+### Core Modules
 
-The PDF generation system is organized into document-specific modules:
+The PDF generation system is organized into the following core modules:
 
-- `src/lib/pdf/common.ts`: Shared utilities and types for PDF generation
-- `src/lib/pdf/invoice-pdf.ts`: Invoice-specific PDF generation logic
-- `src/lib/pdf/estimate-pdf.ts`: Estimate-specific PDF generation logic
-- `src/lib/pdf/purchase-order-pdf.ts`: Purchase order-specific PDF generation logic
-- `src/lib/pdf/product-pdf.ts`: Product-specific PDF generation logic
+#### Type System
+- `src/types/pdf.unified.ts`: Single source of truth for document types and type conversion utilities
+- `src/lib/pdf/pdf.types.ts`: Validation utilities and standardized interfaces
+
+#### Service Layer
+- `src/lib/pdf/pdf.service.ts`: Core service for all PDF operations
+- `src/hooks/pdf/usePDF.ts`: React hook for PDF operations
+
+#### UI Components
+- `src/components/pdf/StandardPDFButton.tsx`: Modern PDF button component
+- `src/components/pdf/PDFPreviewModal.tsx`: Modal for previewing PDFs
+- `src/components/pdf/PDFShareModal.tsx`: Modal for sharing PDFs
+
+#### Legacy Support
+- `src/lib/pdf-utils.ts`: Legacy utilities (forwards to standardized implementation)
+- `src/hooks/pdf/usePDFOperations.ts`: Legacy hook (forwards to standardized implementation)
 
 ### Automation and Error Handling Components
 

@@ -707,12 +707,11 @@ export async function triggerPDFGeneration(
       return data.supabase_pdf_url;
     }
     
-    // Map document type to standardized format for the backend
-    const documentType = type === 'invoice' 
-      ? 'invoice' 
-      : type === 'purchaseOrder' 
-        ? 'purchase_order' 
-        : 'estimate';
+    // Import the necessary functions from pdf.unified.ts
+    const { getBackendDocumentTypeKey } = await import('@/types/pdf.unified');
+    
+    // Convert the legacy type string to the standardized backend format
+    const documentType = getBackendDocumentTypeKey(type);
     
     // Call the standardized pdf-backend function directly with explicit project ID
     const { data: result, error } = await supabase.functions.invoke('pdf-backend', {

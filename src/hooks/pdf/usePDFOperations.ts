@@ -37,7 +37,7 @@ export const usePDFOperations = () => {
    * @returns The URL of the generated PDF or null if generation failed
    */
   const generatePDF = async (
-    documentType: DocumentType,
+    documentType: DocumentType | string,
     documentId: string,
     downloadAfterGeneration: boolean = false
   ): Promise<string | null> => {
@@ -49,19 +49,19 @@ export const usePDFOperations = () => {
     setIsGenerating(true);
 
     try {
-      // Use the standardized triggerPDFGeneration function from pdf-utils
-      // This ensures all PDF generation goes through the pdf-backend function
-      const normalizedType = normalizeDocumentType(documentType);
+      // Standardize the document type using our unified normalizer
+      const normalizedDocType = normalizeDocumentType(documentType);
       
-      // Convert our frontend document type to the format expected by triggerPDFGeneration
-      const pdfType = normalizedType === 'purchase_order' ? 'purchaseOrder' : normalizedType;
+      // Convert to legacy format for triggerPDFGeneration if needed
+      // triggerPDFGeneration expects 'invoice', 'purchaseOrder', or 'estimate'
+      const pdfType = toLegacyDocumentTypeString(normalizedDocType);
       
       // Fetch the document data to pass to triggerPDFGeneration
       let document = null;
       let fetchError = null;
       
       // Use specific table names to satisfy TypeScript
-      if (normalizedType === 'invoice') {
+      if (normalizedDocType === DocumentType.INVOICE) {
         const result = await supabase
           .from('gl_invoices')
           .select('*')
@@ -69,7 +69,7 @@ export const usePDFOperations = () => {
           .single();
         document = result.data;
         fetchError = result.error;
-      } else if (normalizedType === 'estimate') {
+      } else if (normalizedDocType === DocumentType.ESTIMATE) {
         const result = await supabase
           .from('gl_estimates')
           .select('*')
@@ -77,7 +77,7 @@ export const usePDFOperations = () => {
           .single();
         document = result.data;
         fetchError = result.error;
-      } else if (normalizedType === 'purchase_order') {
+      } else if (normalizedDocType === DocumentType.PURCHASE_ORDER) {
         const result = await supabase
           .from('gl_purchase_orders')
           .select('*')
@@ -88,7 +88,7 @@ export const usePDFOperations = () => {
       }
       
       if (fetchError || !document) {
-        throw new Error(`Failed to fetch ${normalizedType} data: ${fetchError?.message || 'Document not found'}`);
+        throw new Error(`Failed to fetch ${normalizedDocType} data: ${fetchError?.message || 'Document not found'}`);
       }
       
       // Use the standardized triggerPDFGeneration function
@@ -99,13 +99,13 @@ export const usePDFOperations = () => {
       );
       
       if (!url) {
-        throw new Error(`Failed to generate ${normalizedType} PDF`);
+        throw new Error(`Failed to generate ${normalizedDocType} PDF`);
       }
       
       // Download the PDF if requested
       if (downloadAfterGeneration && url) {
         const fileName = document?.invoice_uid || document?.estimate_uid || document?.purchase_order_uid || documentId;
-        await downloadPDF(url, `${normalizedType}_${fileName}.pdf`);
+        await downloadPDF(url, `${normalizedDocType}_${fileName}.pdf`);
       }
 
       toast({
