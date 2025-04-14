@@ -90,13 +90,13 @@ To manually trigger queue processing:
 SELECT process_pdf_generation_queue();
 ```
 
-## Deprecated Components
+## Removed Legacy Components
 
-The following edge functions are deprecated and will be removed in a future release:
+The following edge functions have been completely removed from the codebase as of April 2025:
 
 1. `store-pdf`
 2. `generate-pdf`
 3. `batch-generate-and-store-pdfs`
 4. `auto-generate-pdf`
 
-All code should be migrated to use the `pdf-backend` approach.
+All code now uses the standardized `pdf-backend` approach. Any references to these legacy functions should be updated to use the current implementation.
