@@ -3,6 +3,10 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/**
+ * @deprecated This is a temporary placeholder component.
+ * The original component had TypeScript errors and will be rebuilt in a future update.
+ */
 interface PDFPreviewProps {
   url: string | null;
   isOpen: boolean;
@@ -12,10 +16,6 @@ interface PDFPreviewProps {
 /**
  * PDFPreview component displays a PDF in a modal/drawer
  * Shows as a popup on desktop and slides from bottom on mobile
- * 
- * @param url - The URL of the PDF to display
- * @param isOpen - Whether the preview is open
- * @param onClose - Function to call when closing the preview
  */
 export const PDFPreview: React.FC<PDFPreviewProps> = ({
   url,
