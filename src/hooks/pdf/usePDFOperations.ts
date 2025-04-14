@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/utils/use-toast';
-import { generateAndStoreInvoicePDF } from '@/lib/pdf/invoice-pdf';
-import { generateAndStoreEstimatePDF } from '@/lib/pdf/estimate-pdf';
-import { generateAndStorePurchaseOrderPDF } from '@/lib/pdf/purchase-order-pdf';
-import { generateAndStoreProductPDF } from '@/lib/pdf/product-pdf';
+import { triggerPDFGeneration } from '@/lib/pdf-utils';
+import { documentTypeConfig } from '@/types/pdf.unified';
 import { PDFOperationResult } from '@/lib/pdf/common';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -26,8 +24,8 @@ export const usePDFOperations = () => {
   const [isServerProcessing, setIsServerProcessing] = useState(false);
 
   /**
-   * Generates a PDF document based on the document type and data
-   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * Generates a PDF document based on the document type and data using the standardized pdf-backend
+   * @param documentType The type of document (invoice, estimate, purchase_order)
    * @param documentId The document ID to generate the PDF from
    * @param downloadAfterGeneration Whether to download the PDF after generation
    * @returns The URL of the generated PDF or null if generation failed
@@ -43,29 +41,65 @@ export const usePDFOperations = () => {
     }
 
     setIsGenerating(true);
-    let result: PDFOperationResult | null = null;
 
     try {
-      // Generate the PDF based on document type
-      switch (documentType) {
-        case 'invoice':
-          result = await generateAndStoreInvoicePDF(documentId, downloadAfterGeneration);
-          break;
-        case 'purchaseOrder':
-          result = await generateAndStorePurchaseOrderPDF(documentId, downloadAfterGeneration);
-          break;
-        case 'estimate':
-          result = await generateAndStoreEstimatePDF(documentId, downloadAfterGeneration);
-          break;
-        case 'product':
-          result = await generateAndStoreProductPDF(documentId, downloadAfterGeneration);
-          break;
-        default:
-          throw new Error(`Unsupported document type: ${documentType}`);
+      // Use the standardized triggerPDFGeneration function from pdf-utils
+      // This ensures all PDF generation goes through the pdf-backend function
+      const normalizedType = normalizeDocumentType(documentType);
+      
+      // Convert our frontend document type to the format expected by triggerPDFGeneration
+      const pdfType = normalizedType === 'purchase_order' ? 'purchaseOrder' : normalizedType;
+      
+      // Fetch the document data to pass to triggerPDFGeneration
+      let document = null;
+      let fetchError = null;
+      
+      // Use specific table names to satisfy TypeScript
+      if (normalizedType === 'invoice') {
+        const result = await supabase
+          .from('gl_invoices')
+          .select('*')
+          .eq('id', documentId)
+          .single();
+        document = result.data;
+        fetchError = result.error;
+      } else if (normalizedType === 'estimate') {
+        const result = await supabase
+          .from('gl_estimates')
+          .select('*')
+          .eq('id', documentId)
+          .single();
+        document = result.data;
+        fetchError = result.error;
+      } else if (normalizedType === 'purchase_order') {
+        const result = await supabase
+          .from('gl_purchase_orders')
+          .select('*')
+          .eq('id', documentId)
+          .single();
+        document = result.data;
+        fetchError = result.error;
       }
-
-      if (!result.success || !result.url) {
-        throw new Error(result.error?.message || `Failed to generate ${documentType} PDF`);
+      
+      if (fetchError || !document) {
+        throw new Error(`Failed to fetch ${normalizedType} data: ${fetchError?.message || 'Document not found'}`);
+      }
+      
+      // Use the standardized triggerPDFGeneration function
+      const url = await triggerPDFGeneration(
+        pdfType as 'invoice' | 'purchaseOrder' | 'estimate', 
+        document as any, 
+        true
+      );
+      
+      if (!url) {
+        throw new Error(`Failed to generate ${normalizedType} PDF`);
+      }
+      
+      // Download the PDF if requested
+      if (downloadAfterGeneration && url) {
+        const fileName = document?.invoice_uid || document?.estimate_uid || document?.purchase_order_uid || documentId;
+        await downloadPDF(url, `${normalizedType}_${fileName}.pdf`);
       }
 
       toast({
@@ -73,7 +107,7 @@ export const usePDFOperations = () => {
         description: 'The PDF has been successfully created.',
       });
 
-      return result.url;
+      return url;
     } catch (error) {
       console.error(`Error generating ${documentType} PDF:`, 
         error instanceof Error 
@@ -92,12 +126,12 @@ export const usePDFOperations = () => {
   };
 
   /**
-   * Request server-side batch generation of PDFs using the new pdf-backend edge function
-   * @param documentType The type of document (invoice, purchaseOrder, estimate)
+   * Request server-side batch generation of PDFs using the standardized pdf-backend edge function
+   * @param documentType The type of document (invoice, estimate, purchase_order)
    * @param documentId The document ID to generate the PDF from
    * @returns Promise resolving to a boolean indicating success
    */
-  const batchGeneratePDFNew = async (
+  const batchGeneratePDF = async (
     documentType: DocumentType,
     documentId: string
   ): Promise<boolean> => {
@@ -294,49 +328,54 @@ export const usePDFOperations = () => {
   };
 
   /**
-   * Store PDF in Supabase storage
-   * @param documentType Type of document (invoice, purchaseOrder, estimate, product)
+   * Store PDF in Supabase storage using the standardized pdf-backend function
+   * @param documentType Type of document (invoice, estimate, purchase_order)
    * @param documentId The ID of the document
-   * @param pdfBlob The PDF file as a Blob
+   * @param pdfBlob The PDF file as a Blob (optional - if null, will trigger server-side generation)
    * @returns URL of the stored PDF or null if storage fails
    */
   const storePDF = async (
     documentType: DocumentType,
     documentId: string,
-    pdfBlob: Blob
+    pdfBlob?: Blob | null
   ): Promise<string | null> => {
     setIsStoring(true);
     try {
-      // Call our edge function to store the PDF
-      const reader = new FileReader();
-      reader.readAsDataURL(pdfBlob);
+      let base64Data: string | undefined;
       
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1]; // Remove the data:application/pdf;base64, part
-          resolve(base64);
-        };
-        reader.onerror = (error) => reject(error);
-      });
-      
-      // Use the storage document type key from our standardized mapping
-      const storageTypeKey = getStorageDocumentTypeKey(documentType);
-      
-      const { data, error } = await supabase.functions.invoke('store-pdf', {
+      // If PDF blob is provided, convert it to base64
+      if (pdfBlob) {
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob);
+        
+        base64Data = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.split(',')[1]; // Remove the data:application/pdf;base64, part
+            resolve(base64);
+          };
+          reader.onerror = (error) => reject(error);
+        });
+      }
+
+      // Use the standardized pdf-backend function
+      const normalizedType = normalizeDocumentType(documentType);
+
+      // Make sure to include the project_id for Glide sync pattern
+      const { data, error } = await supabase.functions.invoke('pdf-backend', {
         body: {
-          documentType: storageTypeKey,
-          documentId,
-          pdfBase64: base64Data,
-          fileName: `${documentType}_${documentId}.pdf`
+          type: normalizedType,
+          id: documentId,
+          pdf_base64: base64Data, // Optional - only if client-side generated PDF is provided
+          project_id: 'swrfsullhirscyxqneay' // Explicit project ID as per Glide sync pattern
         }
       });
       
       if (error) {
-        console.error('Error storing PDF:', error);
+        console.error('Error with PDF operation:', error);
         toast({
-          title: 'Storage Failed',
-          description: 'The PDF was generated but could not be stored on the server.',
+          title: 'PDF Operation Failed',
+          description: 'The PDF operation could not be completed.',
           variant: 'destructive'
         });
         return null;
@@ -344,7 +383,7 @@ export const usePDFOperations = () => {
       
       return data?.url || null;
     } catch (error) {
-      console.error('Error storing PDF:', error);
+      console.error('Error with PDF operation:', error);
       return null;
     } finally {
       setIsStoring(false);
@@ -352,67 +391,26 @@ export const usePDFOperations = () => {
   };
 
   /**
-   * Request server-side batch generation of PDFs using the legacy edge function
-   * @param documentType The type of document (invoice, purchaseOrder, estimate, product)
+   * Legacy method with same name for backward compatibility
+   * @param documentType The type of document (invoice, estimate, purchase_order)
    * @param documentId The document ID to generate the PDF from
    * @returns Promise resolving to a boolean indicating success
-   * @deprecated Use batchGeneratePDFNew instead which utilizes the new pdf-backend function
+   * @deprecated This is kept for backward compatibility but now uses the standardized pdf-backend approach
    */
-  const batchGeneratePDF = async (
+  const batchGeneratePDFOld = async (
     documentType: DocumentType,
     documentId: string
   ): Promise<boolean> => {
-    if (!documentId) {
-      console.error('No document ID provided for batch PDF generation');
-      return false;
-    }
-
-    setIsServerProcessing(true);
-
-    try {
-      // Use the batch document type key from our standardized mapping
-      const batchTypeKey = getBatchDocumentTypeKey(documentType);
-
-      // Call the batch-generate-and-store-pdfs edge function
-      const { data, error } = await supabase.functions.invoke('batch-generate-and-store-pdfs', {
-        body: {
-          items: [
-            {
-              id: documentId,
-              type: batchTypeKey
-            }
-          ]
-        }
-      });
-
-      if (error) {
-        console.error('Error calling batch PDF generation:', error);
-        throw new Error(`Failed to request batch generation: ${error.message}`);
-      }
-
-      console.log('Batch PDF generation response:', data);
-      return true;
-    } catch (error) {
-      console.error(`Error requesting batch ${documentType} PDF generation:`, 
-        error instanceof Error 
-          ? { message: error.message, stack: error.stack } 
-          : String(error)
-      );
-      toast({
-        title: 'Batch PDF Request Failed',
-        description: error instanceof Error ? error.message : 'There was an error requesting PDF generation.',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsServerProcessing(false);
-    }
+    console.warn('Using legacy batchGeneratePDFOld method - this will be removed in a future update');
+    // Redirect to the standardized implementation
+    return batchGeneratePDF(documentType, documentId);
   };
 
   return {
     generatePDF,
     batchGeneratePDF,
-    batchGeneratePDFNew,
+    batchGeneratePDFNew: batchGeneratePDF, // Alias for backward compatibility
+    batchGeneratePDFOld, // Legacy method for backward compatibility
     batchGenerateMultiplePDFs,
     downloadPDF,
     storePDF,

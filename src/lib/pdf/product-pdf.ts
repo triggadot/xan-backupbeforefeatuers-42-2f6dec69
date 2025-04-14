@@ -1,3 +1,17 @@
+/**
+ * @deprecated This client-side PDF generation is deprecated.
+ * Please use the triggerPDFGeneration function from pdf-utils.ts instead,
+ * which leverages the standardized pdf-backend edge function.
+ * 
+ * Example:
+ * ```typescript
+ * import { triggerPDFGeneration } from '@/lib/pdf-utils';
+ * const pdfUrl = await triggerPDFGeneration('product', productData);
+ * ```
+ * 
+ * See /supabase/functions/pdf-backend/README.md for complete documentation.
+ */
+
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Database } from '@/integrations/supabase/types';

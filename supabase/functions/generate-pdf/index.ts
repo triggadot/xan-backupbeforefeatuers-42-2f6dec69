@@ -1,9 +1,17 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+/**
+ * @deprecated This function is deprecated. Please use the pdf-backend function instead.
+ * See /supabase/functions/pdf-backend/README.md for complete documentation.
+ * 
+ * This is now a forwarding wrapper that calls the pdf-backend function with the 
+ * appropriate parameters.
+ */
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { PDFDocument, rgb, StandardFonts, PageSizes } from 'https://cdn.skypack.dev/pdf-lib@1.17.1?dts';
 
-console.log('Generate PDF function booting up');
+console.log('DEPRECATED: Generate PDF function - Forwarding to pdf-backend');
 
 // Mapping document types to table names
 const tableMap: { [key: string]: string } = {
@@ -13,8 +21,13 @@ const tableMap: { [key: string]: string } = {
   // Add other types if needed
 };
 
+// NOTE: The original PDF generation functions are kept but not used anymore
+// They are maintained for documentation purposes only
+
 // Generate a PDF for an invoice using pdf-lib
+/* istanbul ignore next */
 async function generateInvoicePDF(invoice: any): Promise<Uint8Array | null> {
+  console.warn('DEPRECATED: This function is no longer used directly');
   try {
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
@@ -203,7 +216,9 @@ async function generateInvoicePDF(invoice: any): Promise<Uint8Array | null> {
 }
 
 // Generate a PDF for an estimate using pdf-lib
+/* istanbul ignore next */
 async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
+  console.warn('DEPRECATED: This function is no longer used directly');
   try {
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
@@ -392,7 +407,9 @@ async function generateEstimatePDF(estimate: any): Promise<Uint8Array | null> {
 }
 
 // Generate a PDF for a purchase order using pdf-lib
+/* istanbul ignore next */
 async function generatePurchaseOrderPDF(purchaseOrder: any): Promise<Uint8Array | null> {
+  console.warn('DEPRECATED: This function is no longer used directly');
   try {
     // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
@@ -471,7 +488,9 @@ async function generatePurchaseOrderPDF(purchaseOrder: any): Promise<Uint8Array 
 }
 
 // Generate a PDF based on document type and data
+/* istanbul ignore next */
 async function generatePDF(type: string, data: any): Promise<Uint8Array | null> {
+  console.warn('DEPRECATED: This function is no longer used directly');
   console.log(`Generating ${type} PDF for ID: ${data.id}`);
   
   switch (type.toLowerCase()) {
@@ -494,235 +513,135 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Ensure environment variables are set
+    declare var Deno: {
+      env: {
+        get(key: string): string | undefined;
+      }
+    };
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
     if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error(
-        'Missing environment variables SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
-      );
+      throw new Error('Missing Supabase environment variables');
     }
 
-    // Create Supabase client with service role
+    // Initialize Supabase client with admin privileges
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Parse request body
-    const { id, type } = await req.json();
-    const tableName = tableMap[type];
+    const requestData = await req.json();
+    const { type, id, fetchOptions } = requestData;
 
-    if (!id || !type || !tableName) {
-      throw new Error("Invalid request: missing id, type, or unknown document type.");
-    }
-
-    console.log(`Processing ${type} with ID: ${id}`);
-    
-    try {
-      // 1. Fetch document data (use Glidebase pattern, not foreign key joins)
-      const { data: documentData, error: fetchError } = await supabaseAdmin
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (fetchError || !documentData) {
-        throw new Error(
-          `Failed to fetch ${type} ${id}: ${fetchError?.message || 'Not found'}`,
-        );
-      }
-      console.log(`Fetched data for ${type} ${id}`);
-      
-      // Separately fetch the related account following Glidebase pattern
-      if (documentData.rowid_accounts) {
-        try {
-          const { data: accountData } = await supabaseAdmin
-            .from('gl_accounts')
-            .select('*')
-            .eq('glide_row_id', documentData.rowid_accounts)
-            .maybeSingle();
-            
-          if (accountData) {
-            // Manually attach the account data
-            documentData.gl_accounts = accountData;
-            console.log(`Added account data to ${type} ${id}`);
-          }
-        } catch (accountError) {
-          console.warn(`Failed to fetch account for ${type} ${id}:`, accountError);
-          // Continue without account if fetch fails
+    if (!type || !id) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Missing required parameters: type and id',
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+          status: 400,
         }
-      }
-      
-      // Fetch line items if needed
-      if (type === 'invoice') {
-        try {
-          const { data: lines } = await supabaseAdmin
-            .from('gl_invoice_lines')
-            .select('*')
-            .eq('rowid_invoices', documentData.glide_row_id);
-            
-          if (lines?.length > 0) {
-            documentData.lines = lines;
-            console.log(`Added ${lines.length} line items to invoice data`);
-          }
-        } catch (lineError) {
-          console.warn(`Failed to fetch invoice lines for ${id}:`, lineError);
-        }
-      } else if (type === 'estimate') {
-        try {
-          const { data: lines } = await supabaseAdmin
-            .from('gl_estimate_lines')
-            .select('*')
-            .eq('rowid_estimates', documentData.glide_row_id);
-            
-          if (lines?.length > 0) {
-            documentData.lines = lines;
-            console.log(`Added ${lines.length} line items to estimate data`);
-          }
-        } catch (lineError) {
-          console.warn(`Failed to fetch estimate lines for ${id}:`, lineError);
-        }
-      }
-      
-      // 2. Generate PDF using pdf-lib
-      const pdfBytes = await generatePDF(type, documentData);
-      if (!pdfBytes) {
-        throw new Error(`Failed to generate PDF for ${type} ${id}`);
-      }
-      console.log(`Generated PDF for ${type} ${id}`);
-
-      // 3. Upload PDF to Supabase Storage with clean UID-based naming
-      let fileName = '';
-      
-      // Use exactly the document UID without prefixing with document type
-      if (type === 'invoice' && documentData.invoice_uid) {
-        fileName = `${documentData.invoice_uid}.pdf`;
-        console.log(`Using invoice_uid for filename: ${fileName}`);
-      } 
-      else if (type === 'estimate' && documentData.estimate_uid) {
-        fileName = `${documentData.estimate_uid}.pdf`;
-        console.log(`Using estimate_uid for filename: ${fileName}`);
-      }
-      else if ((type === 'purchase-order' || type === 'purchaseOrder') && documentData.purchase_order_uid) {
-        fileName = `${documentData.purchase_order_uid}.pdf`;
-        console.log(`Using purchase_order_uid for filename: ${fileName}`);
-      }
-      else {
-        // If no document UID found, use a consistent fallback format matching other implementations
-        const prefix = type === 'invoice' ? 'INV#' :
-                      (type === 'purchase-order' || type === 'purchaseOrder') ? 'PO#' :
-                      type === 'estimate' ? (documentData.is_a_sample ? 'SMP#' : 'EST#') :
-                      'DOC#';
-                      
-        fileName = `${prefix}${id}.pdf`;
-        console.log(`Using fallback filename: ${fileName}`);
-      }
-      
-      // Store files in type-specific folders
-      const storageKey = `${type}/${fileName}`;
-      
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from('pdfs')
-        .upload(storageKey, pdfBytes, {
-          contentType: 'application/pdf',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
-      }
-      console.log(`Uploaded PDF to storage: ${storageKey}`);
-
-      // 4. Get Public URL
-      const { data: urlData } = supabaseAdmin.storage
-        .from('pdfs')
-        .getPublicUrl(storageKey);
-
-      if (!urlData?.publicUrl) {
-        console.warn(`Could not get public URL for ${storageKey}. Using path.`);
-      }
-
-      const publicUrl = urlData?.publicUrl || storageKey;
-      
-      // 5. Update Database Record
-      const { error: updateError } = await supabaseAdmin
-        .from(tableName)
-        .update({ supabase_pdf_url: publicUrl })
-        .eq('id', id);
-
-      if (updateError) {
-        throw new Error(
-          `Failed to update DB for ${type} ${id}: ${updateError.message}`,
-        );
-      }
-      console.log(`Updated database for ${type} ${id}`);
-
-      // 6. Send webhook notification if configured
-      try {
-        // Get webhook URL from vault
-        const { data: webhookData, error: webhookError } = await supabaseAdmin
-          .from('vault.secrets')
-          .select('secret')
-          .eq('name', 'n8n_pdf_webhook')
-          .single();
-          
-        if (webhookError) {
-          console.warn(`Could not retrieve webhook URL from vault: ${webhookError.message}`);
-        } else if (webhookData?.secret) {
-          console.log(`Sending webhook notification for ${type} ${id}`);
-          
-          // Prepare notification payload with metadata
-          const notificationPayload = {
-            event: 'pdf_generated',
-            timestamp: new Date().toISOString(),
-            documentType: type,
-            documentId: id,
-            glideRowId: documentData.glide_row_id,
-            documentUid: documentData.invoice_uid || documentData.estimate_uid || documentData.purchase_order_uid,
-            pdfUrl: publicUrl,
-            tableUpdated: tableName,
-            storageKey: storageKey,
-            fromFunction: 'generate-pdf'
-          };
-          
-          // Send webhook notification
-          const webhookResponse = await fetch(webhookData.secret, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(notificationPayload)
-          });
-          
-          if (!webhookResponse.ok) {
-            console.warn(`Webhook notification failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
-          } else {
-            console.log(`Webhook notification sent successfully for ${type} ${id}`);
-          }
-        }
-      } catch (webhookError) {
-        // Log webhook error but don't fail the operation
-        console.error(`Error sending webhook notification: ${webhookError.message}`);
-      }
-
-      // Return success with URL
-      return new Response(JSON.stringify({ success: true, url: publicUrl }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    } catch (error) {
-      console.error(
-        `Error processing ${type} ${id}:`,
-        error.message || error,
       );
-      return new Response(JSON.stringify({ success: false, error: error.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
     }
+
+    console.log(`[DEPRECATED] Forwarding PDF generation for ${type} ID ${id} to pdf-backend`);
+    
+    // Forward the request to the pdf-backend function
+    // pdf-backend expects documentType in camelCase format
+    const pdfBackendResponse = await supabaseAdmin.functions.invoke('pdf-backend', {
+      body: JSON.stringify({
+        action: 'generate',
+        documentType: type, // pdf-backend accepts invoice, estimate, purchaseOrder
+        documentId: id,
+        forceRegenerate: true,
+        // Include other original request parameters
+        ...requestData
+      })
+    });
+    
+    // Handle any errors from the pdf-backend function
+    if (pdfBackendResponse.error) {
+      console.error('Error forwarding to pdf-backend:', pdfBackendResponse.error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `PDF backend function error: ${pdfBackendResponse.error.message || 'Unknown error'}`,
+          originalError: pdfBackendResponse.error
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+          status: 500,
+        }
+      );
+    }
+    
+    // Log the successful forwarding
+    console.log(`Successfully forwarded to pdf-backend, response:`, pdfBackendResponse.data);
+    
+    // Map the pdf-backend response to match the expected format from generate-pdf
+    const responseData = pdfBackendResponse.data;
+    const publicUrl = responseData.url || responseData.pdfUrl;
+    
+    // When function was called directly (without client expecting storage)
+    if (responseData.pdfBase64) {
+      // Return the PDF data as requested
+      return new Response(
+        JSON.stringify({
+          success: true,
+          pdfBase64: responseData.pdfBase64,
+          documentType: type,
+          documentId: id,
+          message: `PDF successfully generated for ${type} ${id} (via pdf-backend)`
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+          status: 200,
+        }
+      );
+    }
+    
+    // Otherwise return the URL of the stored PDF
+    return new Response(
+      JSON.stringify({
+        success: true,
+        url: publicUrl,
+        documentType: type,
+        documentId: id,
+        message: `PDF successfully generated and stored for ${type} ${id} (via pdf-backend)`
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error('Function error:', error.message || error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message || 'An unknown error occurred'
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+        status: 500,
+      }
+    );
   }
 });

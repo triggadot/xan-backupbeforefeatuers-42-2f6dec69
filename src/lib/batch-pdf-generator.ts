@@ -1,12 +1,5 @@
-import { jsPDF } from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  generateInvoicePDF, 
-  generatePurchaseOrderPDF, 
-  generateEstimatePDF,
-  uploadPDFToStorage
-} from './pdf-utils';
-import { updatePDFCache } from './pdf-cache';
+import { triggerPDFGeneration } from './pdf-utils';
 
 // Define batch job status type
 export type BatchJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -56,8 +49,9 @@ export async function createBatchPDFJob(
     };
     
     // Store the job in the database
+    // Using gl_batch_pdf_jobs to follow the Glide naming convention with 'gl_' prefix
     const { error } = await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .insert(job);
     
     if (error) {
@@ -80,8 +74,9 @@ export async function createBatchPDFJob(
 export async function startBatchPDFJob(jobId: string): Promise<boolean> {
   try {
     // Get the job from the database
+    // Using gl_batch_pdf_jobs to follow the Glide naming convention with 'gl_' prefix
     const { data: job, error } = await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .select('*')
       .eq('id', jobId)
       .single();
@@ -93,7 +88,7 @@ export async function startBatchPDFJob(jobId: string): Promise<boolean> {
     
     // Update job status to processing
     const { error: updateError } = await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .update({
         status: 'processing',
         startedAt: new Date().toISOString()
@@ -106,7 +101,8 @@ export async function startBatchPDFJob(jobId: string): Promise<boolean> {
     }
     
     // Start processing in the background
-    processBatchPDFJob(job).catch(err => {
+    // Cast to BatchPDFJob to handle type issues
+    processBatchPDFJob(job as unknown as BatchPDFJob).catch(err => {
       console.error('Error processing batch PDF job:', err);
     });
     
@@ -129,12 +125,15 @@ async function processBatchPDFJob(job: BatchPDFJob): Promise<void> {
     // Get the table name based on document type
     const tableName = getTableName(job.documentType);
     
+    // Use the known project ID explicitly for all operations
+    const PROJECT_ID = 'swrfsullhirscyxqneay';
+    
     // Process each document
     for (const documentId of job.documentIds) {
       try {
         // Get the document from the database
         const { data: document, error } = await supabase
-          .from(tableName)
+          .from(tableName as any)
           .select('*')
           .eq('id', documentId)
           .single();
@@ -149,56 +148,41 @@ async function processBatchPDFJob(job: BatchPDFJob): Promise<void> {
           continue;
         }
         
-        // Generate the PDF
-        const doc = generatePDF(job.documentType, document);
-        
-        if (!doc) {
-          results.push({
-            documentId,
-            pdfUrl: null,
-            success: false,
-            error: 'Failed to generate PDF'
-          });
-          continue;
-        }
-        
-        // Upload the PDF to storage
-        const folderName = getFolderName(job.documentType);
-        const fileName = getFileName(job.documentType, document);
-        
-        const pdfUrl = await uploadPDFToStorage(doc, folderName, fileName);
+        // Use the new triggerPDFGeneration function to generate PDF on the server
+        // Cast document to the expected type (Invoice, PurchaseOrder, or Estimate)
+        const pdfUrl = await triggerPDFGeneration(
+          job.documentType,
+          document as any, // Use 'any' to bypass the type checking as we know the document structure is valid
+          true // Force regenerate
+        );
         
         if (!pdfUrl) {
           results.push({
             documentId,
             pdfUrl: null,
             success: false,
-            error: 'Failed to upload PDF to storage'
+            error: `Failed to generate PDF: ${error?.message || 'Unknown error'}`
           });
           continue;
         }
         
-        // Update the document with the PDF URL
+        // Add the document to results with the PDF URL
+        results.push({
+          documentId,
+          pdfUrl, // This is the standardized supabase_pdf_url from triggerPDFGeneration
+          success: true
+        });
+        
+        // Update the document with the PDF URL in case it wasn't already updated
+        // This ensures we have the supabase_pdf_url field updated
         const { error: updateError } = await supabase
-          .from(tableName)
-          .update({
-            supabase_pdf_url: pdfUrl
-          })
+          .from(tableName as any)
+          .update({ supabase_pdf_url: pdfUrl })
           .eq('id', documentId);
         
         if (updateError) {
-          console.error('Error updating document with PDF URL:', updateError);
+          console.error(`Error updating supabase_pdf_url for ${job.documentType} ${documentId}:`, updateError);
         }
-        
-        // Update the PDF cache
-        await updatePDFCache(documentId, job.documentType, pdfUrl, document);
-        
-        // Add to results
-        results.push({
-          documentId,
-          pdfUrl,
-          success: true
-        });
         
         // Update progress
         progress++;
@@ -235,7 +219,7 @@ async function processBatchPDFJob(job: BatchPDFJob): Promise<void> {
 async function updateBatchJobProgress(jobId: string, progress: number, total: number): Promise<void> {
   try {
     await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .update({
         progress,
         total
@@ -254,7 +238,7 @@ async function updateBatchJobProgress(jobId: string, progress: number, total: nu
 async function completeBatchJob(jobId: string, results: BatchPDFJob['results']): Promise<void> {
   try {
     await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .update({
         status: 'completed',
         completedAt: new Date().toISOString(),
@@ -274,7 +258,7 @@ async function completeBatchJob(jobId: string, results: BatchPDFJob['results']):
 async function failBatchJob(jobId: string, error: string): Promise<void> {
   try {
     await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .update({
         status: 'failed',
         completedAt: new Date().toISOString(),
@@ -294,7 +278,7 @@ async function failBatchJob(jobId: string, error: string): Promise<void> {
 export async function getBatchPDFJobStatus(jobId: string): Promise<BatchPDFJob | null> {
   try {
     const { data, error } = await supabase
-      .from('batch_pdf_jobs')
+      .from('gl_batch_pdf_jobs' as any)
       .select('*')
       .eq('id', jobId)
       .single();
@@ -304,7 +288,8 @@ export async function getBatchPDFJobStatus(jobId: string): Promise<BatchPDFJob |
       return null;
     }
     
-    return data as BatchPDFJob;
+    // Cast to BatchPDFJob to ensure type safety
+    return data as unknown as BatchPDFJob;
   } catch (error) {
     console.error('Error fetching batch PDF job status:', error);
     return null;
@@ -348,23 +333,25 @@ function getFolderName(documentType: 'invoice' | 'purchaseOrder' | 'estimate'): 
 }
 
 /**
- * Helper function to generate a PDF for a document
+ * Helper function to trigger PDF generation for a document
+ * 
+ * This function has been updated to use the new edge function approach
+ * instead of client-side PDF generation.
+ * 
  * @param documentType The document type
  * @param document The document data
- * @returns The generated PDF
+ * @returns Promise resolving to the PDF URL or null if generation failed
  */
-function generatePDF(documentType: 'invoice' | 'purchaseOrder' | 'estimate', document: any): jsPDF | null {
+async function generatePDF(documentType: 'invoice' | 'purchaseOrder' | 'estimate', document: any): Promise<string | null> {
   try {
-    switch (documentType) {
-      case 'invoice':
-        return generateInvoicePDF(document);
-      case 'purchaseOrder':
-        return generatePurchaseOrderPDF(document);
-      case 'estimate':
-        return generateEstimatePDF(document);
-      default:
-        return null;
-    }
+    // Use the triggerPDFGeneration function which calls the edge function
+    const pdfUrl = await triggerPDFGeneration(
+      documentType,
+      document as any, // Cast to any to handle type mismatches
+      true // Force regenerate for batch operations
+    );
+    
+    return pdfUrl;
   } catch (error) {
     console.error('Error generating PDF:', error);
     return null;

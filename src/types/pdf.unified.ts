@@ -15,7 +15,7 @@ export enum DocumentType {
   /** Estimate document type */
   ESTIMATE = 'estimate',
   /** Purchase order document type */
-  PURCHASE_ORDER = 'purchaseorder',  // Note: This matches the edge function value
+  PURCHASE_ORDER = 'purchase_order',  // Standardized to match backend value
 }
 
 /**
@@ -57,6 +57,57 @@ export interface DocumentTypeConfig {
     referenceField: string;
   }[];
 }
+
+/**
+ * Configuration for each document type including table names and field mappings
+ * Following the Glidebase pattern of using glide_row_id for relationships
+ * @type {Record<DocumentType, DocumentTypeConfig>}
+ */
+export const documentTypeConfig: Record<DocumentType, DocumentTypeConfig> = {
+  [DocumentType.INVOICE]: {
+    tableName: 'gl_invoices',
+    linesTableName: 'gl_invoice_lines',
+    uidField: 'invoice_uid',
+    accountRefField: 'rowid_accounts',
+    storageFolder: 'Invoices',
+    additionalRelations: [
+      {
+        tableName: 'gl_shipping_records',
+        referenceField: 'rowid_invoices'
+      },
+      {
+        tableName: 'gl_customer_payments',
+        referenceField: 'rowid_invoices'
+      }
+    ]
+  },
+  [DocumentType.ESTIMATE]: {
+    tableName: 'gl_estimates',
+    linesTableName: 'gl_estimate_lines',
+    uidField: 'estimate_uid',
+    accountRefField: 'rowid_accounts',
+    storageFolder: 'Estimates',
+    additionalRelations: [
+      {
+        tableName: 'gl_customer_credits',
+        referenceField: 'rowid_estimates'
+      }
+    ]
+  },
+  [DocumentType.PURCHASE_ORDER]: {
+    tableName: 'gl_purchase_orders',
+    linesTableName: 'gl_purchase_order_lines',
+    uidField: 'purchase_order_uid',
+    accountRefField: 'rowid_accounts',
+    storageFolder: 'PurchaseOrders',
+    additionalRelations: [
+      {
+        tableName: 'gl_vendor_payments',
+        referenceField: 'rowid_purchase_orders'
+      }
+    ]
+  }
+};
 
 /**
  * Base interface for account data matching database schema

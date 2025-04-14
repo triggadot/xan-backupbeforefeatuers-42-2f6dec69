@@ -1,9 +1,17 @@
+/**
+ * @deprecated This function is deprecated. Please use the pdf-backend function instead.
+ * See /supabase/functions/pdf-backend/README.md for complete documentation.
+ * 
+ * This is now a forwarding wrapper that calls the pdf-backend function with the 
+ * appropriate parameters.
+ */
+
 import { PageSizes, PDFDocument, rgb, StandardFonts } from 'https://cdn.skypack.dev/pdf-lib@1.17.1?dts';
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
-console.log('Batch Generate and Store PDFs function booting up');
+console.log('DEPRECATED: Batch Generate and Store PDFs function - Forwarding to pdf-backend');
 
 /**
  * Supported document types for PDF generation
@@ -1095,7 +1103,7 @@ function generateFileName(documentType: DocumentType, documentData: any): string
 }
 
 
-// --- Main Server Handler ---
+// --- Main Server Handler (Forwarding to pdf-backend) ---
 serve(async (req: Request) => {
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
@@ -1115,15 +1123,16 @@ serve(async (req: Request) => {
     // Create Supabase client with service role
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Project ID for reference in logs (Hardcoded - Consider making dynamic if needed)
+    // Project ID for reference in logs (Required for Glide Sync pattern)
     const projectId = "swrfsullhirscyxqneay";
-    console.log(`Executing Edge Function in project: ${projectId}`);
+    console.log(`[DEPRECATED] Forwarding batch PDF request to pdf-backend in project: ${projectId}`);
 
     // Parse request body
-     if (!req.body) {
+    if (!req.body) {
       throw new Error("Request has no body.");
     }
-    const { items } = await req.json();
+    const requestData = await req.json();
+    const { items } = requestData;
     if (!Array.isArray(items)) {
       throw new Error("Request body must contain an 'items' array.");
     }
@@ -1135,33 +1144,65 @@ serve(async (req: Request) => {
         });
     }
 
-    console.log(`Processing batch of ${items.length} items.`);
-    const results = [];
+    console.log(`Forwarding batch of ${items.length} items to pdf-backend function.`);
 
-    // Process items sequentially to avoid overwhelming resources
-    for (const item of items) {
-      // Validate basic item structure
-      if (!item || typeof item !== 'object' || !item.id || !item.type) {
-          console.warn('Skipping invalid item in batch:', item);
-          results.push({ id: item?.id || 'unknown', type: item?.type || 'unknown', success: false, error: 'Invalid item format (missing id or type)', url: null });
-          continue;
+    // Forward the entire original request to the pdf-backend function
+    // This preserves all the original parameters and structure
+    try {
+      // Build the url with the explicit project ID as per Glide sync pattern
+      const pdfBackendUrl = `${supabaseUrl}/functions/v1/pdf-backend?project_id=${projectId}`;
+      console.log(`Forwarding request to: ${pdfBackendUrl}`);
+      
+      // Forward the request to pdf-backend with the same structure
+      const response = await fetch(pdfBackendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          // Pass through origin for CORS if present
+          ...(req.headers.get('origin') ? { 'Origin': req.headers.get('origin') } : {})
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`pdf-backend returned error ${response.status}: ${errorText}`);
       }
 
-      const { id, type } = item;
+      // Get the response from pdf-backend and return it directly
+      const pdfBackendResponse = await response.json();
+      
+      // Return the response from pdf-backend directly
+      console.log('Successfully forwarded request to pdf-backend and received response');
+      return new Response(JSON.stringify(pdfBackendResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (forwardingError) {
+      // Handle any errors in the forwarding process
+      console.error('Error forwarding request to pdf-backend:', forwardingError.message || forwardingError);
+      return new Response(JSON.stringify({ 
+        error: `Error forwarding request to pdf-backend: ${forwardingError.message || forwardingError}`,
+        message: 'This function is deprecated. Please use pdf-backend directly.'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+  } catch (error) {
+    // Handle errors in the main function setup (e.g., env vars, request parsing)
+    console.error('Critical Function Error:', error.message || error);
+    return new Response(JSON.stringify({ 
+      error: `Critical Function Error: ${error.message}`,
+      message: 'This function is deprecated. Please use pdf-backend directly.'
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, // Server error
+    });
+  }
+});
 
-      // Start with a default result for this item
-      let itemResult = { id, type, success: false, error: '', url: null };
-
-      try {
-        // 1. Normalize the document type
-        const normalizedType = normalizeDocumentType(type);
-        const config = documentTypeConfig[normalizedType];
-        // Item result type updated to normalized version
-        itemResult.type = normalizedType;
-
-        // Config should exist if normalization succeeded, but double-check
-        if (!config) {
-           throw new Error(`Internal Error: No configuration found for normalized type: ${normalizedType}`);
         }
 
         console.log(`Processing ${normalizedType} with ID: ${id}`);

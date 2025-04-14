@@ -9,11 +9,15 @@ import { PDFErrorType, createPDFError } from './utils.ts';
  * Interface for PDF storage result
  * @interface StorageResult
  */
-interface StorageResult {
+export interface StorageResult {
   /** Storage path/key for the PDF */
   storageKey: string;
   /** Public URL for the stored PDF */
   url: string;
+  /** Whether the operation was successful */
+  success: boolean;
+  /** Error message if not successful */
+  error?: string;
 }
 
 /**
@@ -135,7 +139,8 @@ export async function storePDF(
 
     return {
       storageKey,
-      url: urlData.publicUrl
+      url: urlData.publicUrl,
+      success: true
     };
   } catch (error) {
     console.error('Error storing PDF:', error);
@@ -145,11 +150,13 @@ export async function storePDF(
       throw error;
     }
     
-    throw createPDFError(
-      PDFErrorType.STORAGE_ERROR,
-      `Failed to store PDF: ${error.message || 'Unknown error'}`,
-      error
-    );
+    // Return error information instead of throwing for better integration with queue system
+    return {
+      storageKey: '',
+      url: '',
+      success: false,
+      error: `Failed to store PDF: ${error.message || 'Unknown error'}`
+    };
   }
 }
 

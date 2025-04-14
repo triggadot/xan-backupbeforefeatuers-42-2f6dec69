@@ -1,12 +1,24 @@
+/**
+ * @deprecated This function is deprecated. Please use the pdf-backend function instead.
+ * See /supabase/functions/pdf-backend/README.md for complete documentation.
+ * 
+ * This is now a forwarding wrapper that calls the pdf-backend function with the 
+ * appropriate parameters.
+ */
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 /**
- * Auto-Generate PDF Edge Function
+ * Auto-Generate PDF Edge Function (DEPRECATED)
  * 
  * This function automatically generates PDFs when new documents are created.
  * It is triggered by database webhooks when records are inserted or updated.
+ * 
+ * IMPORTANT: This function is now deprecated and forwards all requests to the
+ * standardized pdf-backend function, which follows the Glidebase sync pattern
+ * with glide_row_id for relationship tracking.
  * 
  * Can handle both single documents and batches:
  * 
@@ -69,7 +81,7 @@ serve(async (req) => {
   }
 });
 
-// Handle batch PDF generation request
+// Handle batch PDF generation request (now forwards to pdf-backend)
 async function handleBatchRequest(supabaseAdmin, payload) {
   // Validate batch request
   if (!payload.documentType || !payload.ids || !Array.isArray(payload.ids) || payload.ids.length === 0) {
@@ -87,17 +99,23 @@ async function handleBatchRequest(supabaseAdmin, payload) {
   
   const { documentType, ids } = payload;
   
-  // Call the batch-generate-and-store-pdfs edge function
+  // Call the pdf-backend edge function with batch processing parameters
   try {
-    // Convert the format to what batch-generate-and-store-pdfs expects
+    console.log(`[DEPRECATED] Forwarding batch PDF request for ${ids.length} ${documentType} documents to pdf-backend`);
+    
+    // Convert the format to what pdf-backend expects
     const items = ids.map(id => ({
       id,
       type: documentType
     }));
     
-    const { data, error } = await supabaseAdmin.functions.invoke('batch-generate-and-store-pdfs', {
+    // Required for Glide sync pattern
+    const projectId = "swrfsullhirscyxqneay";
+    
+    const { data, error } = await supabaseAdmin.functions.invoke('pdf-backend', {
       body: { 
-        items: items
+        items: items,
+        project_id: projectId  // Include explicit project ID as per Glide sync pattern
       }
     });
     
@@ -130,7 +148,7 @@ async function handleBatchRequest(supabaseAdmin, payload) {
   }
 }
 
-// Handle single document PDF generation
+// Handle single document PDF generation (now forwards to pdf-backend)
 async function handleSingleDocument(supabaseAdmin, payload) {
   // Skip if not an INSERT/UPDATE or if it's not a relevant table
   if (!['INSERT', 'UPDATE'].includes(payload.type) || 
@@ -160,23 +178,29 @@ async function handleSingleDocument(supabaseAdmin, payload) {
     }
   }
   
-  // Map table to document type for the generate-pdf function
-  // Using 'purchase-order' with hyphen for consistency across the application
+  // Map table to document type - use standardized format for pdf-backend
+  // Following the enum pattern in pdf-backend: INVOICE='invoice', ESTIMATE='estimate', PURCHASE_ORDER='purchase_order'
   const tableToTypeMap = {
     'gl_invoices': 'invoice',
     'gl_estimates': 'estimate',
-    'gl_purchase_orders': 'purchase-order'
+    'gl_purchase_orders': 'purchase_order'  // Note: standardized to use underscore instead of hyphen
   };
   
   const documentType = tableToTypeMap[payload.table];
   const documentId = payload.record.id;
   
-  // Call the generate-pdf edge function
+  // Required for Glide sync pattern
+  const projectId = "swrfsullhirscyxqneay";
+  
+  console.log(`[DEPRECATED] Forwarding single ${documentType} document (ID: ${documentId}) to pdf-backend`);
+  
+  // Call the pdf-backend edge function
   try {
-    const { data, error } = await supabaseAdmin.functions.invoke('generate-pdf', {
+    const { data, error } = await supabaseAdmin.functions.invoke('pdf-backend', {
       body: { 
         type: documentType, 
-        id: documentId 
+        id: documentId,
+        project_id: projectId  // Include explicit project ID as per Glide sync pattern
       },
     });
     

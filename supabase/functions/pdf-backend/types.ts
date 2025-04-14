@@ -8,7 +8,7 @@ export enum DocumentType {
   /** Estimate document type */
   ESTIMATE = 'estimate',
   /** Purchase order document type */
-  PURCHASE_ORDER = 'purchaseorder',
+  PURCHASE_ORDER = 'purchase_order',
 }
 
 /**
@@ -73,7 +73,7 @@ export const documentTypeConfig: Record<DocumentType, DocumentTypeConfig> = {
   },
   [DocumentType.PURCHASE_ORDER]: {
     tableName: 'gl_purchase_orders',
-    linesTableName: 'gl_purchase_order_lines',
+    linesTableName: 'gl_products', // Products serve as PO line items
     uidField: 'purchase_order_uid',
     accountRefField: 'rowid_accounts',
     storageFolder: 'PurchaseOrders',
@@ -91,12 +91,21 @@ export const documentTypeConfig: Record<DocumentType, DocumentTypeConfig> = {
  * @type {Record<string, DocumentType>}
  */
 export const documentTypeAliases: Record<string, DocumentType> = {
+  // Invoice aliases
   'invoice': DocumentType.INVOICE,
   'invoices': DocumentType.INVOICE,
+  'inv': DocumentType.INVOICE,
+  'bill': DocumentType.INVOICE,
+  'bills': DocumentType.INVOICE,
 
+  // Estimate aliases
   'estimate': DocumentType.ESTIMATE,
   'estimates': DocumentType.ESTIMATE,
+  'est': DocumentType.ESTIMATE,
+  'quote': DocumentType.ESTIMATE,
+  'quotes': DocumentType.ESTIMATE,
 
+  // Purchase order aliases
   'purchaseorder': DocumentType.PURCHASE_ORDER,
   'purchaseorders': DocumentType.PURCHASE_ORDER,
   'purchase-order': DocumentType.PURCHASE_ORDER,
@@ -104,6 +113,7 @@ export const documentTypeAliases: Record<string, DocumentType> = {
   'purchase_order': DocumentType.PURCHASE_ORDER,
   'purchase_orders': DocumentType.PURCHASE_ORDER,
   'po': DocumentType.PURCHASE_ORDER,
+  'pos': DocumentType.PURCHASE_ORDER,
 };
 
 /**
@@ -128,7 +138,6 @@ export function normalizeDocumentType(type: string): DocumentType {
     throw new Error('Document type cannot be empty');
   }
 
-  // Normalize to lowercase with special characters removed
   const normalizedType = type.toLowerCase().trim();
   
   // Check if it's a direct enum value
@@ -143,6 +152,37 @@ export function normalizeDocumentType(type: string): DocumentType {
   
   // Not found
   throw new Error(`Unsupported document type: ${type}`);
+}
+
+/**
+ * Interface for PDF operation result
+ * @interface PDFOperationResult
+ */
+export interface PDFOperationResult {
+  success: boolean;
+  url?: string;
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Interface for PDF error
+ * @interface PDFError
+ */
+export interface PDFError extends PDFOperationResult {
+  success: false;
+  error: string;
+  message?: string;
+}
+
+/**
+ * Interface for PDF success
+ * @interface PDFSuccess
+ */
+export interface PDFSuccess extends PDFOperationResult {
+  success: true;
+  url: string;
+  message?: string;
 }
 
 /**
@@ -169,14 +209,17 @@ export interface Account {
 export interface InvoiceLine {
   id: string;
   glide_row_id?: string;
+  rowid_invoices?: string;
+  rowid_products?: string;
   product_name_display?: string;
   renamed_product_name?: string;
-  quantity?: number;
-  price?: number;
-  total?: number;
+  qty_sold?: number; // Database uses qty_sold, not quantity
+  price_sold?: number; // Database uses price_sold, not price
+  line_total?: number; // Database uses line_total, not total
   product?: {
     vendor_product_name?: string;
     new_product_name?: string;
+    display_name?: string;
   };
 }
 
@@ -187,20 +230,28 @@ export interface InvoiceLine {
 export interface Invoice {
   id: string;
   glide_row_id?: string;
+  rowid_accounts?: string;
   invoice_uid?: string;
   invoice_order_date?: string;
-  invoice_ship_date?: string;
-  status?: string;
+  notes?: string;
   total_amount?: number;
   total_paid?: number;
   balance?: number;
-  shipping_cost?: number;
-  invoice_notes?: string;
-  payment_terms?: string;
+  payment_status?: string;
+  supabase_pdf_url?: string;
+  processed?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Tax fields
+  tax_rate?: number; // Added since used in PDF generation
+  tax_amount?: number; // Calculated field
+  subtotal?: number; // Calculated field
+  // Joined relations
   account?: Account;
   lines?: InvoiceLine[];
   customer_payments?: Array<{
     id: string;
+    glide_row_id?: string;
     payment_amount?: number;
     date_of_payment?: string;
     type_of_payment?: string;
@@ -214,21 +265,19 @@ export interface Invoice {
  */
 export interface PurchaseOrderLineItem {
   id: string;
-  quantity?: number;
-  unitPrice?: number;
-  total?: number;
-  description?: string;
-  productId?: string;
-  product_name?: string;
-  new_product_name?: string;
+  glide_row_id?: string;
+  rowid_purchase_orders?: string;
+  total_qty_purchased?: number; // Actual DB field for quantity
+  cost?: number; // Actual DB field for unit price
+  line_total?: number; // Calculated field
+  purchase_notes?: string; // Notes field
   vendor_product_name?: string;
-  display_name?: string;
-  unit_price?: number;
-  notes?: string;
+  new_product_name?: string;
+  display_name?: string; // Generated column in DB
   samples?: boolean;
   fronted?: boolean;
   category?: string;
-  total_units?: number;
+  product_purchase_date?: string;
 }
 
 /**
@@ -238,21 +287,34 @@ export interface PurchaseOrderLineItem {
 export interface PurchaseOrder {
   id: string;
   glide_row_id?: string;
+  rowid_accounts?: string;
   purchase_order_uid?: string;
   po_date?: string;
-  po_status?: string;
-  po_notes?: string;
-  shipping_cost?: number;
+  docs_shortlink?: string;
+  pdf_link?: string;
+  payment_status?: string;
+  product_count?: number;
   total_amount?: number;
+  total_paid?: number;
   balance?: number;
+  supabase_pdf_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  // For PDF generation
+  tax_rate?: number;
+  tax_amount?: number;
+  subtotal?: number;
+  po_notes?: string;
+  // Joined relations
   account?: Account;
   lineItems?: PurchaseOrderLineItem[];
   vendorPayments?: Array<{
     id: string;
-    amount?: number;
-    date?: string;
-    method?: string;
-    notes?: string;
+    glide_row_id?: string;
+    payment_amount?: number;
+    date_of_payment?: string;
+    date_of_purchase_order?: string;
+    vendor_purchase_note?: string;
   }>;
 }
 
@@ -263,13 +325,17 @@ export interface PurchaseOrder {
 export interface EstimateLine {
   id: string;
   glide_row_id?: string;
+  rowid_estimates?: string;
+  rowid_products?: string;
   product_name_display?: string;
-  quantity?: number;
-  price?: number;
-  total?: number;
+  qty_sold?: number; // Database uses qty_sold, not quantity
+  price_sold?: number; // Database uses price_sold, not price
+  line_total?: number; // Database uses line_total, not total
+  product_sale_note?: string;
   product?: {
     vendor_product_name?: string;
     new_product_name?: string;
+    display_name?: string;
   };
 }
 
@@ -280,17 +346,34 @@ export interface EstimateLine {
 export interface Estimate {
   id: string;
   glide_row_id?: string;
+  rowid_accounts?: string;
+  rowid_invoices?: string;
   estimate_uid?: string;
   estimate_date?: string;
   status?: string;
   is_a_sample?: boolean;
+  add_note?: boolean;
+  valid_final_create_invoice_clicked?: boolean;
+  glide_pdf_url?: string;
+  glide_pdf_url2?: string;
+  notes?: string;
   total_amount?: number;
+  total_credits?: number;
   balance?: number;
-  estimate_notes?: string;
+  supabase_pdf_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  // For PDF generation
+  tax_rate?: number;
+  tax_amount?: number;
+  subtotal?: number;
+  terms?: string;
+  // Joined relations
   account?: Account;
   lines?: EstimateLine[];
   customer_credits?: Array<{
     id: string;
+    glide_row_id?: string;
     payment_amount?: number;
     date_of_payment?: string;
     payment_type?: string;

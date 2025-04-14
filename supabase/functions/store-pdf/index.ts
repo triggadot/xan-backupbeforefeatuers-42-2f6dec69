@@ -1,9 +1,17 @@
 
+/**
+ * @deprecated This function is deprecated. Please use the pdf-backend function instead.
+ * See /supabase/functions/pdf-backend/README.md for complete documentation.
+ * 
+ * This is now a forwarding wrapper that calls the pdf-backend function with the 
+ * appropriate parameters.
+ */
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
-console.log('PDF Storage function started');
+console.log('DEPRECATED: PDF Storage function started - Forwarding to pdf-backend');
 
 serve(async (req: Request) => {
   // Handle CORS preflight request
@@ -23,182 +31,61 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     
     // Parse request body
-    const { documentType, documentId, pdfBase64, fileName } = await req.json();
+    const requestData = await req.json();
+    const { documentType, documentId, pdfBase64, fileName } = requestData;
     
     if (!documentType || !documentId || !pdfBase64) {
       throw new Error('Missing required parameters: documentType, documentId, and pdfBase64 are required');
     }
     
-    console.log(`Processing PDF storage: type=${documentType}, id=${documentId}, filename=${fileName || 'not provided'}`);
+    console.log(`[DEPRECATED] Forwarding PDF storage request to pdf-backend: type=${documentType}, id=${documentId}`);
     
-    
-    // Map document type to storage folder name
-    const folderMap: Record<string, string> = {
-      'invoice': 'invoices',
-      'purchase-order': 'purchase-orders', 
-      'estimate': 'estimates',
-      'product': 'products'
-    };
-    
-    const folder = folderMap[documentType] || 'misc';
-    
-    // Use the provided fileName or fetch the document UID and use that as the filename
-    let safeName = fileName;
-    
-    if (!safeName) {
-      // If no fileName provided, we need to fetch the document to get its UID
-      console.log(`No filename provided, will try to get document UID for ${documentType} ID ${documentId}`);
-      
-      try {
-        const tableName = folderMap[documentType] ? 
-          `gl_${folderMap[documentType].replace(/-/g, '_')}` : '';
-        
-        if (tableName) {
-          // First try by UUID
-          const { data, error } = await supabase
-            .from(tableName)
-            .select('*')
-            .eq('id', documentId)
-            .maybeSingle();
-          
-          if (data) {
-            // Get the appropriate UID field based on document type
-            const uidField = documentType === 'invoice' ? 'invoice_uid' : 
-                            documentType === 'purchase-order' ? 'purchase_order_uid' : 
-                            documentType === 'estimate' ? 'estimate_uid' : 
-                            '';
-            
-            if (uidField && data[uidField]) {
-              safeName = `${data[uidField]}.pdf`;
-              console.log(`Using document UID as filename: ${safeName}`);
-            }
-          } else {
-            // Try by glide_row_id
-            const { data: glideData, error: glideError } = await supabase
-              .from(tableName)
-              .select('*')
-              .eq('glide_row_id', documentId)
-              .maybeSingle();
-              
-            if (glideData) {
-              // Get the appropriate UID field
-              const uidField = documentType === 'invoice' ? 'invoice_uid' : 
-                              documentType === 'purchase-order' ? 'purchase_order_uid' : 
-                              documentType === 'estimate' ? 'estimate_uid' : 
-                              '';
-              
-              if (uidField && glideData[uidField]) {
-                safeName = `${glideData[uidField]}.pdf`;
-                console.log(`Using document UID as filename: ${safeName}`);
-              }
-            }
-          }
-        }
-      } catch (lookupError) {
-        console.warn(`Error looking up document UID: ${lookupError.message}`);
-      }
-      
-      // If we still don't have a safeName, fall back to a simple format
-      if (!safeName) {
-        const prefix = documentType === 'invoice' ? 'INV#' :
-                      documentType === 'purchase-order' ? 'PO#' :
-                      documentType === 'estimate' ? 'EST#' :
-                      documentType === 'product' ? 'PROD#' :
-                      'DOC#';
-                      
-        safeName = `${prefix}${documentId}.pdf`;
-        console.log(`Using fallback filename: ${safeName}`);
-      }
+    // Convert documentType format to match pdf-backend expectations if needed
+    // pdf-backend uses 'purchaseOrder' format while this function uses 'purchase-order'
+    let normalizedDocType = documentType;
+    if (documentType === 'purchase-order') {
+      normalizedDocType = 'purchaseOrder';
     }
     
-    // Decode base64 string to Uint8Array for storage
-    const pdfBinary = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+    // Forward the request to the pdf-backend function
+    const pdfBackendResponse = await supabase.functions.invoke('pdf-backend', {
+      body: JSON.stringify({
+        action: 'generateAndStore',
+        documentType: normalizedDocType,
+        documentId,
+        pdfBase64,
+        fileName,
+        forceRegenerate: true,
+        // Include other necessary fields from the original request
+        ...requestData
+      })
+    });
     
-    console.log(`Decoded PDF binary data, size: ${pdfBinary.length} bytes`);
-    
-    // Store the PDF in the bucket
-    const { data, error: uploadError } = await supabase.storage
-      .from('pdfs')
-      .upload(`${folder}/${safeName}`, pdfBinary, {
-        contentType: 'application/pdf',
-        upsert: true
-      });
-      
-    if (uploadError) {
-      console.error('Error uploading PDF:', uploadError);
-      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    // If the pdf-backend function call failed, return an appropriate error
+    if (pdfBackendResponse.error) {
+      console.error('Error forwarding to pdf-backend:', pdfBackendResponse.error);
+      throw new Error(`PDF backend function error: ${pdfBackendResponse.error.message || 'Unknown error'}`);
     }
     
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('pdfs')
-      .getPublicUrl(`${folder}/${safeName}`);
+    // Log the successful forwarding and response
+    console.log(`Successfully forwarded to pdf-backend, response:`, pdfBackendResponse.data);
     
-    const publicUrl = publicUrlData?.publicUrl;
+    // Return the response from pdf-backend, maintaining the original API contract
+    // Map the response fields to match what clients expect from store-pdf
+    const responseData = pdfBackendResponse.data;
+    const publicUrl = responseData.url || responseData.pdfUrl;
+    const storageFolder = responseData.documentType === 'purchaseOrder' ? 'purchase-orders' : 
+                        `${responseData.documentType}s`;
     
-    if (!publicUrl) {
-      throw new Error('Failed to get public URL for uploaded PDF');
-    }
-    
-    // Update the database record with the PDF URL
-    let tableName = '';
-    
-    switch (documentType) {
-      case 'invoice':
-        tableName = 'gl_invoices';
-        break;
-      case 'purchase-order':
-        tableName = 'gl_purchase_orders';
-        break;
-      case 'estimate':
-        tableName = 'gl_estimates';
-        break;
-      case 'product':
-        tableName = 'gl_products';
-        break;
-      default:
-        throw new Error(`Unsupported document type: ${documentType}`);
-    }
-    
-    if (tableName) {
-      // First try to update by UUID id
-      const { data: updateData, error: updateError } = await supabase
-        .from(tableName)
-        .update({ supabase_pdf_url: publicUrl })
-        .eq('id', documentId)
-        .select('id');
-      
-      // If no rows were updated by id, try updating by glide_row_id
-      if (updateError || !updateData || updateData.length === 0) {
-        console.log(`No records updated using id=${documentId}, trying glide_row_id lookup`);
-        
-        const { data: glideData, error: glideError } = await supabase
-          .from(tableName)
-          .update({ supabase_pdf_url: publicUrl })
-          .eq('glide_row_id', documentId)
-          .select('id, glide_row_id');
-        
-        if (glideError || !glideData || glideData.length === 0) {
-          console.error(`Error updating ${tableName} by glide_row_id:`, glideError || 'No records found');
-          // Continue execution even if both update attempts fail
-        } else {
-          console.log(`Successfully updated ${tableName} using glide_row_id match:`, glideData);
-        }
-      } else {
-        console.log(`Successfully updated ${tableName} using id match:`, updateData);
-      }
-    }
-    
-    // Return success response with URL and additional metadata
     return new Response(
       JSON.stringify({
         success: true,
         url: publicUrl,
         documentType,
         documentId,
-        fileName: safeName,
-        storagePath: `${folder}/${safeName}`,
-        message: `PDF successfully stored for ${documentType} ${documentId}`
+        fileName: responseData.fileName || fileName,
+        storagePath: responseData.storagePath || `${storageFolder}/${fileName || documentId}.pdf`,
+        message: `PDF successfully stored for ${documentType} ${documentId} (via pdf-backend)`
       }),
       {
         headers: {
