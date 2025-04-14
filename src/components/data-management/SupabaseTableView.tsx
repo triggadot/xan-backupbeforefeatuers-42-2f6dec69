@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, KeyboardEvent } from "react";
-import { useTableData, TableName } from "@/hooks/gl-sync";
+import { useTableData } from "@/hooks/gl-sync";
+import { TableName } from "@/types/glsync.unified";
 import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";

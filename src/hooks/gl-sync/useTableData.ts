@@ -1,36 +1,12 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
+import { TableName } from '@/types/glsync.unified';
 
 /**
  * Valid table names in the Supabase database
  * Includes both actual tables and views
  */
-export type TableName = 
-  | 'gl_accounts' 
-  | 'gl_connections' 
-  | 'gl_customer_credits' 
-  | 'gl_customer_payments'
-  | 'gl_estimate_lines'
-  | 'gl_estimates'
-  | 'gl_expenses'
-  | 'gl_invoice_lines'
-  | 'gl_invoices'
-  | 'gl_mappings'
-  | 'gl_products'
-  | 'gl_purchase_orders'
-  | 'gl_shipping_records'
-  | 'gl_sync_errors'
-  | 'gl_sync_logs'
-  | 'gl_vendor_payments'
-  | 'messages'
-  | 'profiles'
-  | 'settings'
-  | 'gl_mapping_status' // view
-  | 'gl_product_sync_stats' // view
-  | 'gl_recent_logs' // view
-  | 'gl_sync_stats' // view
-  | 'gl_tables_view'; // view
 
 /**
  * Hook for interacting with Supabase tables with CRUD operations
