@@ -13,12 +13,13 @@ export interface PDFPreviewModalProps {
   title?: string;
   documentType?: LegacyDocumentTypeString;
   document?: any; // Optional document data
+  onShare?: () => void; // Optional callback for sharing the PDF
 }
 
 /**
  * Modal for previewing PDF documents with zoom and download controls
  */
-export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title, documentType, document }: PDFPreviewModalProps) {
+export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title, documentType, document, onShare }: PDFPreviewModalProps) {
   // State declarations first
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -112,6 +113,17 @@ export function PDFPreviewModal({ pdfUrl, isOpen, onClose, title, documentType, 
             <Button variant="outline" size="icon" onClick={handleDownload}>
               <Download className="h-4 w-4" />
             </Button>
+            {onShare && (
+              <Button variant="outline" size="icon" onClick={onShare}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>

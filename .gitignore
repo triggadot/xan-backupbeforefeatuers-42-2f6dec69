@@ -39,3 +39,4 @@ supabase/.temp/cli-latest
 .env*.local
 vite.config.ts.timestamp-1744118509484-eb538c7b26d8e.mjs
 .cursorrule
+.windsurfrules

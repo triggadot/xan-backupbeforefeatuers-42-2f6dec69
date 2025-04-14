@@ -583,3 +583,325 @@ export type DocumentTypeMap = {
   [DocumentType.PURCHASE_ORDER]: PurchaseOrder;
   [DocumentType.ESTIMATE]: Estimate;
 };
+
+/**
+ * Supported document tables in the database
+ * @deprecated Use documentTypeConfig instead for table names
+ */
+export type DocumentTable = 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates';
+
+/**
+ * Supported storage folders for PDFs
+ * @deprecated Use documentTypeConfig instead for storage folders
+ */
+export type StorageFolder = 'Invoices' | 'PurchaseOrders' | 'Estimates';
+
+/**
+ * PDF job status for batch operations
+ */
+export type PDFJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+/**
+ * PDF batch job definition
+ */
+export interface PDFBatchJob {
+  /** Unique identifier for the batch job */
+  id: string;
+  /** Type of documents in the batch */
+  documentType: DocumentType;
+  /** Array of document IDs to process */
+  documentIds: string[];
+  /** Current status of the batch job */
+  status: PDFJobStatus;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Results for each document if available */
+  results?: PDFOperationResult[];
+  /** Creation timestamp */
+  createdAt: Date;
+  /** Last update timestamp */
+  updatedAt: Date;
+  /** Error message if the job failed */
+  error?: string;
+}
+
+/**
+ * Document summary for batch operations UI
+ */
+export interface DocumentSummary {
+  /** Document ID */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Document date */
+  date?: string | Date;
+  /** Whether the document is selected in the UI */
+  selected?: boolean;
+}
+
+/**
+ * Options for PDF generation
+ */
+export interface PDFGenerationOptions {
+  /** Whether to save the PDF locally */
+  saveLocally?: boolean;
+  /** Whether to update the database with the PDF URL */
+  updateDatabase?: boolean;
+  /** Custom filename for the PDF */
+  customFileName?: string;
+  /** Whether to download the PDF after generation */
+  download?: boolean;
+  /** Whether to force regeneration even if a PDF already exists */
+  forceRegenerate?: boolean;
+}
+
+/**
+ * Creates a ZIP file containing multiple PDFs
+ * 
+ * @param pdfUrls - Array of PDF URLs to include in the ZIP
+ * @param zipFileName - Name for the ZIP file
+ * @returns Promise resolving to a Blob containing the ZIP file
+ */
+export function createPDFZipArchive(
+  pdfUrls: string[],
+  zipFileName: string
+): Promise<Blob> {
+  // This is just a type definition - implementation will be elsewhere
+  throw new Error('Not implemented in type definition file');
+}
+
+/**
+ * Date handling utilities for PDF generation
+ * These utilities help standardize date handling across the application
+ */
+
+/**
+ * Safely parses a date string or Date object to a Date object
+ * @param dateInput - The date string or Date object to parse
+ * @returns A valid Date object or null if parsing fails
+ */
+export function parseDate(dateInput: string | Date | null | undefined): Date | null {
+  if (!dateInput) return null;
+  
+  try {
+    // If it's already a Date object, return it
+    if (dateInput instanceof Date) {
+      return isNaN(dateInput.getTime()) ? null : dateInput;
+    }
+    
+    // Try to parse the string as a date
+    const date = new Date(String(dateInput));
+    return isNaN(date.getTime()) ? null : date;
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    return null;
+  }
+}
+
+/**
+ * Formats a date to a standardized string format
+ * @param dateInput - The date to format
+ * @param format - The format to use (default: 'yyyy-MM-dd')
+ * @param fallback - The fallback string to return if formatting fails
+ * @returns The formatted date string or fallback if formatting fails
+ */
+export function formatDate(
+  dateInput: string | Date | null | undefined,
+  format: string = 'yyyy-MM-dd',
+  fallback: string = 'N/A'
+): string {
+  const date = parseDate(dateInput);
+  if (!date) return fallback;
+  
+  try {
+    // Basic formatting implementation
+    // In a real implementation, you would use a library like date-fns
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    if (format === 'yyyy-MM-dd') {
+      return `${year}-${month}-${day}`;
+    } else if (format === 'MM/dd/yyyy') {
+      return `${month}/${day}/${year}`;
+    } else if (format === 'MMMM d, yyyy') {
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${months[date.getMonth()]} ${date.getDate()}, ${year}`;
+    }
+    
+    // Default to ISO format
+    return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return fallback;
+  }
+}
+
+/**
+ * Compares two dates for equality, handling various input formats
+ * @param date1 - The first date to compare
+ * @param date2 - The second date to compare
+ * @returns True if the dates are equal, false otherwise
+ */
+export function areDatesEqual(
+  date1: string | Date | null | undefined,
+  date2: string | Date | null | undefined
+): boolean {
+  const parsedDate1 = parseDate(date1);
+  const parsedDate2 = parseDate(date2);
+  
+  if (!parsedDate1 && !parsedDate2) return true; // Both null/undefined
+  if (!parsedDate1 || !parsedDate2) return false; // One is null/undefined
+  
+  // Compare year, month, and day (ignoring time)
+  return (
+    parsedDate1.getFullYear() === parsedDate2.getFullYear() &&
+    parsedDate1.getMonth() === parsedDate2.getMonth() &&
+    parsedDate1.getDate() === parsedDate2.getDate()
+  );
+}
+
+/**
+ * Property name normalization utilities
+ * These utilities help standardize property access across different document formats
+ */
+
+/**
+ * Property name mapping for invoice documents
+ */
+export const invoicePropertyMap: Record<string, string> = {
+  // Date fields
+  'invoice_date': 'invoice_date',
+  'date': 'invoice_date',
+  'invoice_order_date': 'invoice_date',
+  
+  // ID fields
+  'id': 'id',
+  'invoice_id': 'id',
+  'invoice_uid': 'invoice_uid',
+  
+  // Amount fields
+  'total': 'total_amount',
+  'total_amount': 'total_amount',
+  'amount': 'total_amount',
+  
+  // Quantity fields
+  'qty': 'quantity',
+  'qty_sold': 'quantity',
+  'quantity': 'quantity',
+  
+  // Status fields
+  'status': 'invoice_status',
+  'invoice_status': 'invoice_status'
+};
+
+/**
+ * Property name mapping for purchase order documents
+ */
+export const purchaseOrderPropertyMap: Record<string, string> = {
+  // Date fields
+  'po_date': 'po_date',
+  'date': 'po_date',
+  'purchase_order_date': 'po_date',
+  
+  // ID fields
+  'id': 'id',
+  'purchase_order_id': 'id',
+  'purchase_order_uid': 'purchase_order_uid',
+  
+  // Amount fields
+  'total': 'total_amount',
+  'total_amount': 'total_amount',
+  'amount': 'total_amount',
+  
+  // Status fields
+  'status': 'po_status',
+  'po_status': 'po_status',
+  'purchase_order_status': 'po_status'
+};
+
+/**
+ * Property name mapping for estimate documents
+ */
+export const estimatePropertyMap: Record<string, string> = {
+  // Date fields
+  'estimate_date': 'estimate_date',
+  'date': 'estimate_date',
+  
+  // ID fields
+  'id': 'id',
+  'estimate_id': 'id',
+  'estimate_uid': 'estimate_uid',
+  
+  // Amount fields
+  'total': 'total_amount',
+  'total_amount': 'total_amount',
+  'amount': 'total_amount',
+  
+  // Status fields
+  'status': 'estimate_status',
+  'estimate_status': 'estimate_status'
+};
+
+/**
+ * Gets the standardized property value from a document
+ * @param document - The document object
+ * @param propertyName - The property name to access
+ * @param documentType - The type of document
+ * @param fallback - The fallback value if property not found
+ * @returns The property value or fallback if not found
+ */
+export function getDocumentProperty<T>(
+  document: Record<string, any>,
+  propertyName: string,
+  documentType: DocumentType,
+  fallback?: T
+): any {
+  if (!document) return fallback;
+  
+  let propertyMap: Record<string, string>;
+  
+  // Select the appropriate property map based on document type
+  switch (documentType) {
+    case DocumentType.INVOICE:
+      propertyMap = invoicePropertyMap;
+      break;
+    case DocumentType.PURCHASE_ORDER:
+      propertyMap = purchaseOrderPropertyMap;
+      break;
+    case DocumentType.ESTIMATE:
+      propertyMap = estimatePropertyMap;
+      break;
+    default:
+      // No mapping available, try direct access
+      return document[propertyName] ?? fallback;
+  }
+  
+  // Get the standardized property name if it exists in the map
+  const standardizedName = propertyMap[propertyName] || propertyName;
+  
+  // Try to access the property using the standardized name
+  return document[standardizedName] ?? fallback;
+}
+
+/**
+ * Gets a formatted date from a document
+ * @param document - The document object
+ * @param datePropertyName - The name of the date property
+ * @param documentType - The type of document
+ * @param format - The format to use (default: 'yyyy-MM-dd')
+ * @param fallback - The fallback string if date not found or invalid
+ * @returns The formatted date string
+ */
+export function getFormattedDocumentDate(
+  document: Record<string, any>,
+  datePropertyName: string,
+  documentType: DocumentType,
+  format: string = 'yyyy-MM-dd',
+  fallback: string = 'N/A'
+): string {
+  if (!document) return fallback;
+  
+  const dateValue = getDocumentProperty(document, datePropertyName, documentType);
+  return formatDate(dateValue, format, fallback);
+}

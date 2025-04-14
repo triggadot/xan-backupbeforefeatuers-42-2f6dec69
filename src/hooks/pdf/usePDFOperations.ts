@@ -21,6 +21,10 @@ import {
 /**
  * Hook for PDF operations including generation, storage, and downloading
  * 
+ * @deprecated Use usePDF from @/hooks/pdf/usePDF instead.
+ * This hook will be removed in a future update. All new code should use the
+ * standardized usePDF hook which provides a more consistent API and better error handling.
+ * 
  * @returns Object containing PDF operation functions and loading states
  */
 export const usePDFOperations = () => {

@@ -67,6 +67,8 @@ interface PDFGenerationButtonProps extends Omit<ButtonProps, 'onClick'> {
 
 /**
  * Enhanced PDF generation button component supporting both client-side and server-side generation
+ * @deprecated Use StandardPDFButton instead. This component will be removed in a future update.
+ * StandardPDFButton provides a more consistent API and better error handling.
  */
 export function PDFGenerationButton({
   documentType,

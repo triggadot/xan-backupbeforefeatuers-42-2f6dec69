@@ -26,6 +26,8 @@ interface PDFButtonProps extends Omit<ButtonProps, 'onClick'> {
 
 /**
  * Unified PDF button component for viewing, sharing, downloading, or generating PDFs
+ * @deprecated Use StandardPDFButton instead. This component will be removed in a future update.
+ * StandardPDFButton provides a more consistent API and better error handling.
  */
 export function PDFButton({
   documentType,

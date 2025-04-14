@@ -4,7 +4,15 @@
  * This file contains TypeScript type definitions for the PDF utility functions
  * used throughout the application for generating, storing, and managing PDFs.
  * 
- * @deprecated Use types from pdf.unified.ts instead for all new development
+ * @deprecated Use types from pdf.unified.ts instead for all new development.
+ * This file will be removed in a future update. All new code should use the
+ * standardized types and interfaces from pdf.unified.ts.
+ * 
+ * MIGRATION GUIDE:
+ * - Import DocumentType from pdf.unified.ts instead of pdf-utils.d.ts
+ * - Use the standardized interfaces in pdf.unified.ts for document types
+ * - Use the date handling utilities in pdf.unified.ts for consistent date formatting
+ * - Use the property normalization utilities for consistent property access
  */
 
 import { jsPDF } from 'jspdf';
@@ -17,16 +25,19 @@ export { DocumentType, LegacyDocumentTypeString };
 
 /**
  * Supported document tables in the database
+ * @deprecated Use documentTypeConfig from pdf.unified.ts instead
  */
 export type DocumentTable = 'gl_invoices' | 'gl_purchase_orders' | 'gl_estimates';
 
 /**
  * Supported storage folders for PDFs
+ * @deprecated Use documentTypeConfig from pdf.unified.ts instead
  */
 export type StorageFolder = 'Invoices' | 'PurchaseOrders' | 'Estimates';
 
 /**
  * Mapping between document types and their corresponding database tables
+ * @deprecated Use documentTypeConfig from pdf.unified.ts instead
  */
 export interface DocumentTableMap {
   invoice: 'gl_invoices';
@@ -36,6 +47,7 @@ export interface DocumentTableMap {
 
 /**
  * Mapping between document types and their corresponding storage folders
+ * @deprecated Use documentTypeConfig from pdf.unified.ts instead
  */
 export interface StorageFolderMap {
   invoice: 'Invoices';
