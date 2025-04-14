@@ -3,14 +3,17 @@
  * 
  * This file contains TypeScript type definitions for the PDF utility functions
  * used throughout the application for generating, storing, and managing PDFs.
+ * 
+ * @deprecated Use types from pdf.unified.ts instead for all new development
  */
 
 import { jsPDF } from 'jspdf';
+import { DocumentType, LegacyDocumentTypeString } from './pdf.unified';
 
 /**
- * Supported document types for PDF generation
+ * @deprecated Use DocumentType enum from pdf.unified.ts instead
  */
-export type DocumentType = 'invoice' | 'purchaseOrder' | 'estimate';
+export { DocumentType, LegacyDocumentTypeString };
 
 /**
  * Supported document tables in the database

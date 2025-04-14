@@ -1,60 +1,63 @@
+import { DocumentType, normalizeDocumentType as unifiedNormalizeDocumentType, getBackendDocumentTypeKey, documentTypeConfig } from './pdf.unified';
 
 /**
- * Supported document types for PDF generation and operations
+ * Helper function to get document type configuration
+ * @param type Document type
+ * @returns Document type configuration
  */
-export enum DocumentType {
-  INVOICE = 'invoice',
-  ESTIMATE = 'estimate',
-  PURCHASE_ORDER = 'purchase_order'
+function getDocumentTypeConfig(type: DocumentType) {
+  return documentTypeConfig[type];
 }
+
+/**
+ * @deprecated Use DocumentType from pdf.unified.ts instead
+ */
+export { DocumentType };
 
 /**
  * Normalizes document type names to ensure consistency across the application
  * @param documentType The document type to normalize
  * @returns Normalized document type string
+ * @deprecated Use normalizeDocumentType from pdf.unified.ts instead
  */
 export function normalizeDocumentType(documentType: DocumentType | string): string {
-  // Convert to lowercase
-  const lowercased = typeof documentType === 'string' ? documentType.toLowerCase() : documentType;
-  
-  // Handle special cases and aliases
-  switch (lowercased) {
-    case 'invoice':
-    case 'invoices':
-      return 'invoice';
-    case 'estimate':
-    case 'estimates':
-    case 'quote':
-    case 'quotes':
-      return 'estimate';
-    case 'purchase_order':
-    case 'purchaseorder':
-    case 'purchase-order':
-    case 'po':
-      return 'purchase_order';
-    default:
-      console.warn(`Unknown document type: ${documentType}, using as-is`);
-      return typeof lowercased === 'string' ? lowercased : 'unknown';
+  try {
+    // Use the unified implementation and convert to string
+    const normalized = unifiedNormalizeDocumentType(documentType);
+    return normalized.toLowerCase();
+  } catch (error) {
+    console.warn(`Error normalizing document type: ${documentType}`, error);
+    return String(documentType).toLowerCase();
   }
 }
 
 /**
- * Returns the storage document type key used in Supabase storage
+ * Returns the storage document type key used in PDF storage paths
  * @param documentType The document type
  * @returns The storage document type key
+ * @deprecated Use documentTypeConfig from pdf.unified.ts instead
  */
 export function getStorageDocumentTypeKey(documentType: DocumentType | string): string {
-  const normalizedType = normalizeDocumentType(documentType);
-  
-  switch (normalizedType) {
-    case 'invoice':
-      return 'invoices';
-    case 'estimate':
-      return 'estimates';
-    case 'purchase_order':
-      return 'purchase-orders';
-    default:
-      return normalizedType;
+  try {
+    // Use the unified implementation
+    const normalized = unifiedNormalizeDocumentType(documentType);
+    const config = getDocumentTypeConfig(normalized);
+    return config.storageFolder.toLowerCase();
+  } catch (error) {
+    console.warn(`Error getting storage document type key: ${documentType}`, error);
+    // Fallback to legacy implementation
+    const normalizedType = normalizeDocumentType(documentType);
+    
+    switch (normalizedType) {
+      case 'invoice':
+        return 'invoices';
+      case 'estimate':
+        return 'estimates';
+      case 'purchase_order':
+        return 'purchase-orders';
+      default:
+        return normalizedType;
+    }
   }
 }
 
@@ -62,18 +65,26 @@ export function getStorageDocumentTypeKey(documentType: DocumentType | string): 
  * Returns the batch document type key used in PDF batch operations
  * @param documentType The document type
  * @returns The batch document type key
+ * @deprecated Use getBackendDocumentTypeKey from pdf.unified.ts instead
  */
 export function getBatchDocumentTypeKey(documentType: DocumentType | string): string {
-  const normalizedType = normalizeDocumentType(documentType);
-  
-  switch (normalizedType) {
-    case 'invoice':
-      return 'invoice';
-    case 'estimate':
-      return 'estimate';
-    case 'purchase_order':
-      return 'purchase-order'; // Note the hyphen format for batch operations
-    default:
-      return normalizedType;
+  try {
+    // For batch operations, we need the backend key format
+    return getBackendDocumentTypeKey(documentType);
+  } catch (error) {
+    console.warn(`Error getting batch document type key: ${documentType}`, error);
+    // Fallback to legacy implementation
+    const normalizedType = normalizeDocumentType(documentType);
+    
+    switch (normalizedType) {
+      case 'invoice':
+        return 'invoice';
+      case 'estimate':
+        return 'estimate';
+      case 'purchase_order':
+        return 'purchase-order'; // Note the hyphen format for batch operations
+      default:
+        return normalizedType;
+    }
   }
 }

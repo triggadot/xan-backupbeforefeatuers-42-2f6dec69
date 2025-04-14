@@ -102,6 +102,14 @@ A comprehensive monitoring dashboard provides insights into PDF generation metri
      - `/retry`: Processes retry of failed PDF generations
    - `scheduled-pdf-generation`: Handles scheduled scanning and automatic PDF generation
 
+   **Note:** As of April 2025, the following legacy edge functions have been completely removed:
+   - `store-pdf`
+   - `generate-pdf`
+   - `batch-generate-and-store-pdfs`
+   - `auto-generate-pdf`
+   
+   All PDF operations now use the standardized `pdf-backend` function with explicit project ID (swrfsullhirscyxqneay).
+
 3. **Database Components**
    - Database triggers on table inserts/updates for automatic PDF generation
    - Scheduled functions via pg_cron for periodic scanning and retry processing

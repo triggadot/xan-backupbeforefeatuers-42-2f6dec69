@@ -1,29 +1,19 @@
 /**
  * Types for PDF generation system
+ * @deprecated Use types from pdf.unified.ts instead for all new development
  */
 
-/**
- * Enum for PDF document types
- */
-export enum DocumentType {
-  INVOICE = 'invoice',
-  ESTIMATE = 'estimate',
-  PURCHASE_ORDER = 'purchase_order',
-}
+import { DocumentType as UnifiedDocumentType, PDFErrorType as UnifiedPDFErrorType } from './pdf.unified';
 
 /**
- * Enum for PDF error types
+ * @deprecated Use DocumentType from pdf.unified.ts instead
  */
-export enum PDFErrorType {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  DATABASE_ERROR = 'DATABASE_ERROR',
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
-  GENERATION_ERROR = 'GENERATION_ERROR',
-  STORAGE_ERROR = 'STORAGE_ERROR',
-  NOT_FOUND_ERROR = 'NOT_FOUND_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-}
+export { UnifiedDocumentType as DocumentType };
+
+/**
+ * @deprecated Use PDFErrorType from pdf.unified.ts instead
+ */
+export { UnifiedPDFErrorType as PDFErrorType };
 
 /**
  * Interface for PDF generation failure

@@ -19,6 +19,30 @@ export enum DocumentType {
 }
 
 /**
+ * Legacy document type strings used in older components
+ * @type {string[]}
+ */
+export type LegacyDocumentTypeString = 'invoice' | 'purchaseOrder' | 'estimate';
+
+/**
+ * Type guard to check if a string is a valid DocumentType
+ * @param {string} type - The type to check
+ * @returns {boolean} True if the type is a valid DocumentType
+ */
+export function isValidDocumentType(type: string): type is DocumentType {
+  return Object.values(DocumentType).includes(type as DocumentType);
+}
+
+/**
+ * Type guard to check if a string is a valid legacy document type string
+ * @param {string} type - The type to check
+ * @returns {boolean} True if the type is a valid legacy document type string
+ */
+export function isLegacyDocumentTypeString(type: string): type is LegacyDocumentTypeString {
+  return ['invoice', 'purchaseOrder', 'estimate'].includes(type);
+}
+
+/**
  * PDF error types for categorizing failures
  * @enum {string}
  */
@@ -465,46 +489,90 @@ export function createPDFError(type: PDFErrorType, message: string, details?: Re
 
 /**
  * Standardizes document type format for internal processing
- * @param {string} type - Document type to normalize
+ * @param {string | DocumentType | LegacyDocumentTypeString} type - Document type to normalize
  * @returns {DocumentType} Normalized DocumentType value
+ * @throws {Error} If the document type is invalid or unsupported
  */
-export function normalizeDocumentType(type: string): DocumentType {
+export function normalizeDocumentType(type: string | DocumentType | LegacyDocumentTypeString): DocumentType {
+  // Handle null/undefined cases
   if (!type) {
     throw new Error('Document type cannot be empty');
   }
 
-  // Normalize to lowercase
-  const normalizedType = type.toLowerCase().trim();
-  
-  // Map of various input formats to our enum values
-  const typeMap: Record<string, DocumentType> = {
-    'invoice': DocumentType.INVOICE,
-    'invoices': DocumentType.INVOICE,
-    
-    'estimate': DocumentType.ESTIMATE,
-    'estimates': DocumentType.ESTIMATE,
-    
-    'purchaseorder': DocumentType.PURCHASE_ORDER,
-    'purchaseorders': DocumentType.PURCHASE_ORDER,
-    'purchase-order': DocumentType.PURCHASE_ORDER,
-    'purchase-orders': DocumentType.PURCHASE_ORDER,
-    'purchase_order': DocumentType.PURCHASE_ORDER,
-    'purchase_orders': DocumentType.PURCHASE_ORDER,
-    'po': DocumentType.PURCHASE_ORDER,
-  };
+  // If it's already a DocumentType enum value, return it directly
+  if (Object.values(DocumentType).includes(type as DocumentType)) {
+    return type as DocumentType;
+  }
 
-  // Check if it's a direct enum value
-  if (Object.values(DocumentType).includes(normalizedType as DocumentType)) {
-    return normalizedType as DocumentType;
+  // Handle string values
+  if (typeof type === 'string') {
+    // Normalize to lowercase without spaces
+    const normalizedType = type.toLowerCase().trim().replace(/\s+/g, '');
+    
+    // Map of various input formats to our enum values
+    const typeMap: Record<string, DocumentType> = {
+      // Invoice variations
+      'invoice': DocumentType.INVOICE,
+      'invoices': DocumentType.INVOICE,
+      
+      // Estimate variations
+      'estimate': DocumentType.ESTIMATE,
+      'estimates': DocumentType.ESTIMATE,
+      
+      // Purchase order variations (including legacy 'purchaseOrder' format)
+      'purchaseorder': DocumentType.PURCHASE_ORDER,
+      'purchaseorders': DocumentType.PURCHASE_ORDER,
+      'purchase-order': DocumentType.PURCHASE_ORDER,
+      'purchase-orders': DocumentType.PURCHASE_ORDER,
+      'purchase_order': DocumentType.PURCHASE_ORDER,
+      'purchase_orders': DocumentType.PURCHASE_ORDER,
+      'po': DocumentType.PURCHASE_ORDER,
+    };
+
+    // Special case for legacy camelCase 'purchaseOrder'
+    if (normalizedType === 'purchaseorder' || type === 'purchaseOrder') {
+      return DocumentType.PURCHASE_ORDER;
+    }
+    
+    // Look up in our map
+    if (typeMap[normalizedType]) {
+      return typeMap[normalizedType];
+    }
   }
   
-  // Look up in our map
-  if (typeMap[normalizedType]) {
-    return typeMap[normalizedType];
+  // Not found or invalid type
+  throw new Error(`Unsupported document type: ${type}. Must be one of: ${Object.values(DocumentType).join(', ')}`);
+}
+
+/**
+ * Converts a DocumentType enum value to its corresponding legacy string format
+ * Used for backward compatibility with older components
+ * @param {DocumentType} type - The DocumentType enum value to convert
+ * @returns {LegacyDocumentTypeString} The legacy string format
+ */
+export function toLegacyDocumentTypeString(type: DocumentType): LegacyDocumentTypeString {
+  switch (type) {
+    case DocumentType.INVOICE:
+      return 'invoice';
+    case DocumentType.ESTIMATE:
+      return 'estimate';
+    case DocumentType.PURCHASE_ORDER:
+      return 'purchaseOrder';
+    default:
+      // This should never happen if all enum values are handled
+      const exhaustiveCheck: never = type;
+      throw new Error(`Unhandled document type: ${exhaustiveCheck}`);
   }
-  
-  // Not found
-  throw new Error(`Unsupported document type: ${type}`);
+}
+
+/**
+ * Gets the correct backend key format for a document type
+ * @param {DocumentType | string} documentType - The document type to convert
+ * @returns {string} The backend key format (e.g., 'purchase_order' for PURCHASE_ORDER)
+ */
+export function getBackendDocumentTypeKey(documentType: DocumentType | string): string {
+  const normalized = normalizeDocumentType(documentType);
+  return normalized.toLowerCase();
 }
 
 /**
