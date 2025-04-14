@@ -3,9 +3,20 @@ import {
   PDFErrorType, 
   createPDFError, 
   createPDFFailure, 
-  StorePDFRequest, 
-  StorePDFResponse 
+  PDFOperationResult
 } from './pdf/common';
+
+/**
+ * Interface for PDF storage response
+ */
+export interface StorePDFResponse {
+  /** Whether the operation was successful */
+  success: boolean;
+  /** Public URL of the stored PDF (if successful) */
+  url?: string;
+  /** Success or error message */
+  message: string;
+}
 
 /**
  * Interface for PDF storage request
@@ -107,51 +118,54 @@ export async function storePDF(
       setTimeout(() => {
         resolve({
           data: null,
-          error: new Error('Edge function request timed out after 10 seconds')
+          error: new Error('Edge function request timed out after 15 seconds')
         });
-      }, 10000); // 10 second timeout
+      }, 15000); // 15 second timeout
     });
 
-    const edgeFunctionPromise = supabase.functions.invoke('store-pdf', {
-      body: payload
+    // Call pdf-backend edge function instead of store-pdf
+    const edgeFunctionPromise = supabase.functions.invoke('pdf-backend', {
+      body: {
+        action: 'generate',
+        documentType: documentType,
+        documentId: documentId,
+        overwriteExisting: true
+      }
     });
 
     // Race between the edge function call and the timeout
     const { data, error } = await Promise.race([edgeFunctionPromise, timeoutPromise]);
 
     if (error) {
-      console.error('Error calling store-pdf function:', error);
-      return createPDFFailure({
-        type: PDFErrorType.STORAGE_ERROR,
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: error
-      });
+      console.error('Error calling pdf-backend function:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
     }
 
     if (!data || !data.success) {
-      const errorMessage = data?.error || 'Unknown error occurred during PDF storage';
+      const errorMessage = data?.error || 'Unknown error occurred during PDF generation';
       console.warn(`Edge function returned error: ${errorMessage}`);
-      return createPDFFailure({
-        type: PDFErrorType.STORAGE_ERROR,
-        message: errorMessage,
-        details: data?.error
-      });
+      return {
+        success: false,
+        message: errorMessage
+      };
     }
 
-    // Successfully stored the PDF
-    console.log(`PDF successfully stored for ${documentType} ${documentId}: ${data.url}`);
+    // Successfully generated and stored the PDF
+    console.log(`PDF successfully generated for ${documentType} ${documentId}: ${data.url}`);
     return {
       success: true,
       url: data.url,
-      message: data.message || 'PDF stored successfully'
+      message: 'PDF generated and stored successfully'
     };
   } catch (error) {
     console.error('Error in storePDF:', error);
-    return createPDFFailure({
-      type: PDFErrorType.STORAGE_ERROR,
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
-      details: error
-    });
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
   }
 }
 

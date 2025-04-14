@@ -642,7 +642,64 @@ export async function generatePDFDocument(
 }
 
 /**
- * Complete workflow to generate and store PDF using the edge function
+ * Trigger PDF generation using the new edge function
+ * 
+ * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
+ * @param data - The document data
+ * @param forceRegenerate - Whether to regenerate the PDF even if it already exists
+ * @returns The URL of the generated PDF or null if generation failed
+ * 
+ * @example
+ * // Generate a purchase order PDF
+ * const pdfUrl = await triggerPDFGeneration('purchaseOrder', purchaseOrderData);
+ * if (pdfUrl) {
+ *   console.log('PDF generated successfully:', pdfUrl);
+ * }
+ */
+export async function triggerPDFGeneration(
+  type: 'invoice' | 'purchaseOrder' | 'estimate',
+  data: Invoice | PurchaseOrder | Estimate,
+  forceRegenerate: boolean = false
+): Promise<string | null> {
+  try {
+    if (!data || !data.id) {
+      console.error('Invalid document data provided for PDF generation');
+      return null;
+    }
+
+    // If document already has a PDF URL and we're not forcing regeneration, return it
+    if (!forceRegenerate && data.supabase_pdf_url) {
+      console.log(`Using existing PDF URL for ${type}: ${data.supabase_pdf_url}`);
+      return data.supabase_pdf_url;
+    }
+    
+    // Map document type to edge function parameter
+    const documentType = type === 'invoice' 
+      ? 'invoice' 
+      : type === 'purchaseOrder' 
+        ? 'purchase-order' 
+        : 'estimate';
+    
+    // Trigger PDF generation using the edge function
+    const result = await storePDF(null, documentType, data.id);
+    
+    if (result.success && result.url) {
+      console.log(`Successfully generated ${type} PDF: ${result.url}`);
+      return result.url;
+    } else {
+      console.error(`PDF generation failed for ${type}: ${result.message}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error in triggerPDFGeneration for ${type}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Legacy function for generating and storing PDF using client-side jsPDF
+ * 
+ * @deprecated Use triggerPDFGeneration instead which generates PDFs on the server
  * 
  * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
  * @param data - The document data
@@ -663,51 +720,14 @@ export async function generateAndStorePDF(
   saveLocally: boolean = false,
   download: boolean = false
 ): Promise<string | null> {
-  try {
-    // Generate the PDF document - always generate it regardless of what happens with storage
-    const pdfBlob = await generatePDFDocument(type, data, download || saveLocally);
-    if (!pdfBlob) {
-      console.error(`Failed to generate ${type} PDF document`);
-      return null;
-    }
-    
-    // Map document type to edge function parameter
-    const documentType = type === 'invoice' 
-      ? 'invoice' 
-      : type === 'purchaseOrder' 
-        ? 'purchase-order' 
-        : 'estimate';
-    
-    let pdfUrl: string | null = null;
-    
-    try {
-      // Store the PDF using the edge function
-      const storageResult = await storePDF(pdfBlob, documentType, data.id);
-      
-      if (storageResult.success && storageResult.url) {
-        console.log(`Successfully stored ${type} PDF: ${storageResult.url}`);
-        pdfUrl = storageResult.url;
-      } else {
-        console.warn(`Edge function storage failed for ${type} PDF: ${storageResult.message}`);
-        // Continue execution even if storage fails
-      }
-    } catch (storageError) {
-      // Log storage error but continue execution
-      console.warn(`Error in edge function storage for ${type} PDF:`, storageError);
-    }
-    
-    // If we have a valid PDF blob but storage failed, we can still return a temporary object URL
-    // This allows the PDF to be viewed in the browser even if permanent storage failed
-    if (!pdfUrl && pdfBlob) {
-      pdfUrl = URL.createObjectURL(pdfBlob);
-      console.log(`Created temporary object URL for ${type} PDF: ${pdfUrl}`);
-    }
-    
-    return pdfUrl;
-  } catch (error) {
-    console.error(`Error in generateAndStorePDF for ${type}:`, error);
-    return null;
-  }
+  // Output deprecation warning
+  console.warn(
+    'generateAndStorePDF is deprecated and will be removed in a future update. ' +
+    'Use triggerPDFGeneration instead to generate PDFs on the server.'
+  );
+
+  // Call the new method instead
+  return triggerPDFGeneration(type, data, true);
 }
 
 /**

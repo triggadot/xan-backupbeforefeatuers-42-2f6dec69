@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { FileText, Share, Download, Loader2 } from 'lucide-react';
-import { generateAndStorePDF } from '@/lib/pdf-utils';
+import { triggerPDFGeneration } from '@/lib/pdf-utils';
 import { PDFPreviewModal } from './PDFPreviewModal';
 import { PDFShareModal } from './PDFShareModal';
 import { useToast } from '@/hooks/utils/use-toast';
@@ -83,10 +83,12 @@ export function PDFButton({
     if (!pdfUrl || action === 'generate') {
       setIsLoading(true);
       try {
-        const url = await generateAndStorePDF(
+        // Use triggerPDFGeneration to generate PDF on the server
+        const forceRegenerate = action === 'generate';
+        const url = await triggerPDFGeneration(
           documentType,
           document,
-          action === 'download' // Save locally if downloading
+          forceRegenerate
         );
         
         if (url) {
@@ -100,11 +102,16 @@ export function PDFButton({
           // Show success toast
           toast({
             title: 'PDF Generated',
-            description: 'The PDF has been successfully generated.',
+            description: 'The PDF has been successfully generated on the server.',
           });
           
           // Perform the action with the new PDF URL
           handleActionWithUrl(url);
+          
+          // Also update the document with the new PDF URL if not already set
+          if (document && 'supabase_pdf_url' in document && !document.supabase_pdf_url) {
+            document.supabase_pdf_url = url;
+          }
         } else {
           throw new Error('Failed to generate PDF');
         }
