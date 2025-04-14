@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Share2 } from 'lucide-react';
-import { PDFGenerationButton } from '@/components/pdf/PDFGenerationButton';
+import { StandardPDFButton } from '@/components/pdf/StandardPDFButton';
+import { DocumentType } from '@/types/pdf.unified';
 import { usePDFOperations } from '@/hooks/pdf/usePDFOperations';
 import { PDFPreviewModal } from '@/components/pdf/PDFPreviewModal';
 import { PDFShareModal } from '@/components/pdf/PDFShareModal';
@@ -150,11 +151,13 @@ export function ProductPDFActions({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Generate PDF Button */}
-      <PDFGenerationButton
-        documentType="product"
+      <StandardPDFButton
+        documentType={DocumentType.INVOICE} // Using INVOICE type for product PDFs
         documentId={productId}
-        showPreview={true}
-        onSuccess={handlePDFSuccess}
+        action="view"
+        onPDFGenerated={handlePDFSuccess}
+        showLabel={true}
+        size="sm"
       />
       
       {/* Additional actions if requested and we have a PDF URL */}

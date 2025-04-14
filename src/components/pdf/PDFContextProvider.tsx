@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { generateAndStorePDF, updatePDFLinkInDatabase } from '@/lib/pdf-utils';
 import { useToast } from '@/hooks/utils/use-toast';
-import { DocumentType } from './PDFButton';
+import { DocumentType } from '@/types/pdf.unified';
 
 interface PDFContextType {
   // PDF generation
@@ -77,10 +77,10 @@ export function PDFProvider({ children }: PDFProviderProps) {
     documentId: string,
     pdfUrl: string
   ): Promise<boolean> => {
-    const tableMap = {
-      'invoice': 'gl_invoices',
-      'purchaseOrder': 'gl_purchase_orders',
-      'estimate': 'gl_estimates',
+    const tableMap: Record<DocumentType, string> = {
+      [DocumentType.INVOICE]: 'gl_invoices',
+      [DocumentType.PURCHASE_ORDER]: 'gl_purchase_orders',
+      [DocumentType.ESTIMATE]: 'gl_estimates',
     };
     
     const table = tableMap[documentType];

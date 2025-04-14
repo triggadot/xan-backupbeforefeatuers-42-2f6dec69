@@ -20,7 +20,8 @@ import {
   SearchIcon, 
   XIcon 
 } from "lucide-react";
-import { PDFGenerationButton } from "@/components/pdf/PDFGenerationButton";
+import { StandardPDFButton } from "@/components/pdf/StandardPDFButton";
+import { DocumentType } from "@/types/pdf.unified";
 import { PDFPreviewModal } from "@/components/pdf/PDFPreviewModal";
 
 interface Product {
@@ -225,12 +226,11 @@ export function PurchaseOrderTable({
                             </Button>
                           </>
                         ) : (
-                          <PDFGenerationButton
-                            documentType="purchaseOrder"
+                          <StandardPDFButton
+                            documentType={DocumentType.PURCHASE_ORDER}
                             documentId={po.id}
-                            download={true}
-                            showPreview={false}
-                            onSuccess={(url) => handlePdfSuccess(po.id, url)}
+                            action="download"
+                            onPDFGenerated={(url) => handlePdfSuccess(po.id, url)}
                             variant="outline"
                             size="sm"
                             className="h-8 w-8 p-0"
@@ -238,7 +238,7 @@ export function PurchaseOrderTable({
                           >
                             <FileTextIcon className="h-4 w-4" />
                             <span className="sr-only">Generate PDF</span>
-                          </PDFGenerationButton>
+                          </StandardPDFButton>
                         )}
                       </div>
                     </TableCell>
