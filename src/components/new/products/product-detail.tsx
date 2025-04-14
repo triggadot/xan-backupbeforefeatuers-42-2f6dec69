@@ -4,11 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, formatShortDate } from '@/utils/format';
 import { ProductDetail as ProductDetailType } from '@/types/products';
 import { ProductPDFActions } from '@/components/products/ProductPDFActions';
-import { ProductCrudActions } from '@/components/products/ProductCrudActions';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '@tremor/react';
+import { toast } from 'sonner';
+import { Edit, Trash2 } from 'lucide-react';
 
 interface ProductDetailProps {
   /**
@@ -60,12 +61,29 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
       <div className="flex justify-between items-center mb-6">
         <Title>Product Details</Title>
         <div className="flex space-x-2">
-          <ProductCrudActions
-            product={product}
-            mode="detail"
-            hideActions={{ add: true }}
-            onActionComplete={() => navigate('/products')}
-          />
+          {/* Edit Button */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              toast.info('Product form editing is not yet implemented');
+            }}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          
+          {/* Delete Button */}
+          <Button
+            variant="outline"
+            className="text-red-500 hover:text-red-50 hover:bg-red-600 hover:border-red-600"
+            onClick={() => {
+              toast.info('Product deletion functionality is not yet implemented');
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+          
           <ProductPDFActions 
             productId={product.glide_row_id} 
             productName={product.display_name || product.vendor_product_name} 

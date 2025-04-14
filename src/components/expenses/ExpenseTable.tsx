@@ -22,11 +22,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
   DropdownMenu,
-  DropdownTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Select,
@@ -132,21 +131,21 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
             </Select>
             
             <DropdownMenu>
-              <DropdownTrigger asChild>
+              <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
                   <span>Filters</span>
                 </Button>
-              </DropdownTrigger>
-              <DropdownContent className="w-56">
-                <DropdownItem 
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuItem 
                   className="flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
                   onClick={() => clearFilters()}
                 >
                   Clear filters
-                </DropdownItem>
+                </DropdownMenuItem>
                 {/* Add more filter options as needed */}
-              </DropdownContent>
+              </DropdownMenuContent>
             </DropdownMenu>
             
             <Button variant="outline" className="ml-auto">
@@ -269,25 +268,25 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                       <TableCell>
                         <div className="flex justify-end">
                           <DropdownMenu>
-                            <DropdownTrigger asChild>
+                            <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <SlidersHorizontal className="h-4 w-4" />
                                 <span className="sr-only">Open menu</span>
                               </Button>
-                            </DropdownTrigger>
-                            <DropdownContent align="end">
-                              <DropdownItem 
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
                                 onClick={() => onEditExpense && onEditExpense(expense)}
                               >
                                 Edit
-                              </DropdownItem>
-                              <DropdownItem
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => onDeleteExpense && onDeleteExpense(expense)}
                                 className="text-destructive"
                               >
                                 Delete
-                              </DropdownItem>
-                            </DropdownContent>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </TableCell>

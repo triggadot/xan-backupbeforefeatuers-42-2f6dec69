@@ -5,5 +5,6 @@
 export { 
   formatCurrency,
   formatDate,
+  formatShortDate,
   truncateText
 } from './format-utils';

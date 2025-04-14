@@ -30,3 +30,15 @@ export const truncateText = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 };
+
+/**
+ * Format a date as a short string (MM/DD/YYYY)
+ */
+export const formatShortDate = (date: Date | string): string => {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return dateObj.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  });
+};

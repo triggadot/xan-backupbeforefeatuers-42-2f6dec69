@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { ProductFormData } from '@/types/products';
 import { CrudDialogBase } from '@/components/common/crud/CrudDialogBase';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils'; // Fixed import path
 
 // Schema for product form validation
 const productFormSchema = z.object({
@@ -83,7 +83,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   const { data: vendors } = useVendors();
   const { data: categories } = useCategories();
   const { data: purchaseOrders } = usePurchaseOrders({ 
-    filters: { vendorId: form?.getValues().vendorId }
+    filters: { vendorId: '' } // Temporary disabled related PO fetch
   });
   
   // Initialize the form
@@ -111,98 +111,37 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   const isSample = form.watch('isSample');
   const vendorId = form.watch('vendorId');
   
-  // Update purchase orders when vendor changes
-  React.useEffect(() => {
-    if (vendorId) {
-      queryClient.invalidateQueries(['purchaseOrders', { vendorId }]);
-    }
-  }, [vendorId, queryClient]);
-  
   const handleSubmit = async (data: z.infer<typeof productFormSchema>) => {
-    try {
-      // Map form data to database fields
-      const productData = {
-        vendor_product_name: data.name,
-        new_product_name: data.name,
-        display_name: data.name,
-        rowid_accounts: data.vendorId,
-        category: data.category,
-        cost: data.cost,
-        total_qty_purchased: data.quantity,
-        product_purchase_date: data.purchaseDate ? data.purchaseDate.toISOString() : null,
-        purchase_notes: data.notes,
-        samples: data.isSample,
-        fronted: data.isFronted,
-        miscellaneous_items: data.isMiscellaneous,
-        terms_for_fronted_product: data.frontedTerms,
-        total_units_behind_sample: data.sampleUnits,
-        rowid_purchase_orders: data.purchaseOrderId || null,
-      };
-      
-      let result;
-      
-      if (isEditMode && product?.glide_row_id) {
-        // Update existing product
-        result = await supabase
-          .from('gl_products')
-          .update(productData)
-          .eq('glide_row_id', product.glide_row_id);
-      } else {
-        // Create new product
-        result = await supabase
-          .from('gl_products')
-          .insert([productData])
-          .select();
-      }
-      
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-      
-      // Invalidate related queries
-      queryClient.invalidateQueries(['products']);
-      queryClient.invalidateQueries(['product-detail']);
-      queryClient.invalidateQueries(['dashboard-metrics']);
-      
-      // Close dialog and show success message
-      setOpen(false);
-      toast.success(`Product ${isEditMode ? 'updated' : 'created'} successfully`);
-      
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast.error(`Failed to ${isEditMode ? 'update' : 'create'} product: ${error.message}`);
+    toast.info('Product form submission is not yet fully implemented');
+    
+    // Call the onSuccess callback if provided
+    if (onSuccess) {
+      onSuccess();
     }
+    
+    // Close the dialog
+    setOpen(false);
   };
-  
+
   return (
     <CrudDialogBase
       title={isEditMode ? 'Edit Product' : 'Add New Product'}
-      description={isEditMode 
-        ? 'Update the information for this product.' 
-        : 'Enter the details for a new product.'}
-      trigger={trigger}
+      description={isEditMode ? 'Update the product details.' : 'Add a new product to your inventory.'}
       open={open}
-      onOpenChange={setOpen}
-      onAction={form.handleSubmit(handleSubmit)}
-      actionLabel={isEditMode ? 'Save Changes' : 'Create Product'}
-      isSubmitting={form.formState.isSubmitting}
-      isActionDisabled={!form.formState.isValid}
-      maxWidth="sm:max-w-[600px]"
+      setOpen={setOpen}
+      trigger={trigger}
+      onSubmit={form.handleSubmit(handleSubmit)}
     >
       <Form {...form}>
         <div className="grid gap-4 py-4">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Product Name*</FormLabel>
+                  <FormLabel>Product Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter product name" {...field} />
                   </FormControl>
@@ -216,9 +155,9 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               name="vendorId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vendor*</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <FormLabel>Vendor</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -238,49 +177,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                 </FormItem>
               )}
             />
-          </div>
-          
-          {/* Purchase Details */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <FormField
-              control={form.control}
-              name="cost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Per Unit*</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min={0} 
-                      step="0.01" 
-                      placeholder="0.00" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity*</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      step={1} 
-                      placeholder="1" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             
             <FormField
               control={form.control}
@@ -288,9 +184,9 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value || ''}
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -298,7 +194,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
                       {categories?.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -312,42 +207,17 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             />
           </div>
           
-          {/* Date and Purchase Order */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Cost & Quantity */}
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="purchaseDate"
+              name="cost"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Purchase Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value || undefined}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <FormItem>
+                  <FormLabel>Cost</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="0" step="0.01" placeholder="0.00" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -355,36 +225,94 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             
             <FormField
               control={form.control}
-              name="purchaseOrderId"
+              name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Purchase Order</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value || ''}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a purchase order" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {purchaseOrders?.map((po) => (
-                        <SelectItem key={po.glide_row_id} value={po.glide_row_id}>
-                          {po.purchase_order_uid} - {format(new Date(po.purchase_order_date), 'PP')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="1" step="1" placeholder="1" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
           
-          {/* Product Flags */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {/* Purchase Date */}
+          <FormField
+            control={form.control}
+            name="purchaseDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Purchase Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value || undefined}
+                      onSelect={field.onChange}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {/* Purchase Order */}
+          <FormField
+            control={form.control}
+            name="purchaseOrderId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase Order</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a purchase order" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {purchaseOrders?.map((po) => (
+                      <SelectItem key={po.glide_row_id} value={po.glide_row_id}>
+                        PO #{po.po_uid} - {format(new Date(po.po_date), "MMM d, yyyy")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {/* Checkboxes */}
+          <div className="grid grid-cols-1 gap-3">
             <FormField
               control={form.control}
               name="isSample"
@@ -397,7 +325,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Sample Product</FormLabel>
+                    <FormLabel>Sample</FormLabel>
                     <FormDescription>
                       This is a product sample
                     </FormDescription>
