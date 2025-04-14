@@ -6,14 +6,8 @@ verify_jwt = false
 [functions.process-account-balance-queue]
 verify_jwt = false
 
-[functions.store-pdf]
+[functions.pdf-backend]
 verify_jwt = false
 
-[functions.batch-generate-and-store-pdfs]
-verify_jwt = false
-
-[functions.auto-generate-pdf]
-verify_jwt = false
-
-[functions.generate-purchase-order-pdf]
+[functions.scheduled-pdf-generation]
 verify_jwt = false
