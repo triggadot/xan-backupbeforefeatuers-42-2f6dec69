@@ -15,13 +15,13 @@ interface FinancialSummaryProps {
   isPending?: boolean;
 }
 
-export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
+function FinancialSummary({
   invoices = [],
   payments = [],
   credits = [],
   totalBalance,
   isPending = false
-}) => {
+}: FinancialSummaryProps) {
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
@@ -65,5 +65,6 @@ export const FinancialSummary: React.FC<FinancialSummaryProps> = ({
       </CardContent>
     </Card>
   );
-};
+}
 
+export { FinancialSummary };

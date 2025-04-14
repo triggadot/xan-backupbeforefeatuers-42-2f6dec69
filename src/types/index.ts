@@ -258,3 +258,7 @@ export interface ColumnDef {
   enableSorting?: boolean;
   sortingFn?: string;
 }
+
+// Export all sync-related types from the unified file
+export * from './glsync.unified';
+
