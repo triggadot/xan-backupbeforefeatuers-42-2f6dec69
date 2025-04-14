@@ -224,3 +224,174 @@ export type TableName =
   | 'gl_recent_logs' // view
   | 'gl_sync_stats' // view
   | 'gl_tables_view'; // view
+
+/**
+ * @deprecated Only use Glide-to-Supabase sync as described in the documentation.
+ * All other sync methods are deprecated.
+ */
+export const DEPRECATED_SYNC_NOTICE = 'This sync method is deprecated. Use the primary Glide-to-Supabase method instead.';
+
+/**
+ * Database table type definitions to match the actual schema
+ * These interfaces define the exact structure of each table in Supabase
+ */
+
+// Account table definition
+export interface GlAccount {
+  id: string;
+  glide_row_id?: string;
+  account_name?: string;
+  client_type?: string;
+  accounts_uid: string;
+  date_added_client?: string;
+  email_of_who_added?: string;
+  photo?: string;
+  created_at?: string;
+  updated_at?: string;
+  balance?: number;
+  customer_balance?: number;
+  vendor_balance?: number;
+}
+
+// Product table definition
+export interface GlProduct {
+  id: string;
+  glide_row_id: string;
+  rowid_accounts?: string;
+  rowid_vendor_payments?: string;
+  rowid_purchase_orders?: string;
+  po_poui_dfrom_add_prod?: string;
+  po_po_date?: string;
+  vendor_product_name?: string;
+  new_product_name?: string;
+  product_purchase_date?: string;
+  total_qty_purchased?: number;
+  cost?: number;
+  samples_or_fronted?: boolean;
+  fronted?: boolean;
+  terms_for_fronted_product?: string;
+  samples?: boolean;
+  total_units_behind_sample?: number;
+  purchase_notes?: string;
+  miscellaneous_items?: boolean;
+  category?: string;
+  product_image1?: string;
+  date_timestamp_subm?: string;
+  email_email_of_user_who_added_product?: string;
+  created_at?: string;
+  updated_at?: string;
+  display_name?: string;
+  total_cost?: number;
+}
+
+// Customer Payment table definition
+export interface GlCustomerPayment {
+  id: string;
+  glide_row_id: string;
+  payment_amount?: number;
+  date_of_payment?: string;
+  type_of_payment?: string;
+  payment_note?: string;
+  rowid_invoices?: string;
+  rowid_accounts?: string;
+  email_of_user?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Estimate table definition
+export interface GlEstimate {
+  id: string;
+  glide_row_id: string;
+  rowid_invoices?: string;
+  rowid_accounts?: string;
+  estimate_date?: string;
+  is_a_sample?: boolean;
+  date_invoice_created_date?: string;
+  add_note?: boolean;
+  valid_final_create_invoice_clicked?: boolean;
+  glide_pdf_url?: string;
+  glide_pdf_url2?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  total_amount?: number;
+  total_credits?: number;
+  balance?: number;
+  estimate_uid?: string;
+  status?: string;
+  supabase_pdf_url?: string;
+}
+
+// Invoice line table definition
+export interface GlInvoiceLine {
+  id: string;
+  glide_row_id: string;
+  renamed_product_name?: string;
+  date_of_sale?: string;
+  rowid_invoices?: string;
+  rowid_products?: string;
+  qty_sold?: number;
+  selling_price?: number;
+  product_sale_note?: string;
+  user_email_of_added?: string;
+  created_at?: string;
+  updated_at?: string;
+  line_total?: number;
+  product_name_display?: string;
+}
+
+// Purchase Order table definition
+export interface GlPurchaseOrder {
+  id: string;
+  glide_row_id: string;
+  po_date?: string;
+  rowid_accounts?: string;
+  purchase_order_uid?: string;
+  date_payment_date_mddyyyy?: string;
+  docs_shortlink?: string;
+  created_at?: string;
+  updated_at?: string;
+  pdf_link?: string;
+  total_amount?: number;
+  total_paid?: number;
+  balance?: number;
+  payment_status?: string;
+  product_count?: number;
+  supabase_pdf_url?: string;
+}
+
+// Invoice table definition
+export interface GlInvoice {
+  id: string;
+  glide_row_id: string;
+  rowid_accounts?: string;
+  invoice_date?: string;
+  is_a_sample?: boolean;
+  invoice_uid?: string;
+  glide_pdf_url?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  total_amount?: number;
+  total_paid?: number;
+  balance?: number;
+  status?: string;
+  supabase_pdf_url?: string;
+}
+
+// Type to map table names to their corresponding interfaces
+export type TableTypeMap = {
+  gl_accounts: GlAccount;
+  gl_products: GlProduct;
+  gl_customer_payments: GlCustomerPayment;
+  gl_estimates: GlEstimate;
+  gl_invoice_lines: GlInvoiceLine;
+  gl_purchase_orders: GlPurchaseOrder;
+  gl_invoices: GlInvoice;
+  gl_connections: GlConnection;
+  gl_mappings: GlMapping;
+  gl_sync_logs: GlSyncLog;
+  gl_sync_errors: GlSyncRecord;
+  [key: string]: any; // For other tables
+};

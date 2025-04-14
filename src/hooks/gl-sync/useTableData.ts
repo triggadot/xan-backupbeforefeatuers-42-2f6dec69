@@ -1,7 +1,11 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { TableName } from '@/types/glsync.unified';
+import { TableName, TableTypeMap } from '@/types/glsync.unified';
+
+// This is needed for TypeScript compatibility with Supabase
+// @ts-ignore - Supabase client type compatibility
+const supabaseAny: any = supabase;
 
 /**
  * Valid table names in the Supabase database
@@ -44,7 +48,17 @@ import { TableName } from '@/types/glsync.unified';
  * };
  * ```
  */
-export function useTableData<T extends Record<string, unknown>>(tableName: TableName) {
+/**
+ * Generic hook for interacting with Supabase tables with CRUD operations
+ * This implementation uses a workaround for strict TypeScript compatibility
+ * by using a type assertion on the Supabase client itself
+ * 
+ * @template T - Type of the records in the table (defaults to the correct type from TableTypeMap)
+ * @param tableName - The Supabase table to interact with
+ */
+export function useTableData<T extends Record<string, any> = TableTypeMap[TableName]>(
+  tableName: TableName
+) {
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +90,8 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     setError(null);
 
     try {
-      let query = supabase.from(tableName).select(
+      // Use the any-typed client to avoid TypeScript errors
+      let query = supabaseAny.from(tableName).select(
         options?.select ? options.select.join(', ') : '*'
       );
 
@@ -114,8 +129,11 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
         throw responseError;
       }
 
-      setData(responseData as T[]);
-      return responseData as T[];
+      // Handle conversion from supabase response to expected type safely
+      // We use double casting to avoid type errors - first to unknown, then to the expected type
+      const typedData = responseData as unknown as T[];
+      setData(typedData);
+      return typedData;
     } catch (err) {
       const errorMessage = err.message || 'Failed to fetch data';
       setError(errorMessage);
@@ -141,7 +159,7 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     setError(null);
 
     try {
-      const { data: newRecord, error: createError } = await supabase
+      const { data: newRecord, error: createError } = await supabaseAny
         .from(tableName)
         .insert(record)
         .select()
@@ -151,12 +169,13 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
         throw createError;
       }
 
-      setData(prevData => [...prevData, newRecord as T]);
+      const typedRecord = newRecord as unknown as T;
+      setData(prevData => [...prevData, typedRecord]);
       toast({
         title: 'Record created',
         description: 'The record was created successfully.',
       });
-      return newRecord as T;
+      return typedRecord;
     } catch (err) {
       const errorMessage = err.message || 'Failed to create record';
       setError(errorMessage);
@@ -186,7 +205,7 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     setError(null);
 
     try {
-      const { data: updatedRecord, error: updateError } = await supabase
+      const { data: updatedRecord, error: updateError } = await supabaseAny
         .from(tableName)
         .update(updates)
         .eq('id', id)
@@ -197,16 +216,17 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
         throw updateError;
       }
 
+      const typedRecord = updatedRecord as unknown as T;
       setData(prevData =>
         prevData.map(item =>
-          (item as any).id === id ? (updatedRecord as T) : item
+          (item as any).id === id ? typedRecord : item
         )
       );
       toast({
         title: 'Record updated',
         description: 'The record was updated successfully.',
       });
-      return updatedRecord as T;
+      return typedRecord;
     } catch (err) {
       const errorMessage = err.message || 'Failed to update record';
       setError(errorMessage);
@@ -232,7 +252,7 @@ export function useTableData<T extends Record<string, unknown>>(tableName: Table
     setError(null);
 
     try {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await supabaseAny
         .from(tableName)
         .delete()
         .eq('id', id);

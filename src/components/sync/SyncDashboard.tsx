@@ -433,9 +433,14 @@ export default function SyncDashboard() {
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Sync Frequency</h3>
+                          <label htmlFor="sync-frequency" className="text-lg font-medium">Sync Frequency</label>
                           <div className="flex items-center space-x-2">
-                            <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+                            <select 
+                              id="sync-frequency"
+                              name="sync-frequency"
+                              aria-label="Select sync frequency"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                            >
                               <option value="manual">Manual only</option>
                               <option value="hourly">Hourly</option>
                               <option value="daily">Daily</option>
@@ -446,14 +451,18 @@ export default function SyncDashboard() {
                         </div>
                         
                         <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Batch Size</h3>
+                          <label htmlFor="batch-size" className="text-lg font-medium">Batch Size</label>
                           <div className="flex items-center space-x-2">
                             <input 
+                              id="batch-size"
+                              name="batch-size"
                               type="number" 
                               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" 
                               defaultValue="100"
                               min="10"
                               max="1000"
+                              placeholder="Enter batch size (10-1000)"
+                              aria-label="Batch size for sync operations"
                             />
                             <Button variant="outline">Save</Button>
                           </div>
