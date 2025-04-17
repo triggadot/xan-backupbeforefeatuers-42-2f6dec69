@@ -4,7 +4,7 @@ import {
   InvoiceWithAccount,
   normalizeInvoiceFields,
 } from "@/types/invoices/invoice";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { InvoiceCardGrid } from "./InvoiceCardGrid";
 
 export default function InvoiceCardPage() {

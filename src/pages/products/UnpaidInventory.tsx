@@ -5,15 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBusinessDashboard } from "@/hooks/dashboard/useBusinessDashboard";
 import { useToast } from "@/hooks/utils/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UnpaidProduct } from "@/types/products";
+import { UnpaidProduct } from "@/types/products/product-types";
 import { RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-const UnpaidInventory: React.FC = () => {
-  const { unpaidInventory, isLoading, error, refreshDashboard } =
-    useBusinessDashboard();
-  const [unpaidProducts, setUnpaidProducts] = useState<UnpaidProduct[]>([]);
-  const { toast } = useToast();
 
   useEffect(() => {
     // Combine samples and fronted products

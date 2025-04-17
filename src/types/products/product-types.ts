@@ -65,6 +65,23 @@ export interface GlProductUpdate {
 // --- Frontend Types (camelCase, no prefix) ---
 
 /**
+ * UnpaidProduct: Used for unpaid inventory dashboard and related features
+ */
+export interface UnpaidProduct {
+  productId: string;
+  glideRowId: string;
+  productName: string;
+  unpaidType: 'Sample' | 'Fronted';
+  quantity: number;
+  value: number;
+  dateAdded?: string;
+  userEmailOfAdded?: string;
+  // Add any other fields used in UnpaidInventory or dashboard
+  [key: string]: any;
+}
+
+
+/**
  * Product model for UI/business logic (can add derived fields)
  */
 export interface Product {

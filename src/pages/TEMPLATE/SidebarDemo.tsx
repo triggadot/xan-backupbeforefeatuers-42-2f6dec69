@@ -1,5 +1,4 @@
-
-import { Demo } from "@/components/data-management/SidebarDemo";
+import { Demo } from "@/components/demos/SidebarDemo";
 
 export default function SidebarDemoPage() {
   return (
@@ -7,4 +6,4 @@ export default function SidebarDemoPage() {
       <Demo />
     </div>
   );
-} 
+}

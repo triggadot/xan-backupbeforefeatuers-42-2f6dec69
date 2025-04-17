@@ -2,6 +2,7 @@ import { EstimateDetailView } from "@/components/estimates";
 import { useEstimateDetail } from "@/hooks/estimates";
 import { useToast } from "@/hooks/utils/use-toast";
 import { useParams } from "react-router-dom";
+import React from "react";
 
 const EstimateDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +29,7 @@ const EstimateDetail = () => {
       } else {
         throw new Error("Failed to convert estimate to invoice");
       }
-    } catch (err) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to convert estimate to invoice.",
