@@ -1,3 +1,4 @@
+
 /**
  * Hook for fetching and managing expenses data
  * 
@@ -6,7 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlExpense, ExpenseFilters, Expense } from '@/types/expenses';
+import { GlExpenseRecord, ExpenseFilters, Expense } from '@/types/expenses';
 
 /**
  * Hook for fetching and filtering expense data
@@ -65,7 +66,7 @@ export const useExpenses = (initialFilters?: ExpenseFilters) => {
       }
       
       // Process the data
-      return (data as GlExpense[]).map(expense => ({
+      return (data as GlExpenseRecord[]).map(expense => ({
         ...expense,
         formattedAmount: expense.amount ? 
           new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(expense.amount)) 

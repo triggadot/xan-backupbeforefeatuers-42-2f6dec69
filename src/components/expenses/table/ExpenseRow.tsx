@@ -5,7 +5,6 @@ import { TableRow, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Expense } from '@/types/expenses';
-import { formatCurrency } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +37,7 @@ export const ExpenseRow: React.FC<ExpenseRowProps> = ({
       <TableCell>{expense.expense_supplier_name || 'N/A'}</TableCell>
       <TableCell className="max-w-xs truncate">{expense.notes || 'No description'}</TableCell>
       <TableCell className="text-right font-medium">
-        {expense.formattedAmount || formatCurrency(expense.amount || 0)}
+        {expense.formattedAmount || new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expense.amount || 0)}
       </TableCell>
       <TableCell>
         <div className="flex justify-end">

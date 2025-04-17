@@ -3,7 +3,6 @@ import React from 'react';
 import { Receipt } from 'lucide-react';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ExpenseFilters } from '@/types/expenses';
 
 interface ExpenseEmptyStateProps {
   hasFilters: boolean;

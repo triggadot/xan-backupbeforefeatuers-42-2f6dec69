@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Expense } from '@/types/expenses';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
-import { formatCurrency } from '@/utils/format';
 
 interface ExpenseSummaryProps {
   expenses: Expense[];
@@ -65,6 +64,15 @@ const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) 
       monthlyChangePercent
     };
   }, [expenses]);
+
+  // Helper function to format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
   if (isLoading) {
     return (

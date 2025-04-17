@@ -8,7 +8,6 @@ import { ExpenseFormData } from '@/types/expenses';
 import { useExpenseMutation } from '@/hooks/expenses';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 
 export const ExpenseList: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -36,6 +35,7 @@ export const ExpenseList: React.FC = () => {
   const handleEditExpense = (expense: any) => {
     // Convert the expense to ExpenseFormData
     setCurrentExpense({
+      id: expense.id,
       notes: expense.notes || '',
       amount: expense.amount || 0,
       category: expense.category || '',
@@ -52,10 +52,10 @@ export const ExpenseList: React.FC = () => {
 
   const handleFormSubmit = async (data: ExpenseFormData) => {
     try {
-      if (currentExpense) {
+      if (currentExpense?.id) {
         // Update existing expense
         await updateExpense.mutateAsync({
-          id: currentExpense.id!,
+          id: currentExpense.id,
           data
         });
         toast.success("Expense updated successfully");
@@ -66,7 +66,7 @@ export const ExpenseList: React.FC = () => {
       }
       setIsFormOpen(false);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     }
   };
@@ -79,7 +79,7 @@ export const ExpenseList: React.FC = () => {
       toast.success("Expense deleted successfully");
       setExpenseToDelete(null);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     }
   };

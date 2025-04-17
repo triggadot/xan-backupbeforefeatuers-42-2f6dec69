@@ -1,3 +1,4 @@
+
 /**
  * Hook for fetching detailed information about a specific expense
  * 
@@ -5,7 +6,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { GlExpense, Expense } from '@/types/expenses';
+import { GlExpenseRecord, Expense } from '@/types/expenses';
 
 /**
  * Hook for fetching detailed information about a specific expense
@@ -38,7 +39,7 @@ export const useExpenseDetail = (id: string | undefined) => {
       if (!data) return null;
       
       // Process the data
-      const expenseData = data as GlExpense;
+      const expenseData = data as GlExpenseRecord;
       return {
         ...expenseData,
         formattedAmount: expenseData.amount ? 

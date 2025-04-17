@@ -1,3 +1,4 @@
+
 /**
  * Main expenses page component that lists all expenses
  * Follows the Feature-Based Architecture pattern

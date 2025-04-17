@@ -1,8 +1,4 @@
-/**
- * ExpenseForm component for creating and editing expenses
- * 
- * @module components/expenses
- */
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,9 +68,6 @@ interface ExpenseFormProps {
   isEdit?: boolean;
 }
 
-/**
- * ExpenseForm component for creating and editing expenses
- */
 export const ExpenseForm = ({ expense, isEdit = false }: ExpenseFormProps) => {
   const navigate = useNavigate();
   const { createExpense, updateExpense } = useExpenseMutation();

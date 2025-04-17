@@ -1,3 +1,4 @@
+
 /**
  * Expense detail page component
  * Shows detailed information for a specific expense
