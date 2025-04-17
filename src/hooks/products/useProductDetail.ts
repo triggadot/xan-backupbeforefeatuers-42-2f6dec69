@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductDetail } from '@/types/products';
 import { Account } from '@/types/accounts';
-import { PurchaseOrder } from '@/types/purchase-orders/purchase-orders';
+import { PurchaseOrder } from '@/types/purchase-orders/purchase-sorders';
 import { Invoice } from '@/types/invoices';
 import { Estimate } from '@/types/estimates';
 

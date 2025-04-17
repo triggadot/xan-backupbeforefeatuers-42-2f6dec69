@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { PurchaseOrder } from '@/types/purchase-orders/purchase-orders';
+import { PurchaseOrder } from '@/types/purchase-orders/purchase-sorders';
 
 interface PurchaseOrderFilters {
   search?: string;
