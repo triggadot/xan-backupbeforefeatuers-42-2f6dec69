@@ -2,25 +2,40 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/layout/Layout';
 import { Toaster } from "@/components/ui/toaster";
-import Auth from '@/pages/Auth';
-import DataManagement from '@/pages/DataManagement';
-import Index from '@/pages/Index';
-import MappingView from '@/pages/MappingView';
-import ModernDashboard from '@/pages/ModernDashboard';
-import NotFound from '@/pages/NotFound';
-import ResponsiveExamples from '@/pages/ResponsiveExamples';
-import SidebarDemo from '@/pages/SidebarDemo';
-import Sync from '@/pages/Sync';
-import TableDemo from '@/pages/TableDemo';
 
-// Import our pages
-import AccountDetail from '@/pages/AccountDetail';
-import AccountOverview from '@/pages/AccountOverview';
-import Accounts from '@/pages/Accounts';
-import ExpensesPage from '@/pages/expenses';
-import ExpenseDetailPage from '@/pages/expenses/[id]';
-import EditExpensePage from '@/pages/expenses/[id]/edit';
-import CreateExpensePage from '@/pages/expenses/new';
+// Import pages from the main barrel file
+import {
+  // Core pages
+  Auth,
+  Index,
+  NotFound,
+  
+  // Dashboard pages
+  ModernDashboard,
+  DataManagement,
+  Sync,
+  
+  // Demo pages
+  ResponsiveExamples,
+  TableDemo,
+  SidebarDemo,
+  
+  // Account pages
+  Accounts,
+  AccountDetail,
+  AccountOverview,
+  
+  // Expense pages
+  ExpensesPage,
+  CreateExpensePage,
+  ExpenseDetailPage,
+  EditExpensePage
+} from '@/pages';
+
+// Missing from barrel file
+import MappingView from '@/pages/MappingView';
+
+// These will eventually be moved to dedicated folders with barrel files
 import EstimateDetailPage from '@/pages/new/EstimateDetail';
 import NewEstimates from '@/pages/new/Estimates';
 import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
