@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import {
   // Core pages
@@ -46,7 +46,8 @@ import UnpaidInventoryPage from '@/pages/products/UnpaidInventory';
 // Import our new card-based invoice pages
 import InvoiceCardPage from '@/pages/invoices/InvoiceCardPage';
 import InvoiceCardDetailPage from '@/pages/invoices/InvoiceCardDetailPage';
-import { Route, Routes } from 'react-router-dom';
+import Layout from '@/components/layout/Layout';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (
