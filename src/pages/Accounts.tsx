@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Plus, RefreshCw, UserPlus } from 'lucide-react';
+import { Plus, RefreshCw, UserPlus, Eye, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Dialog, 
@@ -15,9 +16,11 @@ import { useAccountMutation } from '@/hooks/accounts';
 import { useAccountsWithBalances } from '@/hooks/accounts/useAccountsWithBalances';
 import { Account } from '@/types/accountNew';
 import { AccountFormData } from '@/types/accounts';
+import { useNavigate } from 'react-router-dom';
 
 const Accounts: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { accounts = [], isLoading, error } = useAccountsWithBalances();
   const { createAccount, isCreating } = useAccountMutation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -30,7 +33,7 @@ const Accounts: React.FC = () => {
   );
 
   const handleAddAccount = async (data: AccountFormData) => {
-    createAccount({
+    const newAccount = await createAccount({
       account_name: data.name,
       client_type: data.type,
       email_of_who_added: data.email,
@@ -42,7 +45,20 @@ const Accounts: React.FC = () => {
       balance: 0,
       accounts_uid: `${data.type}_${Date.now()}`,
     });
+    
+    if (newAccount) {
+      // Navigate to the new account's overview page
+      navigate(`/account-overview/${newAccount.id}`);
+    }
+    
     setIsCreateDialogOpen(false);
+  };
+
+  const navigateToAccountDetails = (accountId: string, view: 'overview' | 'details') => {
+    navigate(view === 'overview' 
+      ? `/account-overview/${accountId}` 
+      : `/accounts/${accountId}`
+    );
   };
 
   return (
@@ -76,11 +92,53 @@ const Accounts: React.FC = () => {
         </div>
       </div>
       
-      <AccountCardList 
-        accounts={filteredAccounts} 
-        isLoading={isLoading} 
-        error={error} 
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredAccounts.map((account) => (
+          <div 
+            key={account.id} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{account.name}</h2>
+              <Badge 
+                variant={account.type === 'Customer' ? 'secondary' : 'outline'}
+                className="capitalize"
+              >
+                {account.type}
+              </Badge>
+            </div>
+            <div className="text-muted-foreground mb-4">
+              {account.email || 'No email provided'}
+            </div>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-sm">Balance</div>
+                <div className="font-bold text-lg">
+                  {formatCurrency(account.balance || 0)}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => navigateToAccountDetails(account.id, 'overview')}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Overview
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => navigateToAccountDetails(account.id, 'details')}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Details
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
       
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
