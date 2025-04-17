@@ -4,24 +4,24 @@
  */
 
 // Auth & core pages
-export { default as Auth } from './Auth';
+export { default as Auth } from './utils/Auth';
 export { default as Index } from './Index';
-export { default as NotFound } from './NotFound';
+export { default as NotFound } from './utils/NotFound';
 
 // Dashboard pages
-export { default as ModernDashboard } from './ModernDashboard';
-export { default as DataManagement } from './DataManagement';
-export { default as Sync } from './Sync';
+export { default as ModernDashboard } from './dashboard/ModernDashboard';
+export { default as DataManagement } from './data-tables/DataManagement';
+export { default as Sync } from './sync-glide/Sync';
 
 // Demo pages
-export { default as ResponsiveExamples } from './ResponsiveExamples';
-export { default as TableDemo } from './TableDemo';
-export { default as SidebarDemo } from './SidebarDemo';
+export { default as ResponsiveExamples } from './TEMPLATE/ResponsiveExamples';
+export { default as TableDemo } from './TEMPLATE/TableDemo';
+export { default as SidebarDemo } from './TEMPLATE/SidebarDemo';
 
 // Account pages
-export { default as Accounts } from './Accounts';
-export { default as AccountDetail } from './AccountDetail';
-export { default as AccountOverview } from './AccountOverview';
+export { default as Accounts } from './accounts/Accounts';
+export { default as AccountDetail } from './accounts/AccountDetail';
+export { default as AccountOverview } from './accounts/AccountOverview';
 
 // Re-export all expense pages
 export * from './expenses';

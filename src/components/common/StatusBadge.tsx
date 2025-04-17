@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { EntityStatus } from '@/types/common';
+import { EntityStatus } from '@/types/common/common';
 
 interface StatusBadgeProps {
   status: EntityStatus;

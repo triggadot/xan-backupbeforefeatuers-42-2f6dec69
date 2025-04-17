@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -26,7 +26,7 @@ import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { InvoiceLinesList } from './InvoiceLinesList';
 import { InvoicePaymentsDialog } from './InvoicePaymentsDialog';
 import { PDFActions } from '@/components/pdf/PDFActions';
-import { DocumentType } from '@/types/documents';
+import { DocumentType } from '@/types/documents/documents';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 import {
   DropdownMenu,

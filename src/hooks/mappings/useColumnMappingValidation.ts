@@ -6,7 +6,7 @@
  */
 
 import { useGlSyncValidation } from '@/hooks/gl-sync/useGlSyncValidation';
-import { MappingValidationResult, MappingToValidate } from '@/types/glsync';
+import { MappingValidationResult, MappingToValidate } from '@/types/glide-sync/glsync';
 
 /**
  * Hook that provides validation functionality for column mappings

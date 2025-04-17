@@ -15,7 +15,7 @@ import { FileText, Share, Download, Loader2, Upload, RefreshCw } from 'lucide-re
 import { PDFPreviewModal } from './PDFPreviewModal';
 import { PDFShareModal } from './PDFShareModal';
 import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType, toLegacyDocumentTypeString } from '@/types/pdf.unified';
+import { DocumentType, toLegacyDocumentTypeString } from '@/types/documents/pdf.unified';
 import { PDFGenerationOptions } from '@/lib/pdf/pdf.types';
 import { useToast } from '@/hooks/utils/use-toast';
 import {

@@ -5,9 +5,9 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { DocumentType, toLegacyDocumentTypeString, getBackendDocumentTypeKey } from '@/types/pdf.unified';
+import { DocumentType, toLegacyDocumentTypeString, getBackendDocumentTypeKey } from '@/types/documents/pdf.unified';
 import { PDFGenerationOptions, PDFGenerationResult, validateDocumentType, validatePDFOptions } from './pdf.types';
-import { Invoice, PurchaseOrder, Estimate } from '@/types/pdf-utils';
+import { Invoice, PurchaseOrder, Estimate } from '@/types/documents/pdf-utils';
 
 /**
  * Generates a PDF for a document using the standardized pdf-backend edge function

@@ -14,12 +14,12 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { EstimateWithDetails } from '@/types/estimate';
+import { EstimateWithDetails } from '@/types/estimates/estimate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFActions } from '@/components/pdf/PDFActions';
 import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/pdf.unified';
+import { DocumentType } from '@/types/documents/pdf.unified';
 
 interface EstimateDetailViewProps {
   estimate: EstimateWithDetails;

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
-import { GlConnection } from '@/types/glsync';
+import { GlConnection } from '@/types/glide-sync/glsync';
 
 interface ConnectionFormProps {
   connection: Partial<GlConnection> | null;

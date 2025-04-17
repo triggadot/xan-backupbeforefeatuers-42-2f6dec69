@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Mapping } from '@/types/syncLog';
-import { convertToGlMapping } from '@/utils/gl-mapping-converters';
+import { convertToGlMapping } from '@/types/glide-sync/gl-mapping-converters';
 import { useToast } from '@/hooks/utils/use-toast';
 
 /**

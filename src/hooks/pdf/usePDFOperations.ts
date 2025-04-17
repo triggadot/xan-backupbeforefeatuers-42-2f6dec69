@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/utils/use-toast';
-import { triggerPDFGeneration } from '@/lib/pdf-utils';
+import { triggerPDFGeneration } from '@/lib/pdf/pdf-utils';
 import { PDFOperationResult } from '@/lib/pdf/common';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -10,13 +10,13 @@ import {
   getBackendDocumentTypeKey,
   documentTypeConfig,
   toLegacyDocumentTypeString
-} from '@/types/pdf.unified';
+} from '@/types/documents/pdf.unified';
 
 // Import legacy helpers for backward compatibility
 import { 
   getBatchDocumentTypeKey, 
   getStorageDocumentTypeKey
-} from '@/types/documents';
+} from '@/types/documents/documents';
 
 /**
  * Hook for PDF operations including generation, storage, and downloading

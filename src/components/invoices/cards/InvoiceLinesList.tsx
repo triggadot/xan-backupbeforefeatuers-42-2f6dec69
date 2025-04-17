@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { formatCurrency } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

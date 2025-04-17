@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
-import { GlMapping } from '@/types/glsync';
+import { GlMapping } from '@/types/glide-sync/glsync';
 import { useRealtimeMappings } from '@/hooks/mappings/useRealtimeMappings';
 import { MappingListHeader } from './MappingListHeader';
 import { MappingListItem } from './MappingListItem';

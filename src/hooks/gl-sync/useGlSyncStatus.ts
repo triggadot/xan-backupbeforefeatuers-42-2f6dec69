@@ -1,6 +1,6 @@
 import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { GlRecentLog, GlSyncStats, GlSyncStatus } from '@/types/glsync';
+import { GlRecentLog, GlSyncStats, GlSyncStatus } from '@/types/glide-sync/glsync.ts';
 import { useCallback, useEffect, useState } from 'react';
 import { useRealtimeMappings } from './useRealtimeMappings.ts';
 

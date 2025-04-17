@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { PDFActions } from '@/components/pdf/PDFActions';
 import { useToast } from '@/hooks/utils/use-toast';
 import { format } from 'date-fns';
 import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/pdf.unified';
+import { DocumentType } from '@/types/documents/pdf.unified';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoiceDetailViewProps {

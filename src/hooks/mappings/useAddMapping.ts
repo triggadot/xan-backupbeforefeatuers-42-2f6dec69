@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { GlColumnMapping } from '@/types/glsync';
+import { GlColumnMapping } from '@/types/glide-sync/glsync';
 
 /**
  * Hook for adding a new mapping between Glide and Supabase tables

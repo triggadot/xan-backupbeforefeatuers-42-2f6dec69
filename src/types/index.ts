@@ -260,8 +260,8 @@ export interface ColumnDef {
 }
 
 // Export all sync-related types from the unified file
-export * from './glsync.unified';
+export * from './glide-sync/glsync.unified';
 
 // Export all PDF-related types from the unified file
-export * from './pdf.unified';
+export * from './documents/pdf.unified';
 

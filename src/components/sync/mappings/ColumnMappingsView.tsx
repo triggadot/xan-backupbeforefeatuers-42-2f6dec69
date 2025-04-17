@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Pencil, Save, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GlColumnMapping, GlMapping } from '@/types/glsync';
+import { GlColumnMapping, GlMapping } from '@/types/glide-sync/glsync';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for temporary keys
 

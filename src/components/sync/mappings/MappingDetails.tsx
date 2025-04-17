@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
-import { GlMapping, GlConnection } from '@/types/glsync';
+import { GlMapping, GlConnection } from '@/types/glide-sync/glsync';
 import { ColumnMappingsView } from './ColumnMappingsView';
 import { useToast } from '@/hooks/utils/use-toast';
 import { SyncErrorsView } from './SyncErrorsView';

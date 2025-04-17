@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlSyncRecord } from '@/types/glsync';
+import { GlSyncRecord } from '@/types/glide-sync/glsync';
 import { useToast } from '@/hooks/utils/use-toast';
 
 export function useGlSyncErrors(mappingId?: string) {

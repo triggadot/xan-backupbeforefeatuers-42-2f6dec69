@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { BusinessMetrics, StatusMetrics } from '@/types/business';
-import { determineAccountType, extractAccountFlags } from '@/utils/accountMapper';
+import { BusinessMetrics, StatusMetrics } from '@/types/financial-overviews/business';
+import { determineAccountType, extractAccountFlags } from '@/types/accounts/accountMapper';
 import { UnpaidProduct } from '@/types/products';
 
 /**

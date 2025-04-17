@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CopyIcon, Mail, Share2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFPreviewModalProps } from './PDFPreviewModal';
-import { LegacyDocumentTypeString } from '@/types/pdf.unified';
+import { LegacyDocumentTypeString } from '@/types/documents/pdf.unified';
 
 export interface PDFShareModalProps extends PDFPreviewModalProps {
   title?: string;

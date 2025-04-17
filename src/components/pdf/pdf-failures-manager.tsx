@@ -42,8 +42,8 @@ import {
 } from '@/components/ui/dialog';
 
 // Types and hooks
-import { PDFGenerationFailure, DocumentType } from '@/types/pdf-generation';
-import { usePDFFailures } from '@/hooks/usePDFFailures';
+import { PDFGenerationFailure, DocumentType } from '@/types/documents/pdf-generation';
+import { usePDFFailures } from '@/hooks/pdf/usePDFFailures';
 
 /**
  * Component to display and manage PDF generation failures

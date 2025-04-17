@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { PurchaseOrder } from '@/types/purchaseOrder';
+import { PurchaseOrder } from '@/types/purchase-orders/purchaseOrder';
 
 interface PurchaseOrderStatsProps {
   purchaseOrders: PurchaseOrder[];

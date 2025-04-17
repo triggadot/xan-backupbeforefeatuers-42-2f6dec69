@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { SyncLog } from '@/types/syncLog';
-import { GlSyncLog } from '@/types/glsync';
+import { GlSyncLog } from '@/types/glide-sync/glsync';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from './StatusBadgeUtils';
 import { Skeleton } from '@/components/ui/skeleton';

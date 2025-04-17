@@ -1,9 +1,9 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { getEstimateWithDetails } from '@/services/estimateService';
+import { getEstimateWithDetails } from '@/services/supabase/tables/estimateService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { EstimateWithDetails, EstimateFilters } from '@/types/estimate';
+import { EstimateWithDetails, EstimateFilters } from '@/types/estimates/estimate';
 
 /**
  * Hook for fetching and filtering estimates

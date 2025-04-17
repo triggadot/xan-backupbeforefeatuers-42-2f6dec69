@@ -7,7 +7,7 @@ import { useGlSyncStatus } from '@/hooks/gl-sync'; // Updated import path
 import { useGlSync } from '@/hooks/gl-sync';
 import { useIsMobile } from '@/hooks/utils/use-is-mobile'; // Updated import path
 import { SyncStatusBadge } from '../ui/SyncStatusBadge';
-import { GlSyncStatus } from '@/types/glsync';
+import { GlSyncStatus } from '@/types/glide-sync/glsync';
 import { debounce } from '@/utils/debounce-utils'; // Fix import path
 import { useToast } from '@/hooks/utils/use-toast';
 import { RefreshCw, ExternalLink, AlertCircle, CheckCircle2, XCircle, Loader2, Database, Info, BarChart2 } from 'lucide-react';

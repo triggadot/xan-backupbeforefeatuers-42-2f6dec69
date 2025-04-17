@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Grid, Col, Title, Text, Tab, TabGroup, TabList, TabPanel, TabPanels, Metric, Bold, Divider } from '@tremor/react';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, formatShortDate } from '@/utils/format';
-import { ProductDetail as ProductDetailType } from '@/types/products';
+import { Product as ProductDetailType } from '@/types/products/product-types';
 import { ProductPDFActions } from '@/components/products/ProductPDFActions';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
@@ -54,7 +54,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
     );
   }
 
-  const totalValue = (product.cost || 0) * (product.total_qty_purchased || 0);
+  const totalValue = (product.price || 0) * (product.quantity || 0);
 
   return (
     <div>

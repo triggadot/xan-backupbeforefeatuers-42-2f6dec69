@@ -15,7 +15,7 @@ import { useConnections } from '@/hooks/connections/useConnections';
 import { useSupabaseTables } from '@/hooks/gl-sync/useSupabaseTables';
 import { useGlSync } from '@/hooks/gl-sync';
 import { useAddMapping } from '@/hooks/mappings/useAddMapping';
-import { GlConnection } from '@/types/glsync';
+import { GlConnection } from '@/types/glide-sync/glsync';
 
 interface AddMappingDialogProps {
   open: boolean;

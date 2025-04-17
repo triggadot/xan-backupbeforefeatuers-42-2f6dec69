@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, Grid, Metric, Text, AreaChart, DonutChart } from '@tremor/react';
 import { formatCurrency } from '@/lib/utils';
-import { EstimateWithDetails } from '@/types/estimate';
+import { EstimateWithDetails } from '@/types/estimates/estimate';
 
 interface EstimateStatsProps {
   estimates: EstimateWithDetails[];

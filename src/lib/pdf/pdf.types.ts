@@ -4,7 +4,7 @@
  * This file serves as the single source of truth for all PDF-related types.
  */
 
-import { DocumentType, LegacyDocumentTypeString, normalizeDocumentType } from '@/types/pdf.unified';
+import { DocumentType, LegacyDocumentTypeString, normalizeDocumentType } from '@/types/documents/pdf.unified';
 import { z } from 'zod';
 
 /**

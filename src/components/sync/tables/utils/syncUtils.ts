@@ -1,4 +1,4 @@
-import { TableName } from '@/types/glsync.unified';
+import { TableName } from '@/types/glide-sync/glsync.unified';
 
 /**
  * Table information for display purposes in the sync dashboard

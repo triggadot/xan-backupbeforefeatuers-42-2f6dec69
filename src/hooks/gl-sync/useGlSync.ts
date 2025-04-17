@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/utils/use-toast';
 import { glSyncService } from '@/services/glsync';
-import { SyncResult, GlideTable } from '@/types/glsync';
+import { SyncResult, GlideTable } from '@/types/glide-sync/glsync';
 import { createLogger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 

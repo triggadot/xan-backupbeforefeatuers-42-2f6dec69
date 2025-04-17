@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { TableName, TableTypeMap } from '@/types/glsync.unified';
+import { TableName, TableTypeMap } from '@/types/glide-sync/glsync.unified';
 
 // This is needed for TypeScript compatibility with Supabase
 // @ts-ignore - Supabase client type compatibility

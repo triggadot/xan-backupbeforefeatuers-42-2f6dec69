@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { useRealtimeSyncLogs } from '@/hooks/gl-sync/useRealtimeSyncLogs';
-import { GlRecentLog } from '@/types/glsync';
+import { GlRecentLog } from '@/types/glide-sync/glsync';
 import { Spinner } from '@/components/ui/spinner';
 import { StatusBadge } from '../ui/StatusBadgeUtils';
 

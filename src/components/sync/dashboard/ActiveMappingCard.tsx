@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/utils/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, Clock, FileText } from 'lucide-react';
-import { GlSyncStatus } from '@/types/glsync';
+import { GlSyncStatus } from '@/types/glide-sync/glsync';
 
 interface ActiveMappingCardProps {
   status: GlSyncStatus;

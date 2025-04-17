@@ -12,7 +12,7 @@ import {
   getBatchDocumentTypeKey, 
   getStorageDocumentTypeKey, 
   normalizeDocumentType 
-} from '@/types/documents';
+} from '@/types/documents/documents';
 
 /**
  * Hook for PDF operations including generation, storage, and downloading

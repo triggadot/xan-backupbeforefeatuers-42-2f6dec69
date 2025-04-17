@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useInvoicePayments } from '@/hooks/invoices/useInvoicePayments';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
-import { GlAccount } from '@/types/account';
+import { GlAccount } from '@/types/accounts/account';
 import { InvoicePayment } from '@/types/invoice';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';

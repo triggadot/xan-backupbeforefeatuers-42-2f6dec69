@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ModeToggle } from '@/components/mode-toggle';
+import { ModeToggle } from '@/components/utils/mode-toggle';
 import { Button } from '@/components/ui/button';
 import { Home, Settings, RefreshCw } from 'lucide-react';
 

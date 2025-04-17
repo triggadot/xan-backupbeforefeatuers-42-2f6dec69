@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ColumnDef, SortOption } from '@/types/common';
+import { ColumnDef, SortOption } from '@/types/common/common';
 
 export interface EntityTableProps<T> {
   title: string;

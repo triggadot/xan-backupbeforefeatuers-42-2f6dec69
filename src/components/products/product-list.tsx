@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useProducts } from '@/hooks/products';
-import { Product, ProductFilters } from '@/types/products';
+import { Product, ProductFilters } from '@/types/products/product-types';
 import { Card, Title, Text, Tab, TabGroup, TabList, TabPanel, TabPanels } from '@tremor/react';
 import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
@@ -24,13 +24,13 @@ export const ProductList: React.FC<ProductListProps> = ({
     setFilters({ ...filters, searchTerm });
   };
 
-  const handleCategoryFilter = (category: string | undefined) => {
-    setFilters({ ...filters, category });
+  const handleCategoryFilter = (categoryId: string | undefined) => {
+    setFilters({ ...filters, categoryId });
   };
 
   const calculateTotalValue = (products: Product[] = []) => {
     return products.reduce((sum, product) => {
-      return sum + (product.cost || 0) * (product.total_qty_purchased || 0);
+      return sum + (product.price || 0) * (product.quantity || 0);
     }, 0);
   };
 
@@ -51,7 +51,7 @@ export const ProductList: React.FC<ProductListProps> = ({
   }
 
   const categories = Array.from(
-    new Set(products?.map(product => product.category).filter(Boolean) || [])
+    new Set(products?.map(product => product.categoryId).filter(Boolean) || [])
   );
 
   return (

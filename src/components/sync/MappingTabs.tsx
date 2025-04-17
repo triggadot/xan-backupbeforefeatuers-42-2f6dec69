@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GlSyncRecord, GlMapping } from '@/types/glsync';
+import { GlSyncRecord, GlMapping } from '@/types/glide-sync/glsync';
 import { SyncErrorDisplay } from './SyncErrorDisplay';
 
 interface MappingTabsProps {

@@ -3,7 +3,7 @@
  * Account type definitions
  * Consolidated from previous account.ts and accountNew.ts files
  */
-import { EntityBase, EntityStatus, EntityWithName } from '../common';
+import { EntityBase, EntityStatus, EntityWithName } from '../common/common';
 
 /**
  * Account type represents the primary interface for client/vendor entities
@@ -18,7 +18,7 @@ import { EntityBase, EntityStatus, EntityWithName } from '../common';
  * @module types/accounts
  */
 
-import { EntityBase, EntityStatus } from '../common';
+import { EntityBase, EntityStatus } from '../common/common';
 
 /**
  * Account type that aligns with the gl_accounts table and materialized view structure

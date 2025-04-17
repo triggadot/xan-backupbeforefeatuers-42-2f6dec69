@@ -8,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchase-orders/purchaseOrder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFActions } from '@/components/pdf/PDFActions';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils/use-mobile';
 import {
   Tooltip,
   TooltipContent,

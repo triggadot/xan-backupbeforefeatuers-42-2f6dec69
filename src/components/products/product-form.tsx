@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Product, ProductFormData } from '@/types/products';
+import type { ProductForm } from '@/types/products/product-types';
 import { useProductMutation } from '@/hooks/products';
 import { Card, Title, Grid, Col } from '@tremor/react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ const productFormSchema = z.object({
   sampleUnits: z.coerce.number().optional(),
   purchaseOrderId: z.string().optional(),
 });
+
+import type { Product } from '@/types/products/product-types';
 
 interface ProductFormProps {
   product?: Product;
@@ -57,20 +59,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const { createProduct, updateProduct } = useProductMutation();
   const { toast } = useToast();
   
-  const defaultValues: Partial<ProductFormData> = {
-    name: product?.display_name || '',
-    vendorId: product?.rowid_accounts || '',
-    category: product?.category || '',
-    cost: product?.cost || 0,
-    quantity: product?.total_qty_purchased || 0,
-    purchaseDate: product?.product_purchase_date ? new Date(product.product_purchase_date) : null,
-    notes: product?.purchase_notes || '',
-    isSample: product?.samples || false,
-    isFronted: product?.fronted || false,
-    isMiscellaneous: product?.miscellaneous_items || false,
-    frontedTerms: product?.terms_for_fronted_product || '',
-    sampleUnits: product?.total_units_behind_sample || 0,
-    purchaseOrderId: product?.rowid_purchase_orders || '',
+  const defaultValues: Partial<ProductForm> = {
+    name: product?.name || '',
+    vendorId: product?.vendorId || '',
+    categoryId: product?.categoryId || '',
+    price: product?.price || 0,
+    quantity: product?.quantity || 0,
+    purchaseDate: product?.purchaseDate ? new Date(product.purchaseDate) : null,
+    notes: product?.notes || '',
+    isSample: product?.isSample || false,
+    isFronted: product?.isFronted || false,
+    isMiscellaneous: product?.isMiscellaneous || false,
+    frontedTerms: product?.frontedTerms || '',
+    sampleUnits: product?.sampleUnits || 0,
+    purchaseOrderId: product?.purchaseOrderId || '',
   };
 
   const { 
@@ -78,7 +80,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     handleSubmit, 
     watch,
     formState: { errors, isSubmitting } 
-  } = useForm<ProductFormData>({
+  } = useForm<ProductForm>({
     resolver: zodResolver(productFormSchema),
     defaultValues,
   });
@@ -86,26 +88,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const isSample = watch('isSample');
   const isFronted = watch('isFronted');
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (data: ProductForm) => {
     try {
       if (product) {
         // Update existing product
         await updateProduct.mutateAsync({
-          id: product.glide_row_id,
+          id: product.id,
           data: {
-            ...data,
-            // Map form fields to database fields
-            display_name: data.name,
-            total_qty_purchased: data.quantity,
-            rowid_accounts: data.vendorId,
-            product_purchase_date: data.purchaseDate,
-            purchase_notes: data.notes,
-            samples: data.isSample,
-            fronted: data.isFronted,
-            miscellaneous_items: data.isMiscellaneous,
-            terms_for_fronted_product: data.frontedTerms,
-            total_units_behind_sample: data.sampleUnits,
-            rowid_purchase_orders: data.purchaseOrderId,
+            ...data
           },
         });
         toast({
@@ -116,19 +106,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       } else {
         // Create new product
         await createProduct.mutateAsync({
-          ...data,
-          // Map form fields to database fields
-          display_name: data.name,
-          total_qty_purchased: data.quantity,
-          rowid_accounts: data.vendorId,
-          product_purchase_date: data.purchaseDate,
-          purchase_notes: data.notes,
-          samples: data.isSample,
-          fronted: data.isFronted,
-          miscellaneous_items: data.isMiscellaneous,
-          terms_for_fronted_product: data.frontedTerms,
-          total_units_behind_sample: data.sampleUnits,
-          rowid_purchase_orders: data.purchaseOrderId,
+          ...data
         });
         toast({
           title: "Success",

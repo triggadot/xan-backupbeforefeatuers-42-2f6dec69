@@ -1,5 +1,5 @@
 import { GlAccount } from './accounts';
-import { EntityBase, EntityWithAccount, EntityWithAmount } from './common';
+import { EntityBase, EntityWithAccount, EntityWithAmount } from './common/common';
 
 export interface InvoiceLineItem {
   id: string;

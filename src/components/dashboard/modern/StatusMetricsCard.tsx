@@ -16,7 +16,7 @@ import {
   Metric
 } from '@tremor/react';
 import { FileText, ClipboardList, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { StatusMetrics } from '@/types/business';
+import { StatusMetrics } from '@/types/financial-overviews/business';
 
 interface StatusMetricsCardProps {
   statusMetrics: StatusMetrics[];

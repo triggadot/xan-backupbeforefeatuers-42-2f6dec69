@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/utils/use-toast';
-import { GlConnection } from '@/types/glsync';
+import { GlConnection } from '@/types/glide-sync/glsync';
 import { glSyncService } from '@/services/glsync';
 import {
   Dialog,

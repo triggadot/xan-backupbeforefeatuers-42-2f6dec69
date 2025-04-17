@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { GlSyncStatus } from '@/types/glsync';
+import { GlSyncStatus } from '@/types/glide-sync/glsync';
 import { formatDistance } from 'date-fns';
 
 // --- Validation Display Types and Component ---

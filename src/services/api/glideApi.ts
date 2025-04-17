@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { convertValue } from '@/utils/glsync-transformers';
+import { convertValue } from '@/types/glide-sync/glsync-transformers';
 
 /**
  * GlideAPI service that uses direct HTTP requests (cURL-style) instead of JSON

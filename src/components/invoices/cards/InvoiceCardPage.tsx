@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { InvoiceCardGrid } from './InvoiceCardGrid';
-import { InvoiceWithAccount, normalizeInvoiceFields } from '@/types/new/invoice';
+import { InvoiceWithAccount, normalizeInvoiceFields } from '@/types/invoices/invoice';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function InvoiceCardPage() {

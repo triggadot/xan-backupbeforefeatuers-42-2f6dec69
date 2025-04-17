@@ -11,7 +11,7 @@ import {
   startBatchPDFJob, 
   getBatchPDFJobStatus,
   BatchPDFJob 
-} from '@/lib/batch-pdf-generator';
+} from '@/lib/pdf/batch-pdf-generator';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 

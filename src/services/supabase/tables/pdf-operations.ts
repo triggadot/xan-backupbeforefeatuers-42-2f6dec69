@@ -7,9 +7,9 @@ import {
   getStorageDocumentTypeKey,
   normalizeDocumentType,
   toLegacyDocumentTypeString
-} from '@/types/pdf.unified';
+} from '@/types/documents/pdf.unified';
 import { PDFOperationResult } from '@/lib/pdf/common';
-import { triggerPDFGeneration } from '@/lib/pdf-utils';
+import { triggerPDFGeneration } from '@/lib/pdf/pdf-utils';
 
 /**
  * Type definitions for PDF operations

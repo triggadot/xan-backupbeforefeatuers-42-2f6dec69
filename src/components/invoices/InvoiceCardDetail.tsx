@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -9,7 +9,7 @@ import { PDFActions } from '@/components/pdf/PDFActions';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { Link } from 'react-router-dom';
 import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/pdf.unified';
+import { DocumentType } from '@/types/documents/pdf.unified';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoiceCardDetailProps {

@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, CreditCard, DollarSign, FileText } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';

@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle, AlertCircle, Clock, FileText, CircleDollarSign } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 
 interface InvoiceStatusSummaryProps {
   invoices: InvoiceWithAccount[];

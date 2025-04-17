@@ -1,7 +1,7 @@
 import React from 'react';
 import { ButtonProps } from '@/components/ui/button';
 import { StandardPDFButton } from './StandardPDFButton';
-import { DocumentType } from '@/types/pdf.unified';
+import { DocumentType } from '@/types/documents/pdf.unified';
 
 /**
  * @deprecated Use StandardPDFButton instead.

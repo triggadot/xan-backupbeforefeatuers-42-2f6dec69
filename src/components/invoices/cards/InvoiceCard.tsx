@@ -11,7 +11,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { InvoiceWithAccount } from '@/types/new/invoice';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { 
   Card, 
   CardHeader, 

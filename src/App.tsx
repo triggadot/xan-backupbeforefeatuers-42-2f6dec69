@@ -30,24 +30,24 @@ import {
 } from '@/pages';
 
 // Missing from barrel file
-import MappingView from '@/pages/MappingView';
+import MappingView from '@/pages/sync-glide/MappingView';
 
 // These will eventually be moved to dedicated folders with barrel files
-import EstimateDetailPage from '@/pages/new/EstimateDetail';
-import NewEstimates from '@/pages/new/Estimates';
-import InvoiceDetailPage from '@/pages/new/InvoiceDetail';
-import NewInvoices from '@/pages/new/Invoices';
-import ProductsPage from '@/pages/new/Products';
-import ProductDetailPage from '@/pages/new/ProductDetail';
-import PurchaseOrderDetailPage from '@/pages/new/PurchaseOrderDetail';
-import NewPurchaseOrders from '@/pages/new/PurchaseOrders';
+import EstimateDetailPage from '@/pages/estimates/EstimateDetail';
+import NewEstimates from '@/pages/estimates/Estimates';
+import InvoiceDetailPage from '@/pages/invoices/InvoiceDetail';
+import NewInvoices from '@/pages/invoices/Invoices';
+import ProductsPage from '@/pages/products/Products';
+import ProductDetailPage from '@/pages/products/ProductDetail';
+import PurchaseOrderDetailPage from '@/pages/purchase-orders/PurchaseOrderDetail';
+import NewPurchaseOrders from '@/pages/purchase-orders/PurchaseOrders';
 import UnpaidInventoryPage from '@/pages/products/UnpaidInventory';
 
 // Import our new card-based invoice pages
 import InvoiceCardPage from '@/pages/invoices/InvoiceCardPage';
 import InvoiceCardDetailPage from '@/pages/invoices/InvoiceCardDetailPage';
 import Layout from '@/components/layout/Layout';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import ErrorBoundary from '@/components/utils/ErrorBoundary';
 
 // Temporary placeholder component until we rebuild the pages
 const PlaceholderPage = () => (

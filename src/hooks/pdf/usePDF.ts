@@ -17,7 +17,7 @@ import {
   toLegacyDocumentTypeString,
   getBackendDocumentTypeKey,
   documentTypeConfig
-} from '@/types/pdf.unified';
+} from '@/types/documents/pdf.unified';
 
 /**
  * Hook for PDF operations including generation, batch generation, downloading, and storage

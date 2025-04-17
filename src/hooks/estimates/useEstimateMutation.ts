@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Estimate } from '@/types/estimate';
+import { Estimate } from '@/types/estimates/estimate';
 
 // Helper function to ensure status is a valid enum value
 const validateStatus = (status: string): 'pending' | 'draft' | 'converted' => {

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useEstimateCredits } from '@/hooks/estimates/useEstimateCredits';
 import { cn } from '@/lib/utils';
 import { Account } from '@/types/accounts/index';
-import { CustomerCredit } from '@/types/estimate';
+import { CustomerCredit } from '@/types/estimates/estimate';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Pencil, Plus, TrashIcon } from 'lucide-react';

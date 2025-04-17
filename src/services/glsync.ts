@@ -8,7 +8,7 @@ import {
   MappingToValidate, 
   ColumnMappingSuggestion, 
   GlMapping
-} from '@/types/glsync';
+} from '@/types/glide-sync/glsync';
 import { createLogger } from '@/services/logger';
 
 // Create a dedicated logger for the glsync service

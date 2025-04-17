@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { EstimateWithDetails } from '@/types/estimate';
+import { EstimateWithDetails } from '@/types/estimates/estimate';
 import { GlAccount } from '@/types';
 
 export function useEstimateDetail(estimateId: string | undefined) {

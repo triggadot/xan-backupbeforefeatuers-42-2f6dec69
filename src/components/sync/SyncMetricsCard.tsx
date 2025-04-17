@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { GlSyncStats } from '@/types/glsync';
+import { GlSyncStats } from '@/types/glide-sync/glsync';
 import { formatDateBrief } from '@/utils/date-utils';
 
 interface SyncMetricsCardProps {

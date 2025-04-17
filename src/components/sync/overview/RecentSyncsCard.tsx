@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { GlRecentLog } from '@/types/glsync';
+import { GlRecentLog } from '@/types/glide-sync/glsync';
 import { formatRelative, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 

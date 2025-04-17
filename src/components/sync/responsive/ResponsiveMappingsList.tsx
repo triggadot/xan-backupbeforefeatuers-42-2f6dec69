@@ -1,6 +1,6 @@
 import React from 'react';
 import { MappingsList } from '@/components/sync/mappings/MappingsList';
-import { GlMapping } from '@/types/glsync';
+import { GlMapping } from '@/types/glide-sync/glsync';
 import { useIsMobile } from '@/hooks/utils/use-mobile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollAnimation } from '@/components/ui/scroll-animation';

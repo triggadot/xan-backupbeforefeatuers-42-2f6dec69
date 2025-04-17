@@ -1,76 +1,196 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, Title, Text, Grid } from '@tremor/react';
-import { useUnpaidInventory } from '@/hooks/products/useUnpaidInventory';
-import { UnpaidInventoryList } from '@/components/products/unpaid-inventory-list';
-import { UnpaidInventoryStats } from '@/components/products/unpaid-inventory-stats';
-import { Spinner } from '@/components/ui/spinner';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Product } from '@/types/products';
+import { RefreshCw } from 'lucide-react';
+import { UnpaidInventoryList } from '@/components/products/UnpaidInventoryList';
+import { useToast } from '@/hooks/utils/use-toast';
+import { UnpaidProduct } from '@/types/products';
+import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
+import { AmountDisplay } from '@/components/shared/AmountDisplay';
+import { supabase } from '@/integrations/supabase/client';
 
-/**
- * UnpaidInventory page component
- * 
- * Displays a list of inventory items that have been received but not yet paid for
- * Includes statistics and filtering capabilities
- */
-const UnpaidInventoryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { data: unpaidItems, isLoading, error } = useUnpaidInventory();
+const UnpaidInventory: React.FC = () => {
+  const { unpaidInventory, isLoading, error, refreshDashboard } = useBusinessDashboard();
+  const [unpaidProducts, setUnpaidProducts] = useState<UnpaidProduct[]>([]);
+  const { toast } = useToast();
 
-  const handleSelectProduct = (product: Product) => {
-    navigate(`/products/${product.glide_row_id}`);
+  useEffect(() => {
+    // Combine samples and fronted products
+    if (unpaidInventory) {
+      setUnpaidProducts([...unpaidInventory.samples, ...unpaidInventory.fronted]);
+    }
+  }, [unpaidInventory]);
+
+  const fetchUnpaidInventory = async () => {
+    refreshDashboard();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  const markAsPaid = async (productId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('gl_products')
+        .update({
+          samples: false,
+          fronted: false,
+          samples_or_fronted: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('glide_row_id', productId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Product marked as paid",
+      });
+      
+      // Update local state
+      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      return true;
+    } catch (err) {
+      console.error('Error marking product as paid:', err);
+      toast({
+        title: "Error",
+        description: "Failed to mark product as paid",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        <p>Error loading unpaid inventory: {error instanceof Error ? error.message : 'Unknown error'}</p>
-      </div>
-    );
-  }
+  const markAsReturned = async (productId: string): Promise<boolean> => {
+    try {
+      // Using the new inventory calculation function would be good here
+      // but for now we'll just zero out the quantity
+      const { error } = await supabase
+        .from('gl_products')
+        .update({
+          total_qty_purchased: 0,
+          samples: false,
+          fronted: false,
+          samples_or_fronted: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('glide_row_id', productId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Product marked as returned",
+      });
+      
+      // Update local state
+      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      return true;
+    } catch (err) {
+      console.error('Error marking product as returned:', err);
+      toast({
+        title: "Error",
+        description: "Failed to mark product as returned",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  const totalSampleValue = unpaidProducts
+    .filter(p => p.unpaid_type === 'Sample')
+    .reduce((sum, product) => sum + product.unpaid_value, 0);
+
+  const totalFrontedValue = unpaidProducts
+    .filter(p => p.unpaid_type === 'Fronted')
+    .reduce((sum, product) => sum + product.unpaid_value, 0);
+
+  const totalUnpaidValue = totalSampleValue + totalFrontedValue;
+
+  const handleRefresh = () => {
+    fetchUnpaidInventory();
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <PageHeader
-        title="Unpaid Inventory"
-        description="Manage inventory items that have been received but not paid for"
-        actions={
-          <Button onClick={() => navigate('/purchase-orders')}>
-            View All Purchase Orders
+    <div className="container py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold">Unpaid Inventory</h1>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            title="Refresh unpaid inventory"
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </Button>
-        }
-      />
-
-      <Grid numItemsMd={2} className="gap-6 mb-6">
+        </div>
+      </div>
+      
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card>
-          <Title>Unpaid Inventory Summary</Title>
-          {unpaidItems && <UnpaidInventoryStats items={unpaidItems} />}
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Samples
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              <AmountDisplay amount={totalSampleValue} variant="destructive" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
+            </p>
+          </CardContent>
         </Card>
         
         <Card>
-          <Title>Unpaid Items by Category</Title>
-          <Text className="mt-2">Breakdown of unpaid inventory by product category</Text>
-          {/* Category breakdown visualization would go here */}
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Fronted
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              <AmountDisplay amount={totalFrontedValue} variant="destructive" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
+            </p>
+          </CardContent>
         </Card>
-      </Grid>
-
-      <Card className="mb-6">
-        <Title>Unpaid Inventory Items</Title>
-        <Text className="mb-4">Products received but payment is pending</Text>
-        {unpaidItems && <UnpaidInventoryList items={unpaidItems} onSelectProduct={handleSelectProduct} />}
-      </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Unpaid Value
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              <AmountDisplay amount={totalUnpaidValue} variant="destructive" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {unpaidProducts.length} products total
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {error ? (
+        <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+          <p>Error loading unpaid inventory: {error}</p>
+        </div>
+      ) : (
+        <UnpaidInventoryList 
+          products={unpaidProducts}
+          isLoading={isLoading}
+          onPay={markAsPaid}
+          onReturn={markAsReturned}
+        />
+      )}
     </div>
   );
 };
 
-export default UnpaidInventoryPage;
+export default UnpaidInventory;

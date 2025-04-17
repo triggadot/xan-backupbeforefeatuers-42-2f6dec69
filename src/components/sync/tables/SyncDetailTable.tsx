@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useTableData } from "@/hooks/gl-sync";
-import { TableName } from "@/types/glsync.unified";
+import { TableName } from "@/types/glide-sync/glsync.unified";
 import { TABLE_INFO } from "./utils/syncUtils";
 import {
   Table,

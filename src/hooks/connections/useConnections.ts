@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { GlConnection } from '@/types/glsync';
+import { GlConnection } from '@/types/glide-sync/glsync';
 
 /**
  * Hook for managing Glide connections

@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { useBreakpoint } from '@/hooks/use-mobile';
+import { useBreakpoint } from '@/hooks/utils/use-mobile';
 import { cn } from '@/lib/utils';
 import { ArrowDownIcon, ArrowUpIcon } from 'lucide-react';
 import React from 'react';

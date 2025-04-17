@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RefreshCw, Edit, Trash2, CheckCircle } from 'lucide-react';
-import { GlConnection } from '@/types/glsync';
+import { GlConnection } from '@/types/glide-sync/glsync';
 import { formatDateTime } from '@/utils/date-utils';
 
 interface ConnectionCardProps {

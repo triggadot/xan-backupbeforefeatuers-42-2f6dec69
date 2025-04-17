@@ -1,5 +1,5 @@
 
-import { EntityBase } from './common';
+import { EntityBase } from './common/common';
 
 /**
  * Represents a payment made to a vendor for a purchase order

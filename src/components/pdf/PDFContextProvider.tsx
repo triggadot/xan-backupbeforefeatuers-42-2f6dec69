@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { generateAndStorePDF, updatePDFLinkInDatabase } from '@/lib/pdf-utils';
+import { generateAndStorePDF, updatePDFLinkInDatabase } from '@/lib/pdf/pdf-utils';
 import { useToast } from '@/hooks/utils/use-toast';
-import { DocumentType } from '@/types/pdf.unified';
+import { DocumentType } from '@/types/documents/pdf.unified';
 
 interface PDFContextType {
   // PDF generation

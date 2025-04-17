@@ -5,8 +5,8 @@ import {
   addEstimateLine as addEstimateLineService, 
   updateEstimateLine as updateEstimateLineService, 
   deleteEstimateLine as deleteEstimateLineService 
-} from '@/services/estimateService';
-import { EstimateLine } from '@/types/estimate';
+} from '@/services/supabase/tables/estimateService';
+import { EstimateLine } from '@/types/estimates/estimate';
 
 export function useEstimateLines() {
   const { toast } = useToast();
