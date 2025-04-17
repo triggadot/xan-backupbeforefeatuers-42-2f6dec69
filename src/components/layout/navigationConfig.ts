@@ -1,4 +1,3 @@
-
 export interface NavigationItem {
   title: string;
   href: string;
@@ -110,7 +109,7 @@ export const navigationConfig: NavigationConfig = {
         {
           title: "Unpaid Inventory",
           href: "/unpaid-inventory",
-          icon: "alertCircle", 
+          icon: "alertCircle",
         }
       ]
     },
