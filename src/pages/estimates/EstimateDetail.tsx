@@ -1,19 +1,19 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { useEstimateDetail } from '@/hooks/estimates';
-import { EstimateDetailView } from '@/components/new/estimates';
-import { useToast } from '@/hooks/utils/use-toast';
+import { EstimateDetailView } from "@/components/estimates";
+import { useEstimateDetail } from "@/hooks/estimates";
+import { useToast } from "@/hooks/utils/use-toast";
+import { useParams } from "react-router-dom";
 
 const EstimateDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { estimate, isLoading, error, refreshEstimate, convertToInvoice } = useEstimateDetail(id);
+  const { estimate, isLoading, error, refreshEstimate, convertToInvoice } =
+    useEstimateDetail(id);
 
   const handleRefresh = () => {
     refreshEstimate();
     toast({
-      title: 'Refreshed',
-      description: 'Estimate data has been refreshed.',
+      title: "Refreshed",
+      description: "Estimate data has been refreshed.",
     });
   };
 
@@ -22,17 +22,17 @@ const EstimateDetail = () => {
       const result = await convertToInvoice();
       if (result.success) {
         toast({
-          title: 'Success',
-          description: 'Estimate has been converted to an invoice.',
+          title: "Success",
+          description: "Estimate has been converted to an invoice.",
         });
       } else {
-        throw new Error('Failed to convert estimate to invoice');
+        throw new Error("Failed to convert estimate to invoice");
       }
     } catch (err) {
       toast({
-        title: 'Error',
-        description: 'Failed to convert estimate to invoice.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to convert estimate to invoice.",
+        variant: "destructive",
       });
     }
   };

@@ -1,24 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { UnpaidInventoryList } from '@/components/products/unpaid-inventory-list';
-import { useToast } from '@/hooks/utils/use-toast';
-import { UnpaidProduct } from '@/types/products';
-import { useBusinessDashboard } from '@/hooks/dashboard/useBusinessDashboard';
-import { AmountDisplay } from '@/components/shared/AmountDisplay';
-import { supabase } from '@/integrations/supabase/client';
+import { UnpaidInventoryList } from "@/components/products/unpaid-inventory-list";
+import { AmountDisplay } from "@/components/shared/AmountDisplay";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBusinessDashboard } from "@/hooks/dashboard/useBusinessDashboard";
+import { useToast } from "@/hooks/utils/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { UnpaidProduct } from "@/types/products";
+import { RefreshCw } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 const UnpaidInventory: React.FC = () => {
-  const { unpaidInventory, isLoading, error, refreshDashboard } = useBusinessDashboard();
+  const { unpaidInventory, isLoading, error, refreshDashboard } =
+    useBusinessDashboard();
   const [unpaidProducts, setUnpaidProducts] = useState<UnpaidProduct[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     // Combine samples and fronted products
     if (unpaidInventory) {
-      setUnpaidProducts([...unpaidInventory.samples, ...unpaidInventory.fronted]);
+      setUnpaidProducts([
+        ...unpaidInventory.samples,
+        ...unpaidInventory.fronted,
+      ]);
     }
   }, [unpaidInventory]);
 
@@ -29,31 +32,33 @@ const UnpaidInventory: React.FC = () => {
   const markAsPaid = async (productId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
-        .from('gl_products')
+        .from("gl_products")
         .update({
           samples: false,
           fronted: false,
           samples_or_fronted: false,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('glide_row_id', productId);
-      
+        .eq("glide_row_id", productId);
+
       if (error) throw error;
-      
+
       toast({
         title: "Success",
         description: "Product marked as paid",
       });
-      
+
       // Update local state
-      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      setUnpaidProducts((prev) =>
+        prev.filter((p) => p.product_id !== productId)
+      );
       return true;
     } catch (err) {
-      console.error('Error marking product as paid:', err);
+      console.error("Error marking product as paid:", err);
       toast({
         title: "Error",
         description: "Failed to mark product as paid",
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
@@ -64,43 +69,45 @@ const UnpaidInventory: React.FC = () => {
       // Using the new inventory calculation function would be good here
       // but for now we'll just zero out the quantity
       const { error } = await supabase
-        .from('gl_products')
+        .from("gl_products")
         .update({
           total_qty_purchased: 0,
           samples: false,
           fronted: false,
           samples_or_fronted: false,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('glide_row_id', productId);
-      
+        .eq("glide_row_id", productId);
+
       if (error) throw error;
-      
+
       toast({
         title: "Success",
         description: "Product marked as returned",
       });
-      
+
       // Update local state
-      setUnpaidProducts(prev => prev.filter(p => p.product_id !== productId));
+      setUnpaidProducts((prev) =>
+        prev.filter((p) => p.product_id !== productId)
+      );
       return true;
     } catch (err) {
-      console.error('Error marking product as returned:', err);
+      console.error("Error marking product as returned:", err);
       toast({
         title: "Error",
         description: "Failed to mark product as returned",
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
   };
 
   const totalSampleValue = unpaidProducts
-    .filter(p => p.unpaid_type === 'Sample')
+    .filter((p) => p.unpaid_type === "Sample")
     .reduce((sum, product) => sum + product.unpaid_value, 0);
 
   const totalFrontedValue = unpaidProducts
-    .filter(p => p.unpaid_type === 'Fronted')
+    .filter((p) => p.unpaid_type === "Fronted")
     .reduce((sum, product) => sum + product.unpaid_value, 0);
 
   const totalUnpaidValue = totalSampleValue + totalFrontedValue;
@@ -113,20 +120,20 @@ const UnpaidInventory: React.FC = () => {
     <div className="container py-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold">Unpaid Inventory</h1>
-        
+
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="icon"
             onClick={handleRefresh}
             disabled={isLoading}
             title="Refresh unpaid inventory"
           >
-            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
           </Button>
         </div>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="pb-2">
@@ -139,11 +146,12 @@ const UnpaidInventory: React.FC = () => {
               <AmountDisplay amount={totalSampleValue} variant="destructive" />
             </div>
             <p className="text-xs text-muted-foreground">
-              {unpaidProducts.filter(p => p.unpaid_type === 'Sample').length} products
+              {unpaidProducts.filter((p) => p.unpaid_type === "Sample").length}{" "}
+              products
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -155,11 +163,12 @@ const UnpaidInventory: React.FC = () => {
               <AmountDisplay amount={totalFrontedValue} variant="destructive" />
             </div>
             <p className="text-xs text-muted-foreground">
-              {unpaidProducts.filter(p => p.unpaid_type === 'Fronted').length} products
+              {unpaidProducts.filter((p) => p.unpaid_type === "Fronted").length}{" "}
+              products
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -176,13 +185,13 @@ const UnpaidInventory: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       {error ? (
         <div className="bg-destructive/10 text-destructive p-4 rounded-md">
           <p>Error loading unpaid inventory: {error}</p>
         </div>
       ) : (
-        <UnpaidInventoryList 
+        <UnpaidInventoryList
           products={unpaidProducts}
           isLoading={isLoading}
           onPay={markAsPaid}
