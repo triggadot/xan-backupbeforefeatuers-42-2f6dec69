@@ -1,3 +1,4 @@
+
 /**
  * Common entity types used throughout the application
  */
@@ -14,7 +15,7 @@ export type EntityStatus =
   | 'rejected'
   | 'completed'
   | 'cancelled'
-  | 'complete'
+  | 'complete'  // Added complete to match complete status
   // Invoice specific statuses
   | 'unpaid'
   | 'paid'

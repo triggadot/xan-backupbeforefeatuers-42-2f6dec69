@@ -1,3 +1,4 @@
+
 /**
  * Formatting utility functions
  */
@@ -30,7 +31,7 @@ export const formatCurrency = (
  * @returns Formatted date string
  */
 export const formatDate = (
-  dateString: string | undefined | null,
+  dateString: string | undefined | null | Date,
   format: 'short' | 'medium' | 'long' = 'medium'
 ): string => {
   if (!dateString) return '';
@@ -90,7 +91,9 @@ export const formatPercent = (
  * @param dateString A date string or Date object
  * @returns Formatted short date string
  */
-export const formatShortDate = (dateString: string | Date): string => {
+export const formatShortDate = (
+  dateString: string | Date | undefined | null
+): string => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
