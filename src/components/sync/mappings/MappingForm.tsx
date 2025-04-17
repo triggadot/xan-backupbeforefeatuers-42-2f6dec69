@@ -1,20 +1,24 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/utils/use-toast';
-import { GlMapping } from '@/types/glide-sync/glsync';
-import React, { useState } from 'react';
-import { SyncDirectionSelect } from './SyncDirectionSelect';
-import { SupabaseTableSelect } from './SupabaseTableSelect';
-import GlideTableSelector from '../GlideTableSelector';
-import { ConnectionSelect } from './ConnectionSelect';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useConnections } from '@/hooks/connections/useConnections';
-import { useGlSync } from '@/hooks/gl-sync';
-import { Loader2 } from 'lucide-react';
-import { ColumnMappingEditor } from '@/components/sync/ColumnMappingEditor';
-import { glSyncService } from '@/services/glsync';
+import { ColumnMappingEditor } from "@/components/sync/ColumnMappingEditor";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useConnections } from "@/hooks/connections/useConnections";
+import { useGlSync } from "@/hooks/gl-sync";
+import { useToast } from "@/hooks/utils/use-toast";
+import { glSyncService } from "@/services/glSync";
+import { GlMapping } from "@/types/glide-sync/glsync";
+import { Loader2 } from "lucide-react";
+import React, { useState } from "react";
+import GlideTableSelector from "../GlideTableSelector";
+import { ConnectionSelect } from "./ConnectionSelect";
+import { SupabaseTableSelect } from "./SupabaseTableSelect";
+import { SyncDirectionSelect } from "./SyncDirectionSelect";
 
 interface MappingFormProps {
   mapping?: GlMapping;
@@ -22,19 +26,23 @@ interface MappingFormProps {
   onSuccess?: (mapping: GlMapping) => Promise<void>;
 }
 
-export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMapping, onCancel, onSuccess }) => {
+export const MappingForm: React.FC<MappingFormProps> = ({
+  mapping: initialMapping,
+  onCancel,
+  onSuccess,
+}) => {
   const [mapping, setMapping] = useState<GlMapping>(
     initialMapping || {
-      id: '',
-      connection_id: '',
-      supabase_table: '',
-      glide_table: '',
-      sync_direction: 'to_supabase',
+      id: "",
+      connection_id: "",
+      supabase_table: "",
+      glide_table: "",
+      sync_direction: "to_supabase",
       column_mappings: {},
       enabled: true,
-      glide_table_display_name: '',
+      glide_table_display_name: "",
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     }
   );
   const [isSaving, setIsSaving] = useState(false);
@@ -46,11 +54,11 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setMapping(prev => ({ ...prev, [name]: value }));
+    setMapping((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setMapping(prev => ({ ...prev, [name]: value }));
+    setMapping((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,15 +71,15 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
         const result = await glSyncService.updateMapping(mapping.id, mapping);
         if (result) {
           toast({
-            title: 'Mapping Updated',
-            description: 'Mapping has been updated successfully.'
+            title: "Mapping Updated",
+            description: "Mapping has been updated successfully.",
           });
           if (onSuccess) await onSuccess(result);
         } else {
           toast({
-            title: 'Error',
-            description: 'Failed to update mapping.',
-            variant: 'destructive'
+            title: "Error",
+            description: "Failed to update mapping.",
+            variant: "destructive",
           });
         }
       } else {
@@ -79,25 +87,25 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
         const result = await glSyncService.createMapping(mapping);
         if (result) {
           toast({
-            title: 'Mapping Created',
-            description: 'New mapping has been created successfully.'
+            title: "Mapping Created",
+            description: "New mapping has been created successfully.",
           });
           if (onSuccess) await onSuccess(result);
         } else {
           toast({
-            title: 'Error',
-            description: 'Failed to create mapping.',
-            variant: 'destructive'
+            title: "Error",
+            description: "Failed to create mapping.",
+            variant: "destructive",
           });
         }
       }
       onCancel();
     } catch (error) {
-      console.error('Error during mapping operation:', error);
+      console.error("Error during mapping operation:", error);
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
@@ -119,7 +127,9 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
   return (
     <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>{initialMapping ? 'Edit Mapping' : 'Create Mapping'}</DialogTitle>
+        <DialogTitle>
+          {initialMapping ? "Edit Mapping" : "Create Mapping"}
+        </DialogTitle>
       </DialogHeader>
       <Card className="border-none shadow-none">
         <CardContent>
@@ -139,7 +149,9 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
               <ConnectionSelect
                 connections={connections}
                 value={mapping.connection_id}
-                onValueChange={(value) => handleSelectChange('connection_id', value)}
+                onValueChange={(value) =>
+                  handleSelectChange("connection_id", value)
+                }
                 isLoading={isLoadingConnections}
               />
             </div>
@@ -148,10 +160,10 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
                 tables={[]}
                 value={mapping.glide_table}
                 onTableChange={(tableId, displayName) => {
-                  setMapping(prev => ({
+                  setMapping((prev) => ({
                     ...prev,
                     glide_table: tableId,
-                    glide_table_display_name: displayName
+                    glide_table_display_name: displayName,
                   }));
                 }}
               />
@@ -159,14 +171,18 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
                 tables={tables}
                 isLoading={isLoadingTables}
                 value={mapping.supabase_table}
-                onValueChange={(value) => handleSelectChange('supabase_table', value)}
+                onValueChange={(value) =>
+                  handleSelectChange("supabase_table", value)
+                }
                 onOpen={loadSupabaseTables}
               />
             </div>
             <div>
               <SyncDirectionSelect
                 value={mapping.sync_direction}
-                onValueChange={(value) => handleSelectChange('sync_direction', value)}
+                onValueChange={(value) =>
+                  handleSelectChange("sync_direction", value)
+                }
               />
             </div>
             <div>
@@ -186,7 +202,7 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
                     Saving...
                   </>
                 ) : (
-                  'Save Mapping'
+                  "Save Mapping"
                 )}
               </Button>
             </div>
@@ -195,4 +211,4 @@ export const MappingForm: React.FC<MappingFormProps> = ({ mapping: initialMappin
       </Card>
     </DialogContent>
   );
-}
+};

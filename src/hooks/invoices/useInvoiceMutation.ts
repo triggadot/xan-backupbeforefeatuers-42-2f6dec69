@@ -1,67 +1,122 @@
-/**
- * Hook for creating, updating, and deleting invoices
- * @returns Mutation functions for invoice operations
- */
-import { glInvoicesService } from "@/services/supabase/tables";
-import { UpdateInvoiceInput } from "@/types/invoice";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/utils/use-toast';
+import { InvoiceWithDetails, UpdateInvoiceInput } from '@/types/invoice';
 
 export function useInvoiceMutation() {
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Create invoice mutation
-  const createInvoice = useMutation({
-    mutationFn: async (data: any) => {
-      return await glInvoicesService.createInvoice(data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    },
-    onError: (error) => {
-      console.error("Error creating invoice:", error);
-    },
-  });
+  const createInvoice = async (data: any) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data: invoice, error: createError } = await supabase
+        .from('gl_invoices')
+        .insert([data])
+        .select()
+        .single();
+        
+      if (createError) throw createError;
+      
+      toast({
+        title: 'Success',
+        description: 'Invoice created successfully.',
+      });
+      
+      return invoice;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error creating invoice';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Update invoice mutation
-  const updateInvoice = useMutation({
-    mutationFn: async ({
-      id,
-      ...data
-    }: { id: string } & UpdateInvoiceInput) => {
-      return await glInvoicesService.updateInvoice(id, data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
-    },
-    onError: (error) => {
-      console.error("Error updating invoice:", error);
-    },
-  });
+  const updateInvoice = {
+    mutateAsync: async ({ id, ...data }: { id: string } & UpdateInvoiceInput) => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const { data: invoice, error: updateError } = await supabase
+          .from('gl_invoices')
+          .update(data)
+          .eq('id', id)
+          .select()
+          .single();
+          
+        if (updateError) throw updateError;
+        
+        toast({
+          title: 'Success',
+          description: 'Invoice updated successfully.',
+        });
+        
+        return invoice;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error updating invoice';
+        setError(errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
-  // Delete invoice mutation
-  const deleteInvoice = useMutation({
-    mutationFn: async (id: string) => {
-      await glInvoicesService.deleteInvoice(id);
-      return true;
-    },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.removeQueries({ queryKey: ["invoice", id] });
-    },
-    onError: (error) => {
-      console.error("Error deleting invoice:", error);
-    },
-  });
+  const deleteInvoice = {
+    mutateAsync: async (id: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const { error: deleteError } = await supabase
+          .from('gl_invoices')
+          .delete()
+          .eq('id', id);
+          
+        if (deleteError) throw deleteError;
+        
+        toast({
+          title: 'Success',
+          description: 'Invoice deleted successfully.',
+        });
+        
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Error deleting invoice';
+        setError(errorMessage);
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   return {
     createInvoice,
     updateInvoice,
     deleteInvoice,
-    isLoading:
-      createInvoice.isPending ||
-      updateInvoice.isPending ||
-      deleteInvoice.isPending,
-    error: createInvoice.error || updateInvoice.error || deleteInvoice.error,
+    isLoading,
+    error
   };
 }

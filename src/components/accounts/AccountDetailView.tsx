@@ -446,8 +446,8 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {invoice.lines && invoice.lines.length > 0 ? (
-                                        invoice.lines.map((line, index) => (
+                                      {'lines' in invoice && Array.isArray(invoice.lines) && invoice.lines.length > 0 ? (
+                                        (invoice.lines as any[]).map((line, index) => (
                                           <TableRow key={line.id || index}>
                                             <TableCell>{line.renamed_product_name || line.product_name_display || 'Unnamed Product'}</TableCell>
                                             <TableCell>{line.qty_sold || 0}</TableCell>
@@ -564,8 +564,8 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {po.products && po.products.length > 0 ? (
-                                        po.products.map((product, index) => (
+                                      {'products' in po && Array.isArray(po.products) && po.products.length > 0 ? (
+                                        (po.products as any[]).map((product, index) => (
                                           <TableRow key={product.id || index}>
                                             <TableCell>{product.display_name || product.vendor_product_name || 'Unnamed Product'}</TableCell>
                                             <TableCell>{product.total_qty_purchased || 0}</TableCell>
@@ -655,7 +655,7 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
                           onClick={() => setExpandedEstimate(expandedEstimate === estimate.id ? null : estimate.id)}
                         >
                           <TableCell className="font-medium">
-                            {estimate.estimate_uid || `EST-${estimate.id?.substring(0, 8)}`}
+                            {String(('estimate_uid' in estimate && typeof estimate.estimate_uid === 'string' ? estimate.estimate_uid : `EST-${estimate.id?.substring(0, 8)}`))}
                           </TableCell>
                           <TableCell>{formatDate(estimate.estimate_date || estimate.created_at)}</TableCell>
                           <TableCell>{getStatusBadge(estimate.status || 'draft')}</TableCell>
@@ -744,7 +744,13 @@ const AccountDetailView: React.FC<AccountDetailViewProps> = ({ isEditing = false
           <DialogHeader>
             <DialogTitle>Edit Account</DialogTitle>
           </DialogHeader>
-          {account && <AccountForm defaultValues={account} onSubmit={handleUpdateAccount} />}
+          {account && (
+  <AccountForm
+    defaultValues={account}
+    onSubmit={handleUpdateAccount}
+    isSubmitting={false}
+  />
+)}
         </DialogContent>
       </Dialog>
       

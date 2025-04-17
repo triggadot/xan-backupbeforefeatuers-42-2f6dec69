@@ -1,21 +1,21 @@
-/**
- * Hook for creating, updating, and managing purchase orders
- * @returns Mutation functions for purchase order operations
- */
-import { glPurchaseOrdersService } from "@/services/supabase/tables";
-import { PurchaseOrder } from "@/types/purchase-orders/purchaseOrder";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/utils/use-toast';
+import { PurchaseOrder } from '@/types/purchase-orders/purchaseOrder';
 
 /**
- * Hook for purchase order mutation operations
+ * Hook for creating and updating purchase orders in the database
  */
 export function usePurchaseOrderMutation() {
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const { toast } = useToast();
 
   // Function to safely convert a Date or string to ISO string format
   const toISOString = (dateInput?: Date | string): string | undefined => {
     if (!dateInput) return undefined;
-
+    
     try {
       // If it's a Date object, use toISOString directly
       if (dateInput instanceof Date) {
@@ -24,113 +24,153 @@ export function usePurchaseOrderMutation() {
       // If it's a string, convert to Date first
       return new Date(dateInput).toISOString();
     } catch (e) {
-      console.error("Error converting date:", e);
+      console.error('Error converting date:', e);
       return undefined;
     }
   };
 
-  // Create purchase order mutation
-  const createPurchaseOrder = useMutation({
-    mutationFn: async (data: Partial<PurchaseOrder>) => {
+  // Create a new purchase order
+  const createPurchaseOrder = async (data: Partial<PurchaseOrder>) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
       // Convert date to ISO string format if it exists
       const poDate = toISOString(data.date) || new Date().toISOString();
 
-      const purchaseOrderData = {
-        rowid_accounts: data.vendorId || data.rowid_accounts,
-        po_date: poDate,
-        purchase_order_uid: data.number,
-        notes: data.notes,
-        payment_status: data.status || "draft",
-        glide_row_id: `PO-${Date.now()}`,
-      };
+      const { data: newPo, error } = await supabase
+        .from('gl_purchase_orders')
+        .insert({
+          rowid_accounts: data.vendorId || data.rowid_accounts,
+          po_date: poDate,
+          purchase_order_uid: data.number,
+          notes: data.notes,
+          payment_status: data.status || 'draft',
+          glide_row_id: `PO-${Date.now()}`
+        })
+        .select()
+        .single();
 
-      return await glPurchaseOrdersService.createPurchaseOrder(
-        purchaseOrderData
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
-    },
-    onError: (error) => {
-      console.error("Error creating purchase order:", error);
-    },
-  });
+      if (error) throw error;
 
-  // Update purchase order mutation
-  const updatePurchaseOrder = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Partial<PurchaseOrder>;
-    }) => {
+      toast({
+        title: 'Purchase Order Created',
+        description: 'New purchase order has been created successfully.'
+      });
+
+      return newPo;
+    } catch (err) {
+      console.error('Error creating purchase order:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to create purchase order',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update an existing purchase order
+  const updatePurchaseOrder = async (id: string, data: Partial<PurchaseOrder>) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
       // Convert dates to ISO string format if they exist
       const poDate = toISOString(data.date);
       const dueDate = toISOString(data.dueDate);
 
-      const updateData = {
-        rowid_accounts: data.vendorId || data.rowid_accounts,
-        po_date: poDate,
-        purchase_order_uid: data.number,
-        notes: data.notes,
-        payment_status: data.status,
-        date_payment_date_mddyyyy: dueDate,
-      };
+      const { data: updatedPo, error } = await supabase
+        .from('gl_purchase_orders')
+        .update({
+          rowid_accounts: data.vendorId || data.rowid_accounts,
+          po_date: poDate,
+          purchase_order_uid: data.number,
+          notes: data.notes,
+          payment_status: data.status,
+          date_payment_date_mddyyyy: dueDate
+        })
+        .eq('glide_row_id', id)
+        .select()
+        .single();
 
-      return await glPurchaseOrdersService.updatePurchaseOrder(id, updateData);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
-      queryClient.invalidateQueries({
-        queryKey: ["purchaseOrder", variables.id],
+      if (error) throw error;
+
+      toast({
+        title: 'Purchase Order Updated',
+        description: 'Purchase order has been updated successfully.'
       });
-    },
-    onError: (error) => {
-      console.error("Error updating purchase order:", error);
-    },
-  });
 
-  // Generate PDF mutation
-  const generatePDF = useMutation({
-    mutationFn: async (purchaseOrderId: string): Promise<string> => {
+      return updatedPo;
+    } catch (err) {
+      console.error('Error updating purchase order:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update purchase order',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Generate a PDF for a purchase order
+   * 
+   * @param purchaseOrderId - The glide_row_id of the purchase order
+   * @returns The URL of the generated PDF
+   */
+  const generatePDF = async (purchaseOrderId: string): Promise<string> => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
       // Call the Supabase Edge Function to generate the PDF
       const response = await fetch(
-        "https://swrfsullhirscyxqneay.supabase.co/functions/v1/generate-purchase-order-pdf",
+        'https://swrfsullhirscyxqneay.supabase.co/functions/v1/generate-purchase-order-pdf',
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({ poId: purchaseOrderId }),
         }
       );
-
+      
       const result = await response.json();
-
+      
       if (!result.success) {
-        throw new Error(result.error || "Failed to generate PDF");
+        throw new Error(result.error || 'Failed to generate PDF');
       }
-
+      
+      toast({
+        title: 'PDF Generated',
+        description: 'Purchase order PDF has been generated successfully.'
+      });
+      
       return result.url;
-    },
-    onError: (error) => {
-      console.error("Error generating PDF:", error);
-    },
-  });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to generate PDF',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     createPurchaseOrder,
     updatePurchaseOrder,
     generatePDF,
-    isLoading:
-      createPurchaseOrder.isPending ||
-      updatePurchaseOrder.isPending ||
-      generatePDF.isPending,
-    error:
-      createPurchaseOrder.error ||
-      updatePurchaseOrder.error ||
-      generatePDF.error,
+    isLoading,
+    error
   };
 }

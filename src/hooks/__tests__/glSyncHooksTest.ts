@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { glSyncService } from '@/services/glSync';
+import { act, renderHook } from '@testing-library/react-hooks';
 import { useGlSync } from '../useGlSync';
-import { useGlSyncStatus } from '../useGlSyncStatus';
 import { useGlSyncErrors } from '../useGlSyncErrors';
-import { glSyncService } from '@/services/glsync';
+import { useGlSyncStatus } from '../useGlSyncStatus';
 
 // Mock the glSyncService
 jest.mock('@/services/glsync', () => ({
@@ -60,15 +60,15 @@ describe('useGlSync', () => {
     // Setup
     const expectedResult = true;
     (glSyncService.testConnection as jest.Mock).mockResolvedValue(expectedResult);
-    
+
     // Execute
     const { result } = renderHook(() => useGlSync());
     let actualResult;
-    
+
     await act(async () => {
       actualResult = await result.current.testConnection('test-connection-id');
     });
-    
+
     // Verify
     expect(glSyncService.testConnection).toHaveBeenCalledWith('test-connection-id');
     expect(actualResult).toBe(expectedResult);
@@ -78,15 +78,15 @@ describe('useGlSync', () => {
     // Setup
     const expectedResult = { success: true, recordsProcessed: 10 };
     (glSyncService.syncData as jest.Mock).mockResolvedValue(expectedResult);
-    
+
     // Execute
     const { result } = renderHook(() => useGlSync());
     let actualResult;
-    
+
     await act(async () => {
       actualResult = await result.current.syncData('test-connection-id', 'test-mapping-id');
     });
-    
+
     // Verify
     expect(glSyncService.syncData).toHaveBeenCalledWith('test-connection-id', 'test-mapping-id');
     expect(actualResult).toBe(expectedResult);
@@ -96,7 +96,7 @@ describe('useGlSync', () => {
 describe('useGlSyncStatus', () => {
   it('should initialize with default values', () => {
     const { result } = renderHook(() => useGlSyncStatus());
-    
+
     expect(result.current.syncStatus).toBeNull();
     expect(result.current.allSyncStatuses).toEqual([]);
     expect(result.current.isLoading).toBe(true);
@@ -107,7 +107,7 @@ describe('useGlSyncStatus', () => {
 describe('useGlSyncErrors', () => {
   it('should initialize with default values', () => {
     const { result } = renderHook(() => useGlSyncErrors());
-    
+
     expect(result.current.syncErrors).toEqual([]);
     expect(result.current.isLoading).toBe(true);
     expect(result.current.includeResolved).toBe(false);

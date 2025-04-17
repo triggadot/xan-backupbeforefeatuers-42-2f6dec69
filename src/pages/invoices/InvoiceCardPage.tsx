@@ -1,6 +1,5 @@
-
-import React from 'react';
-import InvoiceCardPageComponent from '@/components/invoices/cards/InvoiceCardPage';
+import InvoiceCardPageComponent from "@/components/invoices/functions/InvoiceCardPage";
+import React from "react";
 
 const InvoiceCardPage: React.FC = () => {
   return <InvoiceCardPageComponent />;

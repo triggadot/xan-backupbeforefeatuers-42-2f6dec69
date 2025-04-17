@@ -18,8 +18,6 @@ import { EntityBase, EntityStatus, EntityWithName } from '../common/common';
  * @module types/accounts
  */
 
-import { EntityBase, EntityStatus } from '../common/common';
-
 /**
  * Account type that aligns with the gl_accounts table and materialized view structure
  * Core representation of an account in the system
@@ -100,6 +98,8 @@ export interface AccountFormData {
   name: string;
   /** Account type */
   type: 'Customer' | 'Vendor' | 'Customer & Vendor';
+  /** Account status */
+  status: 'active' | 'inactive';
   /** Account email */
   email?: string;
   /** Account phone */
