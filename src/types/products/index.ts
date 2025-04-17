@@ -1,10 +1,24 @@
+// Canonical product types are now defined in '@/types/product-types'.
+// This file re-exports them for backward compatibility and migration.
+import {
+  GlProductRecord,
+  GlProductInsert,
+  GlProductUpdate,
+  Product,
+  ProductForm,
+  ProductFilters,
+  convertDbToProduct
+} from '@/types/product-types';
+
+// Deprecated: Remove after migration. Only use for legacy compatibility.
 import { EntityBase, EntityStatus } from '../common';
 
+// Canonical Product type is exported from '@/types/product-types'.
+// Deprecated: Use Product from '@/types/product-types' instead.
 /**
- * Represents a product in the Glidebase system
- * Products are linked to purchase orders, invoices, and estimates
+ * @deprecated Use Product from '@/types/product-types'
  */
-export interface Product extends EntityBase {
+export type Product = import('@/types/product-types').Product;
   // Core Glidebase fields
   glide_row_id: string;
   rowid_accounts?: string;
@@ -171,10 +185,12 @@ export interface UnpaidProduct {
   terms_for_fronted_product?: string;
 }
 
+// Canonical ProductFilters type is exported from '@/types/product-types'.
+// Deprecated: Use ProductFilters from '@/types/product-types' instead.
 /**
- * Filter options for product queries
+ * @deprecated Use ProductFilters from '@/types/product-types'
  */
-export interface ProductFilters {
+export type ProductFilters = import('@/types/product-types').ProductFilters;
   category?: string;
   vendorId?: string;
   purchaseOrderId?: string;
@@ -187,10 +203,12 @@ export interface ProductFilters {
   dateTo?: Date;
 }
 
+// Canonical ProductForm type is exported from '@/types/product-types'.
+// Deprecated: Use ProductForm from '@/types/product-types' instead.
 /**
- * Form data for creating or updating a product
+ * @deprecated Use ProductForm from '@/types/product-types'
  */
-export interface ProductFormData {
+export type ProductFormData = import('@/types/product-types').ProductForm;
   name: string;
   vendorId: string;
   category?: string;
@@ -231,7 +249,12 @@ export interface ProductSummary {
 /**
  * Raw database record from gl_products table
  */
-export interface GlProduct {
+// Canonical GlProductRecord type is exported from '@/types/product-types'.
+// Deprecated: Use GlProductRecord from '@/types/product-types' instead.
+/**
+ * @deprecated Use GlProductRecord from '@/types/product-types'
+ */
+export type GlProduct = import('@/types/product-types').GlProductRecord;
   id: string;
   glide_row_id?: string;
   rowid_accounts?: string;

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, DownloadIcon, SearchIcon } from 'lucide-react';
-import InvoiceList from '@/components/new/invoices/invoice-list';
-import InvoiceStats from '@/components/new/invoices/invoice-stats';
+import InvoiceList from '@/components/invoices/invoice-list';
+import InvoiceStats from '@/components/invoices/invoice-stats';
 import { useToast } from '@/hooks/utils/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useInvoices } from '@/hooks/invoices';
