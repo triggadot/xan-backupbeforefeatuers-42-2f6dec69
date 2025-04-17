@@ -1,13 +1,1 @@
 project_id = "swrfsullhirscyxqneay"
-
-[functions.glsync]
-verify_jwt = false
-
-[functions.process-account-balance-queue]
-verify_jwt = false
-
-[functions.pdf-backend]
-verify_jwt = false
-
-[functions.scheduled-pdf-generation]
-verify_jwt = false
