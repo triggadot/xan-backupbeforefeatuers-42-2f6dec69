@@ -235,8 +235,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
 
       {/* Stock & Finance Sections */}
       <div className="grid grid-cols-1 gap-6 mb-6">
-        <ProductStock productId={product.glide_row_id} />
-        <ProductFinance productId={product.glide_row_id} />
+        <Card>
+          <Title>Product Stock</Title>
+          <Text>Stock information coming soon</Text>
+        </Card>
+        
+        <Card>
+          <Title>Product Finance</Title>
+          <Text>Financial data coming soon</Text>
+        </Card>
       </div>
 
       <Card>
@@ -251,301 +258,125 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, isLoading
           
           <TabPanels>
             <TabPanel>
-              <div className="mt-4">
-                <Title>Related Invoices</Title>
-                {product.invoiceLines && product.invoiceLines.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {product.invoiceLines.map((line, index) => (
-                      <li key={index} className="text-sm border-b border-gray-100 pb-2">
-                        <div className="flex justify-between">
-                          <span>
-                            Invoice #{line.invoice?.invoice_uid || 'N/A'}
-                            {line.invoice?.account && (
-                              <span className="text-gray-500 ml-1">({line.invoice.account.account_name})</span>
-                            )}
-                          </span>
-                          <span className="font-medium">{formatCurrency(line.line_amt || 0)}</span>
-                        </div>
-                        {line.invoice && (
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>{formatShortDate(line.invoice.invoice_date)}</span>
-                            <span>{line.invoice.status || 'Unknown'}</span>
-                            {line.invoice.supabase_pdf_url && (
-                              <a 
-                                href={line.invoice.supabase_pdf_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                View PDF
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </li>
+              {!product.invoiceLines || product.invoiceLines.length === 0 ? (
+                <div className="text-center py-4">
+                  <Text>No invoices found for this product</Text>
+                </div>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>Invoice Date</TableHeaderCell>
+                      <TableHeaderCell>Customer</TableHeaderCell>
+                      <TableHeaderCell>Quantity</TableHeaderCell>
+                      <TableHeaderCell>Price</TableHeaderCell>
+                      <TableHeaderCell>Total</TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {product.invoiceLines.map((line) => (
+                      <TableRow key={line.id}>
+                        <TableCell>{formatShortDate(line.date_of_sale || '')}</TableCell>
+                        <TableCell>{line.customerName || 'N/A'}</TableCell>
+                        <TableCell>{line.qty_sold}</TableCell>
+                        <TableCell>{formatCurrency(line.selling_price)}</TableCell>
+                        <TableCell>{formatCurrency(line.line_total)}</TableCell>
+                      </TableRow>
                     ))}
-                  </ul>
-                ) : (
-                  <Text className="text-sm text-gray-500">No related invoices</Text>
-                )}
-              </div>
+                  </TableBody>
+                </Table>
+              )}
             </TabPanel>
             
             <TabPanel>
-              <div className="mt-4">
-                <Title>Related Estimates</Title>
-                {product.estimateLines && product.estimateLines.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {product.estimateLines.map((line, index) => (
-                      <li key={index} className="text-sm border-b border-gray-100 pb-2">
-                        <div className="flex justify-between">
-                          <span>
-                            Estimate #{line.estimate?.estimate_uid || 'N/A'}
-                            {line.estimate?.account && (
-                              <span className="text-gray-500 ml-1">({line.estimate.account.account_name})</span>
-                            )}
-                          </span>
-                          <span className="font-medium">{formatCurrency(line.line_amt || 0)}</span>
-                        </div>
-                        {line.estimate && (
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>{formatShortDate(line.estimate.estimate_date)}</span>
-                            <span>{line.estimate.status || 'Unknown'}</span>
-                            {line.estimate.supabase_pdf_url && (
-                              <a 
-                                href={line.estimate.supabase_pdf_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                View PDF
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </li>
+              {!product.estimateLines || product.estimateLines.length === 0 ? (
+                <div className="text-center py-4">
+                  <Text>No estimates found for this product</Text>
+                </div>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>Estimate Date</TableHeaderCell>
+                      <TableHeaderCell>Customer</TableHeaderCell>
+                      <TableHeaderCell>Quantity</TableHeaderCell>
+                      <TableHeaderCell>Price</TableHeaderCell>
+                      <TableHeaderCell>Total</TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {product.estimateLines.map((line) => (
+                      <TableRow key={line.id}>
+                        <TableCell>{formatShortDate(line.date_of_sale || '')}</TableCell>
+                        <TableCell>{line.customerName || 'N/A'}</TableCell>
+                        <TableCell>{line.qty_sold}</TableCell>
+                        <TableCell>{formatCurrency(line.selling_price)}</TableCell>
+                        <TableCell>{formatCurrency(line.line_total)}</TableCell>
+                      </TableRow>
                     ))}
-                  </ul>
-                ) : (
-                  <Text className="text-sm text-gray-500">No related estimates</Text>
-                )}
-              </div>
+                  </TableBody>
+                </Table>
+              )}
             </TabPanel>
             
             {product.purchaseOrder && (
               <TabPanel>
-                <div className="mt-4">
-                  <Card>
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <Title>Purchase Order Details</Title>
-                        <Text className="mt-1">
-                          <Link to={`/purchase-orders/${product.purchaseOrder.glide_row_id}`} className="text-blue-600 hover:underline">
-                            {product.purchaseOrder.po_uid || 'PO-' + product.purchaseOrder.id.substring(0, 8)}
-                          </Link>
-                        </Text>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Text className="font-medium">Purchase Order Details</Text>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex justify-between">
+                        <Text className="text-gray-500">Date:</Text>
+                        <Text>{formatDate(product.purchaseOrder.date || '')}</Text>
                       </div>
-                      <Badge variant={product.purchaseOrder.balance === 0 ? 'success' : 'warning'}>
-                        {product.purchaseOrder.balance === 0 ? 'Paid' : 'Outstanding'}
-                      </Badge>
+                      <div className="flex justify-between">
+                        <Text className="text-gray-500">Status:</Text>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+                          {product.purchaseOrder.status || 'Unknown'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <Text className="text-gray-500">Total Amount:</Text>
+                        <Text>{formatCurrency(product.purchaseOrder.total_amount || 0)}</Text>
+                      </div>
                     </div>
-                    
-                    <Grid numItemsMd={2} className="gap-6 mt-4">
-                      <Col>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Date:</Text>
-                            <Text>{formatDate(product.purchaseOrder.date_of_purchase_order)}</Text>
-                          </div>
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Vendor:</Text>
-                            <Text>{product.purchaseOrder.account?.account_name || 'N/A'}</Text>
-                          </div>
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Total Amount:</Text>
-                            <Text>{formatCurrency(product.purchaseOrder.total_amount || 0)}</Text>
-                          </div>
-                        </div>
-                      </Col>
-                      <Col>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Paid Amount:</Text>
-                            <Text>{formatCurrency(product.purchaseOrder.total_paid || 0)}</Text>
-                          </div>
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Balance:</Text>
-                            <Text>{formatCurrency(product.purchaseOrder.balance || 0)}</Text>
-                          </div>
-                          <div className="flex justify-between">
-                            <Text className="text-gray-500">Products Count:</Text>
-                            <Text>{product.purchaseOrder.products_count || 1}</Text>
-                          </div>
-                        </div>
-                      </Col>
-                    </Grid>
-                    
-                    <div className="mt-6">
-                      <Link to={`/purchase-orders/${product.purchaseOrder.glide_row_id}`}>
-                        <Button className="w-full">View Purchase Order</Button>
-                      </Link>
-                    </div>
-                  </Card>
+                  </div>
                 </div>
               </TabPanel>
             )}
             
             <TabPanel>
-              <div className="mt-4">
-                <Title>Vendor Payments</Title>
-                {product.vendorPayments && product.vendorPayments.length > 0 ? (
-                  <div className="overflow-x-auto mt-4">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase Order</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {product.vendorPayments.map((payment, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatShortDate(payment.date_of_payment)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {payment.account?.account_name || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {payment.purchaseOrder ? (
-                                <Link to={`/purchase-orders/${payment.purchaseOrder.glide_row_id}`} className="text-blue-600 hover:underline">
-                                  {payment.purchaseOrder.po_uid || 'PO-' + payment.purchaseOrder.id.substring(0, 8)}
-                                </Link>
-                              ) : 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                              {formatCurrency(payment.payment_amount || 0)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <Badge
-                                variant={payment.status === 'paid' ? 'success' : payment.status === 'pending' ? 'warning' : 'secondary'}
-                              >
-                                {payment.status || 'Unknown'}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 p-4 text-center rounded-md mt-4">
-                    <Text className="text-gray-500">No vendor payments found for this product</Text>
-                  </div>
-                )}
-              </div>
+              {!product.vendorPayments || product.vendorPayments.length === 0 ? (
+                <div className="text-center py-4">
+                  <Text>No vendor payments found for this product</Text>
+                </div>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeaderCell>Date</TableHeaderCell>
+                      <TableHeaderCell>Amount</TableHeaderCell>
+                      <TableHeaderCell>Type</TableHeaderCell>
+                      <TableHeaderCell>Note</TableHeaderCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {product.vendorPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>{formatShortDate(payment.date_of_payment || '')}</TableCell>
+                        <TableCell>{formatCurrency(payment.payment_amount || 0)}</TableCell>
+                        <TableCell>{payment.payment_type || 'N/A'}</TableCell>
+                        <TableCell>{payment.vendor_note || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </TabPanel>
             
             <TabPanel>
-              <div className="mt-4">
-                <Title>Documents</Title>
-                <div className="space-y-4 mt-4">
-                  <Card className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <Text className="font-medium">Product Documentation</Text>
-                        <Text className="text-sm text-gray-500">Product specifications, manuals, and documentation</Text>
-                      </div>
-                      <ProductPDFActions 
-                        productId={product.glide_row_id}
-                        productName={product.display_name || product.vendor_product_name}
-                        existingPdfUrl={product.supabase_pdf_url}
-                        showAllActions={true}
-                      />
-                    </div>
-                  </Card>
-                  
-                  {product.purchaseOrder && (
-                    <Card className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <Text className="font-medium">Purchase Order #{product.purchaseOrder.purchase_order_uid}</Text>
-                          <Text className="text-sm text-gray-500">
-                            {formatShortDate(product.purchaseOrder.purchase_order_date)} | 
-                            {product.purchaseOrder.account?.account_name || 'Unknown Vendor'}
-                          </Text>
-                        </div>
-                        {product.purchaseOrder.supabase_pdf_url ? (
-                          <a 
-                            href={product.purchaseOrder.supabase_pdf_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            View PO
-                          </a>
-                        ) : (
-                          <span className="text-sm text-gray-500">No PDF Available</span>
-                        )}
-                      </div>
-                    </Card>
-                  )}
-                  
-                  {(product.invoiceLines && product.invoiceLines.some(line => line.invoice?.supabase_pdf_url)) && (
-                    <Card className="p-4">
-                      <Text className="font-medium mb-4">Related Invoice Documents</Text>
-                      <div className="space-y-2">
-                        {product.invoiceLines
-                          .filter(line => line.invoice?.supabase_pdf_url)
-                          .map((line, index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <Text className="text-sm">
-                                Invoice #{line.invoice?.invoice_uid} | {formatShortDate(line.invoice?.invoice_date)}
-                              </Text>
-                              <a 
-                                href={line.invoice?.supabase_pdf_url || '#'} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm"
-                              >
-                                View PDF
-                              </a>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    </Card>
-                  )}
-                  
-                  {(product.estimateLines && product.estimateLines.some(line => line.estimate?.supabase_pdf_url)) && (
-                    <Card className="p-4">
-                      <Text className="font-medium mb-4">Related Estimate Documents</Text>
-                      <div className="space-y-2">
-                        {product.estimateLines
-                          .filter(line => line.estimate?.supabase_pdf_url)
-                          .map((line, index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <Text className="text-sm">
-                                Estimate #{line.estimate?.estimate_uid} | {formatShortDate(line.estimate?.estimate_date)}
-                              </Text>
-                              <a 
-                                href={line.estimate?.supabase_pdf_url || '#'} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm"
-                              >
-                                View PDF
-                              </a>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    </Card>
-                  )}
-                </div>
+              <div className="text-center py-4">
+                <Text>Product documentation coming soon</Text>
               </div>
             </TabPanel>
           </TabPanels>
