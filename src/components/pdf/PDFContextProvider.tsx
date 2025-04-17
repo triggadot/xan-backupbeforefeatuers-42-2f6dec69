@@ -5,7 +5,7 @@ import { DocumentType } from '@/types/pdf.unified';
 
 interface PDFContextType {
   // PDF generation
-  generatePDF: (documentType: DocumentType, document: any, saveLocally?: boolean) => Promise<string | null>;
+  generatePDF: (documentType: "invoice" | "purchase_order" | "estimate" | "product", document: any, saveLocally?: boolean) => Promise<string | null>;
   updatePDFLink: (documentType: DocumentType, documentId: string, pdfUrl: string) => Promise<boolean>;
   
   // PDF viewing
@@ -40,7 +40,7 @@ export function PDFProvider({ children }: PDFProviderProps) {
 
   // Generate a PDF for a document
   const generatePDF = async (
-    documentType: DocumentType,
+    documentType: "invoice" | "purchase_order" | "estimate" | "product",
     document: any,
     saveLocally = false
   ): Promise<string | null> => {
@@ -81,6 +81,7 @@ export function PDFProvider({ children }: PDFProviderProps) {
       [DocumentType.INVOICE]: 'gl_invoices',
       [DocumentType.PURCHASE_ORDER]: 'gl_purchase_orders',
       [DocumentType.ESTIMATE]: 'gl_estimates',
+      [DocumentType.PRODUCT]: 'gl_products'
     };
     
     const table = tableMap[documentType];

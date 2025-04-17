@@ -3,7 +3,7 @@ export { ExpenseList } from '@/components/expenses/ExpenseList';
 export { ExpenseForm } from '@/components/expenses/ExpenseForm';
 export { ExpenseTable } from '@/components/expenses/ExpenseTable';
 export { ExpenseSummary } from '@/components/expenses/ExpenseSummary';
-export { ExpenseDetail } from '@/components/expenses/expense-detail';
+export { ExpenseDetail } from '@/components/expenses/ExpenseDetail';
 
 // Export table components
 export { ExpenseRow } from '@/components/expenses/table/ExpenseRow';

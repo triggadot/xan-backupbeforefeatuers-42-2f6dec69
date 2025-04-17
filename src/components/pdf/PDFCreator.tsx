@@ -49,10 +49,14 @@ export function PDFCreator({
 
   // Handle PDF generation
   const handleGeneratePDF = async () => {
-    const result = await generatePDF(documentType, document.id, { saveLocally });
-    if (result && result.pdfUrl) {
-      setPdfUrl(result.pdfUrl);
-      if (onPDFGenerated) onPDFGenerated(result.pdfUrl);
+    try {
+      const url = await generatePDF(documentType as any, document, saveLocally);
+      if (url) {
+        setPdfUrl(url);
+        if (onPDFGenerated) onPDFGenerated(url);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
     }
   };
 

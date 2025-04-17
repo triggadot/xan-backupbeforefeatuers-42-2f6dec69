@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Expense } from '@/types/expenses';
@@ -10,7 +9,7 @@ interface ExpenseSummaryProps {
   isLoading: boolean;
 }
 
-const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) => {
+export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) => {
   const summaryData = useMemo(() => {
     if (!expenses.length) return {
       totalAmount: 0,
@@ -175,5 +174,3 @@ const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) 
     </div>
   );
 };
-
-export default ExpenseSummary;

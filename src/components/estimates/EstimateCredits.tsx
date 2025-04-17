@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useEstimateCredits } from '@/hooks/estimates/useEstimateCredits';
 import { cn } from '@/lib/utils';
-import { GlAccount } from '@/types/accounts';
+import { Account } from '@/types/accounts/index';
 import { CustomerCredit } from '@/types/estimate';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -33,7 +33,7 @@ type CreditFormValues = z.infer<typeof creditFormSchema>;
 interface EstimateCreditsProps {
   estimateId: string;
   credits: CustomerCredit[];
-  customers?: GlAccount[];
+  customers?: Account[];
   onCreditsChanged?: () => void;
 }
 
