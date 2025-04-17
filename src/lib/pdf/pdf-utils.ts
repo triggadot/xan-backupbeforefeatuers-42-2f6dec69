@@ -86,29 +86,29 @@ const formatDate = (dateString: string | null | undefined): string => {
 
 /**
  * Format a date string to a short date format (MM/DD/YYYY)
- * 
+ *
  * @param dateString - The date string to format
  * @returns Formatted date string or 'N/A' if date is invalid
- * 
+ *
  * @example
  * formatShortDate('2023-01-15') // Returns '01/15/2023'
  * formatShortDate('invalid') // Returns 'N/A'
  */
 export function formatShortDate(dateString: string | null | undefined): string {
   if (!dateString) return 'N/A';
-  
+
   const date = new Date(dateString);
-  
+
   // Check if date is valid
   if (isNaN(date.getTime())) {
     console.warn(`Invalid date string provided: ${dateString}`);
     return 'N/A';
   }
-  
+
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const year = date.getFullYear();
-  
+
   return `${month}/${day}/${year}`;
 }
 
@@ -120,12 +120,12 @@ export function formatShortDate(dateString: string | null | undefined): string {
 export function generateInvoicePDF(invoice: Invoice): jsPDF {
   const doc = new jsPDF();
   let currentY = 20;
-  
+
   // Add header with company info
   doc.setFontSize(20);
   doc.text('INVOICE', 105, currentY, { align: 'center' });
   currentY += 15;
-  
+
   // Add company info
   doc.setFontSize(12);
   doc.text('Your Company Name', 20, currentY);
@@ -137,15 +137,15 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
   doc.text('Phone: (555) 555-5555', 20, currentY);
   currentY += 7;
   doc.text('Email: info@yourcompany.com', 20, currentY);
-  
+
   // Add invoice info
   currentY = 35;
   doc.setFontSize(12);
   doc.text(`Invoice #: ${invoice.invoice_uid || 'N/A'}`, 130, currentY);
   currentY += 10;
-  doc.text(`Date: ${formatShortDate(invoice.invoice_order_date)}`, 130, currentY);
+  doc.text(`Date: ${formatShortDate(invoice.date_of_invoice, 130, currentY);
   currentY += 10;
-  
+
   // Add customer info
   currentY = 80;
   doc.setFontSize(14);
@@ -159,7 +159,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
   } else {
     doc.text('Customer information not available', 20, currentY);
   }
-  
+
   // Add invoice items table
   currentY += 20;
   const tableColumn: AutoTableColumn[] = [
@@ -169,9 +169,9 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     { header: 'Unit Price', dataKey: 'price' },
     { header: 'Total', dataKey: 'total' }
   ];
-  
+
   const tableRows = [];
-  
+
   if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
     for (const line of invoice.invoice_lines) {
       tableRows.push({
@@ -191,7 +191,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
       total: ''
     });
   }
-  
+
   doc.autoTable({
     head: [tableColumn.map(col => col.header)],
     body: tableRows.map(row => [
@@ -206,34 +206,34 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     styles: { fontSize: 10, cellPadding: 5 },
     headStyles: { fillColor: [66, 66, 66] }
   });
-  
+
   // Get the y position after the table
   currentY = (doc as any).lastAutoTable.finalY + 20;
-  
+
   // Add totals
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
   doc.text(`Subtotal:`, 150, currentY, { align: 'right' });
   doc.text(formatCurrency(invoice.total_amount || 0), 190, currentY, { align: 'right' });
   doc.setFont(undefined, 'normal');
-  
+
   currentY += 10;
   doc.setFont(undefined, 'bold');
   doc.text(`Amount Paid:`, 150, currentY, { align: 'right' });
   doc.text(formatCurrency(invoice.total_paid || 0), 190, currentY, { align: 'right' });
   doc.setFont(undefined, 'normal');
-  
+
   currentY += 10;
   doc.setFont(undefined, 'bold');
   doc.text(`Balance Due:`, 150, currentY, { align: 'right' });
   doc.text(formatCurrency(invoice.balance || 0), 190, currentY, { align: 'right' });
   doc.setFont(undefined, 'normal');
-  
+
   // Add payment status
   currentY += 20;
   doc.setFontSize(10);
   doc.text(`Payment Status: ${invoice.payment_status || 'N/A'}`, 20, currentY);
-  
+
   // Add notes if available
   if (invoice.notes) {
     currentY += 15;
@@ -253,13 +253,13 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
 export async function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): Promise<jsPDF> {
   try {
     const doc = new jsPDF();
-    
+
     // Add letterhead
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
     doc.text('PURCHASE ORDER', 105, 20, { align: 'center' });
     doc.setFont(undefined, 'normal');
-    
+
     // Add horizontal line
     doc.setLineWidth(0.5);
     doc.line(20, 35, 190, 35);
@@ -298,7 +298,7 @@ export async function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): Pr
 
     // Ensure lineItems is an array
     const lineItems = purchaseOrder.lineItems || [];
-    
+
     // Map purchase order products to table rows
     const rows = lineItems.map(item => {
       // Use the correct properties from the database schema
@@ -306,7 +306,7 @@ export async function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): Pr
       const unitPrice = item.cost || 0;
       // Calculate line total as quantity * price, since line_total may not exist on the base type
       const total = quantity * unitPrice;
-      
+
       return [
         item.display_name || item.vendor_product_name || item.new_product_name || 'N/A',
         quantity,
@@ -333,11 +333,11 @@ export async function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): Pr
     doc.setFontSize(11);
     doc.text(`Subtotal (${totalItems} items):`, 150, finalY + 15, { align: 'right' });
     doc.text(formatCurrency(purchaseOrder.total_amount || 0), 190, finalY + 15, { align: 'right' });
-    
+
     let currentY = finalY + 25;
     doc.text(`Payments:`, 150, currentY, { align: 'right' });
     doc.text(formatCurrency(purchaseOrder.total_paid || 0), 190, currentY, { align: 'right' });
-    
+
     currentY += 10;
     doc.setFont(undefined, 'bold');
     doc.text(`Balance Due:`, 150, currentY, { align: 'right' });
@@ -359,12 +359,12 @@ export async function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): Pr
 export function generateEstimatePDF(estimate: Estimate): jsPDF {
   const doc = new jsPDF();
   let currentY = 20;
-  
+
   // Add header with company info
   doc.setFontSize(20);
   doc.text('ESTIMATE', 105, currentY, { align: 'center' });
   currentY += 15;
-  
+
   // Add company info
   doc.setFontSize(12);
   doc.text('Your Company Name', 20, currentY);
@@ -376,7 +376,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
   doc.text('Phone: (555) 555-5555', 20, currentY);
   currentY += 7;
   doc.text('Email: info@yourcompany.com', 20, currentY);
-  
+
   // Add estimate details
   currentY += 10;
   doc.setFontSize(10);
@@ -384,7 +384,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
   currentY += 7;
   doc.text(`Date: ${formatDate(estimate.estimate_date || '')}`, 20, currentY);
   currentY += 7;
-  
+
   // Add customer info
   if (estimate.gl_accounts) {
     const account = estimate.gl_accounts;
@@ -396,13 +396,13 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
       currentY += 7;
     }
   }
-  
+
   // Add line items table
   currentY += 10;
   doc.setFontSize(10);
   doc.text('Items:', 20, currentY);
   currentY += 7;
-  
+
   // Setup line items table
   const columns = [
     { header: 'Item', dataKey: 'item' },
@@ -410,17 +410,17 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     { header: 'Price', dataKey: 'price' },
     { header: 'Total', dataKey: 'total' }
   ];
-  
+
   const tableData = [];
-  
+
   // Process line items
   if (estimate.estimate_lines && estimate.estimate_lines.length > 0) {
     estimate.estimate_lines.forEach((line) => {
       const product = line.gl_products || {};
       // Handle possible empty objects safely
-      const productName = line.product_name_display || 
+      const productName = line.product_name_display ||
                         (Object.keys(product).length > 0 && 'display_name' in product ? product.display_name : 'Product');
-      
+
       tableData.push({
         item: productName,
         quantity: line.qty || 0,
@@ -429,7 +429,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
       });
     });
   }
-  
+
   // If no line items, add a placeholder
   if (tableData.length === 0) {
     tableData.push({
@@ -439,7 +439,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
       total: '$0.00'
     });
   }
-  
+
   // Add the table
   (doc as any).autoTable({
     head: [columns.map(col => col.header)],
@@ -466,24 +466,24 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     },
     margin: { left: 20, right: 20 }
   });
-  
+
   // Get final Y position after table
   const finalY = (doc as any).lastAutoTable?.finalY || currentY + 50;
-  
+
   // Add total
   currentY = finalY + 10;
   doc.setFontSize(10);
   doc.text(`Total: ${formatCurrency(estimate.total_amount || 0)}`, 170, currentY, { align: 'right' });
-  
+
   // Add balance
   currentY += 7;
   doc.text(`Balance Due: ${formatCurrency(estimate.balance || 0)}`, 170, currentY, { align: 'right' });
-  
+
   // Add notes
   currentY = finalY + 30;
   doc.setFontSize(10);
   doc.text(`Status: ${estimate.status || 'N/A'}`, 20, currentY);
-  
+
   return doc;
 }
 
@@ -504,45 +504,45 @@ export type DocumentType = 'invoice' | 'purchase_order' | 'estimate';
 
 /**
  * Fetch purchase order line items from the database
- * 
+ *
  * @param purchaseOrderId - The unique identifier of the purchase order
  * @returns Promise resolving to an array of products (which serve as line items)
  */
 export async function fetchPurchaseOrderLineItems(purchaseOrderId: string): Promise<any[]> {
   try {
     console.log(`Fetching line items for purchase order: ${purchaseOrderId}`);
-    
+
     // Get the purchase order's glide_row_id first
     const { data: poData, error: poError } = await supabase
       .from('gl_purchase_orders')
       .select('glide_row_id')
       .eq('id', purchaseOrderId)
       .single();
-      
+
     if (poError || !poData) {
       console.error('Error fetching purchase order:', poError);
       return [];
     }
-    
+
     const poGlideRowId = poData.glide_row_id;
-    
+
     // For purchase orders, products serve as line items
     const { data: lineItems, error } = await supabase
       .from('gl_products')
       .select('*')
       .eq('rowid_purchase_orders', poGlideRowId);
-    
+
     if (error) {
       console.error('Error fetching product line items:', error);
       return [];
     }
-    
+
     // Calculate line_total for each product
     const itemsWithTotal = (lineItems || []).map(item => ({
       ...item,
       line_total: (item.total_qty_purchased || 0) * (item.cost || 0)
     }));
-    
+
     console.log(`Found ${itemsWithTotal?.length || 0} product line items`);
     return itemsWithTotal || [];
   } catch (error) {
@@ -553,7 +553,7 @@ export async function fetchPurchaseOrderLineItems(purchaseOrderId: string): Prom
 
 /**
  * Map database line items to the format expected by the PDF generation function
- * 
+ *
  * @param lineItems - Raw products that serve as line items from the database
  * @returns Formatted line items ready for PDF generation
  */
@@ -561,12 +561,12 @@ export function mapPurchaseOrderLineItems(lineItems: any[]): any[] {
   if (!lineItems || !Array.isArray(lineItems)) {
     return [];
   }
-  
+
   return lineItems.map(product => {
     const qty = product.total_qty_purchased || 0;
     const price = product.cost || 0;
     const lineTotal = product.line_total || (qty * price);
-    
+
     return {
       id: product.id,
       description: product.display_name || 'Unknown Product',
@@ -580,7 +580,7 @@ export function mapPurchaseOrderLineItems(lineItems: any[]): any[] {
 }
 /**
  * Complete workflow to generate PDF without storage (storage will be handled by edge function)
- * 
+ *
  * @param type - Type of document ('invoice', 'purchaseOrder', or 'estimate')
  * @param data - Document data
  * @param download - Whether to download the PDF after generation
@@ -609,7 +609,7 @@ export async function generatePDFDocument(
         console.log(`Fetching line items for purchase order: ${purchaseOrder.id}`);
         try {
           const lineItems = await fetchPurchaseOrderLineItems(purchaseOrder.id);
-          
+
           if (lineItems && lineItems.length > 0) {
             purchaseOrder.lineItems = mapPurchaseOrderLineItems(lineItems);
           } else {
@@ -640,7 +640,7 @@ export async function generatePDFDocument(
       console.error(`Error in PDF generation for ${type}:`, genError);
       return null;
     }
-    
+
     if (!doc) {
       console.error(`Failed to generate ${type} PDF`);
       return null;
@@ -651,18 +651,18 @@ export async function generatePDFDocument(
 
     if (type === 'invoice') {
       const invoice = data as Invoice;
-      fileName = invoice.invoice_uid 
-        ? `${invoice.invoice_uid}.pdf` 
+      fileName = invoice.invoice_uid
+        ? `${invoice.invoice_uid}.pdf`
         : `INV-${invoice.glide_row_id || invoice.id}.pdf`;
     } else if (type === 'purchaseOrder') {
       const purchaseOrder = data as PurchaseOrder;
-      fileName = purchaseOrder.purchase_order_uid 
-        ? `${purchaseOrder.purchase_order_uid}.pdf` 
+      fileName = purchaseOrder.purchase_order_uid
+        ? `${purchaseOrder.purchase_order_uid}.pdf`
         : `PO-${purchaseOrder.glide_row_id || purchaseOrder.id}.pdf`;
     } else { // estimate
       const estimate = data as Estimate;
-      fileName = estimate.estimate_uid 
-        ? `${estimate.estimate_uid}.pdf` 
+      fileName = estimate.estimate_uid
+        ? `${estimate.estimate_uid}.pdf`
         : `EST-${estimate.glide_row_id || estimate.id}.pdf`;
     }
 
@@ -684,7 +684,7 @@ export async function generatePDFDocument(
 
 /**
  * Trigger server-side PDF generation using the standardized pdf-backend edge function
- * 
+ *
  * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
  * @param data - The document data
  * @param forceRegenerate - Whether to force regeneration even if a PDF already exists
@@ -706,13 +706,13 @@ export async function triggerPDFGeneration(
       console.log(`Using existing PDF URL for ${type}: ${data.supabase_pdf_url}`);
       return data.supabase_pdf_url;
     }
-    
+
     // Import the necessary functions from pdf.unified.ts
     const { getBackendDocumentTypeKey } = await import('@/types/documents/pdf.unified');
-    
+
     // Convert the legacy type string to the standardized backend format
     const documentType = getBackendDocumentTypeKey(type);
-    
+
     // Call the standardized pdf-backend function directly with explicit project ID
     const { data: result, error } = await supabase.functions.invoke('pdf-backend', {
       body: {
@@ -723,12 +723,12 @@ export async function triggerPDFGeneration(
         forceRegenerate: true
       }
     });
-    
+
     if (error) {
       console.error(`PDF generation failed for ${type}:`, error);
       return null;
     }
-    
+
     if (result?.url) {
       console.log(`Successfully generated ${type} PDF: ${result.url}`);
       return result.url;
@@ -744,15 +744,15 @@ export async function triggerPDFGeneration(
 
 /**
  * Legacy function for generating and storing PDF using client-side jsPDF
- * 
+ *
  * @deprecated Use triggerPDFGeneration instead which generates PDFs on the server
- * 
+ *
  * @param type - The type of document ('invoice', 'purchaseOrder', or 'estimate')
  * @param data - The document data
  * @param saveLocally - Whether to also save the PDF locally
  * @param download - Whether to trigger browser download (only works in browser context)
  * @returns The URL of the uploaded PDF or null if any step failed
- * 
+ *
  * @example
  * // Generate and store a purchase order PDF
  * const pdfUrl = await generateAndStorePDF('purchaseOrder', purchaseOrderData, true);

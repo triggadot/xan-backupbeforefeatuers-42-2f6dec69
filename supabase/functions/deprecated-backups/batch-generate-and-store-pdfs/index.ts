@@ -1,8 +1,8 @@
 /**
  * @deprecated This function is deprecated. Please use the pdf-backend function instead.
  * See /supabase/functions/pdf-backend/README.md for complete documentation.
- * 
- * This is now a forwarding wrapper that calls the pdf-backend function with the 
+ *
+ * This is now a forwarding wrapper that calls the pdf-backend function with the
  * appropriate parameters.
  */
 
@@ -233,7 +233,7 @@ function formatShortDate(dateStr?: string): string {
  * Uses the provided invoice data object (including related lines, account, payments)
  * to draw elements onto the PDF pages using pdf-lib. Handles pagination for line items.
  *
- * @param {any} invoice - The comprehensive invoice data object, expected to contain details like invoice_uid, invoice_order_date, total_amount, and nested arrays for `lines` and `customer_payments`, plus a nested `account` object.
+ * @param {any} invoice - The comprehensive invoice data object, expected to contain details like invoice_uid, date_of_invoiceotal_amount, and nested arrays for `lines` and `customer_payments`, plus a nested `account` object.
  * @returns {Promise<Uint8Array | null>} A promise that resolves with the generated PDF as a Uint8Array, or null if an error occurs during generation.
  *
  * @example
@@ -267,7 +267,7 @@ async function generateInvoicePDF(invoice: any): Promise<Uint8Array | null> {
 
     // Invoice number and date
     const invoiceNumber = invoice.invoice_uid || 'N/A';
-    const invoiceDate = formatShortDate(invoice.invoice_order_date);
+    const invoiceDate = formatShortDate(invoice.date_of_invoice
     page.drawText(`Invoice #: ${invoiceNumber}`, {
       x: 50,
       y: height - 70,
@@ -1042,7 +1042,7 @@ async function generatePDF(normalizedType: DocumentType, data: any): Promise<Uin
  * Includes fallbacks if account UID or date are missing.
  *
  * @param {DocumentType} documentType - The normalized type of the document (e.g., DocumentType.INVOICE).
- * @param {any} documentData - The data object for the document, expected to contain a nested `account` object with `account_uid` or `glide_row_id`, and a relevant date field (e.g., `invoice_order_date`, `po_date`, `estimate_date`). It should also have a UID field (e.g., `invoice_uid`) as a fallback.
+ * @param {any} documentData - The data object for the document, expected to contain a nested `account` object with `account_uid` or `glide_row_id`, and a relevant date field (e.g., `date_of_invoice`po_date`, `estimate_date`). It should also have a UID field (e.g., `invoice_uid`) as a fallback.
  * @returns {string} The generated filename string (e.g., "INV#ACC123102623.pdf").
  *
  * @example
@@ -1052,7 +1052,7 @@ async function generatePDF(normalizedType: DocumentType, data: any): Promise<Uin
 /**
  * Generate a filename for PDF documents prioritizing document UIDs
  * Matches the frontend implementation for consistency
- * 
+ *
  * @param documentType - Type of document (INVOICE, PURCHASE_ORDER, ESTIMATE, etc.)
  * @param documentData - The document data object
  * @returns Filename string based on document UID or fallback
@@ -1062,7 +1062,7 @@ function generateFileName(documentType: DocumentType, documentData: any): string
     // Get the document UID based on document type
     let documentUid = null;
     let fallbackPrefix = 'DOC#';
-    
+
     switch (documentType) {
       case DocumentType.INVOICE:
         documentUid = documentData.invoice_uid;
@@ -1078,20 +1078,20 @@ function generateFileName(documentType: DocumentType, documentData: any): string
         break;
       // Add other document types as needed
     }
-    
+
     // If we have a valid document UID, use it directly
     if (documentUid) {
       console.log(`Using document UID for filename: ${documentUid}.pdf`);
       return `${documentUid}.pdf`;
     }
-    
+
     // For documents without UIDs, use a fallback approach
     console.warn(`No document UID found for ${documentType}, using fallback ID`);
-    
+
     // Use the document ID or glide_row_id as fallback
     const fallbackId = documentData?.id || documentData?.glide_row_id || 'UNKNOWNID';
     const fallbackFilename = `${fallbackPrefix}${fallbackId}.pdf`;
-    
+
     console.log(`Using fallback filename: ${fallbackFilename}`);
     return fallbackFilename;
   } catch (error) {
@@ -1152,7 +1152,7 @@ serve(async (req: Request) => {
       // Build the url with the explicit project ID as per Glide sync pattern
       const pdfBackendUrl = `${supabaseUrl}/functions/v1/pdf-backend?project_id=${projectId}`;
       console.log(`Forwarding request to: ${pdfBackendUrl}`);
-      
+
       // Forward the request to pdf-backend with the same structure
       const response = await fetch(pdfBackendUrl, {
         method: 'POST',
@@ -1172,7 +1172,7 @@ serve(async (req: Request) => {
 
       // Get the response from pdf-backend and return it directly
       const pdfBackendResponse = await response.json();
-      
+
       // Return the response from pdf-backend directly
       console.log('Successfully forwarded request to pdf-backend and received response');
       return new Response(JSON.stringify(pdfBackendResponse), {
@@ -1182,7 +1182,7 @@ serve(async (req: Request) => {
     } catch (forwardingError) {
       // Handle any errors in the forwarding process
       console.error('Error forwarding request to pdf-backend:', forwardingError.message || forwardingError);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: `Error forwarding request to pdf-backend: ${forwardingError.message || forwardingError}`,
         message: 'This function is deprecated. Please use pdf-backend directly.'
       }), {
@@ -1193,7 +1193,7 @@ serve(async (req: Request) => {
   } catch (error) {
     // Handle errors in the main function setup (e.g., env vars, request parsing)
     console.error('Critical Function Error:', error.message || error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: `Critical Function Error: ${error.message}`,
       message: 'This function is deprecated. Please use pdf-backend directly.'
     }), {

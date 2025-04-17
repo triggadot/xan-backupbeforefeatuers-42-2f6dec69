@@ -69,7 +69,7 @@ export async function fetchFinancialMetrics() {
     const revenue = invoiceMetrics?.[0]?.total_invoice_amount || 0;
     const expenses = purchaseMetrics?.[0]?.total_po_amount || 0;
     const profit = revenue - expenses;
-    
+
     // Also get paid/unpaid details which can be shown in the UI
     const paidInvoices = invoiceMetrics?.[0]?.total_payments_received || 0;
     const unpaidInvoices = invoiceMetrics?.[0]?.total_outstanding_balance || 0;
@@ -195,22 +195,22 @@ export async function fetchBusinessMetrics() {
       total_payments_made: number;
       total_purchase_balance: number;
     }
-    
+
     // Use type assertion to provide proper typing
     const stats = (businessStats?.[0] || {}) as BusinessStats;
-    
+
     // Calculate month-to-date and previous month revenue
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const firstDayOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastDayOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-    
+
     // Get current month revenue
     const { data: currentMonthData, error: currentMonthError } = await supabase
       .from('gl_invoices')
       .select('total_amount')
-      .gte('invoice_order_date', firstDayOfMonth.toISOString())
-      .lte('invoice_order_date', today.toISOString());
+      .gte('date_of_invoicefirstDayOfMonth.toISOString())
+      .lte('date_of_invoicetoday.toISOString());
 
     if (currentMonthError) {
       console.error('Error fetching current month invoices:', currentMonthError);
@@ -220,8 +220,8 @@ export async function fetchBusinessMetrics() {
     const { data: lastMonthData, error: lastMonthError } = await supabase
       .from('gl_invoices')
       .select('total_amount')
-      .gte('invoice_order_date', firstDayOfLastMonth.toISOString())
-      .lte('invoice_order_date', lastDayOfLastMonth.toISOString());
+      .gte('date_of_invoicefirstDayOfLastMonth.toISOString())
+      .lte('date_of_invoicelastDayOfLastMonth.toISOString());
 
     if (lastMonthError) {
       console.error('Error fetching last month invoices:', lastMonthError);
@@ -231,14 +231,14 @@ export async function fetchBusinessMetrics() {
     const currentMonthRevenue = currentMonthData?.reduce(
       (sum, invoice) => sum + (invoice.total_amount || 0), 0
     ) || 0;
-    
+
     const lastMonthRevenue = lastMonthData?.reduce(
       (sum, invoice) => sum + (invoice.total_amount || 0), 0
     ) || 0;
-    
+
     // Calculate growth rate
-    const growthRate = lastMonthRevenue > 0 
-      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+    const growthRate = lastMonthRevenue > 0
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
       : currentMonthRevenue > 0 ? 100 : 0;
 
     return {
@@ -260,4 +260,4 @@ export async function fetchBusinessMetrics() {
       totalVendors: 0
     };
   }
-} 
+}

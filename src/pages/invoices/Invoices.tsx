@@ -39,15 +39,15 @@ const Invoices = () => {
   };
 
   const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch = 
+    const matchesSearch =
       invoice.rowid_accounts?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.glide_row_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.id?.toString().includes(searchTerm);
-    
-    const matchesStatus = 
-      selectedStatus === 'all' || 
+
+    const matchesStatus =
+      selectedStatus === 'all' ||
       invoice.payment_status?.toLowerCase() === selectedStatus.toLowerCase();
-    
+
     return matchesSearch && matchesStatus;
   }).sort((a, b) => {
     if (!sortColumn) return 0;
@@ -64,8 +64,8 @@ const Invoices = () => {
     } else if (aValue > bValue) {
       comparison = 1;
     }
-    
-    if (sortColumn === 'invoice_order_date') {
+
+    if (sortColumn === 'date_of_invoice{
       const dateA = aValue ? new Date(aValue).getTime() : 0;
       const dateB = bValue ? new Date(bValue).getTime() : 0;
       comparison = dateA - dateB;
@@ -116,7 +116,7 @@ const Invoices = () => {
         </div>
         <div className="flex gap-2">
           {/* Preline UI Button for Export */}
-          <button 
+          <button
             type="button"
             className="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
             onClick={handleExportPDF}
@@ -124,10 +124,10 @@ const Invoices = () => {
             <DownloadIcon className="h-4 w-4" />
             Export
           </button>
-          
+
           {/* Preline UI Button for New Invoice */}
           <Link to="/invoices/new">
-            <button 
+            <button
               type="button"
               className="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
             >
@@ -180,9 +180,9 @@ const Invoices = () => {
 
           {/* Invoice List */}
           <div className="mt-6">
-            <InvoiceList 
-              invoices={filteredInvoices} 
-              isLoading={isLoading} 
+            <InvoiceList
+              invoices={filteredInvoices}
+              isLoading={isLoading}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSort={handleSort}

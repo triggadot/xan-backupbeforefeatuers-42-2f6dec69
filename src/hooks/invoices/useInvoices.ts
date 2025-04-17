@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Invoice, InvoiceWithAccount, Account } from '@/types/invoice';
 import { supabase } from '@/integrations/supabase/client';
+import { Invoice, InvoiceWithAccount } from '@/types/invoice';
+import { useEffect, useState } from 'react';
 
 interface UseInvoicesReturn {
   invoices: InvoiceWithAccount[];
@@ -42,7 +42,7 @@ export function useInvoices(): UseInvoicesReturn {
           id: invoice.id,
           glide_row_id: invoice.glide_row_id,
           rowid_accounts: invoice.rowid_accounts,
-          invoice_order_date: invoice.invoice_order_date,
+          date_of_invoicenvoice.datdate_of_invoice
           created_timestamp: invoice.created_timestamp,
           submitted_timestamp: invoice.submitted_timestamp,
           processed: invoice.processed,
@@ -73,7 +73,7 @@ export function useInvoices(): UseInvoicesReturn {
         // Don't throw here, we can still return invoices without account data
       } else if (accountData) {
         console.log("Account data:", accountData);
-        
+
         // Create a lookup map for accounts by glide_row_id
         const accountMap = new Map();
         accountData.forEach((account: any) => {
@@ -111,7 +111,7 @@ export function useInvoices(): UseInvoicesReturn {
         // Don't throw here, we can still return invoices without lines
       } else if (lineData) {
         console.log("Invoice line data:", lineData);
-        
+
         // Create a lookup map for lines by rowid_invoices (glide_row_id of invoice)
         const linesByInvoice = new Map();
         lineData.forEach((line: any) => {
@@ -179,7 +179,7 @@ export function useInvoices(): UseInvoicesReturn {
 
       // Refresh the invoice list
       fetchInvoices();
-      
+
       return data as Invoice;
     } catch (err: any) {
       console.error('Error in createInvoice:', err);
@@ -203,7 +203,7 @@ export function useInvoices(): UseInvoicesReturn {
 
       // Refresh the invoice list
       fetchInvoices();
-      
+
       return data as Invoice;
     } catch (err: any) {
       console.error('Error in updateInvoice:', err);
@@ -225,7 +225,7 @@ export function useInvoices(): UseInvoicesReturn {
 
       // Refresh the invoice list
       fetchInvoices();
-      
+
       return true;
     } catch (err: any) {
       console.error('Error in deleteInvoice:', err);
@@ -245,7 +245,7 @@ export function useInvoices(): UseInvoicesReturn {
         console.error('Error fetching invoice by ID:', error);
         throw new Error(`Error fetching invoice by ID: ${error.message}`);
       }
-      
+
       return data as Invoice;
     } catch (err: any) {
       console.error('Error in getInvoiceById:', err);

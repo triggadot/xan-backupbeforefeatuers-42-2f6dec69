@@ -1,8 +1,8 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Estimate } from '@/types/estimates/estimate';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Helper function to ensure status is a valid enum value
 const validateStatus = (status: string): 'pending' | 'draft' | 'converted' => {
@@ -15,16 +15,16 @@ const validateStatus = (status: string): 'pending' | 'draft' | 'converted' => {
 // Helper function to convert Date objects to ISO strings
 const convertDatesToISOString = (data: any): any => {
   if (!data) return data;
-  
+
   const result = { ...data };
-  
+
   // Convert Date objects to strings
   Object.keys(result).forEach(key => {
     if (result[key] instanceof Date) {
       result[key] = result[key].toISOString();
     }
   });
-  
+
   return result;
 };
 
@@ -37,13 +37,13 @@ export function useEstimateMutation() {
       try {
         // Create a unique glide_row_id if not provided
         const glideRowId = data.glide_row_id || `EST-${Date.now()}`;
-        
+
         // Ensure status is a valid enum value
         const validStatus = validateStatus(data.status || 'draft');
 
         // Convert Date objects to strings and prepare data
         const convertedData = convertDatesToISOString(data);
-        
+
         const estimateData = {
           ...convertedData,
           glide_row_id: glideRowId,
@@ -52,15 +52,15 @@ export function useEstimateMutation() {
           total_credits: data.total_credits || 0,
           balance: data.balance || 0
         };
-        
+
         const { data: result, error } = await supabase
           .from('gl_estimates')
           .insert([estimateData])
           .select()
           .single();
-          
+
         if (error) throw error;
-        
+
         // Construct a valid Estimate object
         const newEstimate: Estimate = {
           id: result.id,
@@ -81,12 +81,12 @@ export function useEstimateMutation() {
           created_at: result.created_at,
           updated_at: result.updated_at
         };
-        
+
         toast({
           title: 'Success',
           description: 'Estimate created successfully',
         });
-        
+
         return newEstimate;
       } catch (err) {
         console.error('Error creating estimate:', err);
@@ -111,19 +111,19 @@ export function useEstimateMutation() {
         if (updateData.status) {
           updateData.status = validateStatus(updateData.status);
         }
-        
+
         // Convert Date objects to strings
         const convertedData = convertDatesToISOString(updateData);
-        
+
         const { data: result, error } = await supabase
           .from('gl_estimates')
           .update(convertedData)
           .eq('id', id)
           .select()
           .single();
-          
+
         if (error) throw error;
-        
+
         // Construct a valid Estimate object
         const updatedEstimate: Estimate = {
           id: result.id,
@@ -144,12 +144,12 @@ export function useEstimateMutation() {
           created_at: result.created_at,
           updated_at: result.updated_at
         };
-        
+
         toast({
           title: 'Success',
           description: 'Estimate updated successfully',
         });
-        
+
         return updatedEstimate;
       } catch (err) {
         console.error('Error updating estimate:', err);
@@ -174,14 +174,14 @@ export function useEstimateMutation() {
           .from('gl_estimates')
           .delete()
           .eq('id', id);
-          
+
         if (error) throw error;
-        
+
         toast({
           title: 'Success',
           description: 'Estimate deleted successfully',
         });
-        
+
         return true;
       } catch (err) {
         console.error('Error deleting estimate:', err);
@@ -207,36 +207,36 @@ export function useEstimateMutation() {
           .select('*')
           .eq('id', id)
           .single();
-          
+
         if (estimateError) throw estimateError;
-        
+
         // Create a new invoice ID
         const invoiceGlideId = `INV-${Date.now()}`;
-        
+
         // Create the invoice
         const { data: invoice, error: invoiceError } = await supabase
           .from('gl_invoices')
           .insert({
             glide_row_id: invoiceGlideId,
             rowid_accounts: estimate.rowid_accounts,
-            invoice_order_date: new Date().toISOString(),
+            date_of_invoiceew Date().toISOString(),
             notes: 'Converted from estimate #' + estimate.glide_row_id,
             payment_status: 'draft',
             processed: false
           })
           .select()
           .single();
-          
+
         if (invoiceError) throw invoiceError;
-        
+
         // Get estimate line items
         const { data: estimateLines, error: linesError } = await supabase
           .from('gl_estimate_lines')
           .select('*')
           .eq('rowid_estimates', estimate.glide_row_id);
-          
+
         if (linesError) throw linesError;
-        
+
         // Add line items to the invoice
         if (estimateLines && estimateLines.length > 0) {
           const invoiceLines = estimateLines.map(line => ({
@@ -249,14 +249,14 @@ export function useEstimateMutation() {
             line_total: line.line_total,
             product_sale_note: line.product_sale_note
           }));
-          
+
           const { error: insertLinesError } = await supabase
             .from('gl_invoice_lines')
             .insert(invoiceLines);
-            
+
           if (insertLinesError) throw insertLinesError;
         }
-        
+
         // Update the estimate status to converted and link to the invoice
         const { error: updateError } = await supabase
           .from('gl_estimates')
@@ -265,14 +265,14 @@ export function useEstimateMutation() {
             rowid_invoices: invoiceGlideId
           })
           .eq('id', id);
-          
+
         if (updateError) throw updateError;
-        
+
         toast({
           title: 'Success',
           description: 'Estimate converted to invoice successfully',
         });
-        
+
         return { invoiceId: invoice.id, invoiceGlideId };
       } catch (err) {
         console.error('Error converting estimate to invoice:', err);

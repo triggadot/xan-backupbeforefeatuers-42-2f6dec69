@@ -22,13 +22,13 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
 
   // Calculate subtotal if tax information is available
   const subtotal = invoice.total_amount || 0;
-  
+
   // Calculate item count
   const itemCount = invoice.lines?.length || 0;
-  
+
   // Format invoice number
   const invoiceNumber = invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`;
-  
+
   return (
     <div className="space-y-6">
       {/* Navigation header */}
@@ -40,7 +40,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
           </Button>
         </Link>
       </div>
-      
+
       <Card className="w-full">
         <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
           <div className="space-y-1">
@@ -50,22 +50,22 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <CalendarIcon className="h-4 w-4" />
-              <span className="text-sm">{formatDate(invoice.invoice_order_date)}</span>
+              <span className="text-sm">{formatDate(invoice.date_of_invoice/span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <InvoiceStatusBadge status={invoice.payment_status as any} />
-            <PDFActions 
-              documentType={DocumentType.INVOICE} 
-              document={invoice} 
-              variant="outline" 
-              size="sm" 
-              showLabels={true} 
-              onPDFGenerated={url => setPdfUrl(url)} 
+            <PDFActions
+              documentType={DocumentType.INVOICE}
+              document={invoice}
+              variant="outline"
+              size="sm"
+              showLabels={true}
+              onPDFGenerated={url => setPdfUrl(url)}
             />
           </div>
         </CardHeader>
-        
+
         <CardContent className="pt-6">
           {/* Customer Information */}
           <div className="grid grid-cols-2 gap-6 mb-6">
@@ -127,18 +127,18 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
               </span>
               <AmountDisplay amount={subtotal} />
             </div>
-            
+
             <div className="flex justify-between">
               <span className="text-gray-500 font-medium">Paid</span>
               <AmountDisplay amount={invoice.total_paid || 0} variant={invoice.total_paid ? 'success' : 'default'} />
             </div>
-            
+
             <div className="flex justify-between font-bold pt-2 border-t">
               <span>Balance</span>
-              <AmountDisplay 
-                amount={invoice.balance || 0} 
-                variant={invoice.balance === 0 ? 'success' : invoice.balance > 0 ? 'destructive' : 'default'} 
-                className="font-bold" 
+              <AmountDisplay
+                amount={invoice.balance || 0}
+                variant={invoice.balance === 0 ? 'success' : invoice.balance > 0 ? 'destructive' : 'default'}
+                className="font-bold"
               />
             </div>
           </div>

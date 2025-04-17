@@ -1,13 +1,13 @@
 /**
  * PDF Utility Type Definitions
- * 
+ *
  * This file contains TypeScript type definitions for the PDF utility functions
  * used throughout the application for generating, storing, and managing PDFs.
- * 
+ *
  * @deprecated Use types from pdf.unified.ts instead for all new development.
  * This file will be removed in a future update. All new code should use the
  * standardized types and interfaces from pdf.unified.ts.
- * 
+ *
  * MIGRATION GUIDE:
  * - Import DocumentType from pdf.unified.ts instead of pdf-utils.d.ts
  * - Use the standardized interfaces in pdf.unified.ts for document types
@@ -70,7 +70,7 @@ export interface BaseDocument {
  */
 export interface Invoice extends BaseDocument {
   invoice_uid: string;
-  invoice_order_date: string | Date;
+  date_of_invoice
   rowid_accounts?: string;
   total_amount?: number;
 }
@@ -157,7 +157,7 @@ export interface DocumentSummary {
 
 /**
  * Generates a PDF for an invoice
- * 
+ *
  * @param invoice - The invoice data to generate a PDF for
  * @returns A jsPDF document instance or null if generation fails
  */
@@ -165,7 +165,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF | null;
 
 /**
  * Generates a PDF for a purchase order
- * 
+ *
  * @param purchaseOrder - The purchase order data to generate a PDF for
  * @returns A jsPDF document instance or null if generation fails
  */
@@ -173,7 +173,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF | 
 
 /**
  * Generates a PDF for an estimate
- * 
+ *
  * @param estimate - The estimate data to generate a PDF for
  * @returns A jsPDF document instance or null if generation fails
  */
@@ -181,11 +181,11 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF | null;
 
 /**
  * Generates a PDF based on document type
- * 
+ *
  * @param documentType - The type of document to generate a PDF for
  * @param document - The document data
  * @returns A jsPDF document instance or null if generation fails
- * 
+ *
  * @example
  * ```typescript
  * const pdf = generatePDF('invoice', invoiceData);
@@ -201,12 +201,12 @@ export function generatePDF(
 
 /**
  * Uploads a PDF to Supabase storage
- * 
+ *
  * @param doc - The jsPDF document to upload
  * @param folderName - The folder to store the PDF in
  * @param fileName - The name to give the PDF file
  * @returns Promise resolving to the URL of the uploaded PDF or null if upload fails
- * 
+ *
  * @example
  * ```typescript
  * const pdf = generateInvoicePDF(invoice);
@@ -224,7 +224,7 @@ export function uploadPDFToStorage(
 
 /**
  * Generates and stores a PDF for an invoice
- * 
+ *
  * @param invoice - The invoice data
  * @param saveLocally - Whether to also save the PDF locally
  * @returns Promise resolving to the URL of the uploaded PDF or null if generation/upload fails
@@ -236,7 +236,7 @@ export function generateAndStoreInvoicePDF(
 
 /**
  * Generates and stores a PDF for a purchase order
- * 
+ *
  * @param purchaseOrder - The purchase order data
  * @param saveLocally - Whether to also save the PDF locally
  * @returns Promise resolving to the URL of the uploaded PDF or null if generation/upload fails
@@ -248,7 +248,7 @@ export function generateAndStorePurchaseOrderPDF(
 
 /**
  * Generates and stores a PDF for an estimate
- * 
+ *
  * @param estimate - The estimate data
  * @param saveLocally - Whether to also save the PDF locally
  * @returns Promise resolving to the URL of the uploaded PDF or null if generation/upload fails
@@ -260,12 +260,12 @@ export function generateAndStoreEstimatePDF(
 
 /**
  * Updates a document's PDF link in the database
- * 
+ *
  * @param table - The database table to update
  * @param id - The ID of the document to update
  * @param pdfUrl - The URL of the PDF to store
  * @returns Promise resolving to a boolean indicating success
- * 
+ *
  * @example
  * ```typescript
  * const success = await updatePDFLinkInDatabase(
@@ -286,15 +286,15 @@ export function updatePDFLinkInDatabase(
 
 /**
  * Generates and stores a PDF for any supported document type
- * 
+ *
  * This is the main function to use for PDF generation as it handles
  * the entire workflow of generating, storing, and updating the database.
- * 
+ *
  * @param type - The type of document to generate a PDF for
  * @param data - The document data
  * @param saveLocally - Whether to also save the PDF locally
  * @returns Promise resolving to the URL of the uploaded PDF or null if generation/upload fails
- * 
+ *
  * @example
  * ```typescript
  * // Generate and store an invoice PDF
@@ -302,7 +302,7 @@ export function updatePDFLinkInDatabase(
  * if (pdfUrl) {
  *   console.log('PDF generated and stored at:', pdfUrl);
  * }
- * 
+ *
  * // Generate, store, and download a purchase order PDF
  * const pdfUrl = await generateAndStorePDF('purchaseOrder', purchaseOrder, true);
  * ```
@@ -315,7 +315,7 @@ export function generateAndStorePDF(
 
 /**
  * Creates a batch PDF generation job
- * 
+ *
  * @param documentType - The type of documents to generate PDFs for
  * @param documentIds - Array of document IDs to generate PDFs for
  * @returns Promise resolving to the created batch job
@@ -327,7 +327,7 @@ export function createPDFBatchJob(
 
 /**
  * Processes a PDF batch job
- * 
+ *
  * @param job - The batch job to process
  * @returns Promise resolving to the updated batch job with results
  */
@@ -335,7 +335,7 @@ export function processPDFBatchJob(job: PDFBatchJob): Promise<PDFBatchJob>;
 
 /**
  * Gets the status of a PDF batch job
- * 
+ *
  * @param jobId - The ID of the batch job to check
  * @returns Promise resolving to the current status of the batch job
  */
@@ -343,7 +343,7 @@ export function getPDFBatchJobStatus(jobId: string): Promise<PDFBatchJob | null>
 
 /**
  * Creates a ZIP file containing multiple PDFs
- * 
+ *
  * @param pdfUrls - Array of PDF URLs to include in the ZIP
  * @param zipFileName - Name for the ZIP file
  * @returns Promise resolving to a Blob containing the ZIP file

@@ -147,15 +147,15 @@ export const documentTypeAliases: Record<string, DocumentType> = {
  * Standardizes document type format for internal processing.
  * Converts various input strings (case-insensitive, with/without plurals/hyphens)
  * into a standard DocumentType enum value using the documentTypeAliases map.
- * 
+ *
  * @param {string} type - The document type string to normalize (case-insensitive).
  * @returns {DocumentType} Normalized DocumentType enum value.
  * @throws {Error} If the type is empty, null, or not found in the aliases map.
- * 
+ *
  * @example
  * const normalized = normalizeDocumentType('Invoices');
  * // normalized will be DocumentType.INVOICE
- * 
+ *
  * @example
  * normalizeDocumentType('purchase-order');
  * // returns DocumentType.PURCHASE_ORDER
@@ -166,17 +166,17 @@ export function normalizeDocumentType(type: string): DocumentType {
   }
 
   const normalizedType = type.toLowerCase().trim();
-  
+
   // Check if it's a direct enum value
   if (Object.values(DocumentType).includes(normalizedType as DocumentType)) {
     return normalizedType as DocumentType;
   }
-  
+
   // Look up in aliases
   if (documentTypeAliases[normalizedType]) {
     return documentTypeAliases[normalizedType];
   }
-  
+
   // Not found
   throw new Error(`Unsupported document type: ${type}`);
 }
@@ -259,7 +259,7 @@ export interface Invoice {
   glide_row_id?: string;
   rowid_accounts?: string;
   invoice_uid?: string;
-  invoice_order_date?: string;
+  date_of_invoiceing;
   notes?: string;
   total_amount?: number;
   total_paid?: number;

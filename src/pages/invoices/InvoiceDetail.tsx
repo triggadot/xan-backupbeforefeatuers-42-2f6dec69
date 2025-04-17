@@ -34,7 +34,7 @@ const InvoiceDetailPage = () => {
   const compatibleInvoice: NewInvoiceWithAccount = {
     id: invoice.id,
     glide_row_id: invoice.glide_row_id || '',
-    invoice_order_date: invoice.invoiceDate?.toISOString() || null,
+    date_of_invoicenvoice.invoiceDate?.toISOString() || null,
     created_timestamp: invoice.createdAt?.toISOString() || null,
     submitted_timestamp: invoice.createdAt?.toISOString() || null,
     user_email: null,

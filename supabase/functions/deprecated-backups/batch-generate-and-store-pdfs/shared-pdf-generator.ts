@@ -2,7 +2,7 @@
  * Shared PDF generation logic for Supabase edge functions
  * This is a direct adaptation of the frontend shared-pdf-generator.ts
  * with minimal changes to work in the Deno environment
- * 
+ *
  * IMPORTANT: This file contains duplicated code from the frontend's shared-pdf-generator.ts
  * Any changes to PDF generation logic should be synchronized between both files
  */
@@ -39,7 +39,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     // Invoice details
     doc.setFontSize(10);
     doc.text(`Invoice #: ${invoice.invoice_uid || 'Not Assigned'}`, 20, 60);
-    doc.text(`Date: ${formatDate(invoice.invoice_order_date)}`, 20, 65);
+    doc.text(`Date: ${formatDate(invoice.date_of_invoice, 20, 65);
     doc.text(`Status: ${invoice.status || 'N/A'}`, 20, 70);
 
     // Customer details
@@ -62,7 +62,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -71,10 +71,10 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     ];
 
     const rows = invoice.lines?.map(line => {
-      const productName = line.product_name_display || 
-                          line.renamed_product_name || 
-                          (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
-                          
+      const productName = line.product_name_display ||
+        line.renamed_product_name ||
+        (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
+
       return {
         item: productName,
         quantity: line.quantity || 0,
@@ -106,35 +106,35 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
 
     // Summary and totals
     const finalY = (doc as any).lastAutoTable.finalY || 150;
-    
+
     // Shipping
     if (invoice.shipping_cost) {
       doc.text('Shipping:', 140, finalY + 10);
       doc.text(formatCurrency(invoice.shipping_cost), 180, finalY + 10, { align: 'right' });
     }
-    
+
     // Total
     doc.setFontSize(12);
     doc.text('Total:', 140, finalY + 20);
     doc.text(formatCurrency(invoice.total_amount), 180, finalY + 20, { align: 'right' });
-    
+
     // Paid
     doc.setFontSize(10);
     doc.text('Paid:', 140, finalY + 30);
     doc.text(formatCurrency(invoice.total_paid), 180, finalY + 30, { align: 'right' });
-    
+
     // Balance
     doc.setFontSize(12);
     doc.text('Balance Due:', 140, finalY + 40);
     doc.text(formatCurrency(invoice.balance), 180, finalY + 40, { align: 'right' });
-    
+
     // Payment details
     if (invoice.customer_payments && invoice.customer_payments.length > 0) {
       startY = finalY + 50;
       doc.setFontSize(12);
       doc.text('Payment History', 20, startY);
       doc.setFontSize(10);
-      
+
       autoTable(doc, {
         startY: startY + 5,
         head: [['Date', 'Method', 'Amount', 'Notes']],
@@ -156,7 +156,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
         margin: { left: 20, right: 20 }
       });
     }
-    
+
     // Notes
     if (invoice.invoice_notes) {
       const notesY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : finalY + 50;
@@ -178,7 +178,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
         { align: 'center' }
       );
     }
-    
+
     return doc;
   } catch (error) {
     console.error('Error generating invoice PDF:', error);
@@ -230,7 +230,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -240,7 +240,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
 
     const rows = purchaseOrder.lineItems?.map(line => {
       const productName = line.display_name || line.new_product_name || line.vendor_product_name || 'Unknown Product';
-      
+
       return {
         item: productName,
         quantity: line.quantity || line.total_units || 0,
@@ -272,36 +272,36 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
 
     // Summary and totals
     const finalY = (doc as any).lastAutoTable.finalY || 150;
-    
+
     // Shipping
     if (purchaseOrder.shipping_cost) {
       doc.text('Shipping:', 140, finalY + 10);
       doc.text(formatCurrency(purchaseOrder.shipping_cost), 180, finalY + 10, { align: 'right' });
     }
-    
+
     // Total
     doc.setFontSize(12);
     doc.text('Total:', 140, finalY + 20);
     doc.text(formatCurrency(purchaseOrder.total_amount), 180, finalY + 20, { align: 'right' });
-    
+
     // Paid
     const totalPaid = purchaseOrder.vendorPayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
     doc.setFontSize(10);
     doc.text('Paid:', 140, finalY + 30);
     doc.text(formatCurrency(totalPaid), 180, finalY + 30, { align: 'right' });
-    
+
     // Balance
     doc.setFontSize(12);
     doc.text('Balance Due:', 140, finalY + 40);
     doc.text(formatCurrency(purchaseOrder.balance || (purchaseOrder.total_amount || 0) - totalPaid), 180, finalY + 40, { align: 'right' });
-    
+
     // Payment details
     if (purchaseOrder.vendorPayments && purchaseOrder.vendorPayments.length > 0) {
       startY = finalY + 50;
       doc.setFontSize(12);
       doc.text('Payment History', 20, startY);
       doc.setFontSize(10);
-      
+
       autoTable(doc, {
         startY: startY + 5,
         head: [['Date', 'Method', 'Amount', 'Notes']],
@@ -323,7 +323,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
         margin: { left: 20, right: 20 }
       });
     }
-    
+
     // Notes
     if (purchaseOrder.po_notes) {
       const notesY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : finalY + 50;
@@ -345,7 +345,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
         { align: 'center' }
       );
     }
-    
+
     return doc;
   } catch (error) {
     console.error('Error generating purchase order PDF:', error);
@@ -364,7 +364,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
   try {
     // Determine if this is a sample
     const documentTitle = estimate.is_a_sample === true ? 'SAMPLE' : 'ESTIMATE';
-    
+
     // Company letterhead
     doc.setFontSize(18);
     doc.text(documentTitle, 105, 20, { align: 'center' });
@@ -400,7 +400,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -409,9 +409,9 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     ];
 
     const rows = estimate.lines?.map(line => {
-      const productName = line.product_name_display || 
-                          (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
-                          
+      const productName = line.product_name_display ||
+        (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
+
       return {
         item: productName,
         quantity: line.quantity || 0,
@@ -443,32 +443,32 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
 
     // Summary and totals
     const finalY = (doc as any).lastAutoTable.finalY || 150;
-    
+
     // Total
     doc.setFontSize(12);
     doc.text('Total:', 140, finalY + 20);
     doc.text(formatCurrency(estimate.total_amount), 180, finalY + 20, { align: 'right' });
-    
+
     // Credits
     const totalCredits = estimate.customer_credits?.reduce((sum, credit) => sum + (credit.payment_amount || 0), 0) || 0;
     if (totalCredits > 0) {
       doc.setFontSize(10);
       doc.text('Credits:', 140, finalY + 30);
       doc.text(formatCurrency(totalCredits), 180, finalY + 30, { align: 'right' });
-      
+
       // Balance
       doc.setFontSize(12);
       doc.text('Balance:', 140, finalY + 40);
       doc.text(formatCurrency(estimate.balance || (estimate.total_amount || 0) - totalCredits), 180, finalY + 40, { align: 'right' });
     }
-    
+
     // Credits details
     if (estimate.customer_credits && estimate.customer_credits.length > 0) {
       startY = finalY + 50;
       doc.setFontSize(12);
       doc.text('Credit History', 20, startY);
       doc.setFontSize(10);
-      
+
       autoTable(doc, {
         startY: startY + 5,
         head: [['Date', 'Type', 'Amount', 'Notes']],
@@ -490,7 +490,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
         margin: { left: 20, right: 20 }
       });
     }
-    
+
     // Notes
     if (estimate.estimate_notes) {
       const notesY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : finalY + 50;
@@ -512,7 +512,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
         { align: 'center' }
       );
     }
-    
+
     return doc;
   } catch (error) {
     console.error('Error generating estimate PDF:', error);
@@ -562,7 +562,7 @@ export function generateFilename(
   try {
     let prefix = 'DOC';
     let uid = '';
-    
+
     switch (documentType) {
       case 'invoice':
         prefix = 'INV';
@@ -578,12 +578,12 @@ export function generateFilename(
         uid = estimate.estimate_uid || '';
         break;
     }
-    
+
     // If we have a UID, use it
     if (uid) {
       return `${uid}.pdf`;
     }
-    
+
     // Otherwise use a fallback name with the ID
     return `${prefix}-${data.id}.pdf`;
   } catch (error) {
@@ -602,11 +602,11 @@ export function pdfToUint8Array(doc: jsPDF): Uint8Array {
     const base64 = doc.output('datauristring').split(',')[1];
     const binary = atob(base64);
     const array = new Uint8Array(binary.length);
-    
+
     for (let i = 0; i < binary.length; i++) {
       array[i] = binary.charCodeAt(i);
     }
-    
+
     return array;
   } catch (error) {
     console.error('Error converting PDF to Uint8Array:', error);

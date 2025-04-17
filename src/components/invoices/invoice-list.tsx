@@ -1,6 +1,14 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { AmountDisplay } from "@/components/common/AmountDisplay";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -8,20 +16,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import { InvoiceWithAccount } from '@/types/invoices/invoice';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { AmountDisplay } from '@/components/common/AmountDisplay';
+} from "@/components/ui/table";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { InvoiceWithAccount } from "@/types/invoices/invoice";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface InvoiceListProps {
   invoices: InvoiceWithAccount[];
@@ -37,8 +36,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({
   onStatusFilter,
 }) => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -57,37 +56,42 @@ const InvoiceList: React.FC<InvoiceListProps> = ({
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'paid':
+      case "paid":
         return <Badge variant="success">{status.toUpperCase()}</Badge>;
-      case 'partial':
+      case "partial":
         return <Badge variant="warning">{status.toUpperCase()}</Badge>;
-      case 'unpaid':
+      case "unpaid":
         return <Badge variant="destructive">{status.toUpperCase()}</Badge>;
-      case 'credit':
+      case "credit":
         return <Badge variant="secondary">{status.toUpperCase()}</Badge>;
       default:
         return <Badge variant="secondary">{status.toUpperCase()}</Badge>;
     }
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
+  const filteredInvoices = invoices.filter((invoice) => {
     // Apply search term filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesAccount = invoice.gl_accounts?.account_name?.toLowerCase().includes(searchLower);
-      const matchesNumber = invoice.invoice_uid?.toLowerCase().includes(searchLower) ||
-                           invoice.id?.toLowerCase().includes(searchLower);
-      
+      const matchesAccount = invoice.gl_accounts?.account_name
+        ?.toLowerCase()
+        .includes(searchLower);
+      const matchesNumber =
+        invoice.invoice_uid?.toLowerCase().includes(searchLower) ||
+        invoice.id?.toLowerCase().includes(searchLower);
+
       if (!matchesAccount && !matchesNumber) {
         return false;
       }
     }
-    
+
     // Apply status filter
-    if (statusFilter !== 'all') {
-      return invoice.payment_status?.toLowerCase() === statusFilter.toLowerCase();
+    if (statusFilter !== "all") {
+      return (
+        invoice.payment_status?.toLowerCase() === statusFilter.toLowerCase()
+      );
     }
-    
+
     return true;
   });
 
@@ -124,7 +128,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({
             </SelectContent>
           </Select>
         </div>
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -148,22 +152,33 @@ const InvoiceList: React.FC<InvoiceListProps> = ({
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow 
+                  <TableRow
                     key={invoice.id}
                     className="cursor-pointer hover:bg-gray-50"
                     onClick={() => handleRowClick(invoice.id)}
                   >
-                    <TableCell className="font-medium">{invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`}</TableCell>
-                    <TableCell>{formatDate(invoice.invoice_order_date)}</TableCell>
-                    <TableCell>{invoice.gl_accounts?.account_name || 'N/A'}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(invoice.total_amount || 0)}</TableCell>
+                    <TableCell className="font-medium">
+                      {invoice.invoice_uid ||
+                        `INV-${invoice.id.substring(0, 6)}`}
+                    </TableCell>
+                    <TableCell>{formatDate(invoice.date_of_invoice)}</TableCell>
+                    <TableCell>
+                      {invoice.gl_accounts?.account_name || "N/A"}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <AmountDisplay 
-                        amount={invoice.balance || 0} 
-                        variant={(invoice.balance || 0) > 0 ? 'destructive' : 'success'}
+                      {formatCurrency(invoice.total_amount || 0)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AmountDisplay
+                        amount={invoice.balance || 0}
+                        variant={
+                          (invoice.balance || 0) > 0 ? "destructive" : "success"
+                        }
                       />
                     </TableCell>
-                    <TableCell>{getStatusBadge(invoice.payment_status || 'draft')}</TableCell>
+                    <TableCell>
+                      {getStatusBadge(invoice.payment_status || "draft")}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

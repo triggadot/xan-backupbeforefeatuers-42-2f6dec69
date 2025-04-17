@@ -39,7 +39,7 @@ export interface Invoice {
   id: string;
   glide_row_id?: string;
   invoice_uid?: string;
-  invoice_order_date?: string;
+  date_of_invoicestring;
   invoice_ship_date?: string;
   status?: string;
   total_amount?: number;
@@ -153,7 +153,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     // Invoice details
     doc.setFontSize(10);
     doc.text(`Invoice #: ${invoice.invoice_uid || 'Not Assigned'}`, 20, 60);
-    doc.text(`Date: ${formatDate(invoice.invoice_order_date)}`, 20, 65);
+    doc.text(`Date: ${formatDate(invoice.date_of_invoice, 20, 65);
     doc.text(`Status: ${invoice.status || 'N/A'}`, 20, 70);
 
     // Customer details
@@ -176,7 +176,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -185,10 +185,10 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     ];
 
     const rows = invoice.lines?.map(line => {
-      const productName = line.product_name_display || 
-                           line.renamed_product_name || 
+      const productName = line.product_name_display ||
+                           line.renamed_product_name ||
                           (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
-                           
+
       return {
         item: productName,
         quantity: line.quantity || 0,
@@ -212,18 +212,18 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
     doc.setFontSize(10);
     doc.text('Subtotal:', 140, finalY);
     doc.text(formatCurrency(invoice.total_amount || 0), 170, finalY, { align: 'right' });
-    
+
     if (invoice.shipping_cost) {
       doc.text('Shipping:', 140, finalY + 5);
       doc.text(formatCurrency(invoice.shipping_cost), 170, finalY + 5, { align: 'right' });
     }
-    
+
     doc.text('Total:', 140, finalY + 10);
     doc.text(formatCurrency(invoice.total_amount || 0), 170, finalY + 10, { align: 'right' });
-    
+
     doc.text('Amount Paid:', 140, finalY + 15);
     doc.text(formatCurrency(invoice.total_paid || 0), 170, finalY + 15, { align: 'right' });
-    
+
     doc.setFontSize(12);
     doc.text('Balance Due:', 140, finalY + 25);
     doc.text(formatCurrency(invoice.balance || 0), 170, finalY + 25, { align: 'right' });
@@ -233,17 +233,17 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
       doc.setFontSize(10);
       doc.text('Notes:', 20, finalY + 35);
       doc.setFontSize(9);
-      
+
       const textLines = doc.splitTextToSize(invoice.invoice_notes, 170);
       doc.text(textLines, 20, finalY + 40);
     }
 
     // Payment terms
     if (invoice.payment_terms) {
-      const termsY = invoice.invoice_notes ? 
-        finalY + 40 + (doc.splitTextToSize(invoice.invoice_notes, 170).length * 5) + 5 : 
+      const termsY = invoice.invoice_notes ?
+        finalY + 40 + (doc.splitTextToSize(invoice.invoice_notes, 170).length * 5) + 5 :
         finalY + 40;
-        
+
       doc.setFontSize(10);
       doc.text('Payment Terms:', 20, termsY);
       doc.setFontSize(9);
@@ -257,7 +257,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
       doc.setFontSize(10);
       doc.text(paymentTitle, 100, paymentY);
       paymentY += 5;
-      
+
       // Payment table columns
       const paymentColumns = [
         { header: 'Date', dataKey: 'date' },
@@ -265,7 +265,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
         { header: 'Amount', dataKey: 'amount' },
         { header: 'Note', dataKey: 'note' }
       ];
-      
+
       // Payment table rows
       const paymentRows = invoice.customer_payments.map(payment => ({
         date: formatShortDate(payment.date_of_payment),
@@ -273,7 +273,7 @@ export function generateInvoicePDF(invoice: Invoice): jsPDF {
         amount: formatCurrency(payment.payment_amount || 0),
         note: payment.payment_note || ''
       }));
-      
+
       autoTable(doc, {
         startY: paymentY,
         columns: paymentColumns,
@@ -336,7 +336,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -346,11 +346,11 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
 
     const rows = purchaseOrder.lineItems?.map(item => {
       // Product name display, with fallbacks
-      const productName = item.display_name || 
-                          item.new_product_name || 
-                          item.vendor_product_name || 
+      const productName = item.display_name ||
+                          item.new_product_name ||
+                          item.vendor_product_name ||
                           'Unknown Product';
-      
+
       return {
         item: productName,
         quantity: item.quantity || item.total_units || 0,
@@ -374,16 +374,16 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
     doc.setFontSize(10);
     doc.text('Subtotal:', 140, finalY);
     doc.text(formatCurrency(purchaseOrder.total_amount || 0), 170, finalY, { align: 'right' });
-    
+
     if (purchaseOrder.shipping_cost) {
       doc.text('Shipping:', 140, finalY + 5);
       doc.text(formatCurrency(purchaseOrder.shipping_cost), 170, finalY + 5, { align: 'right' });
     }
-    
+
     doc.setFontSize(12);
     doc.text('Total:', 140, finalY + 15);
     doc.text(formatCurrency(purchaseOrder.total_amount || 0), 170, finalY + 15, { align: 'right' });
-    
+
     // Balance
     doc.text('Balance:', 140, finalY + 25);
     doc.text(formatCurrency(purchaseOrder.balance || 0), 170, finalY + 25, { align: 'right' });
@@ -393,7 +393,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
       doc.setFontSize(10);
       doc.text('Notes:', 20, finalY + 35);
       doc.setFontSize(9);
-      
+
       const textLines = doc.splitTextToSize(purchaseOrder.po_notes, 170);
       doc.text(textLines, 20, finalY + 40);
     }
@@ -405,7 +405,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
       doc.setFontSize(10);
       doc.text(paymentTitle, 100, paymentY);
       paymentY += 5;
-      
+
       // Payment table columns
       const paymentColumns = [
         { header: 'Date', dataKey: 'date' },
@@ -413,7 +413,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
         { header: 'Amount', dataKey: 'amount' },
         { header: 'Note', dataKey: 'note' }
       ];
-      
+
       // Payment table rows
       const paymentRows = purchaseOrder.vendorPayments.map(payment => ({
         date: formatShortDate(payment.date),
@@ -421,7 +421,7 @@ export function generatePurchaseOrderPDF(purchaseOrder: PurchaseOrder): jsPDF {
         amount: formatCurrency(payment.amount || 0),
         note: payment.notes || ''
       }));
-      
+
       autoTable(doc, {
         startY: paymentY,
         columns: paymentColumns,
@@ -484,7 +484,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     // Line items
     doc.setFontSize(10);
     let startY = 100;
-    
+
     const columns = [
       { header: 'Item', dataKey: 'item' },
       { header: 'Quantity', dataKey: 'quantity' },
@@ -493,9 +493,9 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     ];
 
     const rows = estimate.lines?.map(line => {
-      const productName = line.product_name_display || 
+      const productName = line.product_name_display ||
                          (line.product ? (line.product.new_product_name || line.product.vendor_product_name) : 'Unknown Product');
-                           
+
       return {
         item: productName,
         quantity: line.quantity || 0,
@@ -519,7 +519,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
     doc.setFontSize(12);
     doc.text('Total Estimate:', 140, finalY);
     doc.text(formatCurrency(estimate.total_amount || 0), 170, finalY, { align: 'right' });
-    
+
     // Credits/Deposits
     if (estimate.customer_credits && estimate.customer_credits.length > 0) {
       const totalCredits = estimate.customer_credits.reduce((total, credit) => total + (credit.payment_amount || 0), 0);
@@ -528,7 +528,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
         doc.text(formatCurrency(totalCredits), 170, finalY + 10, { align: 'right' });
       }
     }
-    
+
     // Balance
     doc.text('Balance Due:', 140, finalY + 20);
     doc.text(formatCurrency(estimate.balance || 0), 170, finalY + 20, { align: 'right' });
@@ -538,7 +538,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
       doc.setFontSize(10);
       doc.text('Notes:', 20, finalY + 35);
       doc.setFontSize(9);
-      
+
       const textLines = doc.splitTextToSize(estimate.estimate_notes, 170);
       doc.text(textLines, 20, finalY + 40);
     }
@@ -562,7 +562,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
       doc.setFontSize(10);
       doc.text(paymentTitle, 100, paymentY);
       paymentY += 5;
-      
+
       // Payment table columns
       const paymentColumns = [
         { header: 'Date', dataKey: 'date' },
@@ -570,7 +570,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
         { header: 'Amount', dataKey: 'amount' },
         { header: 'Note', dataKey: 'note' }
       ];
-      
+
       // Payment table rows
       const paymentRows = estimate.customer_credits.map(credit => ({
         date: formatShortDate(credit.date_of_payment),
@@ -578,7 +578,7 @@ export function generateEstimatePDF(estimate: Estimate): jsPDF {
         amount: formatCurrency(credit.payment_amount || 0),
         note: credit.payment_note || ''
       }));
-      
+
       autoTable(doc, {
         startY: paymentY,
         columns: paymentColumns,
@@ -640,7 +640,7 @@ export function generateFilename(
     // Get the document UID based on document type
     let documentUid = null;
     let fallbackPrefix = 'DOC#';
-    
+
     switch (documentType) {
       case 'invoice':
         documentUid = (data as Invoice).invoice_uid;
@@ -655,15 +655,15 @@ export function generateFilename(
         fallbackPrefix = (data as Estimate).is_a_sample === true ? 'SMP#' : 'EST#';
         break;
     }
-    
+
     // If we have a valid document UID, use it directly
     if (documentUid) {
       return `${documentUid}.pdf`;
     }
-    
+
     // For documents without UIDs, use a fallback approach
     console.warn(`No document UID found for ${documentType}, using fallback ID`);
-    
+
     // Use the document ID or glide_row_id as fallback
     const fallbackId = data?.id || data?.glide_row_id || 'UNKNOWNID';
     return `${fallbackPrefix}${fallbackId}.pdf`;

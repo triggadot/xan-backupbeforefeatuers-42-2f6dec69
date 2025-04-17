@@ -71,7 +71,7 @@ export interface Product extends BaseEntity {
   imageUrl?: string;
   vendorName?: string;
   vendorId?: string;
-  
+
   // Additional fields for business logic
   isSample?: boolean;
   isFronted?: boolean;
@@ -133,7 +133,7 @@ export interface GlInvoice {
   glide_row_id: string;
   created_timestamp?: string;
   submitted_timestamp?: string;
-  invoice_order_date?: string;
+  date_of_invoicestring;
   processed?: boolean;
   notes?: string;
   doc_glideforeverlink?: string;

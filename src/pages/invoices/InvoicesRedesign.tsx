@@ -57,15 +57,15 @@ const InvoicesRedesign = () => {
   // Filter and sort invoices
   const filteredInvoices = invoices
     .filter((invoice) => {
-      const matchesSearch = 
+      const matchesSearch =
         invoice.rowid_accounts?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.glide_row_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.id?.toString().includes(searchTerm);
-      
-      const matchesStatus = 
-        selectedStatus === 'all' || 
+
+      const matchesStatus =
+        selectedStatus === 'all' ||
         invoice.payment_status?.toLowerCase() === selectedStatus.toLowerCase();
-      
+
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -80,8 +80,8 @@ const InvoicesRedesign = () => {
       } else if (aValue > bValue) {
         comparison = 1;
       }
-      
-      if (sortColumn === 'invoice_order_date' || sortColumn === 'created_at' || sortColumn === 'due_date') {
+
+      if (sortColumn === 'date_of_invoice' || sortColumn === 'created_at' || sortColumn === 'due_date') {
         const dateA = aValue ? new Date(aValue).getTime() : 0;
         const dateB = bValue ? new Date(bValue).getTime() : 0;
         comparison = dateA - dateB;
@@ -115,8 +115,8 @@ const InvoicesRedesign = () => {
   const totalPaid = paidInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
   const pendingInvoices = invoices.filter(invoice => ['unpaid', 'partial'].includes(invoice.payment_status || ''));
   const totalPending = pendingInvoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0);
-  const overdueInvoices = invoices.filter(invoice => 
-    ['unpaid', 'partial'].includes(invoice.payment_status || '') && 
+  const overdueInvoices = invoices.filter(invoice =>
+    ['unpaid', 'partial'].includes(invoice.payment_status || '') &&
     invoice.due_date && new Date(invoice.due_date) < new Date()
   );
   const totalOverdue = overdueInvoices.reduce((sum, invoice) => sum + (invoice.balance || 0), 0);
@@ -132,25 +132,25 @@ const InvoicesRedesign = () => {
   const monthlyData = (() => {
     const data: { month: string, Paid: number, Pending: number, Overdue: number }[] = [];
     const today = new Date();
-    
+
     // Create entries for the last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthKey = date.toLocaleString('default', { month: 'short' });
       data.push({ month: monthKey, Paid: 0, Pending: 0, Overdue: 0 });
     }
-    
+
     // Map to easily access month data
     const monthMap = new Map(data.map(item => [item.month, item]));
-    
+
     // Populate with actual invoice data
     invoices.forEach(invoice => {
       if (!invoice.created_at) return;
-      
+
       const invoiceDate = new Date(invoice.created_at);
       const monthKey = invoiceDate.toLocaleString('default', { month: 'short' });
       const monthData = monthMap.get(monthKey);
-      
+
       if (monthData) {
         if (invoice.payment_status === 'paid') {
           monthData.Paid += (invoice.total_amount || 0);
@@ -163,14 +163,14 @@ const InvoicesRedesign = () => {
         }
       }
     });
-    
+
     return data;
   })();
 
   // Function to render status badge
   const renderStatusBadge = (status: string | null | undefined) => {
     if (!status) return null;
-    
+
     const variants: Record<string, string> = {
       paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
       partial: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
@@ -178,7 +178,7 @@ const InvoicesRedesign = () => {
       draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
       credit: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     };
-    
+
     return (
       <Badge className={variants[status.toLowerCase()] || ''}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -254,7 +254,7 @@ const InvoicesRedesign = () => {
               </div>
             </SheetContent>
           </Sheet>
-          
+
           {/* Desktop action buttons */}
           <Button
             variant="outline"
@@ -265,7 +265,7 @@ const InvoicesRedesign = () => {
             <DownloadIcon className="h-4 w-4 mr-2" />
             Export
           </Button>
-          
+
           <Link to="/invoices/new">
             <Button size="sm">
               <PlusIcon className="h-4 w-4 mr-2" />
@@ -329,7 +329,7 @@ const InvoicesRedesign = () => {
                 {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} found
               </CardDescription>
             </div>
-            
+
             {/* Search & Filter - Desktop */}
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <div className="hidden md:block relative w-full sm:w-64">
@@ -341,7 +341,7 @@ const InvoicesRedesign = () => {
                   className="pl-9"
                 />
               </div>
-              
+
               <Select
                 value={selectedStatus}
                 onValueChange={setSelectedStatus}
@@ -358,7 +358,7 @@ const InvoicesRedesign = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               {/* Visualization Toggle */}
               <div className="hidden md:flex items-center space-x-2">
                 <Switch
@@ -377,7 +377,7 @@ const InvoicesRedesign = () => {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {/* Invoice Table */}
           <div className="rounded-md border">
@@ -385,9 +385,9 @@ const InvoicesRedesign = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort('invoice_order_date')}>
+                    <TableHead className="w-[120px] cursor-pointer" onClick={() => handleSort('date_of_invoice')}>
                       Date
-                      {sortColumn === 'invoice_order_date' && (
+                      {sortColumn === 'date_of_invoice' && (
                         <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </TableHead>
@@ -440,8 +440,8 @@ const InvoicesRedesign = () => {
                     filteredInvoices.map((invoice) => (
                       <TableRow key={invoice.id} className="group">
                         <TableCell className="font-medium">
-                          {invoice.invoice_order_date 
-                            ? new Date(invoice.invoice_order_date).toLocaleDateString() 
+                          {invoice.date_of_invoice
+                            ? new Date(invoice.date_of_invoice).toLocaleDateString()
                             : 'N/A'}
                         </TableCell>
                         <TableCell>

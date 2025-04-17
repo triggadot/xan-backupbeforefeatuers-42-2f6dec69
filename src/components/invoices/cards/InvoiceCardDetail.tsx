@@ -2,23 +2,23 @@
 import React, { useState } from 'react';
 import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  CreditCard, 
-  FileText, 
-  DollarSign, 
-  Share2, 
-  Printer, 
+import {
+  ArrowLeft,
+  Calendar,
+  CreditCard,
+  FileText,
+  DollarSign,
+  Share2,
+  Printer,
   Download,
   User
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,14 +43,14 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
   const [activeTab, setActiveTab] = useState('details');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
-  
+
   // Format invoice number
   const invoiceNumber = invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`;
-  
+
   // Calculate values
   const subtotal = invoice.total_amount || 0;
   const itemCount = invoice.lines?.length || 0;
-  
+
   return (
     <div className="space-y-6">
       {/* Header with navigation and actions */}
@@ -61,26 +61,26 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
             Back to Invoices
           </Button>
         </Link>
-        
+
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setPaymentsOpen(true)}
           >
             <CreditCard className="mr-2 h-4 w-4" />
             Payments
           </Button>
-          
-          <PDFActions 
+
+          <PDFActions
             documentType={DocumentType.INVOICE}
-            document={invoice} 
-            variant="outline" 
-            size="sm" 
-            showLabels={true} 
-            onPDFGenerated={url => setPdfUrl(url)} 
+            document={invoice}
+            variant="outline"
+            size="sm"
+            showLabels={true}
+            onPDFGenerated={url => setPdfUrl(url)}
           />
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -105,7 +105,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
           </DropdownMenu>
         </div>
       </div>
-      
+
       <Card className="shadow-md">
         <CardHeader className="border-b pb-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -116,14 +116,14 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                <span className="text-sm">{formatDate(invoice.invoice_order_date)}</span>
+                <span className="text-sm">{formatDate(invoice.date_of_invoice/span>
               </div>
             </div>
             <div className="flex flex-col items-start md:items-end gap-2">
               <InvoiceStatusBadge status={invoice.payment_status as any} size="default" />
               <div className="text-sm text-muted-foreground">
-                {invoice.balance > 0 
-                  ? `Balance: ${formatCurrency(invoice.balance)}` 
+                {invoice.balance > 0
+                  ? `Balance: ${formatCurrency(invoice.balance)}`
                   : 'Paid in Full'}
               </div>
             </div>
@@ -138,7 +138,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
               <TabsTrigger value="history">Payment History</TabsTrigger>
             </TabsList>
           </div>
-          
+
           <CardContent className="p-6">
             <TabsContent value="details" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -157,7 +157,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
                       </div>
                     </div>
                   </div>
-                  
+
                   {invoice.notes && (
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
@@ -167,7 +167,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
                     </div>
                   )}
                 </div>
-                
+
                 <div className="md:border-l md:pl-6">
                   <h3 className="text-sm font-medium text-gray-500 mb-3">Summary</h3>
                   <div className="space-y-2">
@@ -177,46 +177,46 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
                       </span>
                       <AmountDisplay amount={subtotal} />
                     </div>
-                    
+
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Paid</span>
-                      <AmountDisplay 
-                        amount={invoice.total_paid || 0} 
-                        variant={invoice.total_paid ? 'success' : 'default'} 
+                      <AmountDisplay
+                        amount={invoice.total_paid || 0}
+                        variant={invoice.total_paid ? 'success' : 'default'}
                       />
                     </div>
-                    
+
                     <div className="flex justify-between font-bold pt-2 border-t">
                       <span>Balance</span>
-                      <AmountDisplay 
-                        amount={invoice.balance || 0} 
-                        variant={invoice.balance === 0 ? 'success' : invoice.balance > 0 ? 'destructive' : 'default'} 
-                        className="font-bold" 
+                      <AmountDisplay
+                        amount={invoice.balance || 0}
+                        variant={invoice.balance === 0 ? 'success' : invoice.balance > 0 ? 'destructive' : 'default'}
+                        className="font-bold"
                       />
                     </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="items" className="mt-0">
               <InvoiceLinesList invoice={invoice} />
             </TabsContent>
-            
+
             <TabsContent value="history" className="mt-0">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium">Payment History</h3>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => setPaymentsOpen(true)}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
                     View All Payments
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card className="p-4">
                     <div className="text-sm text-muted-foreground mb-1">Total Amount</div>
@@ -224,14 +224,14 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
                       {formatCurrency(invoice.total_amount || 0)}
                     </div>
                   </Card>
-                  
+
                   <Card className="p-4">
                     <div className="text-sm text-muted-foreground mb-1">Amount Paid</div>
                     <div className="text-lg font-bold text-emerald-600">
                       {formatCurrency(invoice.total_paid || 0)}
                     </div>
                   </Card>
-                  
+
                   <Card className="p-4">
                     <div className="text-sm text-muted-foreground mb-1">Balance</div>
                     <div className={`text-lg font-bold ${invoice.balance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>

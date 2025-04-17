@@ -1,6 +1,13 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import React from "react";
 
 /**
  * @deprecated This is a temporary placeholder component.
@@ -10,7 +17,9 @@ interface UnpaidInvoicesTableProps {
   invoices: any[];
 }
 
-export const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoices }) => {
+export const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({
+  invoices,
+}) => {
   // Simplified component that doesn't use the problematic AmountDisplay component
   return (
     <Card>
@@ -39,14 +48,16 @@ export const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoic
                     {invoice.invoice_uid || invoice.id}
                   </TableCell>
                   <TableCell>
-                    {invoice.invoice_order_date ? new Date(invoice.invoice_order_date).toLocaleDateString() : 'N/A'}
+                    {invoice.date_of_invoice
+                      ? new Date(invoice.date_of_invoice).toLocaleDateString()
+                      : "N/A"}
                   </TableCell>
                   <TableCell className="text-right">
                     ${(invoice.balance || 0).toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <span className="inline-block px-2 py-1 text-xs text-gray-800 bg-gray-100 rounded-full">
-                      {invoice.payment_status || 'Unknown'}
+                      {invoice.payment_status || "Unknown"}
                     </span>
                   </TableCell>
                 </TableRow>
@@ -58,4 +69,3 @@ export const UnpaidInvoicesTable: React.FC<UnpaidInvoicesTableProps> = ({ invoic
     </Card>
   );
 };
-
