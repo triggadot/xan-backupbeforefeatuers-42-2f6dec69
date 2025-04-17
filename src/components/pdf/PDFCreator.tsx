@@ -1,10 +1,12 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Download, Loader2 } from 'lucide-react';
 import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/documents/pdf.unified';
+import { DocumentType } from '@/types/pdf.unified';
+import { PDFGenerationResult } from '@/lib/pdf/pdf.types';
 
 interface PDFCreatorProps {
   documentType: DocumentType;
@@ -50,10 +52,16 @@ export function PDFCreator({
   // Handle PDF generation
   const handleGeneratePDF = async () => {
     try {
-      const url = await generatePDF(documentType as any, document, saveLocally);
-      if (url) {
-        setPdfUrl(url);
-        if (onPDFGenerated) onPDFGenerated(url);
+      const result = await generatePDF(documentType, document.id, {
+        download: saveLocally
+      });
+      
+      if (result.success && result.url) {
+        setPdfUrl(result.url);
+        
+        if (onPDFGenerated && result.url) {
+          onPDFGenerated(result.url);
+        }
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -91,47 +99,26 @@ export function PDFCreator({
         </div>
 
         {pdfUrl && (
-          <div className="p-4 bg-muted rounded-md mb-4">
-            <p className="text-sm mb-2">PDF successfully generated!</p>
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline truncate block"
-            >
-              {pdfUrl}
-            </a>
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-3 rounded-md mb-4">
+            <span className="text-sm truncate max-w-[70%]">{pdfUrl}</span>
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+              <Download className="h-4 w-4 mr-2" /> Open
+            </Button>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button
-          variant="outline"
-          disabled={isGenerating}
-          onClick={handleGeneratePDF}
-        >
+      <CardFooter>
+        <Button onClick={handleGeneratePDF} disabled={isGenerating}>
           {isGenerating ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Generating...
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...
             </>
           ) : (
             <>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate PDF
+              <FileText className="h-4 w-4 mr-2" /> Generate PDF
             </>
           )}
         </Button>
-        
-        {pdfUrl && (
-          <Button
-            variant="default"
-            onClick={handleDownloadPDF}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-        )}
       </CardFooter>
     </Card>
   );
