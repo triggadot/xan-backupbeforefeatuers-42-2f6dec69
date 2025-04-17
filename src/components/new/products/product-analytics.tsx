@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useProducts } from '@/hooks/products';
-import { Card, Title, Text, Grid, Col, LineChart, BarChart, DonutChart, DateRangePicker } from '@tremor/react';
+import { Card, Title, Text, Grid, Col, LineChart, BarChart, DonutChart, DateRangePicker, DateRangePickerValue } from '@tremor/react';
 import { Spinner } from '@/components/ui/spinner';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { DateRange } from 'react-day-picker';
@@ -15,7 +15,10 @@ import { DateRange } from 'react-day-picker';
  */
 export const ProductAnalytics: React.FC = () => {
   const { data: products, isLoading, error } = useProducts();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRangePickerValue>({
+    from: undefined,
+    to: undefined,
+  });
 
   // Filter products by date range if selected
   const filteredProducts = useMemo(() => {
@@ -210,6 +213,11 @@ export const ProductAnalytics: React.FC = () => {
     return `Your top category "${topCategory.category}" represents ${topCategoryPercent}% of your total inventory value (${formatCurrency(topCategory["Total Value"])}).`;
   }, [categoryValueComparison, filteredProducts]);
 
+  // Format values for chart display
+  const formatChartValue = (value: number) => {
+    return formatCurrency(value);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -248,7 +256,6 @@ export const ProductAnalytics: React.FC = () => {
           onValueChange={setDateRange}
           placeholder="Filter by purchase date"
           selectPlaceholder="Select"
-          color="blue"
         />
       </div>
 
@@ -264,7 +271,7 @@ export const ProductAnalytics: React.FC = () => {
             colors={["blue", "emerald"]}
             valueFormatter={(value, category) => 
               category === "Total Value" 
-                ? formatCurrency(value) 
+                ? formatChartValue(value) 
                 : value.toString()
             }
             yAxisWidth={60}
@@ -273,7 +280,7 @@ export const ProductAnalytics: React.FC = () => {
                 <div className="font-medium">{formatMonthYear(props.payload.date)}</div>
                 <div className="text-sm text-gray-500">
                   <div>Products: {props.payload["Product Count"]}</div>
-                  <div>Value: {formatCurrency(props.payload["Total Value"])}</div>
+                  <div>Value: {formatChartValue(props.payload["Total Value"])}</div>
                 </div>
               </div>
             )}
@@ -318,7 +325,7 @@ export const ProductAnalytics: React.FC = () => {
             index="category"
             categories={["Total Value", "Average Value"]}
             colors={["emerald", "amber"]}
-            valueFormatter={(value) => formatCurrency(value)}
+            valueFormatter={(value) => formatChartValue(value)}
             yAxisWidth={80}
             layout="vertical"
           />

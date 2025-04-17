@@ -1,5 +1,5 @@
 
 export { EstimateCredits } from './EstimateCredits';
-export { EstimateDetailView } from './estimate-detail-view';
-export { EstimateList } from './estimate-list';
-export { EstimateStats } from './estimate-stats';
+export { EstimateDetailView } from './EstimateDetailView';
+export { EstimateList } from './EstimateLists';
+export { EstimateStats } from './EstimateStats';

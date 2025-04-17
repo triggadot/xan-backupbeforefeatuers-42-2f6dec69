@@ -95,7 +95,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           data: {
             ...data,
             // Map form fields to database fields
-            new_product_name: data.name,
+            display_name: data.name,
             total_qty_purchased: data.quantity,
             rowid_accounts: data.vendorId,
             product_purchase_date: data.purchaseDate,
@@ -111,14 +111,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         toast({
           title: "Success",
           description: "Product updated successfully",
-          variant: "success",
+          variant: "default",
         });
       } else {
         // Create new product
         await createProduct.mutateAsync({
           ...data,
           // Map form fields to database fields
-          new_product_name: data.name,
+          display_name: data.name,
           total_qty_purchased: data.quantity,
           rowid_accounts: data.vendorId,
           product_purchase_date: data.purchaseDate,
@@ -133,7 +133,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         toast({
           title: "Success",
           description: "Product created successfully",
-          variant: "success",
+          variant: "default",
         });
       }
       
@@ -167,7 +167,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                       id="name" 
                       placeholder="Enter product name" 
                       {...field} 
-                      error={errors.name?.message}
                     />
                   )}
                 />

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useProductMutation } from '@/hooks/products';
-import { toast } from '@/hooks/utils/use-toast';
+import { useToast } from '@/hooks/utils/use-toast';
 import { Product } from '@/types/products';
 import { Card, Title } from '@tremor/react';
 import React, { useState } from 'react';
@@ -27,6 +27,7 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
   const [activeImage, setActiveImage] = useState<string | null>(product.product_image1 || null);
   const [isUploading, setIsUploading] = useState(false);
   const { updateProduct } = useProductMutation();
+  const { toast } = useToast();
 
   // Get all available images from the product
   const productImages = [
@@ -41,13 +42,21 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
     const file = files[0];
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+      toast({
+        title: "Error",
+        description: "Image size should be less than 5MB",
+        variant: "destructive"
+      });
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Only image files are allowed');
+      toast({
+        title: "Error",
+        description: "Only image files are allowed",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -70,13 +79,21 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
       });
       
       setActiveImage(imageUrl);
-      toast.success('Image uploaded successfully');
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+        variant: "default"
+      });
       
       if (onImageUpdate) {
         onImageUpdate();
       }
     } catch (error) {
-      toast.error(`Error uploading image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({
+        title: "Error",
+        description: `Error uploading image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
     }
@@ -95,13 +112,21 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
       });
       
       setActiveImage(null);
-      toast.success('Image removed successfully');
+      toast({
+        title: "Success",
+        description: "Image removed successfully",
+        variant: "default"
+      });
       
       if (onImageUpdate) {
         onImageUpdate();
       }
     } catch (error) {
-      toast.error(`Error removing image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({
+        title: "Error",
+        description: `Error removing image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     }
   };
 

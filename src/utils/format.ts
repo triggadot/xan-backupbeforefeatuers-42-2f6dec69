@@ -1,4 +1,3 @@
-
 /**
  * Formatting utility functions
  */
@@ -84,4 +83,19 @@ export const formatPercent = (
     maximumFractionDigits: decimals,
     minimumFractionDigits: decimals
   }).format(value / 100);
+};
+
+/**
+ * Format a date in a short format (MM/DD/YYYY)
+ * @param dateString A date string or Date object
+ * @returns Formatted short date string
+ */
+export const formatShortDate = (dateString: string | Date): string => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric'
+  });
 };

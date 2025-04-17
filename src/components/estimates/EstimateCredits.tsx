@@ -83,7 +83,13 @@ export function EstimateCredits({ estimateId, credits, customers = [], onCredits
   const handleAddCredit = async (values: CreditFormValues) => {
     await addCustomerCredit.mutateAsync({
       estimateGlideId: estimateId,
-      data: values
+      data: {
+        rowid_accounts: values.rowid_accounts,
+        date_of_payment: values.date_of_payment ? format(values.date_of_payment, 'yyyy-MM-dd') : undefined,
+        payment_amount: values.payment_amount,
+        payment_note: values.payment_note,
+        payment_type: values.payment_type
+      }
     });
     setIsAddDialogOpen(false);
     resetForm();
@@ -96,7 +102,13 @@ export function EstimateCredits({ estimateId, credits, customers = [], onCredits
     
     await updateCustomerCredit.mutateAsync({
       creditId: editingCredit.id,
-      data: values
+      data: {
+        rowid_accounts: values.rowid_accounts,
+        date_of_payment: values.date_of_payment ? format(values.date_of_payment, 'yyyy-MM-dd') : undefined,
+        payment_amount: values.payment_amount,
+        payment_note: values.payment_note,
+        payment_type: values.payment_type
+      }
     });
     setIsEditDialogOpen(false);
     resetForm();

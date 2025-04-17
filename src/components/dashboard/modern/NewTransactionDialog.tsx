@@ -35,6 +35,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAccounts } from "@/hooks/accounts";
 import { useQueryClient } from "@tanstack/react-query";
+import { v4 as uuidv4 } from 'uuid';
 
 // Define form schema with Zod
 const transactionSchema = z.object({
@@ -74,7 +75,7 @@ export default function NewTransactionDialog({
   const queryClient = useQueryClient();
   
   // Fetch accounts for dropdown selection
-  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
 
   // Default values for the form
   const defaultValues: Partial<TransactionFormValues> = {
@@ -93,13 +94,17 @@ export default function NewTransactionDialog({
   const onSubmit = async (values: TransactionFormValues) => {
     setIsSubmitting(true);
     try {
+      // Generate a unique ID for the new payment
+      const glideRowId = uuidv4();
+      
       // Determine which table to insert into based on transaction type
       if (values.type === "Received") {
         // Insert into customer payments table
         const { error } = await supabase.from("gl_customer_payments").insert({
+          glide_row_id: glideRowId,
           rowid_accounts: values.account_id,
           payment_amount: values.amount,
-          type_of_payment: values.type,
+          payment_type: values.type,
           date_of_payment: values.date,
           payment_note: values.note,
         });
@@ -108,10 +113,11 @@ export default function NewTransactionDialog({
       } else {
         // Insert into vendor payments table
         const { error } = await supabase.from("gl_vendor_payments").insert({
+          glide_row_id: glideRowId,
           rowid_accounts: values.account_id,
           payment_amount: values.amount,
           date_of_payment: values.date,
-          vendor_purchase_note: values.note,
+          vendor_note: values.note,
         });
 
         if (error) throw error;
@@ -236,7 +242,7 @@ export default function NewTransactionDialog({
                               key={account.glide_row_id}
                               value={account.glide_row_id}
                             >
-                              {account.account_name}
+                              {account.name}
                             </SelectItem>
                           ))
                       )}

@@ -4,6 +4,48 @@
 
 **URL**: https://lovable.dev/projects/d78015a4-6ce3-4ef5-a5b3-13bdcc40f648
 
+## Development Standards & Conventions
+This project follows specific coding standards and conventions:
+
+- **File & Directory Names:** kebab-case (e.g., `invoice-list.tsx`, `purchase-orders/`)
+- **React Components:** PascalCase (e.g., `InvoiceList`, `PurchaseOrderTable`)
+- **Variables, Functions, Methods:** camelCase (e.g., `handleSubmit`, `invoiceData`)
+- **Environment Variables:** UPPERCASE (e.g., `API_URL`, `DATABASE_URL`)
+- **Exports:** Named exports for components
+
+**Source of Truth:** Complete documentation of all conventions is maintained in:
+- `docs/naming-convention-plan.md` - Naming conventions and migration plan
+- `docs/documentation.md` - Documentation standards and JSDoc usage
+- `docs/documentation-guide.md` - Guide to all project documentation
+
+> **Documentation Approach:** We maintain comprehensive documentation in the `/docs` directory rather than scattered README files throughout the codebase. Component and hook documentation uses JSDoc comments directly in the source code, with only key modules having their own README files.
+
+## Technology Stack
+
+This project is built with:
+
+- **Frontend Framework:** React + Vite with TypeScript
+- **Styling:** Tailwind CSS
+- **UI Components:** 
+  - Shadcn UI (`@/components/ui/`)
+  - Tremor for data visualization (`@/components/tremor/`)
+- **Data Fetching:** TanStack Query (React Query)
+- **Form Handling:** React Hook Form + Zod
+- **State Management:** React Context
+
+## Architecture
+
+### Supabase-Only CRUD Architecture
+
+All Create, Read, Update, and Delete (CRUD) operations in this project are handled directly via the Supabase client libraries and service layer. There is **no use of n8n, webhooks, or external automation** for database operations.
+
+- All business logic and data synchronization are managed within the app or using Supabase features (such as Row Level Security and triggers).
+- The service layer in `src/services/supabase/tables` provides type-safe, consistent access to all core tables.
+- UI components must use this service layer for all data operations—no direct SDK calls or use of `any` types in components.
+- This approach simplifies debugging, improves reliability, and ensures all CRUD actions are secure and auditable.
+
+For more, see [Supabase CRUD documentation](https://supabase.com/docs/guides/database/crud).
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
@@ -50,20 +92,8 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/d78015a4-6ce3-4ef5-a5b3-13bdcc40f648) and click on Share -> Publish.
 
 ## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)

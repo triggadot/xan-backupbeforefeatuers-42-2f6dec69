@@ -14,6 +14,7 @@ export type EntityStatus =
   | 'rejected'
   | 'completed'
   | 'cancelled'
+  | 'complete'
   // Invoice specific statuses
   | 'unpaid'
   | 'paid'
