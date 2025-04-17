@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { UnpaidInventoryList } from '@/components/products/UnpaidInventoryList';
+import { UnpaidInventoryList } from '@/components/products/unpaid-inventory-list';
 import { useToast } from '@/hooks/utils/use-toast';
 import { UnpaidProduct } from '@/types/products';
-import { useBusinessDashboard } from '@/hooks/useBusinessDashboard';
+import { useBusinessDashboard } from '@/hooks/dashboard/useBusinessDashboard';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 import { supabase } from '@/integrations/supabase/client';
 

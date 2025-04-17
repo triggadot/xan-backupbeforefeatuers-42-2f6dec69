@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/pdf/supabase';
 import { InvoiceCardGrid } from './InvoiceCardGrid';
 import { InvoiceWithAccount, normalizeInvoiceFields } from '@/types/invoices/invoice';
 import { Skeleton } from '@/components/ui/skeleton';
