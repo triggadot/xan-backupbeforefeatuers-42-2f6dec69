@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ApprovalQueueItem } from '@/hooks/telegram/useProductApprovalQueue';
-import { ConfidenceScoreBadge } from '../../features/telegram/product-matching/components/ConfidenceScoreBadge';
+import { ConfidenceScoreBadge } from './ConfidenceScoreBadge';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ApprovalQueueCardProps {

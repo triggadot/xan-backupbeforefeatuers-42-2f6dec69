@@ -1,5 +1,5 @@
 
-import { Demo } from "@/components/demos/SidebarDemo";
+import { Demo } from "@/components/data-management/SidebarDemo";
 
 export default function SidebarDemoPage() {
   return (
