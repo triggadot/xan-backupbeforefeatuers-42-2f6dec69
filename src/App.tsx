@@ -247,38 +247,40 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="expenses" 
-            element={
-              <ProtectedRoute>
-                <ExpensesPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="expenses/new" 
-            element={
-              <ProtectedRoute>
-                <CreateExpensePage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="expenses/:id" 
-            element={
-              <ProtectedRoute>
-                <ExpenseDetailPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="expenses/:id/edit" 
-            element={
-              <ProtectedRoute>
-                <EditExpensePage />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="expenses">
+            <Route 
+              index
+              element={
+                <ProtectedRoute>
+                  <ExpensesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="new" 
+              element={
+                <ProtectedRoute>
+                  <CreateExpensePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path=":id" 
+              element={
+                <ProtectedRoute>
+                  <ExpenseDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path=":id/edit" 
+              element={
+                <ProtectedRoute>
+                  <EditExpensePage />
+                </ProtectedRoute>
+              } 
+            />
+          </Route>
           <Route 
             path="data-management" 
             element={
