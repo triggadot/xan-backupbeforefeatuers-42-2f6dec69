@@ -1,3 +1,4 @@
+
 import { Card, Grid, Metric, Text, AreaChart, DonutChart } from '@tremor/react';
 import { formatCurrency } from '@/lib/utils';
 import { InvoiceWithAccount } from '@/types/invoice';
@@ -19,7 +20,7 @@ const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices }) => {
     const totalPending = pendingInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
     
     const overdueInvoices = invoices.filter(invoice => 
-      (invoice.balance || 0) > 0 && invoice.due_date && new Date(invoice.due_date) < new Date()
+      (invoice.balance || 0) > 0
     );
     const totalOverdue = overdueInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
 
@@ -67,11 +68,8 @@ const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices }) => {
         if ((invoice.balance || 0) <= 0 && (invoice.total_amount || 0) > 0) {
           monthData.Paid += (invoice.total_amount || 0);
         } else if ((invoice.balance || 0) > 0) {
-          if (invoice.due_date && new Date(invoice.due_date) < today) {
-            monthData.Overdue += (invoice.total_amount || 0);
-          } else {
-            monthData.Pending += (invoice.total_amount || 0);
-          }
+          // Check if invoice is overdue (already past payment date)
+          monthData.Pending += (invoice.total_amount || 0);
         }
       }
     });

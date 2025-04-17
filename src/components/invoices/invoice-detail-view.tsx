@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { InvoiceWithAccount } from '@/types/new/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -120,10 +121,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
           <div>
             <h3 className="text-sm font-medium text-gray-500">Invoice Date</h3>
             <p className="text-gray-900">{formatDate(invoice.invoice_order_date)}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Due Date</h3>
-            <p className="text-gray-900">{formatDate(invoice.due_date)}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Customer</h3>

@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Printer, Download, Share2, Edit, RefreshCw } from 'lucide-react';
@@ -189,7 +190,7 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">
-                Estimate #{estimate.estimate_uid || formattedEstimateNumber}
+                Estimate #{formattedEstimateNumber}
               </h2>
               <p className="text-gray-500">
                 {estimate.account?.account_name || 'No Account'}
@@ -354,5 +355,3 @@ export const EstimateDetailView: React.FC<EstimateDetailViewProps> = ({
     </div>
   );
 };
-
-export default EstimateDetailView;
