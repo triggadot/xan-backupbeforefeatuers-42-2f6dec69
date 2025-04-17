@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/types";
 
 /**
  * Type definitions for gl_customer_credits table
@@ -75,26 +75,26 @@ export const glCustomerCreditsService = {
   /**
    * Get all customer credits with optional filtering
    */
-  async getCustomerCredits(filters: CustomerCreditFilters = {}): Promise<CustomerCredit[]> {
-    let query = supabase
-      .from('gl_customer_credits')
-      .select('*');
+  async getCustomerCredits(
+    filters: CustomerCreditFilters = {}
+  ): Promise<CustomerCredit[]> {
+    let query = supabase.from("gl_customer_credits").select("*");
 
     // Apply filters
     if (filters.invoiceId) {
-      query = query.eq('rowid_invoices', filters.invoiceId);
+      query = query.eq("rowid_invoices", filters.invoiceId);
     }
     if (filters.estimateId) {
-      query = query.eq('rowid_estimates', filters.estimateId);
+      query = query.eq("rowid_estimates", filters.estimateId);
     }
     if (filters.accountId) {
-      query = query.eq('rowid_accounts', filters.accountId);
+      query = query.eq("rowid_accounts", filters.accountId);
     }
     if (filters.dateFrom) {
-      query = query.gte('date_of_payment', filters.dateFrom.toISOString());
+      query = query.gte("date_of_payment", filters.dateFrom.toISOString());
     }
     if (filters.dateTo) {
-      query = query.lte('date_of_payment', filters.dateTo.toISOString());
+      query = query.lte("date_of_payment", filters.dateTo.toISOString());
     }
     if (filters.search) {
       query = query.or(
@@ -102,14 +102,16 @@ export const glCustomerCreditsService = {
       );
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) {
-      console.error('Error fetching customer credits:', error);
+      console.error("Error fetching customer credits:", error);
       throw new Error(`Failed to fetch customer credits: ${error.message}`);
     }
 
-    return (data as unknown as GlCustomerCreditRecord[]).map(item => {
+    return (data as unknown as GlCustomerCreditRecord[]).map((item) => {
       const credit: CustomerCredit = {
         id: item.id,
         glide_row_id: item.glide_row_id,
@@ -132,13 +134,13 @@ export const glCustomerCreditsService = {
    */
   async getCustomerCreditById(id: string): Promise<CustomerCredit> {
     const { data, error } = await supabase
-      .from('gl_customer_credits')
-      .select('*')
-      .eq('glide_row_id', id)
+      .from("gl_customer_credits")
+      .select("*")
+      .eq("glide_row_id", id)
       .single();
 
     if (error) {
-      console.error('Error fetching customer credit:', error);
+      console.error("Error fetching customer credit:", error);
       throw new Error(`Failed to fetch customer credit: ${error.message}`);
     }
 
@@ -167,7 +169,9 @@ export const glCustomerCreditsService = {
   /**
    * Create a new customer credit
    */
-  async createCustomerCredit(creditData: CustomerCreditForm): Promise<CustomerCredit> {
+  async createCustomerCredit(
+    creditData: CustomerCreditForm
+  ): Promise<CustomerCredit> {
     const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 
     const dbCredit: GlCustomerCreditInsert = {
@@ -182,13 +186,13 @@ export const glCustomerCreditsService = {
     };
 
     const { data, error } = await supabase
-      .from('gl_customer_credits')
+      .from("gl_customer_credits")
       .insert(dbCredit)
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating customer credit:', error);
+      console.error("Error creating customer credit:", error);
       throw new Error(`Failed to create customer credit: ${error.message}`);
     }
 
@@ -198,24 +202,34 @@ export const glCustomerCreditsService = {
   /**
    * Update an existing customer credit
    */
-  async updateCustomerCredit(id: string, creditData: Partial<CustomerCreditForm>): Promise<CustomerCredit> {
+  async updateCustomerCredit(
+    id: string,
+    creditData: Partial<CustomerCreditForm>
+  ): Promise<CustomerCredit> {
     const dbCredit: Partial<GlCustomerCreditInsert> = {};
 
-    if (creditData.dateOfPayment !== undefined) dbCredit.date_of_payment = creditData.dateOfPayment?.toISOString();
-    if (creditData.paymentType !== undefined) dbCredit.payment_type = creditData.paymentType;
-    if (creditData.invoiceId !== undefined) dbCredit.rowid_invoices = creditData.invoiceId;
-    if (creditData.estimateId !== undefined) dbCredit.rowid_estimates = creditData.estimateId;
-    if (creditData.accountId !== undefined) dbCredit.rowid_accounts = creditData.accountId;
-    if (creditData.paymentAmount !== undefined) dbCredit.payment_amount = creditData.paymentAmount;
-    if (creditData.paymentNote !== undefined) dbCredit.payment_note = creditData.paymentNote;
+    if (creditData.dateOfPayment !== undefined)
+      dbCredit.date_of_payment = creditData.dateOfPayment?.toISOString();
+    if (creditData.paymentType !== undefined)
+      dbCredit.payment_type = creditData.paymentType;
+    if (creditData.invoiceId !== undefined)
+      dbCredit.rowid_invoices = creditData.invoiceId;
+    if (creditData.estimateId !== undefined)
+      dbCredit.rowid_estimates = creditData.estimateId;
+    if (creditData.accountId !== undefined)
+      dbCredit.rowid_accounts = creditData.accountId;
+    if (creditData.paymentAmount !== undefined)
+      dbCredit.payment_amount = creditData.paymentAmount;
+    if (creditData.paymentNote !== undefined)
+      dbCredit.payment_note = creditData.paymentNote;
 
     const { error } = await supabase
-      .from('gl_customer_credits')
+      .from("gl_customer_credits")
       .update(dbCredit)
-      .eq('glide_row_id', id);
+      .eq("glide_row_id", id);
 
     if (error) {
-      console.error('Error updating customer credit:', error);
+      console.error("Error updating customer credit:", error);
       throw new Error(`Failed to update customer credit: ${error.message}`);
     }
 
@@ -227,12 +241,12 @@ export const glCustomerCreditsService = {
    */
   async deleteCustomerCredit(id: string): Promise<void> {
     const { error } = await supabase
-      .from('gl_customer_credits')
+      .from("gl_customer_credits")
       .delete()
-      .eq('glide_row_id', id);
+      .eq("glide_row_id", id);
 
     if (error) {
-      console.error('Error deleting customer credit:', error);
+      console.error("Error deleting customer credit:", error);
       throw new Error(`Failed to delete customer credit: ${error.message}`);
     }
   },
@@ -241,14 +255,15 @@ export const glCustomerCreditsService = {
    * Subscribe to customer credit changes
    */
   subscribeToCustomerCreditChanges(callback: (payload: any) => void) {
-    return supabase.channel('custom-all-channel')
+    return supabase
+      .channel("custom-all-channel")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'gl_customer_credits' },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "gl_customer_credits" },
         (payload) => {
           callback(payload);
         }
       )
       .subscribe();
-  }
+  },
 };

@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Product, ProductFormData } from '@/types/products';
+import { glProductsService } from "@/services/supabase/tables";
+import { Product, ProductFormData } from "@/types/products";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 /**
  * Hook for creating, updating, and deleting products
@@ -9,69 +9,48 @@ import { Product, ProductFormData } from '@/types/products';
 export const useProductMutation = () => {
   const queryClient = useQueryClient();
 
+  // Create product mutation
   const createProduct = useMutation({
-    mutationFn: async (productData: ProductFormData) => {
-      const { data, error } = await supabase
-        .from('gl_products')
-        .insert([{
-          ...productData,
-          glide_row_id: `gl_products_${Date.now()}`, // Generate a unique glide_row_id
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }])
-        .select()
-        .single();
+    mutationFn: async (productData: ProductFormData): Promise<Product> => {
+      const newProduct = await glProductsService.createProduct({
+        ...productData,
+        name: productData.name || "Unnamed Product",
+      });
 
-      if (error) {
-        throw new Error(`Error creating product: ${error.message}`);
-      }
-
-      return data as Product;
+      return newProduct;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 
+  // Update product mutation
   const updateProduct = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<ProductFormData> }) => {
-      const { data: updatedProduct, error } = await supabase
-        .from('gl_products')
-        .update({
-          ...data,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('glide_row_id', id)
-        .select()
-        .single();
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<ProductFormData>;
+    }): Promise<Product> => {
+      const updatedProduct = await glProductsService.updateProduct(id, data);
 
-      if (error) {
-        throw new Error(`Error updating product: ${error.message}`);
-      }
-
-      return updatedProduct as Product;
+      return updatedProduct;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", variables.id] });
     },
   });
 
+  // Delete product mutation
   const deleteProduct = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('gl_products')
-        .delete()
-        .eq('glide_row_id', id);
-
-      if (error) {
-        throw new Error(`Error deleting product: ${error.message}`);
-      }
-
-      return id;
+    mutationFn: async (id: string): Promise<void> => {
+      await glProductsService.deleteProduct(id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.removeQueries({ queryKey: ["product", id] });
     },
   });
 
