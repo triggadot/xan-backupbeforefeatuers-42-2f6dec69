@@ -1,3 +1,4 @@
+
 /**
  * EditExpense page component
  * Provides a form for editing an existing expense
@@ -33,4 +34,4 @@ const EditExpensePage = () => {
   );
 };
 
-export default EditExpensePage; 
+export default EditExpensePage;
