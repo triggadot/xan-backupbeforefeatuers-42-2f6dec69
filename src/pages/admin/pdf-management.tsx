@@ -1,5 +1,5 @@
 import React from 'react';
-import { PDFFailuresManager } from '@/components/new/pdf/pdf-failures-manager';
+import { PDFFailuresManager } from '@/components/pdf/pdf-failures-manager';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

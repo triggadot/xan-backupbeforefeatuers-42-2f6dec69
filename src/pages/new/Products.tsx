@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@tremor/react';
-import { ProductList, ProductStats, ProductCategories, ProductInventoryReport, ProductVendors, ProductAnalytics } from '@/components/new/products';
+import { ProductList, ProductStats, ProductCategories, ProductInventoryReport, ProductVendors, ProductAnalytics } from '@/components/products';
 import { Product } from '@/types/products';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';

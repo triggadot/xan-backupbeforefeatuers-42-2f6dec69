@@ -1,10 +1,9 @@
-
 // Export the expense components
 export { ExpenseList } from '@/components/expenses/ExpenseList';
 export { ExpenseForm } from '@/components/expenses/ExpenseForm';
 export { ExpenseTable } from '@/components/expenses/ExpenseTable';
 export { ExpenseSummary } from '@/components/expenses/ExpenseSummary';
-export { ExpenseDetail } from '@/components/expenses/ExpenseDetail';
+export { ExpenseDetail } from '@/components/expenses/expense-detail';
 
 // Export table components
 export { ExpenseRow } from '@/components/expenses/table/ExpenseRow';

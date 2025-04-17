@@ -1,13 +1,9 @@
 
-export * from './VendorPayments';
+/**
+ * Purchase orders components index file
+ * Exports all purchase-order-related components for easy importing
+ */
 
-// Re-export new purchase order components
-import PurchaseOrderDetailView from '@/components/new/purchase-orders/purchase-order-detail-view';
-import PurchaseOrderList from '@/components/new/purchase-orders/purchase-order-list';
-import PurchaseOrderStats from '@/components/new/purchase-orders/purchase-order-stats';
-
-export {
-  PurchaseOrderDetailView,
-  PurchaseOrderList,
-  PurchaseOrderStats
-};
+export { default as PurchaseOrderList } from '../new/purchase-orders/purchase-order-list';
+export { default as PurchaseOrderDetailView } from '../new/purchase-orders/purchase-order-detail-view';
+export { default as PurchaseOrderStats } from '../new/purchase-orders/purchase-order-stats';

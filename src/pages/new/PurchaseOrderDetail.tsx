@@ -1,7 +1,7 @@
 
 import { useParams } from 'react-router-dom';
 import { usePurchaseOrderDetail } from '@/hooks/purchase-orders';
-import PurchaseOrderDetailView from '@/components/new/purchase-orders/purchase-order-detail-view';
+import PurchaseOrderDetailView from '@/components/purchase-orders/purchase-order-detail-view';
 import { useToast } from '@/hooks/utils/use-toast';
 import { Container } from '@/components/ui/container';
 import { motion } from 'framer-motion';

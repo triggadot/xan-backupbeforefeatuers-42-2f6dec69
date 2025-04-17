@@ -1,12 +1,11 @@
-
 /**
  * Hook for fetching detailed information about a specific expense
  * 
  * @module hooks/expenses
  */
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { GlExpenseRecord, Expense } from '@/types/expenses';
+import { glExpensesService } from '@/services/supabase';
+import { Expense } from '@/types/expenses';
 
 /**
  * Hook for fetching detailed information about a specific expense
@@ -26,29 +25,8 @@ export const useExpenseDetail = (id: string | undefined) => {
     queryFn: async (): Promise<Expense | null> => {
       if (!id) return null;
       
-      const { data, error } = await supabase
-        .from('gl_expenses')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        throw new Error(`Error fetching expense detail: ${error.message}`);
-      }
-      
-      if (!data) return null;
-      
-      // Process the data
-      const expenseData = data as GlExpenseRecord;
-      return {
-        ...expenseData,
-        formattedAmount: expenseData.amount ? 
-          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(expenseData.amount)) 
-          : '$0.00',
-        formattedDate: expenseData.date ? 
-          new Date(expenseData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) 
-          : ''
-      };
+      // Use the service instead of direct Supabase query
+      return await glExpensesService.getExpense(id);
     },
     enabled: !!id
   });

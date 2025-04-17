@@ -1,5 +1,5 @@
-import { ProductDetail } from '@/components/new/products';
-import { ProductForm } from '@/components/new/products/product-form';
+import { ProductDetail } from '@/components/products';
+import { ProductForm } from '@/components/products/product-form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
