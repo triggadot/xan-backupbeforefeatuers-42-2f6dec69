@@ -1,9 +1,6 @@
+import React from 'react';
+import { Route } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import Layout from '@/components/layout/Layout';
-import { Toaster } from "@/components/ui/toaster";
-
-// Import pages from the main barrel file
 import {
   // Core pages
   Auth,
@@ -92,14 +89,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <AccountDetail />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="accounts/:id/edit" 
-            element={
-              <ProtectedRoute>
-                <AccountDetail isEditing={true} />
               </ProtectedRoute>
             } 
           />
