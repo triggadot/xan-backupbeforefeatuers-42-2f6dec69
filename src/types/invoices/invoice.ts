@@ -11,28 +11,28 @@ export interface Invoice {
   id: string;
   glide_row_id: string;
   rowid_accounts: string | null;
-  date_of_invoicetring | null;
-created_timestamp: string | null;
-submitted_timestamp: string | null;
-user_email: string | null;
-notes: string | null;
-doc_glideforeverlink: string | null;
-created_at: string | null;
-updated_at: string | null;
-total_amount: number | null;
-total_paid: number | null;
-balance: number | null;
-payment_status: string | null;
-invoice_uid ?: string | null;
-// Add missing properties from error messages
-status ?: string; // Used in AccountDetailView
-date ?: string; // Used in AccountDetailView
-amount ?: number; // Used in AccountDetailView
-number ?: string; // Used in AccountDetailView
-tax_rate ?: number; // Used in useInvoiceDetail
-tax_amount ?: number; // Used in useInvoiceDetail
-due_date ?: string; // Used in components
-supabase_pdf_url ?: string; // Used in some components
+  date_of_invoice: string | null;
+  created_timestamp: string | null;
+  submitted_timestamp: string | null;
+  user_email: string | null;
+  notes: string | null;
+  doc_glideforeverlink: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  total_amount: number | null;
+  total_paid: number | null;
+  balance: number | null;
+  payment_status: string | null;
+  invoice_uid?: string | null;
+  // Add missing properties from error messages
+  status?: string; // Used in AccountDetailView
+  date?: string; // Used in AccountDetailView
+  amount?: number; // Used in AccountDetailView
+  number?: string; // Used in AccountDetailView
+  tax_rate?: number; // Used in useInvoiceDetail
+  tax_amount?: number; // Used in useInvoiceDetail
+  due_date?: string; // Used in components
+  supabase_pdf_url?: string; // Used in some components
 }
 
 export interface InvoiceLine {
@@ -92,8 +92,8 @@ export function normalizeInvoiceFields(invoice: Invoice): InvoiceWithAccount {
     ...invoice,
     // Map common field names to expected properties
     number: invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`,
-    date: invoice.date_of_invoice
-    invoice_date: invoice.date_of_invoice
+    date: invoice.date_of_invoice,
+    invoice_date: invoice.date_of_invoice,
     invoice_number: invoice.invoice_uid || `INV-${invoice.id.substring(0, 6)}`,
     amount: invoice.total_amount,
     status: invoice.payment_status,

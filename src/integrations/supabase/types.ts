@@ -1231,8 +1231,6 @@ export type Database = {
           forward_info: Json | null
           glide_row_id: string | null
           group_caption_synced: boolean | null
-          group_first_message_time: string | null
-          group_last_message_time: string | null
           group_message_count: string | null
           height: number | null
           id: string
@@ -1247,6 +1245,7 @@ export type Database = {
           is_forwarded_from: string | null
           is_miscellaneous_item: boolean | null
           is_original_caption: boolean | null
+          last_edited_at: string | null
           last_error_at: string | null
           last_processing_attempt: string | null
           last_synced_at: string | null
@@ -1273,9 +1272,7 @@ export type Database = {
           original_file_id: string | null
           original_message_id: string | null
           processing_attempts: number | null
-          processing_completed_at: string | null
           processing_error: string | null
-          processing_started_at: string | null
           processing_state: Database["public"]["Enums"]["processing_state_type"]
           product_code: string | null
           product_id: string | null
@@ -1341,8 +1338,6 @@ export type Database = {
           forward_info?: Json | null
           glide_row_id?: string | null
           group_caption_synced?: boolean | null
-          group_first_message_time?: string | null
-          group_last_message_time?: string | null
           group_message_count?: string | null
           height?: number | null
           id?: string
@@ -1357,6 +1352,7 @@ export type Database = {
           is_forwarded_from?: string | null
           is_miscellaneous_item?: boolean | null
           is_original_caption?: boolean | null
+          last_edited_at?: string | null
           last_error_at?: string | null
           last_processing_attempt?: string | null
           last_synced_at?: string | null
@@ -1383,9 +1379,7 @@ export type Database = {
           original_file_id?: string | null
           original_message_id?: string | null
           processing_attempts?: number | null
-          processing_completed_at?: string | null
           processing_error?: string | null
-          processing_started_at?: string | null
           processing_state?: Database["public"]["Enums"]["processing_state_type"]
           product_code?: string | null
           product_id?: string | null
@@ -1451,8 +1445,6 @@ export type Database = {
           forward_info?: Json | null
           glide_row_id?: string | null
           group_caption_synced?: boolean | null
-          group_first_message_time?: string | null
-          group_last_message_time?: string | null
           group_message_count?: string | null
           height?: number | null
           id?: string
@@ -1467,6 +1459,7 @@ export type Database = {
           is_forwarded_from?: string | null
           is_miscellaneous_item?: boolean | null
           is_original_caption?: boolean | null
+          last_edited_at?: string | null
           last_error_at?: string | null
           last_processing_attempt?: string | null
           last_synced_at?: string | null
@@ -1493,9 +1486,7 @@ export type Database = {
           original_file_id?: string | null
           original_message_id?: string | null
           processing_attempts?: number | null
-          processing_completed_at?: string | null
           processing_error?: string | null
-          processing_started_at?: string | null
           processing_state?: Database["public"]["Enums"]["processing_state_type"]
           product_code?: string | null
           product_id?: string | null

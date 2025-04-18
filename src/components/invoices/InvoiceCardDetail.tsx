@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { InvoiceWithAccount } from '@/types/invoices/invoice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { PDFActions } from '@/components/pdf/PDFActions';
 import { InvoiceStatusBadge } from '@/components/invoices/InvoiceStatusBadge';
 import { Link } from 'react-router-dom';
-import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/documents/pdf.unified';
+import { usePDF } from '@/hooks/usePDF';
+import { DocumentType } from '@/types/pdf-types';
 import { AmountDisplay } from '@/components/shared/AmountDisplay';
 
 interface InvoiceCardDetailProps {
@@ -50,7 +51,7 @@ export const InvoiceCardDetail: React.FC<InvoiceCardDetailProps> = ({ invoice })
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <CalendarIcon className="h-4 w-4" />
-              <span className="text-sm">{formatDate(invoice.date_of_invoice/span>
+              <span className="text-sm">{formatDate(invoice.date_of_invoice)}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
