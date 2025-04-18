@@ -434,64 +434,79 @@ export type Database = {
       }
       gl_expenses: {
         Row: {
+          amount: number | null
           category: string | null
           created_at: string | null
           date: string | null
           expense_address: string | null
           expense_cash: string | null
           expense_change: string | null
+          expense_date: string | null
           expense_list_of_items: string | null
           expense_receipt_image: string | null
           expense_supplier_name: string | null
           expense_tax: string | null
           expense_text_to_json: string | null
           expense_total: string | null
+          expense_type: string | null
           glide_row_id: string
           id: string
+          last_modified_by: string | null
           notes: string | null
           processing: boolean | null
+          status: string | null
           submitted_by: string | null
           total_amount: number | null
           updated_at: string | null
         }
         Insert: {
+          amount?: number | null
           category?: string | null
           created_at?: string | null
           date?: string | null
           expense_address?: string | null
           expense_cash?: string | null
           expense_change?: string | null
+          expense_date?: string | null
           expense_list_of_items?: string | null
           expense_receipt_image?: string | null
           expense_supplier_name?: string | null
           expense_tax?: string | null
           expense_text_to_json?: string | null
           expense_total?: string | null
+          expense_type?: string | null
           glide_row_id: string
           id?: string
+          last_modified_by?: string | null
           notes?: string | null
           processing?: boolean | null
+          status?: string | null
           submitted_by?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
+          amount?: number | null
           category?: string | null
           created_at?: string | null
           date?: string | null
           expense_address?: string | null
           expense_cash?: string | null
           expense_change?: string | null
+          expense_date?: string | null
           expense_list_of_items?: string | null
           expense_receipt_image?: string | null
           expense_supplier_name?: string | null
           expense_tax?: string | null
           expense_text_to_json?: string | null
           expense_total?: string | null
+          expense_type?: string | null
           glide_row_id?: string
           id?: string
+          last_modified_by?: string | null
           notes?: string | null
           processing?: boolean | null
+          status?: string | null
           submitted_by?: string | null
           total_amount?: number | null
           updated_at?: string | null
