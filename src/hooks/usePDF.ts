@@ -1,17 +1,17 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/utils/use-toast';
-import { DocumentType, PDFGenerationOptions, PDFGenerationResult } from '@/types/documents/pdf.unified';
+import { DocumentType, PDFGenerationOptions, PDFGenerationResult } from '@/types/pdf-types';
 import { pdfService } from '@/services/pdf-service';
 
-export function usePDFGeneration() {
+export function usePDF() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   const generatePDF = async (
-    documentType: DocumentType | string,
+    documentType: DocumentType,
     documentId: string,
-    options?: Partial<PDFGenerationOptions>
+    options?: PDFGenerationOptions
   ): Promise<PDFGenerationResult> => {
     setIsGenerating(true);
 
@@ -26,8 +26,7 @@ export function usePDFGeneration() {
       } else {
         toast({
           title: 'PDF Generation Failed',
-          description: result.error || 'An error occurred while generating the PDF',
-          variant: 'destructive'
+          description: result.error || 'Failed to generate PDF'
         });
       }
 
