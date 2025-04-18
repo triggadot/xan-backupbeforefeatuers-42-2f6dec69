@@ -57,7 +57,12 @@ const PlaceholderPage = () => (
   </div>
 );
 
-
+function App() {
+  return (
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Index />} />
           <Route
             path="dashboard"
             element={
@@ -274,6 +279,12 @@ const PlaceholderPage = () => (
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+      <Toaster />
+    </ErrorBoundary>
+  );
+}
 
 export default function App() {
   return (
@@ -290,11 +301,11 @@ export default function App() {
         />
         {/* fallback not found */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
+       </Routes>
     </ErrorBoundary>
   );
 }
-    <Route path="*" element={<NotFound />} />
+
       </Routes>
     </ErrorBoundary>
   );

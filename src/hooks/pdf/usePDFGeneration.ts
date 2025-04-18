@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
 import { useToast } from '@/hooks/utils/use-toast';
+import { pdfService } from '@/services/PDFServices';
 import { DocumentType, PDFGenerationOptions, PDFGenerationResult } from '@/types/documents/pdf.unified';
-import { pdfService } from '@/services/pdf-service';
+import { useState } from 'react';
 
 export function usePDFGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
