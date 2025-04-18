@@ -1,132 +1,69 @@
 
-import React, { useState } from 'react';
-import { useExpenses } from '@/hooks/expenses';
-import ExpenseTable from './ExpenseTable';
-import ExpenseSummary from './ExpenseSummary';
-import ExpenseFormDialog from './ExpenseFormDialog';
-import { ExpenseFormData } from '@/types/expenses';
-import { useExpenseMutation } from '@/hooks/expenses';
-import { toast } from 'sonner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import React from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ExpenseSummary } from './ExpenseSummary';
+import { ExpenseTable } from './ExpenseTable';
+import { useExpenseQuery } from '@/hooks/expenses/useExpenseQuery';
+import { ExpenseForm } from '@/components/expenses/ExpenseForm';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export const ExpenseList: React.FC = () => {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [currentExpense, setCurrentExpense] = useState<ExpenseFormData | null>(null);
-  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-
-  const {
-    expenses,
-    isLoading,
-    isError,
-    error,
-    filters,
-    updateFilters,
-    clearFilters,
-    refetch
-  } = useExpenses();
-
-  const { createExpense, updateExpense, deleteExpense } = useExpenseMutation();
-
-  const handleCreateExpense = () => {
-    setCurrentExpense(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEditExpense = (expense: any) => {
-    // Convert the expense to ExpenseFormData
-    setCurrentExpense({
-      id: expense.id,
-      notes: expense.notes || '',
-      amount: expense.amount || 0,
-      category: expense.category || '',
-      date: expense.date || new Date().toISOString().split('T')[0],
-      supplier_name: expense.expense_supplier_name || '',
-      receipt_image: expense.expense_receipt_image || ''
-    });
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteExpense = (expense: any) => {
-    setExpenseToDelete(expense.id);
-  };
-
-  const handleFormSubmit = async (data: ExpenseFormData) => {
-    try {
-      if (currentExpense?.id) {
-        // Update existing expense
-        await updateExpense.mutateAsync({
-          id: currentExpense.id,
-          data
-        });
-        toast.success("Expense updated successfully");
-      } else {
-        // Create new expense
-        await createExpense.mutateAsync(data);
-        toast.success("Expense created successfully");
-      }
-      setIsFormOpen(false);
-      refetch();
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!expenseToDelete) return;
-    
-    try {
-      await deleteExpense.mutateAsync(expenseToDelete);
-      toast.success("Expense deleted successfully");
-      setExpenseToDelete(null);
-      refetch();
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-    }
-  };
+export function ExpenseList() {
+  const [open, setOpen] = React.useState(false);
+  const [editingExpense, setEditingExpense] = React.useState<string | null>(null);
+  const { expenses, isLoading, error, createExpense, updateExpense, deleteExpense } = useExpenseQuery();
 
   return (
     <div className="space-y-6">
-      <ExpenseSummary expenses={expenses} isLoading={isLoading} />
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Expenses</h1>
+        <Button onClick={() => setOpen(true)} className="hover-lift">
+          <Plus className="mr-2 h-4 w-4" /> Add Expense
+        </Button>
+      </div>
 
+      <ExpenseSummary expenses={expenses} isLoading={isLoading} />
+      
       <ExpenseTable
         expenses={expenses}
         isLoading={isLoading}
         error={error}
-        filters={filters}
-        updateFilters={updateFilters}
-        clearFilters={clearFilters}
-        onCreateExpense={handleCreateExpense}
-        onEditExpense={handleEditExpense}
-        onDeleteExpense={handleDeleteExpense}
+        onEdit={id => setEditingExpense(id)}
+        onDelete={id => deleteExpense.mutate(id)}
       />
 
-      {isFormOpen && (
-        <ExpenseFormDialog
-          expense={currentExpense}
-          open={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          onSubmit={handleFormSubmit}
-        />
-      )}
-
-      <AlertDialog open={!!expenseToDelete} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the expense record.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={open || !!editingExpense} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
+            <DialogDescription>
+              Fill in the details for this expense.
+            </DialogDescription>
+          </DialogHeader>
+          <ExpenseForm
+            expenseId={editingExpense}
+            onSubmit={async (data) => {
+              if (editingExpense) {
+                await updateExpense.mutateAsync({ id: editingExpense, expense: data });
+              } else {
+                await createExpense.mutateAsync(data);
+              }
+              setOpen(false);
+              setEditingExpense(null);
+            }}
+            onCancel={() => {
+              setOpen(false);
+              setEditingExpense(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default ExpenseList;
+}

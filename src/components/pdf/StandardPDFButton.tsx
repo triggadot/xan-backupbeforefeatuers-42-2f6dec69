@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { FileText, Share, Download, Loader2 } from 'lucide-react';
 import { DocumentType } from '@/types/pdf-types';
-import { usePDF } from '@/hooks/pdf/usePDF';
+import { usePDF } from '@/hooks/usePDF';
 import { PDFViewer } from '@/components/ui/pdf-viewer';
 import {
   DropdownMenu,

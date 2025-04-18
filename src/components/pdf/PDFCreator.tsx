@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Download, Loader2 } from 'lucide-react';
-import { usePDF } from '@/hooks/pdf/usePDF';
-import { DocumentType } from '@/types/pdf.unified';
-import { PDFGenerationResult } from '@/lib/pdf/pdf.types';
+import { usePDF } from '@/hooks/usePDF';
+import { DocumentType, PDFGenerationResult } from '@/types/pdf-types';
 
 interface PDFCreatorProps {
   documentType: DocumentType;
