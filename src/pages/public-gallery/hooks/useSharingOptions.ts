@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Message } from '../types/Message';
+import { useCallback, useState } from "react";
+import { Message } from "../types";
 
 export function useSharingOptions() {
   const [isCopying, setIsCopying] = useState(false);
@@ -11,7 +11,7 @@ export function useSharingOptions() {
       setIsCopying(true);
       await navigator.clipboard.writeText(message.public_url);
     } catch (error) {
-      console.error('Error copying URL to clipboard:', error);
+      console.error("Error copying URL to clipboard:", error);
     } finally {
       setIsCopying(false);
     }
@@ -24,7 +24,7 @@ export function useSharingOptions() {
       setIsCopying(true);
       await navigator.clipboard.writeText(message.caption);
     } catch (error) {
-      console.error('Error copying caption to clipboard:', error);
+      console.error("Error copying caption to clipboard:", error);
     } finally {
       setIsCopying(false);
     }
@@ -32,19 +32,21 @@ export function useSharingOptions() {
 
   // Check if the message has a valid media type for sharing
   const hasShareableMedia = useCallback((message: Message) => {
-    return !!message.public_url && (
-      (message.mime_type?.startsWith('image/') || message.mime_type?.startsWith('video/'))
+    return (
+      !!message.public_url &&
+      (message.mime_type?.startsWith("image/") ||
+        message.mime_type?.startsWith("video/"))
     );
   }, []);
 
   const sharingOptions = [
     {
-      label: 'Copy Media URL',
+      label: "Copy Media URL",
       action: copyMediaUrl,
       isAvailable: hasShareableMedia,
     },
     {
-      label: 'Copy Caption',
+      label: "Copy Caption",
       action: copyCaption,
       isAvailable: (message: Message) => !!message.caption,
     },

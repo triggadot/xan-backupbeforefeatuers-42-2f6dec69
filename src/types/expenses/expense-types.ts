@@ -57,19 +57,27 @@ export interface Expense {
   formattedDate?: string;
 }
 
+export interface ExpenseKPIs {
+  total: number;
+  byCategory: Record<string, number>;
+  byMonth: Record<string, number>;
+}
+
 // Form data for creating/editing expenses
-export interface ExpenseFormData {
-  notes?: string;
-  amount: number;
+export interface ExpenseForm {
   category: string;
-  date: string;
-  supplierName?: string;
-  receiptImage?: string;
+  dateOfExpense: Date;
+  amount: number;
+  expenseSupplierName?: string;
+  notes?: string;
 }
 
 // Filter options for expense queries
 export interface ExpenseFilters {
   category?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  search?: string;
   startDate?: string;
   endDate?: string;
   minAmount?: number;

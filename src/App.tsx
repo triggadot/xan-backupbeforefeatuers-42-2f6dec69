@@ -1,4 +1,3 @@
-
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import {
@@ -27,15 +26,11 @@ import {
 import MappingView from "@/pages/sync-glide/MappingView";
 
 // These will eventually be moved to dedicated folders with barrel files
-import EstimateDetailPage from "@/pages/estimates/EstimateDetail";
-import NewEstimates from "@/pages/estimates/Estimates";
-import InvoiceDetailPage from "@/pages/invoices/InvoiceDetail";
-import NewInvoices from "@/pages/invoices/Invoices";
-import ProductsPage from "@/pages/products/Products";
-import ProductDetailPage from "@/pages/products/ProductDetail";
-import PurchaseOrderDetailPage from "@/pages/purchase-orders/PurchaseOrderDetail";
-import NewPurchaseOrders from "@/pages/purchase-orders/PurchaseOrders";
-import UnpaidInventoryPage from "@/pages/products/UnpaidInventory";
+import { ExpensesPage } from "@/pages/expenses";
+import { InvoiceDetailPage, NewInvoices } from "@/pages/invoices";
+import ProductsPage from "@/pages/products";
+import PurchaseOrdersPage from "@/pages/purchase-orders";
+import EstimatesPage from "@/pages/estimates";
 
 // Import our new card-based invoice pages
 import InvoiceCardPage from "@/pages/invoices/InvoiceCardPage";
@@ -139,7 +134,7 @@ export default function App() {
             path="purchase-orders"
             element={
               <ProtectedRoute>
-                <NewPurchaseOrders />
+                <PurchaseOrdersPage />
               </ProtectedRoute>
             }
           />
@@ -147,7 +142,7 @@ export default function App() {
             path="purchase-orders/:id"
             element={
               <ProtectedRoute>
-                <PurchaseOrderDetailPage />
+                <PlaceholderPage />
               </ProtectedRoute>
             }
           />
@@ -179,7 +174,7 @@ export default function App() {
             path="products/:id"
             element={
               <ProtectedRoute>
-                <ProductDetailPage />
+                <PlaceholderPage />
               </ProtectedRoute>
             }
           />
@@ -192,7 +187,6 @@ export default function App() {
             }
           />
           <Route
-            path="unpaid-inventory"
             element={
               <ProtectedRoute>
                 <UnpaidInventoryPage />
@@ -203,7 +197,7 @@ export default function App() {
             path="estimates"
             element={
               <ProtectedRoute>
-                <NewEstimates />
+                <EstimatesPage />
               </ProtectedRoute>
             }
           />
@@ -211,7 +205,7 @@ export default function App() {
             path="estimates/:id"
             element={
               <ProtectedRoute>
-                <EstimateDetailPage />
+                <PlaceholderPage />
               </ProtectedRoute>
             }
           />
@@ -276,6 +270,14 @@ export default function App() {
           <Route path="table-demo" element={<TableDemo />} />
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />
+          <Route
+            path="expenses"
+            element={
+              <ProtectedRoute>
+                <ExpensesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/shipping"
             element={

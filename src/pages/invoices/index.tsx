@@ -197,3 +197,5 @@ const Invoices = () => {
 };
 
 export default Invoices;
+export { default as InvoiceDetailPage } from './InvoiceDetail';
+export { default as NewInvoices } from './Invoices';

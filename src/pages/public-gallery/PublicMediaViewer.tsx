@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Message } from './types/Message';
-import { PublicMediaDetailSheet } from './PublicMediaDetailSheet';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { PublicMediaDetailSheet } from "./PublicMediaDetailSheet";
+import { Message } from "./types";
 
 export interface MediaViewerProps {
   isOpen: boolean;
@@ -29,17 +29,21 @@ export function PublicMediaViewer({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const currentMessage = currentGroup && currentGroup.length > 0 ? currentGroup[currentIndex] : null;
+  const currentMessage =
+    currentGroup && currentGroup.length > 0 ? currentGroup[currentIndex] : null;
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
   }, [initialIndex, currentGroup]);
 
   // Touch swipe navigation
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  }, []);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      setTouchEnd(null);
+      setTouchStart(e.targetTouches[0].clientX);
+    },
+    []
+  );
   const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     setTouchEnd(e.targetTouches[0].clientX);
   }, []);
@@ -57,18 +61,37 @@ export function PublicMediaViewer({
   useEffect(() => {
     const containerElement = containerRef.current;
     if (isOpen && containerElement) {
-      containerElement.addEventListener('touchstart', handleTouchStart as unknown as EventListener);
-      containerElement.addEventListener('touchmove', handleTouchMove as unknown as EventListener);
-      containerElement.addEventListener('touchend', handleTouchEnd as unknown as EventListener);
+      containerElement.addEventListener(
+        "touchstart",
+        handleTouchStart as unknown as EventListener
+      );
+      containerElement.addEventListener(
+        "touchmove",
+        handleTouchMove as unknown as EventListener
+      );
+      containerElement.addEventListener(
+        "touchend",
+        handleTouchEnd as unknown as EventListener
+      );
       return () => {
-        containerElement.removeEventListener('touchstart', handleTouchStart as unknown as EventListener);
-        containerElement.removeEventListener('touchmove', handleTouchMove as unknown as EventListener);
-        containerElement.removeEventListener('touchend', handleTouchEnd as unknown as EventListener);
+        containerElement.removeEventListener(
+          "touchstart",
+          handleTouchStart as unknown as EventListener
+        );
+        containerElement.removeEventListener(
+          "touchmove",
+          handleTouchMove as unknown as EventListener
+        );
+        containerElement.removeEventListener(
+          "touchend",
+          handleTouchEnd as unknown as EventListener
+        );
       };
     }
   }, [isOpen, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-  if (!isOpen || !currentGroup || currentGroup.length === 0 || !currentMessage) return null;
+  if (!isOpen || !currentGroup || currentGroup.length === 0 || !currentMessage)
+    return null;
 
   return (
     <div

@@ -25,7 +25,73 @@ export interface GlMessagesRecord {
   processing_started_at: string | null;
   processing_completed_at: string | null;
   analyzed_content: any | null;
-  // ...add remaining columns as needed
+  error_message: string | null;
+  retry_count: number | null;
+  last_error_at: string | null;
+  telegram_data: any | null;
+  message_url: string | null;
+  created_at: string;
+  updated_at: string;
+  glide_row_id: string | null;
+  sync_attempt: number | null;
+  storage_exists: boolean | null;
+  storage_path: string | null;
+  storage_metadata: any | null;
+  mime_type_verified: boolean | null;
+  mime_type_original: string | null;
+  content_disposition: string | null;
+  storage_path_standardized: string | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  user_id: string | null;
+  purchase_order: string | null;
+  deleted_from_telegram: boolean | null;
+  is_forward: boolean | null;
+  forward_count: number | null;
+  original_message_id: string | null;
+  forward_from: string | null;
+  forward_from_chat: string | null;
+  forward_chain: string | null;
+  old_analyzed_content: any | null;
+  needs_redownload: boolean | null;
+  redownload_reason: string | null;
+  redownload_flagged_at: string | null;
+  redownload_completed_at: string | null;
+  file_id_expires_at: string | null;
+  telegram_date: string | null;
+  is_bot: boolean | null;
+  message_type: string | null;
+  from_id: string | null;
+  is_duplicate: boolean | null;
+  duplicate_reference_id: string | null;
+  redownload_attempts: number | null;
+  correlation_id: string | null;
+  last_error_at: string | null;
+  edit_count: number | null;
+  forward_info: any | null;
+  edit_history: any | null;
+  is_edit: boolean | null;
+  trigger_source: string | null;
+  text: string | null;
+  media_type: string | null;
+  extension: string | null;
+  message_data: any | null;
+  processing_error: string | null;
+  caption_data: any | null;
+  message_date: string | null;
+  last_synced_at: string | null;
+  purchase_order_uid: string | null;
+  old_notes: string | null;
+  product_sku: string | null;
+  product_match_status: string | null;
+  product_match_date: string | null;
+  product_match_confidence: number | null;
+  match_type: string | null;
+  sync_source: string | null;
+  raw_content: string | null;
+  product_id: string | null;
+  last_edited_at: string | null;
 }
 
 export type GlMessagesInsert = Partial<Omit<GlMessagesRecord, 'id'>>;
@@ -40,7 +106,6 @@ import type { Message } from '../../types/message-types';
  * @param record GlMessagesRecord from Supabase
  * @returns Message (camelCase, no nulls)
  */
-import type { Message } from '../../types/message-types';
 
 export function convertDbToFrontend(record: GlMessagesRecord): Message {
   return {
@@ -67,7 +132,6 @@ export function convertDbToFrontend(record: GlMessagesRecord): Message {
     analyzedContent: record.analyzed_content ?? undefined,
     telegramData: record.telegram_data ?? undefined,
     errorMessage: record.error_message ?? undefined,
-    errorCode: record.error_code ?? undefined,
     storageExists: record.storage_exists ?? undefined,
     storagePath: record.storage_path ?? undefined,
     storageMetadata: record.storage_metadata ?? undefined,

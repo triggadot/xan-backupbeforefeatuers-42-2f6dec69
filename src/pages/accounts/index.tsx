@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, RefreshCw, UserPlus, Eye, FileText } from 'lucide-react';
+import { RefreshCw, UserPlus, Eye, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Dialog, 
@@ -12,11 +12,13 @@ import { Input } from '@/components/ui/input';
 import { useQueryClient } from '@tanstack/react-query';
 import AccountCardList from '@/components/accounts/AccountCardList';
 import AccountForm from '@/components/accounts/AccountForm';
-import { useAccountMutation } from '@/hooks/accounts';
+import { useAccountMutation } from '@/hooks/accounts/useAccountMutation';
 import { useAccountsWithBalances } from '@/hooks/accounts/useAccountsWithBalances';
-import { Account } from '@/types/accounts/accountNew';
-import { AccountFormData } from '@/types/accounts';
+import type { Account } from '@/types/accounts';
+import type { AccountFormData } from '@/types/accounts';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/utils/format-utils';
 
 const Accounts: React.FC = () => {
   const queryClient = useQueryClient();
@@ -73,6 +75,9 @@ const Accounts: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pr-10 w-full sm:w-64"
+              type="text"
+              name="account-search"
+              autoComplete="off"
             />
           </div>
           

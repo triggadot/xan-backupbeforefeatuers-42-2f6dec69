@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { PublicMediaViewer } from './PublicMediaViewer';
-import { PublicMediaCard } from './PublicMediaCard';
-import { usePublicViewer } from './hooks/usePublicViewer';
-import { Message } from './types/Message';
+import { PublicMediaCard } from "./PublicMediaCard";
+import { PublicMediaViewer } from "./PublicMediaViewer";
+import { usePublicViewer } from "./hooks/usePublicViewer";
+import { Message } from "./types";
 
 // Dummy data for initial wiring/testing (replace with real data fetching)
 const sampleMessages: Message[] = [

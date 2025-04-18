@@ -1,5 +1,4 @@
-import React from "react";
-import { Message } from "./types/Message";
+import { Message } from "./types";
 import { isVideoMessage } from "./utils/mediaUtils";
 
 interface PublicMediaCardProps {
@@ -25,7 +24,7 @@ export function PublicMediaCard({
 
   return (
     <div
-      className={`rounded-lg border bg-background shadow hover:shadow-lg cursor-pointer overflow-hidden ${className || ''}`}
+      className={`rounded-lg border bg-background shadow hover:shadow-lg cursor-pointer overflow-hidden ${className || ""}`}
       onClick={() => onClick(message)}
     >
       {isVideo ? (
@@ -36,7 +35,7 @@ export function PublicMediaCard({
             muted
             playsInline
             preload="metadata"
-            style={{ pointerEvents: 'none' }}
+            style={{ pointerEvents: "none" }}
           />
           {message.duration && (
             <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
@@ -47,13 +46,22 @@ export function PublicMediaCard({
       ) : (
         <img
           src={message.public_url}
-          alt={message.analyzed_content?.product_name || message.caption || 'Media'}
+          alt={
+            message.analyzed_content?.product_name || message.caption || "Media"
+          }
           className="w-full aspect-square object-cover bg-muted"
         />
       )}
       <div className="p-2">
-        <div className="font-medium truncate" title={message.analyzed_content?.product_name || message.caption || ''}>
-          {message.analyzed_content?.product_name || message.caption || 'Untitled'}
+        <div
+          className="font-medium truncate"
+          title={
+            message.analyzed_content?.product_name || message.caption || ""
+          }
+        >
+          {message.analyzed_content?.product_name ||
+            message.caption ||
+            "Untitled"}
         </div>
         {message.analyzed_content?.vendor_uid && (
           <div className="text-xs text-muted-foreground mt-1">
