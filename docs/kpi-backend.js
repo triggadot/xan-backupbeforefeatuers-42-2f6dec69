@@ -1,3 +1,5 @@
+import { supabase } from '../src/lib/pdf/supabase';
+
 async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDates }) {
   // Define date ranges based on period or custom dates
   let currentPeriodStart, currentPeriodEnd, previousPeriodStart, previousPeriodEnd;
@@ -78,11 +80,21 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
     AND date_of_invoice <= '${previousEndFormatted}'
   `;
 
-  const currentRevenueResult = await runSQL(currentRevenueQuery);
-  const previousRevenueResult = await runSQL(previousRevenueQuery);
+  // Get revenue data using Supabase JS
+  const { data: currentRevenueData, error: currentRevenueError } = await supabase
+    .from('gl_invoices')
+    .select('total_amount')
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
+  const { data: previousRevenueData, error: previousRevenueError } = await supabase
+    .from('gl_invoices')
+    .select('total_amount')
+    .gte('date_of_invoice', previousStartFormatted)
+    .lte('date_of_invoice', previousEndFormatted);
 
-  const currentRevenue = parseFloat(currentRevenueResult[0]?.revenue || 0);
-  const previousRevenue = parseFloat(previousRevenueResult[0]?.revenue || 0);
+  const sumAmounts = arr => (Array.isArray(arr) ? arr.reduce((sum, row) => sum + (parseFloat(row.total_amount) || 0), 0) : 0);
+  const currentRevenue = sumAmounts(currentRevenueData);
+  const previousRevenue = sumAmounts(previousRevenueData);
   const revenueChange = previousRevenue === 0 ? 0 : ((currentRevenue - previousRevenue) / previousRevenue) * 100;
 
   // Get invoice count
@@ -100,12 +112,20 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
     AND date_of_invoice <= '${previousEndFormatted}'
   `;
 
-  const currentInvoiceCountResult = await runSQL(currentInvoiceCountQuery);
-  const previousInvoiceCountResult = await runSQL(previousInvoiceCountQuery);
-
-  const currentInvoiceCount = parseInt(currentInvoiceCountResult[0]?.count || 0);
-  const previousInvoiceCount = parseInt(previousInvoiceCountResult[0]?.count || 0);
-  const invoiceCountChange = previousInvoiceCount === 0 ? 0 : ((currentInvoiceCount - previousInvoiceCount) / previousInvoiceCount) * 100;
+  // Get invoice count using Supabase JS
+  const { count: currentInvoiceCount, error: currentInvoiceCountError } = await supabase
+    .from('gl_invoices')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
+  const { count: previousInvoiceCount, error: previousInvoiceCountError } = await supabase
+    .from('gl_invoices')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_of_invoice', previousStartFormatted)
+    .lte('date_of_invoice', previousEndFormatted);
+  const safeCurrentInvoiceCount = currentInvoiceCount ?? 0;
+  const safePreviousInvoiceCount = previousInvoiceCount ?? 0;
+  const invoiceCountChange = safePreviousInvoiceCount === 0 ? 0 : ((safeCurrentInvoiceCount - safePreviousInvoiceCount) / safePreviousInvoiceCount) * 100;
 
   // Get active client count (clients with invoices in the period)
   const currentClientCountQuery = `
@@ -122,11 +142,20 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
     AND date_of_invoice <= '${previousEndFormatted}'
   `;
 
-  const currentClientCountResult = await runSQL(currentClientCountQuery);
-  const previousClientCountResult = await runSQL(previousClientCountQuery);
+  // Use Supabase JS client for client count
+  const { data: currentClientCountData, error: currentClientCountError } = await supabase
+    .from('gl_invoices')
+    .select('rowid_accounts', { count: 'exact', head: true })
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
+  const { data: previousClientCountData, error: previousClientCountError } = await supabase
+    .from('gl_invoices')
+    .select('rowid_accounts', { count: 'exact', head: true })
+    .gte('date_of_invoice', previousStartFormatted)
+    .lte('date_of_invoice', previousEndFormatted);
 
-  const currentClientCount = parseInt(currentClientCountResult[0]?.count || 0);
-  const previousClientCount = parseInt(previousClientCountResult[0]?.count || 0);
+  const currentClientCount = currentClientCountData?.count ?? 0;
+  const previousClientCount = previousClientCountData?.count ?? 0;
   const clientCountChange = previousClientCount === 0 ? 0 : ((currentClientCount - previousClientCount) / previousClientCount) * 100;
 
   // Calculate average invoice amount
@@ -149,11 +178,20 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
     AND date <= '${previousEndFormatted}'
   `;
 
-  const currentExpensesResult = await runSQL(currentExpensesQuery);
-  const previousExpensesResult = await runSQL(previousExpensesQuery);
-
-  const currentExpenses = parseFloat(currentExpensesResult[0]?.expenses || 0);
-  const previousExpenses = parseFloat(previousExpensesResult[0]?.expenses || 0);
+  // Get expenses data using Supabase JS
+  const { data: currentExpensesData, error: currentExpensesError } = await supabase
+    .from('gl_expenses')
+    .select('amount')
+    .gte('date', currentStartFormatted)
+    .lte('date', currentEndFormatted);
+  const { data: previousExpensesData, error: previousExpensesError } = await supabase
+    .from('gl_expenses')
+    .select('amount')
+    .gte('date', previousStartFormatted)
+    .lte('date', previousEndFormatted);
+  const sumExpenseAmounts = arr => (Array.isArray(arr) ? arr.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0) : 0);
+  const currentExpenses = sumExpenseAmounts(currentExpensesData);
+  const previousExpenses = sumExpenseAmounts(previousExpensesData);
   const expensesChange = previousExpenses === 0 ? 0 : ((currentExpenses - previousExpenses) / previousExpenses) * 100;
 
   // Calculate profit
@@ -167,44 +205,45 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
   const profitMarginChange = previousProfitMargin === 0 ? 0 : (currentProfitMargin - previousProfitMargin);
 
   // Get payment rate (percentage of invoices paid)
-  const currentPaymentRateQuery = `
-    SELECT
-      COUNT(CASE WHEN payment_status = 'paid' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as payment_rate
-    FROM gl_invoices
-    WHERE date_of_invoice >= '${currentStartFormatted}'
-    AND date_of_invoice <= '${currentEndFormatted}'
-  `;
+  const { data: currentPaidInvoices, error: currentPaidError } = await supabase
+    .from('gl_invoices')
+    .select('payment_status')
+    .eq('payment_status', 'paid')
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
+  const { count: currentTotalCount, error: currentTotalError } = await supabase
+    .from('gl_invoices')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
+  const { data: previousPaidInvoices, error: previousPaidError } = await supabase
+    .from('gl_invoices')
+    .select('payment_status')
+    .eq('payment_status', 'paid')
+    .gte('date_of_invoice', previousStartFormatted)
+    .lte('date_of_invoice', previousEndFormatted);
+  const { count: previousTotalCount, error: previousTotalError } = await supabase
+    .from('gl_invoices')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_of_invoice', previousStartFormatted)
+    .lte('date_of_invoice', previousEndFormatted);
 
-  const previousPaymentRateQuery = `
-    SELECT
-      COUNT(CASE WHEN payment_status = 'paid' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as payment_rate
-    FROM gl_invoices
-    WHERE date_of_invoice >= '${previousStartFormatted}'
-    AND date_of_invoice <= '${previousEndFormatted}'
-  `;
+  const currentPaidCount = Array.isArray(currentPaidInvoices) ? currentPaidInvoices.length : 0;
+  const previousPaidCount = Array.isArray(previousPaidInvoices) ? previousPaidInvoices.length : 0;
 
-  const currentPaymentRateResult = await runSQL(currentPaymentRateQuery);
-  const previousPaymentRateResult = await runSQL(previousPaymentRateQuery);
+  const safeCurrentTotalCount = currentTotalCount ?? 0;
+  const safePreviousTotalCount = previousTotalCount ?? 0;
 
-  const currentPaymentRate = parseFloat(currentPaymentRateResult[0]?.payment_rate || 0);
-  const previousPaymentRate = parseFloat(previousPaymentRateResult[0]?.payment_rate || 0);
+  const currentPaymentRate = safeCurrentTotalCount === 0 ? 0 : (currentPaidCount / safeCurrentTotalCount) * 100;
+  const previousPaymentRate = safePreviousTotalCount === 0 ? 0 : (previousPaidCount / safePreviousTotalCount) * 100;
   const paymentRateChange = previousPaymentRate === 0 ? 0 : (currentPaymentRate - previousPaymentRate);
 
   // Generate revenue chart data
-  const revenueChartQuery = `
-    SELECT
-      DATE_TRUNC('${selectedPeriod === 'week' ? 'day' :
-                 selectedPeriod === 'month' ? 'day' :
-                 selectedPeriod === 'quarter' ? 'week' : 'month'}', date_of_invoice) as time_period,
-      SUM(total_amount) as revenue
-    FROM gl_invoices
-    WHERE date_of_invoice >= '${currentStartFormatted}'
-    AND date_of_invoice <= '${currentEndFormatted}'
-    GROUP BY time_period
-    ORDER BY time_period
-  `;
-
-  const revenueChartData = await runSQL(revenueChartQuery);
+  const { data: revenueChartData, error: revenueChartError } = await supabase
+    .from('gl_invoices')
+    .select('date_of_invoice, total_amount')
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
 
   // Format chart data
   const formatChartDate = (dateStr) => {
@@ -219,28 +258,23 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
   };
 
   const revenueChart = {
-    labels: revenueChartData.map(item => formatChartDate(item.time_period)),
-    data: revenueChartData.map(item => parseFloat(item.revenue || 0))
+    labels: revenueChartData.map(item => formatChartDate(item.date_of_invoice)),
+    data: revenueChartData.map(item => parseFloat(item.total_amount || 0))
   };
 
   // Get revenue by client type
-  const revenueByClientTypeQuery = `
-    SELECT
-      a.client_type,
-      COALESCE(SUM(i.total_amount), 0) as revenue
-    FROM gl_invoices i
-    JOIN gl_accounts a ON i.rowid_accounts = a.glide_row_id
-    WHERE i.date_of_invoice >= '${currentStartFormatted}'
-    AND i.date_of_invoice <= '${currentEndFormatted}'
-    GROUP BY a.client_type
-    ORDER BY revenue DESC
-  `;
-
-  const revenueByClientTypeData = await runSQL(revenueByClientTypeQuery);
+  const { data: revenueByClientTypeData, error: revenueByClientTypeError } = await supabase
+    .from('gl_invoices')
+    .select('rowid_accounts, total_amount')
+    .gte('date_of_invoice', currentStartFormatted)
+    .lte('date_of_invoice', currentEndFormatted);
 
   const revenueByClientType = {
-    labels: revenueByClientTypeData.map(item => item.client_type || 'Unknown'),
-    data: revenueByClientTypeData.map(item => parseFloat(item.revenue || 0))
+    labels: [...new Set(revenueByClientTypeData.map(item => item.rowid_accounts))],
+    data: [...new Set(revenueByClientTypeData.map(item => item.rowid_accounts))].map(client => {
+      const clientData = revenueByClientTypeData.filter(item => item.rowid_accounts === client);
+      return clientData.reduce((sum, item) => sum + parseFloat(item.total_amount || 0), 0);
+    })
   };
 
   return {
@@ -249,7 +283,7 @@ async function getDashboardKPIs({ selectedPeriod, dateFrom, dateTo, useCustomDat
       change: revenueChange
     },
     invoiceCount: {
-      value: currentInvoiceCount,
+      value: safeCurrentInvoiceCount,
       change: invoiceCountChange
     },
     activeClientCount: {

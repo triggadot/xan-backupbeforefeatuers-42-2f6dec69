@@ -1,6 +1,4 @@
 import BusinessMetricsCard from '@/components/dashboard/modern/business-metrics';
-import FinancialActions from '@/components/dashboard/modern/finance-actions';
-import FinancialSummaryCard from '@/components/dashboard/modern/finance0su';
 import NewTransactionDialog from '@/components/dashboard/modern/NewTransactionDialog';
 import QuickTransferCard from '@/components/dashboard/modern/QuickTransferCard';
 import RecentTransactionsTable from '@/components/dashboard/modern/RecentTransactionsTable';
@@ -163,11 +161,6 @@ export default function ModernDashboard() {
             </div>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-6">
-          <div className="relative">
-            <FinancialActions className="h-full" />
-          </div>
-        </div>
       </div>
 
       {/* Quick Transfer */}
@@ -198,7 +191,7 @@ export default function ModernDashboard() {
           />
         </div>
         <div className="relative">
-          <FinancialSummaryCard
+          
             metrics={financialMetrics || []}
             onTimeChange={setTimeFilter}
             selectedTime={timeFilter}

@@ -27,7 +27,7 @@ export interface GlMessagesRecord {
   analyzed_content: any | null;
   error_message: string | null;
   retry_count: number | null;
-  last_error_at: string | null;
+  last_error_at: string | null; // Only one definition allowed
   telegram_data: any | null;
   message_url: string | null;
   created_at: string;
@@ -67,7 +67,7 @@ export interface GlMessagesRecord {
   duplicate_reference_id: string | null;
   redownload_attempts: number | null;
   correlation_id: string | null;
-  last_error_at: string | null;
+  last_error_at: string | null; // Only one definition allowed
   edit_count: number | null;
   forward_info: any | null;
   edit_history: any | null;
