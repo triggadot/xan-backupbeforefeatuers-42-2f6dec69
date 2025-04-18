@@ -278,35 +278,12 @@ function App() {
           <Route path="table-demo" element={<TableDemo />} />
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />
+          <Route path="shipping" element={<ProtectedRoute><ShippingDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-      <Toaster />
     </ErrorBoundary>
   );
 }
 
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <Routes>
-        {/* ...existing routes... */}
-        <Route
-          path="/shipping"
-          element={
-            <ProtectedRoute>
-              <ShippingDashboard />
-            </ProtectedRoute>
-          }
-        />
-        {/* fallback not found */}
-        <Route path="*" element={<NotFound />} />
-       </Routes>
-    </ErrorBoundary>
-  );
-}
-
-      </Routes>
-    </ErrorBoundary>
-  );
-}
+export default App;
