@@ -31,6 +31,9 @@ export interface GlExpenseInsert extends Omit<GlExpenseRecord, 'id' | 'created_a
 // Database update operation type (all fields optional)
 export interface GlExpenseUpdate extends Partial<Omit<GlExpenseRecord, 'id' | 'created_at' | 'updated_at'>> {}
 
+// Database export operation type
+export interface GlExpenseExport extends GlExpenseRecord {}
+
 // Frontend Types (without Gl prefix)
 export interface Expense {
   id: string;
