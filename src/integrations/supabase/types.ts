@@ -308,7 +308,7 @@ export type Database = {
         Row: {
           created_at: string | null
           date_of_sale: string | null
-          glide_row_id: string
+          glide_row_id: string | null
           id: string
           line_total: number | null
           product_name_display: string | null
@@ -324,7 +324,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           date_of_sale?: string | null
-          glide_row_id: string
+          glide_row_id?: string | null
           id?: string
           line_total?: number | null
           product_name_display?: string | null
@@ -340,7 +340,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           date_of_sale?: string | null
-          glide_row_id?: string
+          glide_row_id?: string | null
           id?: string
           line_total?: number | null
           product_name_display?: string | null
@@ -434,7 +434,6 @@ export type Database = {
       }
       gl_expenses: {
         Row: {
-          amount: number | null
           category: string | null
           created_at: string | null
           date: string | null
@@ -452,10 +451,10 @@ export type Database = {
           notes: string | null
           processing: boolean | null
           submitted_by: string | null
+          total_amount: number | null
           updated_at: string | null
         }
         Insert: {
-          amount?: number | null
           category?: string | null
           created_at?: string | null
           date?: string | null
@@ -473,10 +472,10 @@ export type Database = {
           notes?: string | null
           processing?: boolean | null
           submitted_by?: string | null
+          total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
-          amount?: number | null
           category?: string | null
           created_at?: string | null
           date?: string | null
@@ -494,6 +493,7 @@ export type Database = {
           notes?: string | null
           processing?: boolean | null
           submitted_by?: string | null
+          total_amount?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2250,142 +2250,6 @@ export type Database = {
           },
         ]
       }
-      webhook_implementation_details: {
-        Row: {
-          callback_function: string | null
-          created_at: string | null
-          data_schema: Json | null
-          entity_table: string | null
-          id: string
-          implementation_priority: number | null
-          implementation_status: string | null
-          notes: string | null
-          trigger_function: string | null
-          updated_at: string | null
-          webhook_id: string | null
-        }
-        Insert: {
-          callback_function?: string | null
-          created_at?: string | null
-          data_schema?: Json | null
-          entity_table?: string | null
-          id?: string
-          implementation_priority?: number | null
-          implementation_status?: string | null
-          notes?: string | null
-          trigger_function?: string | null
-          updated_at?: string | null
-          webhook_id?: string | null
-        }
-        Update: {
-          callback_function?: string | null
-          created_at?: string | null
-          data_schema?: Json | null
-          entity_table?: string | null
-          id?: string
-          implementation_priority?: number | null
-          implementation_status?: string | null
-          notes?: string | null
-          trigger_function?: string | null
-          updated_at?: string | null
-          webhook_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "webhook_implementation_details_webhook_id_fkey"
-            columns: ["webhook_id"]
-            isOneToOne: false
-            referencedRelation: "webhook_config"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      webhook_log: {
-        Row: {
-          attempt_count: number | null
-          completed_at: string | null
-          created_at: string | null
-          error_message: string | null
-          event_type: string
-          id: string
-          next_retry_at: string | null
-          payload: Json | null
-          response_body: string | null
-          response_status: number | null
-          success: boolean | null
-          webhook_id: string | null
-        }
-        Insert: {
-          attempt_count?: number | null
-          completed_at?: string | null
-          created_at?: string | null
-          error_message?: string | null
-          event_type: string
-          id?: string
-          next_retry_at?: string | null
-          payload?: Json | null
-          response_body?: string | null
-          response_status?: number | null
-          success?: boolean | null
-          webhook_id?: string | null
-        }
-        Update: {
-          attempt_count?: number | null
-          completed_at?: string | null
-          created_at?: string | null
-          error_message?: string | null
-          event_type?: string
-          id?: string
-          next_retry_at?: string | null
-          payload?: Json | null
-          response_body?: string | null
-          response_status?: number | null
-          success?: boolean | null
-          webhook_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "webhook_log_webhook_id_fkey"
-            columns: ["webhook_id"]
-            isOneToOne: false
-            referencedRelation: "webhook_config"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workflow_memory: {
-        Row: {
-          created_at: string | null
-          entity_id: string
-          entity_type: string
-          feature: string
-          id: string
-          memory_data: Json
-          updated_at: string | null
-          workflow_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          entity_id: string
-          entity_type: string
-          feature: string
-          id?: string
-          memory_data?: Json
-          updated_at?: string | null
-          workflow_id: string
-        }
-        Update: {
-          created_at?: string | null
-          entity_id?: string
-          entity_type?: string
-          feature?: string
-          id?: string
-          memory_data?: Json
-          updated_at?: string | null
-          workflow_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       gl_inventory_view: {
@@ -2514,21 +2378,6 @@ export type Database = {
         }
         Relationships: []
       }
-      webhook_integration_checklist: {
-        Row: {
-          callback_function: string | null
-          description: string | null
-          enabled: boolean | null
-          entity_table: string | null
-          event_types: string[] | null
-          implementation_priority: number | null
-          implementation_status: string | null
-          notes: string | null
-          trigger_function: string | null
-          webhook_name: string | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
       admin_restart_media_sync_cron: {
@@ -2606,6 +2455,16 @@ export type Database = {
         Args: { account_uid: string; po_date: string }
         Returns: string
       }
+      get_customer_payment_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          account_name: string
+          total_invoices: number
+          total_invoiced: number
+          total_paid: number
+          outstanding_balance: number
+        }[]
+      }
       get_potential_product_matches: {
         Args: { p_message_id: string; p_limit?: number; p_min_score?: number }
         Returns: Json
@@ -2622,6 +2481,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           table_name: string
+        }[]
+      }
+      get_purchase_order_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          glide_row_id: string
+          total_purchase_amount: number
+          total_payments_made: number
+          outstanding_balance: number
         }[]
       }
       get_standardized_pdf_path: {
@@ -2641,6 +2510,20 @@ export type Database = {
           data_type: string
         }[]
       }
+      get_top_products_by_sales: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          display_name: string
+          total_qty_sold: number
+        }[]
+      }
+      get_total_revenue_by_month: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          month: string
+          total_revenue: number
+        }[]
+      }
       gl_admin_execute_sql: {
         Args: { sql_query: string }
         Returns: Json
@@ -2657,7 +2540,9 @@ export type Database = {
         }[]
       }
       gl_get_business_stats: {
-        Args: Record<PropertyKey, never>
+        Args:
+          | Record<PropertyKey, never>
+          | { start_date: string; end_date: string }
         Returns: {
           total_invoices: number
           total_estimates: number
@@ -2921,6 +2806,21 @@ export type Database = {
       process_pdf_queue: {
         Args: { p_limit?: number }
         Returns: number
+      }
+      record_pdf_generation: {
+        Args: {
+          doc_type: string
+          doc_id: string
+          trigger_source: string
+          trigger_type: string
+          success?: boolean
+          error_message?: string
+        }
+        Returns: undefined
+      }
+      register_pdf_failure: {
+        Args: { doc_type: string; doc_id: string; error_message: string }
+        Returns: undefined
       }
       reject_product_from_queue: {
         Args: { p_queue_id: string; p_reason?: string; p_user_id?: string }
