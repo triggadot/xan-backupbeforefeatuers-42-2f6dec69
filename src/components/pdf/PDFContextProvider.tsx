@@ -1,7 +1,7 @@
+
 import { useToast } from "@/hooks/utils/use-toast";
-import { PDFGenerationOptions, PDFGenerationResult } from "@/lib/pdf/pdf.types";
-import { generatePDF as generatePDFService } from "@/lib/pdf/pdfServices";
-import { DocumentType, toLegacyDocumentTypeString } from "@/types/pdf.unified";
+import { PDFGenerationOptions, PDFGenerationResult, DocumentType, toLegacyDocumentTypeString } from "@/types/pdf-types";
+import { pdfService } from "@/services/pdf-service";
 import { saveAs } from "file-saver";
 import React, { createContext, useContext, useState } from "react";
 
@@ -44,7 +44,7 @@ export const PDFProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsGenerating(true);
 
     try {
-      const result = await generatePDFService(
+      const result = await pdfService.generatePDF(
         documentType,
         documentId,
         options
@@ -102,7 +102,7 @@ export const PDFProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       // Use the single document function, but it will trigger server-side processing
-      const result = await generatePDFService(documentType, documentId, {
+      const result = await pdfService.generatePDF(documentType, documentId, {
         forceRegenerate: true, // Force regeneration for better reliability
       });
 
@@ -142,7 +142,7 @@ export const PDFProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       // Generate with server storage option
-      const result = await generatePDFService(documentType, documentId, {
+      const result = await pdfService.generatePDF(documentType, documentId, {
         forceRegenerate: true, // Always generate fresh version when storing
       });
 
@@ -223,10 +223,10 @@ export const PDFProvider: React.FC<{ children: React.ReactNode }> = ({
   return <PDFContext.Provider value={value}>{children}</PDFContext.Provider>;
 };
 
-export const usePDF = (): PDFContextType => {
+export const usePDFContext = (): PDFContextType => {
   const context = useContext(PDFContext);
   if (!context) {
-    throw new Error("usePDF must be used within a PDFProvider");
+    throw new Error("usePDFContext must be used within a PDFProvider");
   }
   return context;
 };
