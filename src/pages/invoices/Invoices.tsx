@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusIcon, DownloadIcon, SearchIcon } from 'lucide-react';
@@ -6,6 +7,7 @@ import InvoiceStats from '@/components/invoices/InvoiceStats';
 import { useToast } from '@/hooks/utils/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { useInvoices } from '@/hooks/invoices';
+import { InvoiceWithAccount } from '@/types/invoices/invoice';
 
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,7 +67,7 @@ const Invoices = () => {
       comparison = 1;
     }
 
-    if (sortColumn === 'date_of_invoice{
+    if (sortColumn === 'date_of_invoice') {
       const dateA = aValue ? new Date(aValue).getTime() : 0;
       const dateB = bValue ? new Date(bValue).getTime() : 0;
       comparison = dateA - dateB;

@@ -1,3 +1,4 @@
+
 import { useParams } from 'react-router-dom';
 import { useInvoiceDetail } from '@/hooks/invoices';
 import { InvoiceDetailView } from '@/components/invoices';
@@ -34,7 +35,7 @@ const InvoiceDetailPage = () => {
   const compatibleInvoice: NewInvoiceWithAccount = {
     id: invoice.id,
     glide_row_id: invoice.glide_row_id || '',
-    date_of_invoicenvoice.invoiceDate?.toISOString() || null,
+    date_of_invoice: invoice.invoiceDate?.toISOString() || null,
     created_timestamp: invoice.createdAt?.toISOString() || null,
     submitted_timestamp: invoice.createdAt?.toISOString() || null,
     user_email: null,

@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import {
@@ -20,8 +21,6 @@ import {
   Accounts,
   AccountDetail,
   AccountOverview,
-
-
 } from "@/pages";
 
 // Missing from barrel file
@@ -57,12 +56,12 @@ const PlaceholderPage = () => (
   </div>
 );
 
-function App() {
+export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Index />} />
+          <Route index element={<ModernDashboard />} />
           <Route
             path="dashboard"
             element={
@@ -232,7 +231,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="data-management"
             element={
@@ -278,7 +276,14 @@ function App() {
           <Route path="table-demo" element={<TableDemo />} />
           <Route path="sidebar-demo" element={<SidebarDemo />} />
           <Route path="auth" element={<Auth />} />
-          <Route path="shipping" element={<ProtectedRoute><ShippingDashboard /></ProtectedRoute>} />
+          <Route
+            path="/shipping"
+            element={
+              <ProtectedRoute>
+                <ShippingDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

@@ -33,7 +33,7 @@ export const InvoiceCard: React.FC<InvoiceCardProps> = ({ invoice }) => {
 
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Calendar className="h-4 w-4" />
-              <span>{formatDate(invoice.date_of_invoice/span>
+              <span>{formatDate(invoice.date_of_invoice)}</span>
             </div>
           </div>
         </CardContent>

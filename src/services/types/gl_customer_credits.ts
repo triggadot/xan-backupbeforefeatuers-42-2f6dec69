@@ -1,162 +1,147 @@
-import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Type definitions for gl_customer_credits table
+ * TypeScript types for the gl_customer_credits table from Supabase
  */
 
-// Database schema type matching Supabase gl_customer_credits table
+// The database record type that exactly matches the Supabase table columns
 export interface GlCustomerCreditRecord {
   id: string;
   glide_row_id: string;
-  date_of_payment?: string;
-  payment_type?: string;
-  rowid_invoices?: string;
-  rowid_estimates?: string;
-  rowid_accounts?: string;
-  payment_amount?: number;
-  payment_note?: string;
-  created_at: string;
-  updated_at: string;
+  date_of_payment: string | null;
+  payment_amount: number | null;
+  payment_note: string | null;
+  rowid_accounts: string | null;
+  rowid_invoices: string | null;
+  rowid_estimates: string | null;
+  payment_type: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-// Type for database insert/update operations
+// Insert type for creating new customer credit records
 export interface GlCustomerCreditInsert {
   glide_row_id: string;
-  date_of_payment?: string;
-  payment_type?: string;
-  rowid_invoices?: string;
-  rowid_estimates?: string;
-  rowid_accounts?: string;
-  payment_amount?: number;
-  payment_note?: string;
+  date_of_payment?: string | null;
+  payment_amount?: number | null;
+  payment_note?: string | null;
+  rowid_accounts?: string | null;
+  rowid_invoices?: string | null;
+  rowid_estimates?: string | null;
+  payment_type?: string | null;
 }
 
-// Frontend filter interface
-export interface CustomerCreditFilters {
-  invoiceId?: string;
-  estimateId?: string;
-  accountId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  search?: string;
+// Update type for updating existing customer credit records (all fields optional)
+export interface GlCustomerCreditUpdate {
+  glide_row_id?: string;
+  date_of_payment?: string | null;
+  payment_amount?: number | null;
+  payment_note?: string | null;
+  rowid_accounts?: string | null;
+  rowid_invoices?: string | null;
+  rowid_estimates?: string | null;
+  payment_type?: string | null;
+  updated_at?: string;
 }
 
-// Form data for creating/updating customer credits
-export interface CustomerCreditForm {
-  dateOfPayment?: Date;
-  paymentType?: string;
-  invoiceId?: string;
-  estimateId?: string;
-  accountId?: string;
-  paymentAmount?: number;
-  paymentNote?: string;
-}
-
-// Customer credit model for frontend use
+// Frontend model for customer credits (camelCase properties)
 export interface CustomerCredit {
   id: string;
-  glide_row_id: string;
-  date_of_payment?: string;
-  payment_type?: string;
-  rowid_invoices?: string;
-  rowid_estimates?: string;
-  rowid_accounts?: string;
-  payment_amount?: number;
-  payment_note?: string;
-  created_at: string;
-  updated_at: string;
+  glideRowId: string;
+  dateOfPayment: Date | null;
+  paymentAmount: number | null;
+  paymentNote: string | null;
+  accountId: string | null;
+  invoiceId: string | null;
+  estimateId: string | null;
+  paymentType: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+
+  // Derived properties
+  formattedDate?: string;
+  formattedAmount?: string;
+}
+
+// Form data for customer credit input
+export interface CustomerCreditForm {
+  dateOfPayment: Date | null;
+  paymentAmount: number | null;
+  paymentNote: string | null;
+  accountId: string | null;
+  invoiceId: string | null;
+  estimateId: string | null;
+  paymentType: string | null;
+}
+
+// Search filters for customer credits
+export interface CustomerCreditFilters {
+  accountId?: string | null;
+  invoiceId?: string | null;
+  estimateId?: string | null;
+  paymentType?: string | null;
+  dateRange?: {
+    from: Date | null;
+    to: Date | null;
+  };
+  amountRange?: {
+    min: number | null;
+    max: number | null;
+  };
 }
 
 /**
- * Customer Credits service for Supabase operations
- * Handles CRUD operations for gl_customer_credits table
+ * Converts a database record to a frontend model
  */
-export const glCustomerCreditsService = {
-  /**
-   * Get all customer credits with optional filtering
-   */
-  async getCustomerCredits(filters: CustomerCreditFilters = {}): Promise<CustomerCredit[]> {
-    let query = supabase
-      .from('gl_customer_credits')
-      .select('*');
+export function convertDbToFrontend(record: GlCustomerCreditRecord): CustomerCredit {
+  return {
+    id: record.id,
+    glideRowId: record.glide_row_id,
+    dateOfPayment: record.date_of_payment ? new Date(record.date_of_payment) : null,
+    paymentAmount: record.payment_amount,
+    paymentNote: record.payment_note,
+    accountId: record.rowid_accounts,
+    invoiceId: record.rowid_invoices,
+    estimateId: record.rowid_estimates,
+    paymentType: record.payment_type,
+    createdAt: record.created_at ? new Date(record.created_at) : null,
+    updatedAt: record.updated_at ? new Date(record.updated_at) : null,
 
-    // Apply filters
-    if (filters.invoiceId) {
-      query = query.eq('rowid_invoices', filters.invoiceId);
-    }
-    if (filters.estimateId) {
-      query = query.eq('rowid_estimates', filters.estimateId);
-    }
-    if (filters.accountId) {
-      query = query.eq('rowid_accounts', filters.accountId);
-    }
-    if (filters.dateFrom) {
-      query = query.gte('date_of_payment', filters.dateFrom.toISOString());
-    }
-    if (filters.dateTo) {
-      query = query.lte('date_of_payment', filters.dateTo.toISOString());
-    }
-    if (filters.search) {
-      query = query.or(
-        `payment_type.ilike.%${filters.search}%,payment_note.ilike.%${filters.search}%`
-      );
-    }
+    // Derived properties
+    formattedDate: record.date_of_payment ? new Date(record.date_of_payment).toLocaleDateString() : 'N/A',
+    formattedAmount: record.payment_amount ?
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(record.payment_amount)
+      : '$0.00'
+  };
+}
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+/**
+ * Converts a frontend model to a database record for insert
+ */
+export function convertFrontendToDbInsert(model: CustomerCreditForm): GlCustomerCreditInsert {
+  return {
+    glide_row_id: crypto.randomUUID(), // Generate a new UUID
+    date_of_payment: model.dateOfPayment ? model.dateOfPayment.toISOString() : null,
+    payment_amount: model.paymentAmount,
+    payment_note: model.paymentNote,
+    rowid_accounts: model.accountId,
+    rowid_invoices: model.invoiceId,
+    rowid_estimates: model.estimateId,
+    payment_type: model.paymentType
+  };
+}
 
-    if (error) {
-      console.error('Error fetching customer credits:', error);
-      throw new Error(`Failed to fetch customer credits: ${error.message}`);
-    }
-
-    return (data as unknown as GlCustomerCreditRecord[]).map(item => {
-      const credit: CustomerCredit = {
-        id: item.id,
-        glide_row_id: item.glide_row_id,
-        date_of_payment: item.date_of_payment,
-        payment_type: item.payment_type,
-        rowid_invoices: item.rowid_invoices,
-        rowid_estimates: item.rowid_estimates,
-        rowid_accounts: item.rowid_accounts,
-        payment_amount: item.payment_amount,
-        payment_note: item.payment_note,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      };
-      return credit;
-    });
-  },
-
-  /**
-   * Get a single customer credit by ID
-   */
-  async getCustomerCreditById(id: string): Promise<CustomerCredit> {
-    const { data, error } = await supabase
-      .from('gl_customer_credits')
-      .select('*')
-      .eq('glide_row_id', id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching customer credit:', error);
-      throw new Error(`Failed to fetch customer credit: ${error.message}`);
-    }
-
-    if (!data) {
-      throw new Error(`Customer credit with ID ${id} not found`);
-    }
-
-    const item = data as unknown as GlCustomerCreditRecord;
-    const credit: CustomerCredit = {
-      id: item.id,
-      glide_row_id: item.glide_row_id,
-      date_of_payment: item.date_of_payment,
-      payment_type: item.payment_type,
-      rowid_invoices: item.rowid_invoices,
-      rowid_estimates: item.rowid_estimates,
-      rowid_accounts: item.rowid_accounts,
-      payment_amount: item.payment_amount,
-      payment_note: item.payment_note,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-    };  
+/**
+ * Converts a frontend model to a database record for update
+ */
+export function convertFrontendToDbUpdate(model: Partial<CustomerCredit>): GlCustomerCreditUpdate {
+  return {
+    date_of_payment: model.dateOfPayment ? model.dateOfPayment.toISOString() : undefined,
+    payment_amount: model.paymentAmount,
+    payment_note: model.paymentNote,
+    rowid_accounts: model.accountId,
+    rowid_invoices: model.invoiceId,
+    rowid_estimates: model.estimateId,
+    payment_type: model.paymentType,
+    updated_at: new Date().toISOString()
+  };
+}

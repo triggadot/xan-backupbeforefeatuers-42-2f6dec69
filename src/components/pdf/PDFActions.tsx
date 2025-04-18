@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { ButtonProps } from '@/components/ui/button';
 import { StandardPDFButton } from './StandardPDFButton';
-import { DocumentType } from '@/types/documents/pdf.unified';
+import { DocumentType } from '@/types/pdf-types';
 
 /**
  * @deprecated Use StandardPDFButton instead.
@@ -31,9 +32,7 @@ export const PDFActions: React.FC<PDFActionsProps & ButtonProps> = ({
         ? DocumentType.PURCHASE_ORDER 
         : documentType === 'estimate' 
           ? DocumentType.ESTIMATE 
-          : documentType === 'product' 
-            ? DocumentType.PRODUCT 
-            : DocumentType.INVOICE
+          : DocumentType.INVOICE
     : documentType;
 
   return (
