@@ -1,4 +1,3 @@
-
 -- This migration adds tracking functions for PDF generation
 -- to improve reliability and monitoring
 
@@ -12,7 +11,8 @@ CREATE OR REPLACE FUNCTION public.record_pdf_generation(
   error_message TEXT DEFAULT NULL
 ) RETURNS VOID AS $$
 BEGIN
-  INSERT INTO pdf_generation_logs(
+  -- Make sure the pdf_generation_logs table exists before inserting
+  INSERT INTO public.pdf_generation_logs(
     document_type,
     document_id,
     trigger_source,
@@ -40,15 +40,15 @@ DECLARE
   existing_failure INTEGER;
 BEGIN
   -- Check if this document failure is already registered
-  SELECT COUNT(*) INTO existing_failure 
-  FROM pdf_generation_failures
+  SELECT COUNT(*) INTO existing_failure
+  FROM public.pdf_generation_failures
   WHERE document_type = doc_type
   AND document_id = doc_id::TEXT
   AND resolved = false;
-  
+
   -- Only add if not already tracked
   IF existing_failure = 0 THEN
-    INSERT INTO pdf_generation_failures(
+    INSERT INTO public.pdf_generation_failures(
       document_type,
       document_id,
       error_message
@@ -59,8 +59,8 @@ BEGIN
     );
   ELSE
     -- Update existing record with new error and increment retry count
-    UPDATE pdf_generation_failures
-    SET 
+    UPDATE public.pdf_generation_failures
+    SET
       error_message = error_message,
       retry_count = retry_count + 1,
       last_attempt = NOW(),
@@ -69,7 +69,7 @@ BEGIN
     AND document_id = doc_id::TEXT
     AND resolved = false;
   END IF;
-  
+
   -- Record this in logs as well
   PERFORM public.record_pdf_generation(
     doc_type,

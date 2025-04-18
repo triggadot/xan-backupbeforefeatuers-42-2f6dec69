@@ -1,5 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
-import { GlAccountRecord, GlAccountInsert, AccountFilters, AccountForm, Account } from '@/services/types/gl_accounts';
+import { supabase } from '../integrations/supabase/client';
+import { GlAccountRecord, GlAccountInsert, AccountFilters, AccountForm, Account } from '../types/gl_accounts';
 
 /**
  * AccountServices - handles CRUD and realtime for gl_accounts table

@@ -1,4 +1,4 @@
-import { GlAccount } from '../index';
+import { GlAccount } from "../index";
 
 export interface EstimateLine {
   id: string;
@@ -11,7 +11,7 @@ export interface EstimateLine {
   selling_price: number;
   line_total: number;
   date_of_sale?: string; // Changed from string | Date to just string
-  product_sale_note?: string;
+  sale_note?: string; // Updated from product_sale_note to match DB schema
   total_stock_after_sell?: number;
   created_at: string; // Changed from string | Date to just string
   updated_at: string; // Changed from string | Date to just string
@@ -40,18 +40,20 @@ export interface Estimate {
   accountName?: string; // Used for display
   estimate_date?: string; // Changed from string | Date to just string
   is_a_sample?: boolean;
-  add_note?: boolean;
-  status: 'pending' | 'draft' | 'converted';
+  is_note_added?: boolean; // Updated from add_note to match DB schema
+  status: "pending" | "draft" | "converted";
   total_amount: number;
   total_credits: number;
   balance: number;
   glide_pdf_url?: string; // Internal Glide use only
-  glide_pdf_url2?: string; // Internal Glide use only
+  glide_pdf_url_secondary?: string; // Updated from glide_pdf_url2 to match DB schema
   supabase_pdf_url?: string; // Supabase storage URL for PDFs
-  valid_final_create_invoice_clicked?: boolean;
-  date_invoice_created_date?: string; // Changed from string | Date to just string
+  is_invoice_created?: boolean; // Updated from valid_final_create_invoice_clicked to match DB schema
+  date_invoice_created?: string; // Updated from date_invoice_created_date to match DB schema
   created_at: string; // Changed from string | Date to just string
   updated_at: string; // Changed from string | Date to just string
+  notes?: string; // Added from DB schema
+  estimate_uid?: string; // Added from DB schema
 }
 
 export interface EstimateWithDetails extends Estimate {
@@ -64,7 +66,7 @@ export interface EstimateWithDetails extends Estimate {
 
 // Add the EstimateFilters interface
 export interface EstimateFilters {
-  status?: 'pending' | 'draft' | 'converted';
+  status?: "pending" | "draft" | "converted";
   accountId?: string;
   fromDate?: string;
   toDate?: string;

@@ -102,6 +102,11 @@ export const navigationConfig: NavigationConfig = {
           icon: "shoppingBag",
         },
         {
+          title: "Shipping",
+          href: "/shipping",
+          icon: "package",
+        },
+        {
           title: "Expenses",
           href: "/expenses",
           icon: "receipt",
