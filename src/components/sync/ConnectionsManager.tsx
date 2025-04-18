@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/utils/use-toast";
-import { glSyncService } from "@/services/glSync";
+import { glSyncService } from "@/services/GlSync";
 import { createLogger } from "@/services/logger";
 import { GlConnection } from "@/types/glide-sync/glsync";
 import {

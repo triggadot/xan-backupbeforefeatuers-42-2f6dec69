@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useConnections } from "@/hooks/connections/useConnections";
 import { useGlSync } from "@/hooks/gl-sync";
 import { useToast } from "@/hooks/utils/use-toast";
-import { glSyncService } from "@/services/glSync";
+import { glSyncService } from "@/services/GlSync";
 import { GlMapping } from "@/types/glide-sync/glsync";
 import { Loader2 } from "lucide-react";
 import React, { useState } from "react";

@@ -2,7 +2,7 @@
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFGenerationOptions, PDFGenerationResult } from '@/lib/pdf/pdf.types';
 import { batchGeneratePDFs, generatePDF as generatePDFService } from '@/lib/pdf/pdfServices';
-import { pdfDatabaseService } from '@/services/pdf-service';
+import { pdfDatabaseService } from '@/services/PDFServices';
 import { DocumentType } from '@/types/pdf.unified';
 import { saveAs } from 'file-saver';
 import { useState } from 'react';

@@ -1,6 +1,6 @@
-import BusinessMetricsCard from '@/components/dashboard/modern/BusinessMetricsCard';
-import FinancialActions from '@/components/dashboard/modern/FinancialActions';
-import FinancialSummaryCard from '@/components/dashboard/modern/FinancialSummaryCard';
+import BusinessMetricsCard from '@/components/dashboard/modern/business-metrics';
+import FinancialActions from '@/components/dashboard/modern/finance-actions';
+import FinancialSummaryCard from '@/components/dashboard/modern/finance0su';
 import NewTransactionDialog from '@/components/dashboard/modern/NewTransactionDialog';
 import QuickTransferCard from '@/components/dashboard/modern/QuickTransferCard';
 import RecentTransactionsTable from '@/components/dashboard/modern/RecentTransactionsTable';
@@ -26,38 +26,38 @@ export default function ModernDashboard() {
   const isMobile = useBreakpoint('md');
   const [timeFilter, setTimeFilter] = useState('30d');
   const queryClient = useQueryClient();
-  
+
   // Fetch real data using hooks - these now use our Supabase SQL functions
-  const { 
+  const {
     data: businessMetrics,
     isLoading: isLoadingMetrics
   } = useBusinessMetrics();
-  
+
   const {
     data: chartData,
     isLoading: isLoadingChart
   } = useChartData(12); // Show a full year of data
-  
+
   const {
     data: transactions,
     isLoading: isLoadingTransactions
   } = useRecentTransactions(10, timeFilter);
-  
+
   const {
     data: financialMetrics,
     isLoading: isLoadingFinancials
   } = useFinancialMetrics();
-  
+
   const {
     data: contacts,
     isLoading: isLoadingContacts
   } = useContacts(5);
-  
+
   // Calculated metrics
   const totalRevenue = financialMetrics?.find(m => m.label === 'Revenue')?.value || 0;
   const paidInvoices = financialMetrics?.find(m => m.label === 'Revenue')?.secondaryValue || 0;
   const collectionRate = totalRevenue > 0 ? Math.round((paidInvoices / totalRevenue) * 100) : 0;
-  
+
   const handleQuickTransfer = async (contactId: string, amount: number) => {
     console.log(`Transfer $${amount} to contact ${contactId}`);
     // In a real implementation, this would call the Supabase functions API to process the transfer
@@ -82,7 +82,7 @@ export default function ModernDashboard() {
           }} />
         </div>
       </div>
-      
+
       {/* Top Metrics */}
       <ResponsiveGrid
         columns={{ xs: 1, sm: 2, lg: 3, xl: 4 }}
@@ -149,12 +149,12 @@ export default function ModernDashboard() {
           )}
         </GridItem>
       </ResponsiveGrid>
-      
+
       {/* Charts and Financial Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 relative">
-          <TransactionChart 
-            data={chartData || []} 
+          <TransactionChart
+            data={chartData || []}
             className="h-full"
           />
           {isLoadingChart && (
@@ -169,7 +169,7 @@ export default function ModernDashboard() {
           </div>
         </div>
       </div>
-      
+
       {/* Quick Transfer */}
       <div className="grid grid-cols-1 gap-6 mb-6">
         <div className="relative">
@@ -185,7 +185,7 @@ export default function ModernDashboard() {
           )}
         </div>
       </div>
-      
+
       {/* Lower Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative">
@@ -206,7 +206,7 @@ export default function ModernDashboard() {
           />
         </div>
       </div>
-      
+
       {/* Mobile quick actions */}
       <ShowAt breakpoint="sm" below>
         <div className="fixed bottom-20 right-4 z-40">

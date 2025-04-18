@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/utils/use-toast";
-import { glSyncService } from "@/services/glSync";
+import { glSyncService } from "@/services/GlSync";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 

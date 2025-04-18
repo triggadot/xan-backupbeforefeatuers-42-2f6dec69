@@ -1,4 +1,4 @@
-import { glSyncService } from '@/services/glSync';
+import { glSyncService } from '@/services/GlSync';
 import { act, renderHook } from '@testing-library/react-hooks';
 import { useGlSync } from '../useGlSync';
 import { useGlSyncErrors } from '../useGlSyncErrors';

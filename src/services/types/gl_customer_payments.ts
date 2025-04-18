@@ -70,7 +70,7 @@ export interface CustomerPayment {
  * Customer Payments service for Supabase operations
  * Handles CRUD operations for gl_customer_payments table
  */
-export const glCustomerPaymentsService = {
+export const GlCustomerPaymentsService = {
   /**
    * Get all customer payments with optional filtering
    */

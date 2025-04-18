@@ -159,4 +159,4 @@ export const glCustomerCreditsService = {
       payment_note: item.payment_note,
       created_at: item.created_at,
       updated_at: item.updated_at,
-    };
+    };  
