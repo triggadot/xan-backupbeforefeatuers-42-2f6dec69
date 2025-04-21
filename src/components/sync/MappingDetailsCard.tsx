@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { GlMapping, GlSyncStatus } from '@/types/glide-sync/glsync';
+import { GlMapping, GlSyncStatus } from '@/types/glsync';
 import { ArrowRightLeft, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useGlSync } from '@/hooks/gl-sync';

@@ -1,5 +1,5 @@
 import React, { ReactNode, ErrorInfo } from 'react';
-import { GlMapping } from '@/types/glide-sync/glsync';
+import { GlMapping } from '@/types/glsync';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 

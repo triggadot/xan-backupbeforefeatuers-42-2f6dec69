@@ -33,8 +33,8 @@ product_profitability AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
-        OR i.date_of_invoice IS NULL
+        i.invoice_order_date BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
+        OR i.invoice_order_date IS NULL
     GROUP BY 
         p.id, p.display_name, p.category
 ),
@@ -82,8 +82,8 @@ customer_profitability AS (
         gl_products p ON il.rowid_products = p.glide_row_id
     WHERE 
         (a.client_type = 'Customer' OR a.client_type = 'Customer & Vendor')
-        AND (i.date_of_invoice BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
-             OR i.date_of_invoice IS NULL)
+        AND (i.invoice_order_date BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
+             OR i.invoice_order_date IS NULL)
     GROUP BY 
         a.id, a.account_name, a.client_type, a.customer_balance
 ),
@@ -109,8 +109,8 @@ category_profitability AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
-        OR i.date_of_invoice IS NULL
+        i.invoice_order_date BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
+        OR i.invoice_order_date IS NULL
     GROUP BY 
         p.category
 ),
@@ -155,7 +155,7 @@ overall_profitability AS (
     LEFT JOIN 
         gl_products p ON il.rowid_products = p.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM analysis_period) AND (SELECT end_date FROM analysis_period)
 )
 
 -- Main query that returns all sections

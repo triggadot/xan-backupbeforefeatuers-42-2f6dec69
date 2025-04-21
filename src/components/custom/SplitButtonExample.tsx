@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Container } from '@/components/ui/container';
-import { useBreakpoint } from '@/hooks/utils/use-mobile';
-import { HideAt, ShowAt } from '@/hooks/utils/use-responsive';
+import { useBreakpoint } from '@/hooks/use-mobile';
+import { HideAt, ShowAt } from '@/hooks/use-responsive';
 import { Bell, Calendar, Home, Settings, User } from 'lucide-react';
 import { useState } from 'react';
 import { SplitButtonDropdown } from './SplitButtonDropdown';

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import { GlConnection } from '@/types/glide-sync/glsync';
+import { GlConnection } from '@/types/glsync';
 import ConnectionCard from './ConnectionCard';
 import AddConnectionDialog from './AddConnectionDialog';
 import EditConnectionDialog from './EditConnectionDialog';

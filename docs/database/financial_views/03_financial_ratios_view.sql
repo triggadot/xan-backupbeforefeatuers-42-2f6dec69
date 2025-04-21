@@ -24,7 +24,7 @@ current_revenue AS (
     FROM 
         gl_invoices
     WHERE 
-        date_of_invoice(SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
+        invoice_order_date BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
 ),
 
 current_cogs AS (
@@ -43,7 +43,7 @@ current_cogs AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
 ),
 
 current_expenses AS (
@@ -92,7 +92,7 @@ previous_revenue AS (
     FROM 
         gl_invoices
     WHERE 
-        date_of_invoice BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
+        invoice_order_date BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
 ),
 
 previous_cogs AS (
@@ -111,7 +111,7 @@ previous_cogs AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
 ),
 
 previous_expenses AS (

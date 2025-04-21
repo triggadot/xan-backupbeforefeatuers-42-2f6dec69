@@ -5,51 +5,26 @@ Xan-1 is a comprehensive business management system built for handling financial
 
 ## Core Objectives
 1. Provide a unified platform for tracking and managing business transactions
-2. Support data synchronization between Supabase PostgreSQL and Glide Apps
+2. Support bidirectional sync between Supabase PostgreSQL and Glide Apps
 3. Offer PDF generation and management for business documents
 4. Implement product inventory management with relationship tracking
 5. Maintain accurate financial calculations and balances
-6. Create a maintainable, consistent codebase with clear conventions
 
 ## Primary Features
-- **Financial Management**
-  - Invoice management with line items and payment tracking
-  - Purchase order system with product line items
-  - Estimate creation with conversion to invoices
-  - Payment processing for both customers and vendors
+- Invoice management with line items and payment tracking
+- Purchase order system with product line items
+- Estimate creation with conversion to invoices
+- Account management for both customers and vendors
+- Product inventory tracking and relationship management
+- PDF generation, sharing, and batch processing
+- Data synchronization with Glide Apps
 
-- **Relationship Management**
-  - Account management for both customers and vendors
-  - Balance tracking for financial relationships
-  - Contact information and communication history
-
-- **Inventory Management**
-  - Product inventory tracking and relationship management
-  - Sample and fronted product handling
-  - Category management and reporting
-  - Stock level monitoring
-
-- **Document Management**
-  - PDF generation, viewing, and sharing
-  - Batch processing capabilities
-  - Document templates and customization
-  - Failure tracking and management
-
-## Technical Architecture
-- **Frontend**: React with TypeScript, Vite, Tailwind CSS
-- **UI Components**: Shadcn UI for base components, Tremor for data visualization
-- **State Management**: React Context, TanStack Query for data fetching
-- **Database**: Supabase PostgreSQL with service layer access
-- **API**: Supabase Edge Functions for server-side logic
-- **PDF Generation**: Client-side with jsPDF, server-side with pdf-lib
-
-## Development Standards
-- **File & Directory Names**: kebab-case
-- **Component Names**: PascalCase
-- **Variables, Functions, Methods**: camelCase
-- **Environment Variables**: UPPERCASE
-- **Documentation**: JSDoc for components, markdown for architecture
-- **Data Fetching**: TanStack Query hooks with consistent patterns
+## Technical Goals
+- Create a maintainable Feature-Based Architecture
+- Implement consistent data patterns across the application
+- Ensure reliable balance calculations across financial entities
+- Support full PDF functionality for business documents
+- Maintain proper relationship integrity despite lack of foreign key constraints
 
 ## Database Configuration
 - Supabase Project ID: swrfsullhirscyxqneay

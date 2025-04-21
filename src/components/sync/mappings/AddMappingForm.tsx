@@ -9,8 +9,8 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
-import { GlColumnMapping } from '@/types/glide-sync/glsync';
-import { convertToDbMapping, getDefaultColumnMappings } from '@/types/glide-sync/gl-mapping-converters';
+import { GlColumnMapping } from '@/types/glsync';
+import { convertToDbMapping, getDefaultColumnMappings } from '@/utils/gl-mapping-converters';
 import { useGlSync } from '@/hooks/gl-sync';
 
 interface AddMappingFormProps {

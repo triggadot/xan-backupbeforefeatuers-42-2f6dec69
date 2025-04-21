@@ -4,8 +4,8 @@ import App from './App.tsx'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from './components/auth/AuthProvider.tsx'
-import ErrorBoundary from './components/utils/ErrorBoundary.tsx'
+import { AuthProvider } from './contexts/AuthProvider'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Import Preline
 import 'preline/preline'

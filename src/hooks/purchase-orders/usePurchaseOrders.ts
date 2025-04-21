@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchase-orders/purchaseOrder';
+import { PurchaseOrder, PurchaseOrderFilters } from '@/types/purchaseOrder';
 import { GlAccount } from '@/types';
 
 export function usePurchaseOrders(filters: PurchaseOrderFilters = {}) {

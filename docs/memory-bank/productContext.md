@@ -9,82 +9,39 @@ Xan-1 provides a unified platform that:
 2. Manages product inventory with proper relationships
 3. Maintains customer and vendor accounts with accurate balance calculations
 4. Generates professional PDF documents for business communications
-5. Provides robust data management with type safety and consistent patterns
+5. Synchronizes data with Glide Apps for mobile accessibility
 
 ## User Experience Goals
-- Intuitive navigation between related entities
+- Intuitive navigation between related entities (accounts → invoices → products)
 - Clear visualization of financial status and balances
 - Simplified document generation and sharing
 - Comprehensive product inventory management
-- Consistent, responsive UI with modern design patterns
-- Type-safe data handling with proper error management
+- Efficient data entry and relationship mapping
 
-## Core Business Workflows
+## Core Workflows
+1. **Invoice Management**: Create invoices, add line items, track payments, generate PDFs
+2. **Purchase Order Processing**: Create POs for vendors, track product deliveries and payments
+3. **Estimate Handling**: Create estimates, convert to invoices when approved
+4. **Account Management**: Track customer and vendor information, monitor balances
+5. **Product Inventory**: Manage product details, track relationships with invoices/POs
+6. **Data Synchronization**: Maintain data consistency between Supabase and Glide Apps
 
-### 1. Invoice Management
-- **Creation Flow**: User creates invoice → adds customer → adds line items → sets tax/dates → saves
-- **Payment Flow**: User views invoice → records payment → system updates balances
-- **PDF Flow**: User generates PDF → views preview → shares with customer
-- **Data Requirements**:
-  - Customer information for proper addressing and contact
-  - Product details for line items
-  - Payment information for tracking
+## Balance Calculation Business Logic
+1. **Account Balance Calculation**:
+   - `customer_balance`: Money owed TO the company from customers
+     - Calculated from: `(SUM(gl_invoices.balance WHERE rowid_accounts=acc.id)) + (SUM(gl_estimates.balance WHERE rowid_accounts=acc.id AND is_a_sample=true AND status!='converted'))`
+   - `vendor_balance`: Money owed BY the company to vendors
+     - Calculated from: `SUM(gl_purchase_orders.balance) * -1` where `rowid_accounts=acc.id`
+   - `balance`: Net account balance 
+     - Calculated as: `customer_balance + vendor_balance`
 
-### 2. Purchase Order Processing
-- **Creation Flow**: User creates PO → selects vendor → adds products → sets terms → saves
-- **Receiving Flow**: User marks products as received → updates inventory
-- **Payment Flow**: User records vendor payment → system updates balances
-- **Data Requirements**:
-  - Vendor information
-  - Product details (cost, quantity, descriptions)
-  - Payment terms and tracking
+2. **Invoice Payment Status Logic**:
+   - If `total_amount = 0`, status is `draft`
+   - If `balance < 0`, status is `credit`
+   - If `balance = 0` AND `total_amount > 0`, status is `paid`
+   - If `total_paid > 0` AND `balance > 0`, status is `partial`
+   - Otherwise (`total_paid = 0` AND `balance > 0`), status is `unpaid`
 
-### 3. Product Inventory Management
-- **Addition Flow**: User creates product → assigns vendor → sets details → saves
-- **Tracking Flow**: System tracks inventory as products are sold/purchased
-- **Sample Handling**: Special tracking for sample products and fronted inventory
-- **Data Requirements**:
-  - Product details (name, cost, selling price)
-  - Vendor relationship
-  - Inventory quantities
-  - Sample/fronted status
-
-### 4. Account Management
-- **Customer Flow**: User creates customer → tracks invoices → manages payments
-- **Vendor Flow**: User creates vendor → tracks purchase orders → manages payments
-- **Balance Tracking**: System calculates balances based on transactions
-- **Data Requirements**:
-  - Contact information
-  - Transaction history
-  - Balance calculations
-
-## Business Logic Patterns
-
-### 1. Balance Calculation Pattern
-- **Customer Balance**: Sum of unpaid invoice amounts (positive means customer owes money)
-  - Formula: `SUM(invoice.balance WHERE invoice.rowid_accounts = account.glide_row_id)`
-- **Vendor Balance**: Sum of unpaid purchase order amounts (negative means company owes vendor)
-  - Formula: `SUM(purchase_order.balance WHERE purchase_order.rowid_accounts = account.glide_row_id) * -1`
-- **Net Balance**: `customer_balance + vendor_balance`
-
-### 2. Payment Status Pattern
-- **Invoice Status Logic**:
-  - `draft`: total_amount = 0
-  - `paid`: balance <= 0
-  - `partial`: balance > 0 AND total_paid > 0
-  - `unpaid`: balance > 0 AND total_paid = 0
-
-- **Purchase Order Status Logic**:
-  - `draft`: total_amount = 0
-  - `complete`: balance <= 0
-  - `partial`: balance > 0 AND total_paid > 0
-  - `received`: balance > 0 AND total_paid = 0
-
-### 3. Inventory Tracking Pattern
-- **Current Inventory**: Original Purchase Quantity - Sold Quantity - Sample Quantity
-- **Sold Quantity**: Sum of quantities from invoice lines
-- **Sample Quantity**: Sum of quantities from sample-marked estimate lines
-- **Product Status Tracking**:
-  - Normal products: Standard inventory tracking
-  - Sample products: Tracked separately but affects vendor balance
-  - Fronted products: Special terms tracking with vendor
+3. **Product Display Logic**:
+   - Primary name display: Use `new_product_name` if available, otherwise fall back to `vendor_product_name`
+   - For invoice lines: Use `line.product_name_display`, then `line.renamed_product_name`, then `product.vendor_product_name`

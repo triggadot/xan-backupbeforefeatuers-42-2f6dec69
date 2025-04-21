@@ -1,104 +1,74 @@
 # Active Context
 
 ## Current Focus
-- Standardizing file naming conventions (converting PascalCase to kebab-case)
-- Implementing TanStack Query for all data fetching and mutations
-- Migrating to the service layer pattern for Supabase table access
-- Enhancing PDF generation and management functionality
-- Improving documentation with consistent JSDoc comments and markdown files
+- Implementing Supabase-to-Glide synchronization using n8n as an intermediary
+- Reorganizing hooks into feature-based directories following the Feature-Based Architecture pattern
+- Improving product inventory management system with comprehensive views
+- Enhancing PDF generation system for all document types
+- Consolidating duplicate code and implementing consistent patterns
+- Creating documentation for new database functions
 
 ## Recent Changes
-1. **Consolidated Documentation Approach**:
-   - Created single source of truth in `/docs` directory
-   - Standardized documentation format across the project
-   - Removed legacy README files in favor of centralized documentation
-   - Enhanced main README with development standards
+1. Revised calculation logic for `gl_accounts` balances:
+   - vendor_balance: Now calculated as sum of related gl_purchase_orders.balance * -1
+   - balance: Calculated as customer_balance + vendor_balance
+   - Implemented via database triggers for automatic updates
+   - Removed the old `gl_calculate_account_balance` function
+   - Added backfill functions for existing data
 
-2. **Migrated Hooks to TanStack Query**:
-   - Updated useInvoices to use TanStack Query with proper caching
-   - Implemented useInvoiceMutation with optimistic updates
-   - Converted useInvoicePayments to use mutations
-   - Added service layer integration to hooks
+2. Reorganized purchase order hooks following Feature-Based Architecture:
+   - Primary hooks: usePurchaseOrders, usePurchaseOrderDetail
+   - Legacy hooks maintained with backward compatibility exports
 
-3. **Enhanced PDF Management**:
-   - Added PDF Failures Manager component to the admin section
-   - Implemented centralized PDF management interface
-   - Created consistent error handling for PDF generation failures
-   - Improved PDF storage and retrieval mechanisms
+3. Added Product Category Default Logic:
+   - New database function: `set_default_product_category()`
+   - Trigger: `set_product_category_trigger`
+   - Default value: "Flowers" for NULL category fields
 
-4. **Standardized Naming Conventions**:
-   - Defined clear conventions for files, components, and variables
-   - Converted invoice components to kebab-case files
-   - Created barrel exports for clean imports
-   - Documented migration plan for remaining components
-
-5. **Implemented Service Layer**:
-   - Created typed service modules for Supabase tables
-   - Implemented consistent method naming conventions
-   - Added proper error handling and logging
-   - Updated hooks to use the service layer
+4. Removed legacy pages and moving toward a unified UI approach:
+   - Deprecated old pages in src/pages root
+   - New pages in src/pages/new to be moved to root once fully tested
 
 ## Ongoing Tasks
-- **File Naming Standardization**:
-  - Converting PurchaseOrderList.tsx to purchase-order-list.tsx
-  - Updating imports to use barrel files
-  - Maintaining backward compatibility during transition
-  - Focusing on purchase order components first
+- Implementing Supabase-to-Glide synchronization system:
+  - ✅ Products synchronization completed
+  - 🔄 Invoices synchronization in progress
+  - Infrastructure tables partially set up
+  - Need to create gl_id_mappings and gl_webhook_config tables
+  - Developing n8n workflows for entity-specific operations
+  - Creating edge function for webhook processing
 
-- **TanStack Query Migration**:
-  - Converting remaining hooks to use TanStack Query
-  - Implementing proper query invalidation for related data
-  - Adding optimistic updates for better UX
-  - Creating consistent error handling patterns
+- Creating a comprehensive product inventory management system showing:
+  - Basic product information
+  - Related invoice data
+  - Related purchase order data
+  - Related estimate data
+  - Vendor information
+  - Customer information
 
-- **Service Layer Implementation**:
-  - Creating remaining service modules for all tables
-  - Adding comprehensive error handling
-  - Implementing consistent method patterns
-  - Updating hooks to use services for data access
+- Refactoring PDF generation system by document type:
+  - Create document-specific PDF modules
+  - Integrate with existing data fetching hooks
+  - Update storage and utility functions
+  - Create consistent error handling
 
-- **Documentation Improvements**:
-  - Adding JSDoc comments to all key components
-  - Updating type definitions with better documentation
-  - Creating usage examples for complex components
-  - Standardizing documentation format
+- Reorganizing hooks into feature directories:
+  - Move hooks to appropriate feature directories
+  - Create index.ts files with backward compatibility
+  - Update import paths in components
+  - Remove or deprecate duplicate implementations
 
-- **Component Structure Refinement**:
-  - Moving components to feature-based directories
-  - Implementing consistent prop interfaces
-  - Adding proper TypeScript typing to all components
-  - Creating reusable UI patterns
+- Enhancing UI/UX with Tailwind CSS, Preline UI, and Tremor:
+  - Implement improved list views 
+  - Create dashboard visualizations
+  - Enhance PDF sharing and downloading
+  - Improve overall user experience
 
 ## Technical Considerations
-- **TanStack Query Patterns**:
-  - Consistent queryKey structure (e.g., ['invoices', filters])
-  - Proper cache invalidation on mutations
-  - Error handling and loading states
-  - Optimistic updates for better user experience
-
-- **Service Layer Implementation**:
-  - Type-safe return values
-  - Consistent error handling
-  - Method naming conventions
-  - Proper use of Supabase query builder
-
-- **File Naming Migration**:
-  - Maintain backward compatibility during transition
-  - Update imports across the codebase
-  - Use barrel files for clean exports
-  - Migrate one feature at a time
-
-- **PDF System Improvements**:
-  - Centralized error handling
-  - Failure tracking and management
-  - Consistent template structure
-  - PDF storage and retrieval optimization
-
-- **Component Structure**:
-  - Feature-based organization
-  - Consistent prop interfaces
-  - Reusable UI patterns
-  - Clear separation of concerns
+- Following Glidebase relationship pattern without foreign key constraints
+- Implementing bidirectional synchronization between Supabase and Glide
+- Using n8n as workflow orchestration for Supabase-to-Glide sync
+- Maintaining proper balance calculations across all financial entities
 
 ### Payment Implementation Status
 - **Current Implementation**:

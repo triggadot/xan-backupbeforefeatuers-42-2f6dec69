@@ -30,7 +30,7 @@ FROM
   LEFT JOIN gl_expenses e ON i.id = e.invoice_id
 WHERE
   a.client_type = 'customer'
-  AND i.date_of_invoice >= DATE_TRUNC('year', CURRENT_DATE)
+  AND i.invoice_order_date >= DATE_TRUNC('year', CURRENT_DATE)
 GROUP BY
   a.id, a.account_name
 HAVING
@@ -51,7 +51,7 @@ ORDER BY
   SELECT
     a.id AS customer_id,
     a.account_name AS customer_name,
-    EXTRACT(QUARTER FROM i.date_of_invoice) AS quarter,
+    EXTRACT(QUARTER FROM i.invoice_order_date) AS quarter,
     COUNT(DISTINCT i.id) AS total_invoices,
     SUM(i.total_amount) AS total_revenue,
     COALESCE(SUM(e.amount), 0) AS total_expenses,
@@ -66,7 +66,7 @@ ORDER BY
     LEFT JOIN gl_expenses e ON i.id = e.invoice_id
   WHERE
     a.client_type = 'customer'
-    AND i.date_of_invoice >= DATE_TRUNC('year', CURRENT_DATE)
+    AND i.invoice_order_date >= DATE_TRUNC('year', CURRENT_DATE)
   GROUP BY
     a.id, a.account_name, quarter
   HAVING

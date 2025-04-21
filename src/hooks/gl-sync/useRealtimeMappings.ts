@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlMapping } from '@/types/glide-sync/glsync';
+import { GlMapping } from '@/types/glsync';
 import { useToast } from '@/hooks/utils/use-toast';
 
 /**

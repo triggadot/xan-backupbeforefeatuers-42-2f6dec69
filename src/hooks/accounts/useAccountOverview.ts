@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { Account } from '@/types/accounts/accountNew';
-import { InvoiceWithAccount } from '@/types/invoices/invoice';
+import { Account } from '@/types/accountNew';
+import { InvoiceWithAccount } from '@/types/new/invoice';
 
 /**
  * Interface for customer payments

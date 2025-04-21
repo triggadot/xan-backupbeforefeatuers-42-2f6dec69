@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { AnimatePresence } from 'framer-motion';
 import { SyncDetailTable } from './SyncDetailTable';
-import { TableName } from '@/types/glide-sync/glsync.unified';
+import { TableName } from '@/types/glsync.unified';
 import { useGlSyncStatus } from '@/hooks/gl-sync';
 
 // Table metadata for display purposes

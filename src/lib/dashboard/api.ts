@@ -1,259 +1,263 @@
-
-import { supabase } from '@/lib/supabaseClient';
-import { formatISO } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Dashboard API functions for retrieving dashboard data
+ * Fetches business statistics for dashboard metrics
  */
+export async function fetchBusinessStats() {
+  const { data, error } = await supabase
+    .rpc('gl_get_business_stats');
 
-export async function getSalesOverview(timeframe = '30d') {
+  if (error) {
+    console.error('Error fetching business stats:', error);
+    throw error;
+  }
+
+  return data?.[0] || null;
+}
+
+/**
+ * Fetches recent transactions (customer payments and vendor payments)
+ * Uses gl_get_recent_transactions RPC function for better performance
+ */
+export async function fetchRecentTransactions(limit = 10, days = 30) {
   try {
-    // Determine date range based on timeframe
-    const now = new Date();
-    let startDate = new Date();
+    // Use the RPC function to get consolidated transactions
+    const { data, error } = await supabase
+      .rpc('gl_get_recent_transactions', {
+        days_back: days,
+        limit_count: limit
+      });
+
+    if (error) {
+      console.error('Error fetching recent transactions:', error);
+      throw error;
+    }
+
+    // The data is already formatted correctly by the SQL function
+    return data || [];
+  } catch (err) {
+    console.error('Error in fetchRecentTransactions:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetches financial metrics data (revenue, expenses, profit)
+ * Uses SQL functions to get accurate metrics
+ */
+export async function fetchFinancialMetrics() {
+  try {
+    // Fetch invoice metrics (revenue)
+    const { data: invoiceMetrics, error: invoiceError } = await supabase
+      .rpc('gl_get_invoice_metrics');
+
+    if (invoiceError) {
+      console.error('Error fetching invoice metrics:', invoiceError);
+      throw invoiceError;
+    }
+
+    // Fetch purchase order metrics (expenses)
+    const { data: purchaseMetrics, error: purchaseError } = await supabase
+      .rpc('gl_get_purchase_metrics');
+
+    if (purchaseError) {
+      console.error('Error fetching purchase metrics:', purchaseError);
+      throw purchaseError;
+    }
+
+    // Extract metrics from the returned data
+    const revenue = invoiceMetrics?.[0]?.total_invoice_amount || 0;
+    const expenses = purchaseMetrics?.[0]?.total_po_amount || 0;
+    const profit = revenue - expenses;
     
-    switch (timeframe) {
-      case '7d':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case '30d':
-        startDate.setDate(now.getDate() - 30);
-        break;
-      case '90d':
-        startDate.setDate(now.getDate() - 90);
-        break;
-      case '1y':
-        startDate.setFullYear(now.getFullYear() - 1);
-        break;
-      default:
-        startDate.setDate(now.getDate() - 30);
+    // Also get paid/unpaid details which can be shown in the UI
+    const paidInvoices = invoiceMetrics?.[0]?.total_payments_received || 0;
+    const unpaidInvoices = invoiceMetrics?.[0]?.total_outstanding_balance || 0;
+    const pendingExpenses = purchaseMetrics?.[0]?.open_po_amount || 0;
+
+    return [
+      {
+        label: 'Revenue',
+        value: revenue,
+        secondaryValue: paidInvoices, // Paid amount
+        secondaryLabel: 'Collected',
+        tertiaryValue: unpaidInvoices, // Unpaid amount
+        tertiaryLabel: 'Outstanding',
+        color: 'bg-blue-600',
+        textColor: 'text-blue-700 dark:text-blue-400',
+        bgColor: 'bg-blue-50 dark:bg-blue-950/50'
+      },
+      {
+        label: 'Profit',
+        value: profit,
+        color: 'bg-emerald-600',
+        textColor: 'text-emerald-700 dark:text-emerald-400',
+        bgColor: 'bg-emerald-50 dark:bg-emerald-950/50'
+      },
+      {
+        label: 'Expenses',
+        value: expenses,
+        secondaryValue: pendingExpenses,
+        secondaryLabel: 'Pending',
+        color: 'bg-rose-600',
+        textColor: 'text-rose-700 dark:text-rose-400',
+        bgColor: 'bg-rose-50 dark:bg-rose-950/50'
+      }
+    ];
+  } catch (err) {
+    console.error('Error in fetchFinancialMetrics:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetches data for transaction chart (monthly income vs expenses)
+ * Uses gl_get_monthly_revenue SQL function for better performance
+ */
+export async function fetchChartData(months = 8) {
+  try {
+    // Use our RPC function to get the monthly revenue data
+    const { data, error } = await supabase
+      .rpc('gl_get_monthly_revenue', {
+        months_back: months
+      });
+
+    if (error) {
+      console.error('Error fetching monthly revenue data:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Transform the data to match the expected format for the chart
+    return data.map(item => ({
+      date: item.month, // Using the correct property name from the function return type
+      Income: item.revenue,
+      Expense: item.expenses
+    }));
+  } catch (err) {
+    console.error('Error in fetchChartData:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetches contact data for quick transfer functionality
+ */
+export async function fetchContacts(limit = 5) {
+  const { data, error } = await supabase
+    .from('gl_accounts')
+    .select('id, account_name, photo')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching contacts:', error);
+    throw error;
+  }
+
+  return data.map(contact => ({
+    id: contact.id,
+    name: contact.account_name || 'Unnamed Contact',
+    avatar: contact.photo || `https://i.pravatar.cc/150?u=${contact.id}`
+  }));
+}
+
+/**
+ * Fetches business metrics for the dashboard cards
+ * Uses SQL functions to retrieve accurate metrics
+ */
+export async function fetchBusinessMetrics() {
+  try {
+    // Fetch overall business stats
+    const { data: businessStats, error: statsError } = await supabase
+      .rpc('gl_get_business_stats');
+
+    if (statsError) {
+      console.error('Error fetching business stats:', statsError);
+      throw statsError;
+    }
+
+    // Define the type for business stats to match the database function return type
+    interface BusinessStats {
+      total_invoices: number;
+      total_estimates: number;
+      total_purchase_orders: number;
+      total_products: number;
+      total_customers: number;
+      total_vendors: number;
+      total_invoice_amount: number;
+      total_payments_received: number;
+      total_outstanding_balance: number;
+      total_purchase_amount: number;
+      total_payments_made: number;
+      total_purchase_balance: number;
     }
     
-    // Format dates for Postgres
-    const startDateStr = formatISO(startDate).split('T')[0];
-    const endDateStr = formatISO(now).split('T')[0];
+    // Use type assertion to provide proper typing
+    const stats = (businessStats?.[0] || {}) as BusinessStats;
     
-    // Query for total sales, invoices, and paid amounts
-    const { data: invoiceData, error: invoiceError } = await supabase
+    // Calculate month-to-date and previous month revenue
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstDayOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastDayOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    
+    // Get current month revenue
+    const { data: currentMonthData, error: currentMonthError } = await supabase
       .from('gl_invoices')
-      .select('total_amount, total_paid, payment_status, created_at, date_of_invoice')
-      .gte('date_of_invoice', startDateStr)
-      .lte('date_of_invoice', endDateStr);
-    
-    if (invoiceError) throw invoiceError;
-    
-    // Calculate metrics
-    const totalSales = invoiceData.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-    const paidAmount = invoiceData.reduce((sum, invoice) => sum + (invoice.total_paid || 0), 0);
-    const unpaidAmount = totalSales - paidAmount;
-    const invoiceCount = invoiceData.length;
-    const paidInvoiceCount = invoiceData.filter(invoice => invoice.payment_status === 'paid').length;
-    const partiallyPaidCount = invoiceData.filter(invoice => invoice.payment_status === 'partial').length;
-    const unpaidInvoiceCount = invoiceData.filter(invoice => invoice.payment_status === 'unpaid').length;
-    
-    // Daily sales data for chart
-    const dailySales = {};
-    invoiceData.forEach(invoice => {
-      const date = invoice.date_of_invoice ? new Date(invoice.date_of_invoice).toISOString().split('T')[0] : null;
-      if (!date) return;
-      
-      if (!dailySales[date]) {
-        dailySales[date] = {
-          date,
-          sales: 0,
-          payments: 0,
-        };
-      }
-      
-      dailySales[date].sales += invoice.total_amount || 0;
-      dailySales[date].payments += invoice.total_paid || 0;
-    });
-    
-    // Convert to array and sort by date
-    const salesChartData = Object.values(dailySales).sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    
-    return {
-      overview: {
-        totalSales,
-        paidAmount,
-        unpaidAmount,
-        invoiceCount,
-        paidInvoiceCount,
-        partiallyPaidCount,
-        unpaidInvoiceCount
-      },
-      salesChartData
-    };
-  } catch (error) {
-    console.error("Error fetching sales overview:", error);
-    throw error;
-  }
-}
+      .select('total_amount')
+      .gte('invoice_order_date', firstDayOfMonth.toISOString())
+      .lte('invoice_order_date', today.toISOString());
 
-export async function getCustomerOverview() {
-  try {
-    // Get all customers
-    const { data: customers, error: customerError } = await supabase
-      .from('gl_accounts')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (customerError) throw customerError;
-    
-    // Count invoices per customer
-    const { data: invoiceData, error: invoiceError } = await supabase
+    if (currentMonthError) {
+      console.error('Error fetching current month invoices:', currentMonthError);
+    }
+
+    // Get last month revenue
+    const { data: lastMonthData, error: lastMonthError } = await supabase
       .from('gl_invoices')
-      .select('rowid_accounts, total_amount');
+      .select('total_amount')
+      .gte('invoice_order_date', firstDayOfLastMonth.toISOString())
+      .lte('invoice_order_date', lastDayOfLastMonth.toISOString());
+
+    if (lastMonthError) {
+      console.error('Error fetching last month invoices:', lastMonthError);
+    }
+
+    // Calculate totals
+    const currentMonthRevenue = currentMonthData?.reduce(
+      (sum, invoice) => sum + (invoice.total_amount || 0), 0
+    ) || 0;
     
-    if (invoiceError) throw invoiceError;
+    const lastMonthRevenue = lastMonthData?.reduce(
+      (sum, invoice) => sum + (invoice.total_amount || 0), 0
+    ) || 0;
     
-    // Calculate customer metrics
-    const customerMetrics = customers.map(customer => {
-      const customerInvoices = invoiceData.filter(invoice => invoice.rowid_accounts === customer.glide_row_id);
-      const totalSpent = customerInvoices.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
-      
-      return {
-        id: customer.id,
-        name: customer.account_name,
-        invoiceCount: customerInvoices.length,
-        totalSpent,
-        createdAt: customer.created_at
-      };
-    });
-    
-    // Sort by total spent
-    const topCustomers = [...customerMetrics]
-      .sort((a, b) => b.totalSpent - a.totalSpent)
-      .slice(0, 5);
-    
-    // New vs returning calculation (simplified)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
-    
-    const newCustomers = customers.filter(c => c.created_at >= thirtyDaysAgoStr).length;
-    const returningCustomers = customers.length - newCustomers;
-    
+    // Calculate growth rate
+    const growthRate = lastMonthRevenue > 0 
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      : currentMonthRevenue > 0 ? 100 : 0;
+
     return {
-      overview: {
-        totalCustomers: customers.length,
-        newCustomers,
-        returningCustomers,
-        averageSpend: customerMetrics.reduce((sum, c) => sum + c.totalSpent, 0) / customers.length
-      },
-      topCustomers
+      totalBalance: stats.total_payments_received - stats.total_payments_made || 0,
+      activeCustomers: stats.total_customers || 0,
+      monthlyRevenue: currentMonthRevenue,
+      growthRate: growthRate,
+      totalProducts: stats.total_products || 0,
+      totalVendors: stats.total_vendors || 0
     };
-  } catch (error) {
-    console.error("Error fetching customer overview:", error);
-    throw error;
-  }
-}
-
-export async function getRecentTransactions(limit = 5) {
-  try {
-    // Get recent invoices
-    const { data: invoices, error: invoiceError } = await supabase
-      .from('gl_invoices')
-      .select(`
-        *,
-        account:rowid_accounts(*)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    if (invoiceError) throw invoiceError;
-    
-    // Get recent payments
-    const { data: payments, error: paymentError } = await supabase
-      .from('gl_customer_payments')
-      .select(`
-        *,
-        account:rowid_accounts(*)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    if (paymentError) throw paymentError;
-    
-    // Combine and sort
-    const transactions = [
-      ...invoices.map(invoice => ({
-        id: invoice.id,
-        type: 'invoice',
-        amount: invoice.total_amount,
-        date: invoice.date_of_invoice || invoice.created_at,
-        customer: invoice.account?.account_name || 'Unknown',
-        customerId: invoice.rowid_accounts,
-        status: invoice.payment_status,
-        reference: invoice.invoice_uid
-      })),
-      ...payments.map(payment => ({
-        id: payment.id,
-        type: 'payment',
-        amount: payment.payment_amount,
-        date: payment.date_of_payment || payment.created_at,
-        customer: payment.account?.account_name || 'Unknown',
-        customerId: payment.rowid_accounts,
-        status: 'completed',
-        reference: `Payment for ${payment.rowid_invoices || 'invoice'}`
-      }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, limit);
-    
-    return transactions;
-  } catch (error) {
-    console.error("Error fetching recent transactions:", error);
-    throw error;
-  }
-}
-
-export async function getInventorySummary() {
-  try {
-    // Get inventory data
-    const { data: products, error: productError } = await supabase
-      .from('gl_products')
-      .select('*');
-    
-    if (productError) throw productError;
-    
-    // Calculate inventory metrics
-    const totalProducts = products.length;
-    const totalValue = products.reduce((sum, product) => {
-      const cost = product.cost || 0;
-      const qty = product.total_qty_purchased || 0;
-      return sum + (cost * qty);
-    }, 0);
-    
-    // Group by category
-    const categoryCounts = {};
-    products.forEach(product => {
-      const category = product.category || 'Uncategorized';
-      if (!categoryCounts[category]) {
-        categoryCounts[category] = 0;
-      }
-      categoryCounts[category]++;
-    });
-    
-    const categoryData = Object.entries(categoryCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
-    
+  } catch (err) {
+    console.error('Error in fetchBusinessMetrics:', err);
     return {
-      overview: {
-        totalProducts,
-        totalValue,
-        categoryCount: Object.keys(categoryCounts).length,
-        lowStockCount: products.filter(p => (p.total_qty_purchased || 0) <= 3).length
-      },
-      categoryData
+      totalBalance: 0,
+      activeCustomers: 0,
+      monthlyRevenue: 0,
+      growthRate: 0,
+      totalProducts: 0,
+      totalVendors: 0
     };
-  } catch (error) {
-    console.error("Error fetching inventory summary:", error);
-    throw error;
   }
-}
-
-// Add more dashboard API functions as needed
+} 

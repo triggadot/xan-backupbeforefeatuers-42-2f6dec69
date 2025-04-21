@@ -14,9 +14,9 @@
 */
 
 SELECT
-  EXTRACT(YEAR FROM date_of_invoice) AS year,
-  EXTRACT(MONTH FROM date_of_invoice) AS month,
-  TO_CHAR(date_of_invoice, 'Month') AS month_name,
+  EXTRACT(YEAR FROM invoice_order_date) AS year,
+  EXTRACT(MONTH FROM invoice_order_date) AS month,
+  TO_CHAR(invoice_order_date, 'Month') AS month_name,
   COUNT(*) AS invoice_count,
   SUM(total_amount) AS total_revenue,
   SUM(amount_paid) AS payments_received,
@@ -24,8 +24,8 @@ SELECT
 FROM
   gl_invoices
 WHERE
-  date_of_invoice >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
-  AND date_of_invoice < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month')
+  invoice_order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+  AND invoice_order_date < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month')
 GROUP BY
   year, month, month_name
 ORDER BY
@@ -41,9 +41,9 @@ ORDER BY
   Example Extension (with customer breakdown):
   
   SELECT
-    EXTRACT(YEAR FROM i.date_of_invoice) AS year,
-    EXTRACT(MONTH FROM i.date_of_invoice) AS month,
-    TO_CHAR(i.date_of_invoice, 'Month') AS month_name,
+    EXTRACT(YEAR FROM i.invoice_order_date) AS year,
+    EXTRACT(MONTH FROM i.invoice_order_date) AS month,
+    TO_CHAR(i.invoice_order_date, 'Month') AS month_name,
     a.account_name AS customer_name,
     COUNT(*) AS invoice_count,
     SUM(i.total_amount) AS total_revenue,
@@ -53,8 +53,8 @@ ORDER BY
     gl_invoices i
     JOIN gl_accounts a ON i.customer_id = a.id
   WHERE
-    i.date_of_invoice >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
-    AND i.date_of_invoice < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month')
+    i.invoice_order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '12 months')
+    AND i.invoice_order_date < DATE_TRUNC('month', CURRENT_DATE + INTERVAL '1 month')
     AND a.client_type = 'customer'
   GROUP BY
     year, month, month_name, customer_name

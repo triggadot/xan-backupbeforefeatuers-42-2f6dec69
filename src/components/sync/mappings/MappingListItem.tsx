@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mapping } from '@/types/syncLog';
-import { GlMapping } from '@/types/glide-sync/glsync';
-import { convertToGlMapping } from '@/types/glide-sync/gl-mapping-converters';
+import { GlMapping } from '@/types/glsync';
+import { convertToGlMapping } from '@/utils/gl-mapping-converters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

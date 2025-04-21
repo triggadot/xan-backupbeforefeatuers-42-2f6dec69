@@ -2,7 +2,7 @@ import { Database } from '@/integrations/supabase/types';
 import { PostgrestError } from '@supabase/supabase-js';
 
 // Type for valid table names in our application
-export type SupabaseTableName = keyof Database['public']['Tables'] |
+export type SupabaseTableName = keyof Database['public']['Tables'] | 
                                 keyof Database['public']['Views'];
 
 // Expanded PostgrestError type without extending PostgrestError
@@ -143,7 +143,7 @@ export interface PurchaseOrderRow {
 export interface InvoiceRow {
   id?: string;
   glide_row_id?: string;
-  date_of_invoice
+  invoice_order_date?: string;
   rowid_accounts?: string;
   created_at?: string;
   updated_at?: string;

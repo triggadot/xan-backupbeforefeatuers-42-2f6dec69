@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { TableHead, TableHeader as UITableHeader, TableRow } from '@/components/ui/table';
-import { ColumnDef, SortOption } from '@/types';
+import { ColumnDef, SortOption } from '@/types/base';
 import { SortableColumn } from './SortableColumn';
 
 interface TableHeaderProps<T> {
-  columns: ColumnDef[];
+  columns: ColumnDef<T>[];
   sortOptions: SortOption | null;
   onSort: (columnId: string) => void;
   hasRowActions: boolean;

@@ -1212,6 +1212,13 @@ export type Database = {
             referencedRelation: "gl_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "match_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       messages: {
@@ -1557,6 +1564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "gl_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "messages_message_caption_id_fkey"
@@ -2022,6 +2036,13 @@ export type Database = {
             referencedRelation: "gl_products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "product_matches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       product_matching_config: {
@@ -2258,6 +2279,15 @@ export type Database = {
       }
     }
     Views: {
+      expense_summary: {
+        Row: {
+          category: string | null
+          expense_count: number | null
+          month: string | null
+          total_expenses: number | null
+        }
+        Relationships: []
+      }
       gl_inventory_view: {
         Row: {
           category: string | null
@@ -2295,7 +2325,7 @@ export type Database = {
           total_qty_purchased: number | null
           total_revenue: number | null
           updated_at: string | null
-          vendor_balance_impact: number | null
+          vendor_balance: number | null
           vendor_name: string | null
           vendor_payments_amount: number | null
           vendor_uid: string | null
@@ -2381,6 +2411,23 @@ export type Database = {
       gl_tables_view: {
         Row: {
           table_name: unknown | null
+        }
+        Relationships: []
+      }
+      product_sales: {
+        Row: {
+          display_name: string | null
+          product_id: string | null
+          total_quantity_sold: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
+      sales_summary: {
+        Row: {
+          date_of_invoice: string | null
+          invoice_count: number | null
+          total_sales: number | null
         }
         Relationships: []
       }

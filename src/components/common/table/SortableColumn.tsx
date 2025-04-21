@@ -1,42 +1,43 @@
 
 import React from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { TableHead } from '@/components/ui/table';
-import { ColumnDef, SortOption } from '@/types';
+import { ColumnDef, SortOption } from '@/types/base';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SortableColumnProps {
-  column: ColumnDef;
+  column: ColumnDef<any>;
   sortOptions: SortOption | null;
   onSort: (columnId: string) => void;
 }
 
-export const SortableColumn: React.FC<SortableColumnProps> = ({
-  column,
-  sortOptions,
-  onSort,
-}) => {
-  const isSortable = column.enableSorting !== false;
-  const columnId = column.accessorKey || column.id;
-  
-  const getSortIcon = () => {
-    if (sortOptions?.field !== columnId) return null;
-    
-    return sortOptions.direction === 'asc' ? (
-      <ChevronUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ChevronDown className="ml-2 h-4 w-4" />
-    );
-  };
+export function SortableColumn({ 
+  column, 
+  sortOptions, 
+  onSort 
+}: SortableColumnProps) {
+  const isSorted = sortOptions?.field === column.id;
+  const sortDirection = isSorted ? sortOptions.direction : null;
 
   return (
     <TableHead
-      className={isSortable ? 'cursor-pointer select-none' : ''}
-      onClick={isSortable ? () => onSort(columnId) : undefined}
+      className={cn(
+        "whitespace-nowrap",
+        column.enableSorting ? "cursor-pointer hover:bg-muted/50" : ""
+      )}
+      onClick={() => column.enableSorting && onSort(column.id)}
     >
-      <div className="flex items-center">
-        {column.header}
-        {isSortable && getSortIcon()}
+      <div className="flex items-center justify-between">
+        <span>{column.header}</span>
+        {isSorted && (
+          <span className="ml-2">
+            {sortDirection === 'asc' ? 
+              <ArrowUp className="h-4 w-4" /> : 
+              <ArrowDown className="h-4 w-4" />
+            }
+          </span>
+        )}
       </div>
     </TableHead>
   );
-};
+}

@@ -1,12 +1,12 @@
-import React from 'react';
-import { Account } from '@/types/accounts';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { User, BarChart2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { AmountDisplay } from '@/components/shared/AmountDisplay';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { AmountDisplay } from "@/components/shared/AmountDisplay";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Account } from "@/types/account";
+import { BarChart2, User } from "lucide-react";
+import React from "react";
+import { Link } from "react-router-dom";
 
 interface AccountCardProps {
   account: Account;
@@ -15,44 +15,44 @@ interface AccountCardProps {
 const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const getTypeColor = (account: Account) => {
     if (account.is_customer && account.is_vendor) {
-      return 'bg-green-100 text-green-800';
+      return "bg-green-100 text-green-800";
     } else if (account.is_customer) {
-      return 'bg-blue-100 text-blue-800';
+      return "bg-blue-100 text-blue-800";
     } else if (account.is_vendor) {
-      return 'bg-purple-100 text-purple-800';
+      return "bg-purple-100 text-purple-800";
     } else {
-      return 'bg-gray-100 text-gray-800';
+      return "bg-gray-100 text-gray-800";
     }
   };
 
   const getAccountType = (account: Account) => {
     if (account.is_customer && account.is_vendor) {
-      return 'Customer & Vendor';
+      return "Customer & Vendor";
     } else if (account.is_customer) {
-      return 'Customer';
+      return "Customer";
     } else if (account.is_vendor) {
-      return 'Vendor';
+      return "Vendor";
     } else {
-      return 'Account';
+      return "Account";
     }
   };
 
   // Determine the variant for the balance display based on positive or negative
   const getBalanceVariant = (balance: number) => {
     if (balance > 0) {
-      return 'success'; // Positive: They owe us money (good for our business)
+      return "success"; // Positive: They owe us money (good for our business)
     } else if (balance < 0) {
-      return 'destructive'; // Negative: We owe them money
+      return "destructive"; // Negative: We owe them money
     }
-    return 'default'; // Zero balance
+    return "default"; // Zero balance
   };
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
       .toUpperCase()
       .substring(0, 2);
   };
@@ -66,29 +66,36 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
               <div className="flex items-center gap-3 mb-2">
                 <Avatar className="h-10 w-10">
                   {account.photo ? (
-                    <AvatarImage src={account.photo} alt={account.name} />
+                    <AvatarImage
+                      src={account.photo}
+                      alt={account.account_name}
+                    />
                   ) : null}
-                  <AvatarFallback>{getInitials(account.name)}</AvatarFallback>
+                  <AvatarFallback>
+                    {getInitials(account.account_name)}
+                  </AvatarFallback>
                 </Avatar>
-                <h3 className="font-semibold text-lg truncate">{account.name}</h3>
+                <h3 className="font-semibold text-lg truncate">
+                  {account.account_name}
+                </h3>
               </div>
             </Link>
-            
+
             <div className="flex gap-1 items-center text-sm text-muted-foreground mb-2">
               <User size={14} />
-              <span className="capitalize">{getAccountType(account)}</span>
+              <span className="capitalize">{account.client_type}</span>
             </div>
-            
+
             <div className="mt-4 flex items-center justify-between">
-              <Badge 
+              <Badge
                 variant="outline"
                 className={`capitalize ${getTypeColor(account)}`}
               >
-                {getAccountType(account)}
+                {account.client_type}
               </Badge>
-              
-              <AmountDisplay 
-                amount={account.balance} 
+
+              <AmountDisplay
+                amount={account.balance}
                 variant={getBalanceVariant(account.balance)}
               />
             </div>

@@ -1,4 +1,8 @@
-
+/**
+ * ExpenseDetail component displays detailed information about a specific expense
+ * 
+ * @module components/expenses
+ */
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Calendar, Receipt, Tag, Clipboard } from 'lucide-react';
 import { format } from 'date-fns';
@@ -27,6 +31,9 @@ interface ExpenseDetailProps {
   id: string;
 }
 
+/**
+ * ExpenseDetail component displays detailed information about a specific expense
+ */
 export const ExpenseDetail = ({ id }: ExpenseDetailProps) => {
   const navigate = useNavigate();
   const { expense, isLoading } = useExpenseDetail(id);

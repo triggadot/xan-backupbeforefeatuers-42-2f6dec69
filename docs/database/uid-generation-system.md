@@ -57,13 +57,13 @@ BEGIN
     -- Generate invoice_uid in the following cases:
     -- 1. If invoice_uid is NULL (new record or cleared value)
     -- 2. If rowid_accounts has changed (different account)
-    -- 3. If date_of_invoice has changed (different date)
+    -- 3. If invoice_order_date has changed (different date)
     IF NEW.invoice_uid IS NULL 
        OR (TG_OP = 'UPDATE' AND OLD.rowid_accounts IS DISTINCT FROM NEW.rowid_accounts)
-       OR (TG_OP = 'UPDATE' AND OLD.date_of_invoice IS DISTINCT FROM NEW.date_of_invoice)
+       OR (TG_OP = 'UPDATE' AND OLD.invoice_order_date IS DISTINCT FROM NEW.invoice_order_date)
     THEN
         -- Using the custom function
-        NEW.invoice_uid := generate_invoice_uid(v_account_uid, NEW.date_of_invoice);
+        NEW.invoice_uid := generate_invoice_uid(v_account_uid, NEW.invoice_order_date);
     END IF;
     
     RETURN NEW;
@@ -81,10 +81,10 @@ $$;
 This trigger function fetches the account UID and calls the `generate_invoice_uid` function to generate a unique identifier for invoices. It fires when:
 1. A new invoice is created with a NULL `invoice_uid`
 2. An invoice's `rowid_accounts` is changed
-3. An invoice's `date_of_invoice` is changed
+3. An invoice's `invoice_order_date` is changed
 
 **Dependencies:**
-- `gl_invoices` table with `invoice_uid`, `rowid_accounts`, and `date_of_invoice` columns
+- `gl_invoices` table with `invoice_uid`, `rowid_accounts`, and `invoice_order_date` columns
 - `gl_accounts` table with `accounts_uid` and `glide_row_id` columns
 - `generate_invoice_uid` function
 
@@ -271,7 +271,7 @@ EXECUTE FUNCTION generate_estimate_uid();
 
 When a new invoice is created:
 ```sql
-INSERT INTO gl_invoices (glide_row_id, rowid_accounts, date_of_invoice)
+INSERT INTO gl_invoices (glide_row_id, rowid_accounts, invoice_order_date)
 VALUES ('glide123', 'account456', '2025-04-08');
 -- Result: invoice_uid = 'INV#ABC040825' (if account_uid = 'ABC')
 ```

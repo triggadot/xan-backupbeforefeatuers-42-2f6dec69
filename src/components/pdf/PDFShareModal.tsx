@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CopyIcon, Mail, Share2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/utils/use-toast';
 import { PDFPreviewModalProps } from './PDFPreviewModal';
+import { LegacyDocumentTypeString } from '@/types/pdf.unified';
 
-export interface PDFShareModalProps extends Omit<PDFPreviewModalProps, 'LegacyDocumentTypeString'> {
+export interface PDFShareModalProps extends PDFPreviewModalProps {
   title?: string;
 }
 
@@ -32,7 +33,7 @@ export function PDFShareModal({ pdfUrl, isOpen, onClose, title = 'Share Document
       if (documentType === 'invoice') return 'invoice';
       if (documentType === 'purchaseOrder') return 'purchase order';
       if (documentType === 'estimate') return 'estimate';
-      return String(documentType);
+      return documentType;
     }
     
     // Fallback to title-based detection

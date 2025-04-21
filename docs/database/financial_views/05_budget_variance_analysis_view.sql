@@ -20,29 +20,29 @@ previous_period AS (
 -- Current Period Revenue
 current_revenue AS (
     SELECT 
-        DATE_TRUNC('month', i.date_of_invoice)::DATE AS month,
+        DATE_TRUNC('month', i.invoice_order_date)::DATE AS month,
         COUNT(i.id) AS invoice_count,
         COALESCE(SUM(i.total_amount), 0) AS total_revenue
     FROM 
         gl_invoices i
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
     GROUP BY 
-        DATE_TRUNC('month', i.date_of_invoice)::DATE
+        DATE_TRUNC('month', i.invoice_order_date)::DATE
 ),
 
 -- Previous Period Revenue (Budget Proxy)
 previous_revenue AS (
     SELECT 
-        DATE_TRUNC('month', i.date_of_invoice)::DATE AS month,
+        DATE_TRUNC('month', i.invoice_order_date)::DATE AS month,
         COUNT(i.id) AS invoice_count,
         COALESCE(SUM(i.total_amount), 0) AS total_revenue
     FROM 
         gl_invoices i
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
     GROUP BY 
-        DATE_TRUNC('month', i.date_of_invoice)::DATE
+        DATE_TRUNC('month', i.invoice_order_date)::DATE
 ),
 
 -- Current Period Expenses by Category
@@ -113,7 +113,7 @@ current_product_sales AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM current_period) AND (SELECT end_date FROM current_period)
     GROUP BY 
         p.category
 ),
@@ -132,7 +132,7 @@ previous_product_sales AS (
     LEFT JOIN 
         gl_invoices i ON il.rowid_invoices = i.glide_row_id
     WHERE 
-        i.date_of_invoice BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
+        i.invoice_order_date BETWEEN (SELECT start_date FROM previous_period) AND (SELECT end_date FROM previous_period)
     GROUP BY 
         p.category
 ),

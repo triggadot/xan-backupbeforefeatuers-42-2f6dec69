@@ -1,14 +1,9 @@
 
-import InvoiceCardPageComponent from "@/components/invoices/functions/InvoiceCardPage";
-import React from "react";
-import { PDFProvider } from "@/components/pdf/PDFContextProvider";
+import React from 'react';
+import InvoiceCardPageComponent from '@/components/invoices/cards/InvoiceCardPage';
 
 const InvoiceCardPage: React.FC = () => {
-  return (
-    <PDFProvider>
-      <InvoiceCardPageComponent />
-    </PDFProvider>
-  );
+  return <InvoiceCardPageComponent />;
 };
 
 export default InvoiceCardPage;

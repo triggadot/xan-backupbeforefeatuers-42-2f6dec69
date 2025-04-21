@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { PurchaseOrderLineItem } from '@/types/purchase-orders/purchaseOrder';
+import { PurchaseOrderLineItem } from '@/types/purchaseOrder';
 import { useToast } from '@/hooks/utils/use-toast';
 
 export function useProductOperations() {

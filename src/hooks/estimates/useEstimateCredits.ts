@@ -5,8 +5,8 @@ import {
   addCustomerCredit as addCustomerCreditService, 
   updateCustomerCredit as updateCustomerCreditService, 
   deleteCustomerCredit as deleteCustomerCreditService 
-} from '@/services/supabase/tables/estimateService';
-import { CustomerCredit } from '@/types/estimates/estimate';
+} from '@/services/estimateService';
+import { CustomerCredit } from '@/types/estimate';
 
 export function useEstimateCredits() {
   const { toast } = useToast();

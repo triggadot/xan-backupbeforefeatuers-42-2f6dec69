@@ -5,12 +5,14 @@
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **UI Component Libraries**:
-  - Shadcn UI for base components
-  - Tremor for data visualization
+  - Shadcn UI for base and business components
+  - Tremor for dashboards and data visualization
 - **State Management**: React Context and Hooks
-- **Data Fetching**: TanStack Query (React Query)
+- **Data Fetching**: TanStack Query (react-query)
 - **Form Handling**: React Hook Form with Zod validation
-- **PDF Generation**: jsPDF, pdf-lib, Supabase Edge Functions
+- **PDF Handling for Frontend**: jsPDF, jszip, file-saver
+- **PDF Handling for Backend**: pdf-lib; USING EDGE FUNCTIONS
+
 
 ## Backend Stack
 - **Database**: Supabase PostgreSQL (Project ID: swrfsullhirscyxqneay)
@@ -18,13 +20,6 @@
 - **Storage**: Supabase Storage for PDFs and files
 - **Server Logic**: Supabase Edge Functions
 - **Connection**: `supabase` client from `@/integrations/supabase/client`
-
-## Core Architecture Patterns
-- **File & Directory Names**: kebab-case
-- **Component Names**: PascalCase
-- **Feature-Based Architecture**: Code organized by domain/feature
-- **Service Layer**: Typed access to Supabase tables via `services/supabase`
-- **Hook Pattern**: Primary hooks use TanStack Query for data fetching and mutations
 
 ## Database Schema
 Core tables include:
@@ -58,7 +53,7 @@ create table public.gl_invoices (
   id uuid not null default gen_random_uuid(),
   glide_row_id text not null,
   rowid_accounts text null,
-  date_of_invoice timestamp with time zone null,
+  invoice_order_date timestamp with time zone null,
   created_timestamp timestamp with time zone null,
   submitted_timestamp timestamp with time zone null,
   processed boolean null,
@@ -137,31 +132,21 @@ create table public.gl_products (
 ```
 
 ## Integration Systems
+- **Glide Apps Integration**: Bidirectional sync system using edge functions
+  - Core components: `MappingDetails.tsx`, `SyncDashboard.tsx`, `useGlSync.ts`
+  - Complete override mode during sync: constraints temporarily disabled
+  - Data flow: Edge function → Glide API → Transform → Sync functions
+  - Inconsistent data handling with automatic repair
 
-### Supabase Service Layer
-- Located in `src/services/supabase`
-- Provides type-safe access to database tables
-- Naming convention: `gl[TableNamePlural]Service` (e.g., `glInvoicesService`)
-- Methods follow consistent patterns:
-  - `get[TableNamePlural]()` - Retrieve multiple records
-  - `get[TableNameSingular]()` - Retrieve single record
-  - `create[TableNameSingular]()` - Create record
-  - `update[TableNameSingular]()` - Update record
-  - `delete[TableNameSingular]()` - Delete record
-
-### PDF System
-- **Generation**: Client-side generation using jsPDF
-- **Storage**: PDFs stored in Supabase Storage
-- **Components**:
+- **PDF System**: Generation, storage and sharing capabilities
   - PDF Preview Modal for in-app viewing
-  - PDF Share Link Component for sharing
-  - PDF Management Page in admin section
-  - PDF Failures Manager for error handling
-- **URL storage**: Uses `supabase_pdf_url` field for generated PDF URLs
+  - PDF Share Link Component for clipboard/email sharing
+  - PDF Caching System to avoid regenerating unchanged documents
+  - Batch PDF Generation for multiple documents
+  - URL storage using `supabase_pdf_url` field (not `pdf_url` which is for internal Glide use)
 
-### Payment System
-- **Customer Payments**: Tracked in `gl_customer_payments` table
-- **Vendor Payments**: Tracked in `gl_vendor_payments` table
-- **Credits**: Tracked in `gl_customer_credits` table
-- **Balance Calculation**: Automatic via database triggers
-- **Implementation**: TanStack Query for mutations and data fetching
+- **Customer & Vendor Payment System**:
+  - Customer payments (`gl_customer_payments`) tied to invoices
+  - Vendor payments (`gl_vendor_payments`) tied to purchase orders
+  - Credits (`gl_customer_credits`) tied to estimates
+  - Automatic balance calculation via triggers

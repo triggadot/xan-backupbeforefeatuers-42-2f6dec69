@@ -1,317 +1,38 @@
 # System Patterns
 
 ## Architecture Overview
-The project follows a Feature-Based Architecture, organizing code by domain/feature rather than technical role. This approach provides better cohesion, isolation, and maintainability.
+The project follows a Feature-Based Architecture (Domain-Driven Design with feature modules), organizing code by domain rather than technical role.
 
 ### Directory Structure
 ```
 src/
 ├── components/
-│   ├── new/                       # New components following conventions
-│   │   ├── invoices/              # Invoice-specific components with kebab-case files
-│   │   │   ├── invoice-list.tsx
-│   │   │   ├── invoice-detail-view.tsx
-│   │   │   └── index.ts           # Barrel export file
-│   │   ├── purchase-orders/       # Purchase order components
-│   │   │   ├── PurchaseOrderList.tsx  # In process of migration to kebab-case
-│   │   │   └── index.ts
-│   ├── ui/                        # UI primitives (Shadcn)
-│   ├── tremor/                    # Data visualization components
-│   └── custom/                    # Custom reusable components
+│   ├── products/                  # Product-specific components
+│   │   ├── ProductList.tsx
+│   │   ├── ProductDetail.tsx
+│   │   ├── ProductForm.tsx
+│   │   └── product-analytics.tsx
+│   ├── invoices/                  # Invoice-specific components
+│   ├── purchase-orders/           # Purchase order components
+│   └── shared/                    # Shared components
 ├── hooks/
+│   ├── products/                  # Product-specific hooks
+│   │   ├── useProducts.ts         # Main hook for fetching products
+│   │   ├── useProductDetail.ts    # Hook for fetching detailed product info
+│   │   ├── useProductVendors.ts   # Hook for product-vendor relationships
+│   │   └── index.ts               # Exports all hooks with backward compatibility
 │   ├── invoices/                  # Invoice-specific hooks
-│   │   ├── useInvoices.ts         # TanStack Query implementation
-│   │   ├── useInvoiceMutation.ts  # CRUD operations with mutations
-│   │   └── index.ts               # Barrel exports with backward compatibility
 │   ├── purchase-orders/           # Purchase order hooks
-│   ├── products/                  # Product hooks
-│   └── utils/                     # Utility hooks
-├── services/
-│   └── supabase/                  # Supabase service layer
-│       ├── gl-invoices.ts         # Invoice service
-│       ├── gl-purchase-orders.ts  # Purchase orders service
-│       └── tables.ts              # Service exports
-├── types/
-│   ├── new/                       # New type definitions
-│   │   ├── invoice.ts
-│   │   ├── purchase-order.ts
-│   │   └── legacy/                    # Legacy types for compatibility
-├── lib/
-│   ├── pdf/                       # PDF generation modules
-│   └── utils.ts                   # Utility functions
-└── pages/
-    ├── invoices/                  # Invoice pages
-    ├── purchase-orders/           # Purchase order pages
-    └── admin/                     # Admin pages
-```
-
-## Key Implementation Patterns
-
-### 1. Supabase Service Layer Pattern
-The service layer provides a consistent interface to Supabase tables with proper typing:
-
-```typescript
-// src/services/supabase/gl-invoices.ts
-import { supabase } from '@/integrations/supabase/client';
-import { GLInvoice, GLInvoiceForm } from '@/types/new/invoice';
-
-export const glInvoicesService = {
-  // Get multiple invoices with optional filters
-  async getInvoices(options?: { accountId?: string; status?: string }) {
-    const query = supabase.from('gl_invoices').select('*');
-    
-    if (options?.accountId) {
-      query.eq('rowid_accounts', options.accountId);
-    }
-    
-    if (options?.status) {
-      query.eq('payment_status', options.status);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching invoices:', error);
-      throw error;
-    }
-    
-    return data as GLInvoice[];
-  },
-  
-  // Get a single invoice by ID
-  async getInvoice(id: string) {
-    const { data, error } = await supabase
-      .from('gl_invoices')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error(`Error fetching invoice ${id}:`, error);
-      throw error;
-    }
-    
-    return data as GLInvoice;
-  },
-  
-  // Create a new invoice
-  async createInvoice(invoice: GLInvoiceForm) {
-    const { data, error } = await supabase
-      .from('gl_invoices')
-      .insert(invoice)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating invoice:', error);
-      throw error;
-    }
-    
-    return data as GLInvoice;
-  },
-  
-  // Update an existing invoice
-  async updateInvoice(id: string, updates: Partial<GLInvoiceForm>) {
-    const { data, error } = await supabase
-      .from('gl_invoices')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error(`Error updating invoice ${id}:`, error);
-      throw error;
-    }
-    
-    return data as GLInvoice;
-  },
-  
-  // Delete an invoice
-  async deleteInvoice(id: string) {
-    const { error } = await supabase
-      .from('gl_invoices')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error(`Error deleting invoice ${id}:`, error);
-      throw error;
-    }
-  }
-};
-```
-
-### 2. TanStack Query Hook Pattern
-All data fetching hooks use TanStack Query for consistent caching, state management, and mutations:
-
-```typescript
-// src/hooks/invoices/useInvoices.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { glInvoicesService } from '@/services/supabase/gl-invoices';
-import { Invoice, InvoiceFilters } from '@/types/new/invoice';
-import { normalizeInvoiceFields } from '@/types/new/invoice';
-
-export function useInvoices(filters?: InvoiceFilters) {
-  const queryClient = useQueryClient();
-
-  // Query for fetching invoices
-  const {
-    data: invoices = [],
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['invoices', filters],
-    queryFn: async () => {
-      const data = await glInvoicesService.getInvoices(filters);
-      return data.map(invoice => normalizeInvoiceFields(invoice));
-    }
-  });
-
-  // Mutation for creating invoice
-  const createInvoice = useMutation({
-    mutationFn: glInvoicesService.createInvoice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    }
-  });
-
-  // Mutation for updating invoice
-  const updateInvoice = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Invoice> }) => 
-      glInvoicesService.updateInvoice(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    }
-  });
-
-  // Mutation for deleting invoice
-  const deleteInvoice = useMutation({
-    mutationFn: glInvoicesService.deleteInvoice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    }
-  });
-
-  return {
-    invoices,
-    isLoading,
-    error,
-    refetch,
-    createInvoice,
-    updateInvoice,
-    deleteInvoice
-  };
-}
-```
-
-### 3. Component Export Pattern
-All components use barrel exports through index.ts files for cleaner imports:
-
-```typescript
-// src/components/new/invoices/index.ts
-export { InvoiceList } from './invoice-list';
-export { InvoiceDetailView } from './invoice-detail-view';
-export { InvoiceStats } from './invoice-stats';
-```
-
-Usage:
-```typescript
-// Importing components
-import { InvoiceList, InvoiceStats } from '@/components/new/invoices';
-```
-
-### 4. Naming Convention Pattern
-- **Files & Directories**: kebab-case (e.g., `invoice-list.tsx`, `purchase-orders/`)
-- **Components**: PascalCase (e.g., `InvoiceList`, `PurchaseOrderDetail`)
-- **Hooks**: camelCase prefixed with "use" (e.g., `useInvoices`, `usePurchaseOrderDetail`)
-- **Services**: camelCase with prefix (e.g., `glInvoicesService`, `glProductsService`)
-- **Types**: PascalCase (e.g., `Invoice`, `PurchaseOrder`, `InvoiceLineItem`)
-
-### 5. Database Relationship Pattern
-All relationships use the "Glidebase" pattern with `rowid_` fields:
-
-- Foreign key fields use prefix `rowid_` followed by plural name of referenced table
-- These fields reference the `glide_row_id` field (not UUID primary key)
-- No actual foreign key constraints in database
-- Examples:
-  - `gl_invoice_lines.rowid_invoices` → `gl_invoices.glide_row_id`
-  - `gl_products.rowid_purchase_orders` → `gl_purchase_orders.glide_row_id`
-
-### 6. Manual Join Pattern
-Due to lack of foreign key constraints, relationships are manually joined:
-
-```typescript
-// 1. Fetch primary entities
-const { data: invoices } = await supabase.from('gl_invoices').select('*');
-
-// 2. Fetch related data
-const { data: accounts } = await supabase.from('gl_accounts').select('*');
-
-// 3. Create lookup map
-const accountMap = new Map();
-accounts.forEach(account => {
-  accountMap.set(account.glide_row_id, account);
-});
-
-// 4. Join the data
-const invoicesWithAccounts = invoices.map(invoice => {
-  return {
-    ...invoice,
-    account: invoice.rowid_accounts ? accountMap.get(invoice.rowid_accounts) : null
-  };
-});
-```
-
-### 7. PDF System Architecture
-PDF generation is handled through a combination of client and server components:
-
-- **Client-side Generation**: 
-  - Uses jsPDF for most documents
-  - Stores PDFs in Supabase Storage
-  - Updates database with PDF URL
-
-- **PDF Admin Components**:
-  - PDF Management Page - Central interface for PDF operations
-  - PDF Failures Manager - Tracks and handles PDF generation errors
-
-- **Document Types**:
-  - Invoices
-  - Purchase Orders
-  - Estimates
-  - Product Catalogs
-  - Shipping Documents
-
-### 8. Error Handling Pattern
-Consistent error handling across the application:
-
-```typescript
-try {
-  // Operation that might fail
-  const result = await riskyOperation();
-  return result;
-} catch (error) {
-  // Log specific error with context
-  console.error('Error in specific context:', error);
-  
-  // Application-specific error handling
-  if (error.code === 'POSTGRES_ERROR') {
-    // Handle database error
-  } else if (error.code === 'STORAGE_ERROR') {
-    // Handle storage error
-  }
-  
-  // User feedback via toast notifications
-  toast({
-    title: 'Operation Failed',
-    description: 'Specific error message for user',
-    variant: 'destructive',
-  });
-  
-  // Rethrow for caller to handle or use fallback
-  throw error;
-}
+│   └── shared/                    # Shared hooks
+├── pages/
+│   ├── Products.tsx               # Main products page
+│   ├── ProductDetail.tsx          # Product detail page
+│   ├── Invoices.tsx               # Main invoices page
+│   └── ...                        # Other pages
+└── types/
+    ├── products/                  # Product-specific types
+    ├── invoices/                  # Invoice-specific types
+    └── ...                        # Other type modules
 ```
 
 ## Database Patterns

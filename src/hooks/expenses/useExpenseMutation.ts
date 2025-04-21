@@ -1,4 +1,3 @@
-
 /**
  * Hook for creating, updating, and deleting expenses
  * 
@@ -6,7 +5,7 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ExpenseFormData, GlExpenseRecord } from '@/types/expenses';
+import { ExpenseFormData, GlExpense } from '@/types/expenses';
 
 /**
  * Hook for expense mutation operations
@@ -18,7 +17,7 @@ export const useExpenseMutation = () => {
   
   // Create expense mutation
   const createExpense = useMutation({
-    mutationFn: async (data: ExpenseFormData): Promise<GlExpenseRecord> => {
+    mutationFn: async (data: ExpenseFormData): Promise<GlExpense> => {
       // Create a new glide_row_id for the expense
       const glideRowId = `glexp_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
       
@@ -42,7 +41,7 @@ export const useExpenseMutation = () => {
         throw new Error(`Error creating expense: ${error.message}`);
       }
       
-      return newExpense as GlExpenseRecord;
+      return newExpense as GlExpense;
     },
     onSuccess: () => {
       // Invalidate and refetch expenses list after successful creation
@@ -52,7 +51,7 @@ export const useExpenseMutation = () => {
   
   // Update expense mutation
   const updateExpense = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<ExpenseFormData> }): Promise<GlExpenseRecord> => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<ExpenseFormData> }): Promise<GlExpense> => {
       const { data: updatedExpense, error } = await supabase
         .from('gl_expenses')
         .update({
@@ -72,7 +71,7 @@ export const useExpenseMutation = () => {
         throw new Error(`Error updating expense: ${error.message}`);
       }
       
-      return updatedExpense as GlExpenseRecord;
+      return updatedExpense as GlExpense;
     },
     onSuccess: (_, variables) => {
       // Invalidate and refetch the updated expense and expenses list

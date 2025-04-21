@@ -1,142 +1,95 @@
-import { GlAccount } from './accounts';
-import { EntityBase, EntityWithAccount, EntityWithAmount } from './common/common';
 
-export interface InvoiceLineItem {
+import { EntityBase } from './base';
+import { Account } from './account';
+
+export interface InvoiceRow extends EntityBase {
+  invoice_uid?: string | null;
+  rowid_accounts?: string | null;
+  date_of_invoice?: string | null;
+  payment_status?: string | null;
+  total_amount?: number | null;
+  total_paid?: number | null;
+  balance?: number | null;
+  notes?: string | null;
+  supabase_pdf_url?: string | null;
+  // Runtime data from joins
+  account?: any;
+  lines?: any[];
+}
+
+export interface InvoiceLine {
   id: string;
-  invoiceId: string;
+  glideRowId: string;
   productId: string;
-  description: string;
+  invoiceId: string;
   productName: string;
   quantity: number;
-  unitPrice: number;
+  price: number;
   total: number;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  productDetails?: any;
 }
 
-export interface InvoicePayment {
+export interface Invoice {
   id: string;
-  invoiceId: string;
-  accountId: string;
-  date: Date;
-  amount: number;
-  paymentMethod: string;
-  notes?: string;
-  paymentDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Invoice extends EntityBase, EntityWithAmount, EntityWithAccount {
-  invoiceNumber: string;
-  customerId: string;
-  customerName: string;
-  invoiceDate: Date;
-  status: 'draft' | 'unpaid' | 'paid' | 'partial' | 'credit';
-  total_paid: number;
-  balance: number;
-  lineItems?: InvoiceLineItem[];
-  payments?: InvoicePayment[];
-  notes?: string;
-  total?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-  created_at: string;
-  updated_at?: string;
-  glide_row_id: string;
-  total_amount: number;
-  pdf_link?: string; // Internal Glide use only
-  supabase_pdf_url?: string; // Supabase storage URL for PDFs
-}
-
-export interface InvoiceWithDetails extends Invoice {
-  lineItems: InvoiceLineItem[];
-  payments: InvoicePayment[];
-  account?: GlAccount;
-  notes?: string;
-  total: number;
-  amountPaid: number;
-  subtotal: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-  pdf_link?: string; // Internal Glide use only
-  supabase_pdf_url?: string; // Supabase storage URL for PDFs
-}
-
-export interface InvoiceWithCustomer {
-  id: string;
-  invoiceNumber: string;
-  customerName: string;
-  invoiceDate: Date;
-  dueDate: Date;
-  status: 'draft' | 'unpaid' | 'paid' | 'partial' | 'credit';
-  amount: number;
-  amountPaid: number;
-  balance: number;
-  createdAt: Date;
-  updatedAt?: Date;
-  customer?: GlAccount;
-  customerId: string;
   glideRowId: string;
-  date: Date;
-  total: number;
-  lineItemsCount: number;
-  pdf_link?: string; // Internal Glide use only
-  supabase_pdf_url?: string; // Supabase storage URL for PDFs
-}
-
-export interface InvoiceFilters {
-  status?: string;
-  customerId?: string;
-  fromDate?: string | Date;
-  toDate?: string | Date;
-  dateFrom?: string | Date;
-  dateTo?: string | Date;
-  search?: string;
-}
-
-export interface CreateInvoiceInput {
-  customerId: string;
-  invoiceDate: Date;
-  dueDate?: Date;
+  invoiceUid: string;
+  accountId: string;
+  date: string;
   status: string;
+  totalAmount: number;
+  totalPaid: number;
+  balance: number;
   notes?: string;
-  lineItems: Array<{
-    productId: string;
-    description: string;
-    quantity: number;
-    unitPrice: number;
-  }>;
+  pdfUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  // Joined data
+  account?: AccountSummary;
+  lines?: InvoiceLine[];
 }
 
-export interface UpdateInvoiceInput {
-  customerId?: string;
-  invoiceDate?: Date;
-  dueDate?: Date;
-  status?: string;
-  notes?: string;
+export interface AccountSummary {
+  id: string;
+  name: string;
+  type: string;
+  glideRowId: string;
 }
 
 export interface InvoiceWithAccount extends Invoice {
-  account?: GlAccount;
+  account?: AccountSummary;
 }
 
-export interface InvoiceListItem {
+export interface InvoiceFormData {
+  accountId: string;
+  date: string;
+  status: string;
+  notes?: string;
+}
+
+export type InvoiceListItem = {
   id: string;
   invoiceNumber: string;
-  glideRowId: string;
-  customerId: string;
-  customerName: string;
-  date: Date;
-  dueDate?: Date;
+  customer: string;
+  date: string;
+  status: string;
   total: number;
   balance: number;
-  status: string;
-  lineItemsCount: number;
-  notes?: string;
-  amountPaid: number;
-  pdf_link?: string; // Internal Glide use only
-  supabase_pdf_url?: string; // Supabase storage URL for PDFs
+};
+
+export function normalizeInvoiceFields(invoice: InvoiceRow): InvoiceWithAccount {
+  return {
+    id: invoice.id,
+    glideRowId: invoice.glide_row_id,
+    invoiceUid: invoice.invoice_uid || '',
+    accountId: invoice.rowid_accounts || '',
+    date: invoice.date_of_invoice || '',
+    status: invoice.payment_status || 'draft',
+    totalAmount: invoice.total_amount || 0,
+    totalPaid: invoice.total_paid || 0,
+    balance: invoice.balance || 0,
+    notes: invoice.notes || '',
+    pdfUrl: invoice.supabase_pdf_url,
+    createdAt: invoice.created_at,
+    updatedAt: invoice.updated_at
+  };
 }

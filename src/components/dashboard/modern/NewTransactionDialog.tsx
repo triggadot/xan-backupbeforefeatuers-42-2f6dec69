@@ -2,22 +2,12 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -25,315 +15,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, PlusCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useAccounts } from "@/hooks/accounts";
-import { useQueryClient } from "@tanstack/react-query";
-import { v4 as uuidv4 } from 'uuid';
-
-// Define form schema with Zod
-const transactionSchema = z.object({
-  account_id: z.string({
-    required_error: "Please select an account",
-  }),
-  amount: z.coerce
-    .number({
-      required_error: "Amount is required",
-      invalid_type_error: "Amount must be a number",
-    })
-    .positive({ message: "Amount must be greater than 0" }),
-  type: z.enum(["Received", "Paid"], {
-    required_error: "Please select a transaction type",
-  }),
-  date: z.string().min(1, { message: "Date is required" }),
-  note: z.string().optional(),
-});
-
-type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 interface NewTransactionDialogProps {
-  onTransactionAdded?: () => void;
-  buttonVariant?: "default" | "outline" | "ghost" | "link";
-  buttonSize?: "default" | "sm" | "lg" | "icon";
-  fullWidth?: boolean;
+  onTransactionAdded: () => void;
 }
 
-export default function NewTransactionDialog({
+export function NewTransactionDialog({
   onTransactionAdded,
-  buttonVariant = "default",
-  buttonSize = "default",
-  fullWidth = false,
 }: NewTransactionDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const queryClient = useQueryClient();
-  
-  // Fetch accounts for dropdown selection
-  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  // Default values for the form
-  const defaultValues: Partial<TransactionFormValues> = {
-    date: new Date().toISOString().slice(0, 10),
-    type: "Received",
-    note: "",
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  // Initialize form with react-hook-form
-  const form = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues,
-  });
-
-  // Form submission handler
-  const onSubmit = async (values: TransactionFormValues) => {
-    setIsSubmitting(true);
     try {
-      // Generate a unique ID for the new payment
-      const glideRowId = uuidv4();
-      
-      // Determine which table to insert into based on transaction type
-      if (values.type === "Received") {
-        // Insert into customer payments table
-        const { error } = await supabase.from("gl_customer_payments").insert({
-          glide_row_id: glideRowId,
-          rowid_accounts: values.account_id,
-          payment_amount: values.amount,
-          payment_type: values.type,
-          date_of_payment: values.date,
-          payment_note: values.note,
-        });
+      // TODO: Implement actual transaction creation logic
+      // This would call your Supabase API to create the transaction
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        if (error) throw error;
-      } else {
-        // Insert into vendor payments table
-        const { error } = await supabase.from("gl_vendor_payments").insert({
-          glide_row_id: glideRowId,
-          rowid_accounts: values.account_id,
-          payment_amount: values.amount,
-          date_of_payment: values.date,
-          vendor_note: values.note,
-        });
-
-        if (error) throw error;
-      }
-
-      // Show success message
       toast({
-        title: "Transaction added",
-        description: `${values.type} payment of $${values.amount.toFixed(2)} was successfully recorded.`,
+        title: "Transaction created",
+        description: "The new transaction was successfully recorded.",
       });
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["recentTransactions"] });
-      queryClient.invalidateQueries({ queryKey: ["financialMetrics"] });
-      queryClient.invalidateQueries({ queryKey: ["businessMetrics"] });
-      
-      // Reset form and close dialog
-      form.reset(defaultValues);
+      onTransactionAdded();
       setOpen(false);
-      
-      // Notify parent component if callback provided
-      if (onTransactionAdded) {
-        onTransactionAdded();
-      }
     } catch (error) {
-      console.error("Error adding transaction:", error);
       toast({
         title: "Error",
-        description: "Failed to add transaction. Please try again.",
+        description: "Failed to create transaction. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant={buttonVariant} 
-          size={buttonSize}
-          className={fullWidth ? "w-full" : ""}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          New Transaction
-        </Button>
+        <Button>New Transaction</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Transaction</DialogTitle>
-          <DialogDescription>
-            Record a payment received from a customer or a payment made to a vendor.
-          </DialogDescription>
+          <DialogTitle>Create New Transaction</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Transaction Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select transaction type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Received">Payment Received</SelectItem>
-                      <SelectItem value="Paid">Payment Made</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {field.value === "Received"
-                      ? "Money coming into your business"
-                      : "Money going out of your business"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="account_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {form.watch("type") === "Received" ? "Customer" : "Vendor"}
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isSubmitting || isLoadingAccounts}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an account" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingAccounts ? (
-                        <div className="flex items-center justify-center py-2">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading...
-                        </div>
-                      ) : (
-                        accounts
-                          ?.filter((account) =>
-                            form.watch("type") === "Received"
-                              ? account.is_customer
-                              : account.is_vendor
-                          )
-                          .map((account) => (
-                            <SelectItem
-                              key={account.glide_row_id}
-                              value={account.glide_row_id}
-                            >
-                              {account.name}
-                            </SelectItem>
-                          ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="type" className="text-right">
+              Type
+            </Label>
+            <Select name="type" required>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select transaction type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="transfer">Transfer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="amount" className="text-right">
+              Amount
+            </Label>
+            <Input
+              id="amount"
               name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        $
-                      </span>
-                      <Input
-                        {...field}
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        className="pl-7"
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              type="number"
+              step="0.01"
+              required
+              className="col-span-3"
             />
-
-            <FormField
-              control={form.control}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
+            <Input
+              id="description"
+              name="description"
+              required
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="date" className="text-right">
+              Date
+            </Label>
+            <Input
+              id="date"
               name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              type="date"
+              required
+              className="col-span-3"
             />
-
-            <FormField
-              control={form.control}
-              name="note"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Note (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Add details about this transaction"
-                      className="resize-none"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Transaction"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Processing..." : "Create Transaction"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

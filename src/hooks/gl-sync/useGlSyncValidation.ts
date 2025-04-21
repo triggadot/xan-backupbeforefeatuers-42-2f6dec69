@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
-import { MappingValidationResult, MappingToValidate } from '@/types/glide-sync/glsync';
+import { MappingValidationResult, MappingToValidate } from '@/types/glsync';
 
 export function useGlSyncValidation() {
   const [validating, setValidating] = useState(false);

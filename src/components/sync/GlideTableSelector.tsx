@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search } from "lucide-react";
-import { GlideTable } from '@/types/glide-sync/glsync';
+import { GlideTable } from '@/types/glsync';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

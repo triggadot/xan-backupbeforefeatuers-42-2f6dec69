@@ -4,12 +4,14 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 
+import { LegacyDocumentTypeString } from '@/types/pdf.unified';
+
 export interface PDFPreviewModalProps {
   pdfUrl: string;
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  documentType?: string;
+  documentType?: LegacyDocumentTypeString;
   document?: any; // Optional document data
   onShare?: () => void; // Optional callback for sharing the PDF
 }

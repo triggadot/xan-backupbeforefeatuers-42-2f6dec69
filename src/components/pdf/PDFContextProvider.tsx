@@ -1,232 +1,146 @@
-
-import { useToast } from "@/hooks/utils/use-toast";
-import { PDFGenerationOptions, PDFGenerationResult, DocumentType, toLegacyDocumentTypeString } from "@/types/pdf-types";
-import { pdfService } from "@/services/pdf-service";
-import { saveAs } from "file-saver";
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { generateAndStorePDF, updatePDFLinkInDatabase } from '@/lib/pdf-utils';
+import { useToast } from '@/hooks/utils/use-toast';
+import { DocumentType } from '@/types/pdf.unified';
 
 interface PDFContextType {
-  pdfUrl: string | null;
-  setPdfUrl: React.Dispatch<React.SetStateAction<string | null>>;
-  isGenerating: boolean;
-  isServerProcessing: boolean;
-  generatePDF: (
-    documentType: DocumentType | string,
-    documentId: string,
-    options?: Partial<PDFGenerationOptions>
-  ) => Promise<PDFGenerationResult>;
-  batchGeneratePDF: (
-    documentType: DocumentType | string,
-    documentId: string
-  ) => Promise<boolean>;
-  storePDF: (
-    documentType: DocumentType | string,
-    documentId: string
-  ) => Promise<PDFGenerationResult>;
-  downloadPDF: (url: string, fileName: string) => Promise<void>;
+  // PDF generation
+  generatePDF: (documentType: DocumentType, document: any, saveLocally?: boolean) => Promise<string | null>;
+  updatePDFLink: (documentType: DocumentType, documentId: string, pdfUrl: string) => Promise<boolean>;
+  
+  // PDF viewing
+  viewPDF: (pdfUrl: string, documentType: DocumentType, document: any) => void;
+  
+  // PDF sharing
+  sharePDF: (pdfUrl: string, documentType: DocumentType, document: any) => void;
+  
+  // PDF download
+  downloadPDF: (pdfUrl: string) => void;
+  
+  // Loading state
+  isLoading: boolean;
 }
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
 
-export const PDFProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isServerProcessing, setIsServerProcessing] = useState(false);
+interface PDFProviderProps {
+  children: ReactNode;
+}
+
+export function PDFProvider({ children }: PDFProviderProps) {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [currentPDF, setCurrentPDF] = useState<{
+    url: string;
+    documentType: DocumentType;
+    document: any;
+  } | null>(null);
 
+  // Generate a PDF for a document
   const generatePDF = async (
-    documentType: DocumentType | string,
+    documentType: DocumentType,
+    document: any,
+    saveLocally = false
+  ): Promise<string | null> => {
+    setIsLoading(true);
+    
+    try {
+      const pdfUrl = await generateAndStorePDF(documentType, document, saveLocally);
+      
+      if (pdfUrl) {
+        toast({
+          title: 'PDF Generated',
+          description: 'The PDF has been successfully generated.',
+        });
+        return pdfUrl;
+      } else {
+        throw new Error('Failed to generate PDF');
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'PDF Generation Failed',
+        description: 'There was an error generating the PDF. Please try again.',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the PDF link in the database
+  const updatePDFLink = async (
+    documentType: DocumentType,
     documentId: string,
-    options?: Partial<PDFGenerationOptions>
-  ): Promise<PDFGenerationResult> => {
-    setIsGenerating(true);
-
-    try {
-      const result = await pdfService.generatePDF(
-        documentType,
-        documentId,
-        options
-      );
-
-      if (result.success && result.url) {
-        setPdfUrl(result.url);
-
-        // Download if requested
-        if (options?.download && result.url) {
-          await downloadPDF(
-            result.url,
-            options?.filename ||
-              `${toLegacyDocumentTypeString(documentType)}_${documentId}.pdf`
-          );
-        }
-
-        toast({
-          title: "PDF Generated",
-          description: "The PDF has been successfully generated.",
-        });
-      } else {
-        throw new Error(result.error || "Failed to generate PDF");
-      }
-
-      return result;
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-
-      toast({
-        title: "PDF Generation Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred.",
-        variant: "destructive",
-      });
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        documentType: documentType as DocumentType,
-        documentId,
-      };
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const batchGeneratePDF = async (
-    documentType: DocumentType | string,
-    documentId: string
+    pdfUrl: string
   ): Promise<boolean> => {
-    setIsServerProcessing(true);
-
+    const tableMap: Record<DocumentType, string> = {
+      [DocumentType.INVOICE]: 'gl_invoices',
+      [DocumentType.PURCHASE_ORDER]: 'gl_purchase_orders',
+      [DocumentType.ESTIMATE]: 'gl_estimates',
+    };
+    
+    const table = tableMap[documentType];
+    
     try {
-      // Use the single document function, but it will trigger server-side processing
-      const result = await pdfService.generatePDF(documentType, documentId, {
-        forceRegenerate: true, // Force regeneration for better reliability
-      });
-
-      if (result.success) {
-        toast({
-          title: "PDF Generation Queued",
-          description: "The PDF is being generated on the server.",
-        });
-      } else {
-        throw new Error(result.error || "Failed to queue PDF generation");
-      }
-
-      return result.success;
-    } catch (error) {
-      console.error("Error queuing PDF generation:", error);
-
-      toast({
-        title: "PDF Generation Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred.",
-        variant: "destructive",
-      });
-
-      return false;
-    } finally {
-      setIsServerProcessing(false);
-    }
-  };
-
-  const storePDF = async (
-    documentType: DocumentType | string,
-    documentId: string
-  ): Promise<PDFGenerationResult> => {
-    setIsServerProcessing(true);
-
-    try {
-      // Generate with server storage option
-      const result = await pdfService.generatePDF(documentType, documentId, {
-        forceRegenerate: true, // Always generate fresh version when storing
-      });
-
-      if (result.success) {
-        toast({
-          title: "PDF Stored Successfully",
-          description: "The PDF has been generated and stored on the server.",
-        });
-      } else {
-        throw new Error(result.error || "Failed to store PDF");
-      }
-
-      return result;
-    } catch (error) {
-      console.error("Error storing PDF:", error);
-
-      toast({
-        title: "PDF Storage Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred.",
-        variant: "destructive",
-      });
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        documentType: documentType as DocumentType,
+      const success = await updatePDFLinkInDatabase(
+        table as any,
         documentId,
-      };
-    } finally {
-      setIsServerProcessing(false);
-    }
-  };
-
-  const downloadPDF = async (url: string, fileName: string): Promise<void> => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to download PDF: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      saveAs(blob, fileName);
-
-      toast({
-        title: "PDF Downloaded",
-        description: "The PDF has been downloaded successfully.",
-      });
+        pdfUrl
+      );
+      
+      return success;
     } catch (error) {
-      console.error("Error downloading PDF:", error);
-
-      toast({
-        title: "PDF Download Failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred.",
-        variant: "destructive",
-      });
-
-      throw error;
+      console.error('Error updating PDF link:', error);
+      return false;
     }
   };
 
-  const value: PDFContextType = {
-    pdfUrl,
-    setPdfUrl,
-    isGenerating,
-    isServerProcessing,
-    generatePDF,
-    batchGeneratePDF,
-    storePDF,
-    downloadPDF,
+  // View a PDF
+  const viewPDF = (pdfUrl: string, documentType: DocumentType, document: any) => {
+    setCurrentPDF({ url: pdfUrl, documentType, document });
+    setShowPreviewModal(true);
   };
 
-  return <PDFContext.Provider value={value}>{children}</PDFContext.Provider>;
-};
+  // Share a PDF
+  const sharePDF = (pdfUrl: string, documentType: DocumentType, document: any) => {
+    setCurrentPDF({ url: pdfUrl, documentType, document });
+    setShowShareModal(true);
+  };
 
-export const usePDFContext = (): PDFContextType => {
+  // Download a PDF
+  const downloadPDF = (pdfUrl: string) => {
+    window.open(pdfUrl, '_blank');
+  };
+
+  const value = {
+    generatePDF,
+    updatePDFLink,
+    viewPDF,
+    sharePDF,
+    downloadPDF,
+    isLoading,
+  };
+
+  return (
+    <PDFContext.Provider value={value}>
+      {children}
+      
+      {/* We would include modals here, but we're using the component-specific modals for now */}
+    </PDFContext.Provider>
+  );
+}
+
+// Custom hook to use the PDF context
+export function usePDF() {
   const context = useContext(PDFContext);
-  if (!context) {
-    throw new Error("usePDFContext must be used within a PDFProvider");
+  
+  if (context === undefined) {
+    throw new Error('usePDF must be used within a PDFProvider');
   }
+  
   return context;
-};
+}

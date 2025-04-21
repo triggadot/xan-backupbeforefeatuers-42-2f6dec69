@@ -2,7 +2,7 @@ import { SplitButtonDropdown } from '@/components/custom/SplitButtonDropdown';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from '@/components/ui/skeleton';
-import { useBreakpoint } from '@/hooks/utils/use-mobile';
+import { useBreakpoint } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ArrowDownCircle, ArrowUpCircle, Loader2, RefreshCcw } from 'lucide-react';
 

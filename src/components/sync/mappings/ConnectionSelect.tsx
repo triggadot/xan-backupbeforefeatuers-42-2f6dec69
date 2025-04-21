@@ -3,7 +3,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { GlConnection } from '@/types/glide-sync/glsync';
+import { GlConnection } from '@/types/glsync';
 
 interface ConnectionSelectProps {
   connections: GlConnection[];

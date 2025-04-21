@@ -1,5 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { BREAKPOINTS } from '@/hooks/utils/use-mobile';
+import { BREAKPOINTS } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
 

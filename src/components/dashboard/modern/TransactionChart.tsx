@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useBreakpoint } from '@/hooks/utils/use-mobile';
+import { useBreakpoint } from '@/hooks/use-mobile';
 import { AreaChart, Card as TremorCard } from '@tremor/react';
 import { useTheme } from 'next-themes';
 

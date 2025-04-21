@@ -27,8 +27,8 @@ import {
   SelectTrigger,
   SelectValue 
 } from '@/components/ui/select';
-import { useVendors } from '@/hooks/accounts/useVendors';
-import { useCategories } from '@/hooks/utils/useCategories';
+import { useVendors } from '@/hooks/useVendors';
+import { useCategories } from '@/hooks/useCategories';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';

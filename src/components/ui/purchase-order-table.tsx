@@ -21,7 +21,7 @@ import {
   XIcon 
 } from "lucide-react";
 import { StandardPDFButton } from "@/components/pdf/StandardPDFButton";
-import { DocumentType } from "@/types/documents/pdf.unified";
+import { DocumentType } from "@/types/pdf.unified";
 import { PDFPreviewModal } from "@/components/pdf/PDFPreviewModal";
 
 interface Product {

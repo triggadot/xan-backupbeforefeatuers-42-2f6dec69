@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/utils/use-toast';
 import { Account, GlAccount } from '@/types/accounts';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 /**
  * Hook for fetching accounts (vendors and customers)
@@ -22,12 +21,30 @@ import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 export function useFetchAccounts(filters?: Record<string, any>) {
   const { toast } = useToast();
   
+  // Format filters for query
+  const getQueryFilters = useCallback(() => {
+    if (!filters) return {};
+    
+    const queryFilters: Record<string, any> = {};
+    
+    if (filters.client_type) {
+      queryFilters.client_type = filters.client_type;
+    }
+    
+    if (filters.search) {
+      // Handle search separately since it uses ilike
+      return queryFilters;
+    }
+    
+    return queryFilters;
+  }, [filters]);
+  
   // Get accounts query
   const accountsQuery = useQuery({
     queryKey: ['accounts', filters],
     queryFn: async () => {
       try {
-        // Build base query
+        // Build query with filters
         let query = supabase
           .from('gl_accounts')
           .select(`
@@ -40,10 +57,11 @@ export function useFetchAccounts(filters?: Record<string, any>) {
             )
           `);
         
-        // Apply client_type filter
-        if (filters?.client_type) {
-          query = query.eq('client_type', filters.client_type);
-        }
+        // Apply filters
+        const queryFilters = getQueryFilters();
+        Object.entries(queryFilters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
         
         // Apply search filter if provided
         if (filters?.search) {

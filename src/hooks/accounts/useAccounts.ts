@@ -1,56 +1,82 @@
-import { useFetchAccounts } from './useFetchAccounts';
-import { useAccountDetail } from './useAccountDetail';
-import { useAccountMutation } from './useAccountMutation';
 
-/**
- * Consolidated hook for managing accounts (vendors and customers)
- * Combines functionality from useFetchAccounts, useAccountDetail, and useAccountMutation
- * Uses the Glidebase pattern where relationships use rowid_ fields referencing glide_row_id values
- * 
- * @param filters - Optional filters to apply to the accounts query
- * @returns Object containing accounts data and operations
- * 
- * @example
- * // Basic usage
- * const { accounts, isLoading } = useAccounts({ client_type: 'Vendor' });
- * 
- * // Create a new account
- * const { createAccount } = useAccounts();
- * createAccount({
- *   account_name: 'Acme Corp',
- *   client_type: 'Vendor',
- *   accounts_uid: 'ACME001'
- * });
- * 
- * // Get account details
- * const { getAccount } = useAccounts();
- * const accountDetails = await getAccount('123e4567-e89b-12d3-a456-426614174000');
- */
-export function useAccounts(filters?: Record<string, any>) {
-  // Use the specialized hooks
-  const { accounts, isLoading, isError, error } = useFetchAccounts(filters);
-  const { getAccount } = useAccountDetail();
-  const { 
-    createAccount, 
-    updateAccount, 
-    deleteAccount,
-    isCreating,
-    isUpdating,
-    isDeleting
-  } = useAccountMutation();
+import { accountService } from '@/services/account-service';
+import { useEntitiesQuery } from '../data/useEntityQuery';
+import { useCreateEntity, useUpdateEntity, useDeleteEntity } from '../data/useEntityMutation';
+import { Account } from '@/types/account';
+import { useState, useMemo } from 'react';
+
+export type AccountFilter = {
+  searchTerm?: string;
+  accountType?: 'customer' | 'vendor' | 'both' | null;
+  status?: 'active' | 'inactive' | null;
+};
+
+export function useAccounts(initialFilters: AccountFilter = {}) {
+  const [filters, setFilters] = useState<AccountFilter>(initialFilters);
   
-  // Return a combined API for backward compatibility
+  const query = useEntitiesQuery(accountService);
+  
+  const filteredAccounts = useMemo(() => {
+    let result = query.data || [];
+    
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      result = result.filter(account => 
+        account.name.toLowerCase().includes(searchLower) ||
+        account.email?.toLowerCase().includes(searchLower) ||
+        account.accountsUid?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    if (filters.accountType) {
+      if (filters.accountType === 'customer') {
+        result = result.filter(account => 
+          account.type === 'Customer' || account.type === 'Customer & Vendor'
+        );
+      } else if (filters.accountType === 'vendor') {
+        result = result.filter(account => 
+          account.type === 'Vendor' || account.type === 'Customer & Vendor'
+        );
+      } else if (filters.accountType === 'both') {
+        result = result.filter(account => account.type === 'Customer & Vendor');
+      }
+    }
+    
+    return result;
+  }, [query.data, filters]);
+  
+  const updateFilters = (newFilters: Partial<AccountFilter>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+  
+  const clearFilters = () => {
+    setFilters({});
+  };
+  
   return {
-    accounts,
-    isLoading,
-    isError,
-    error,
-    getAccount,
-    createAccount,
-    updateAccount,
-    deleteAccount,
-    isCreating,
-    isUpdating,
-    isDeleting
+    accounts: filteredAccounts,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    filters,
+    updateFilters,
+    clearFilters,
+    refetch: query.refetch
+  };
+}
+
+export function useAccountMutations() {
+  const createMutation = useCreateEntity(accountService);
+  const updateMutation = useUpdateEntity(accountService, '');
+  const deleteMutation = useDeleteEntity(accountService);
+  
+  return {
+    createAccount: (data: Partial<Account>) => createMutation.mutateAsync(data),
+    updateAccount: (id: string, data: Partial<Account>) => 
+      updateMutation.mutateAsync({ ...data }, { context: { id } }),
+    deleteAccount: (id: string) => deleteMutation.mutateAsync(id),
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending
   };
 }

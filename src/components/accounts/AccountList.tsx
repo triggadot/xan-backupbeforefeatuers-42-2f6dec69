@@ -1,18 +1,17 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/utils/format-utils';
-import { Account } from '@/types/accounts';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Account } from "@/types/accounts";
+import { formatCurrency } from "@/utils/format-utils";
+import React from "react";
+import { Link } from "react-router-dom";
 
 interface AccountListProps {
   accounts: Account[];
@@ -20,7 +19,11 @@ interface AccountListProps {
   error: string | null;
 }
 
-const AccountList: React.FC<AccountListProps> = ({ accounts, isLoading, error }) => {
+const AccountList: React.FC<AccountListProps> = ({
+  accounts,
+  isLoading,
+  error,
+}) => {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -55,11 +58,15 @@ const AccountList: React.FC<AccountListProps> = ({ accounts, isLoading, error })
   }
 
   const getTypeColor = (type: string | undefined) => {
-    switch(type) {
-      case 'Customer': return 'bg-blue-100 text-blue-800';
-      case 'Vendor': return 'bg-purple-100 text-purple-800';
-      case 'Customer & Vendor': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (type) {
+      case "Customer":
+        return "bg-blue-100 text-blue-800";
+      case "Vendor":
+        return "bg-purple-100 text-purple-800";
+      case "Customer & Vendor":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -83,27 +90,39 @@ const AccountList: React.FC<AccountListProps> = ({ accounts, isLoading, error })
             {accounts.map((account) => (
               <TableRow key={account.id}>
                 <TableCell>
-                  <Link 
-                    to={`/accounts/${account.id}`} 
+                  <Link
+                    to={`/accounts/${account.id}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    {account.name}
+                    {account.account_name}
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(account.type)}`}>
-                    {account.type || 'Unknown'}
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(
+                      account.client_type
+                    )}`}
+                  >
+                    {account.client_type || "Unknown"}
                   </span>
                 </TableCell>
-                <TableCell>{account.email || '-'}</TableCell>
-                <TableCell>{account.phone || '-'}</TableCell>
+                <TableCell>{account.email_of_who_added || "-"}</TableCell>
+                <TableCell>-</TableCell>
                 <TableCell className="text-right">
                   {account.balance !== undefined ? (
-                    <span className={account.balance > 0 ? 'text-green-600' : account.balance < 0 ? 'text-red-600' : ''}>
+                    <span
+                      className={
+                        account.balance > 0
+                          ? "text-green-600"
+                          : account.balance < 0
+                          ? "text-red-600"
+                          : ""
+                      }
+                    >
                       {formatCurrency(account.balance)}
                     </span>
                   ) : (
-                    '$0.00'
+                    "$0.00"
                   )}
                 </TableCell>
               </TableRow>

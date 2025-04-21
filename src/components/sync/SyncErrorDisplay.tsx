@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GlSyncRecord } from '@/types/glide-sync/glsync';
+import { GlSyncRecord } from '@/types/glsync';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';

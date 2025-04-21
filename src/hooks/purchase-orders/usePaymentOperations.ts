@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorPayment } from '@/types/purchase-orders/purchaseOrder';
+import { VendorPayment } from '@/types/purchaseOrder';
 import { useToast } from '@/hooks/utils/use-toast';
 
 export function usePaymentOperations() {

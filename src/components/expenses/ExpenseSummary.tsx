@@ -1,15 +1,17 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Expense } from '@/types/expenses';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
 interface ExpenseSummaryProps {
   expenses: Expense[];
   isLoading: boolean;
 }
 
-export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) => {
+const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoading }) => {
   const summaryData = useMemo(() => {
     if (!expenses.length) return {
       totalAmount: 0,
@@ -63,15 +65,6 @@ export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoad
       monthlyChangePercent
     };
   }, [expenses]);
-
-  // Helper function to format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   if (isLoading) {
     return (
@@ -174,3 +167,5 @@ export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, isLoad
     </div>
   );
 };
+
+export default ExpenseSummary;

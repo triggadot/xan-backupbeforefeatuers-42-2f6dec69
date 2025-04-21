@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/utils/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { GlConnection } from '@/types/glide-sync/glsync';
+import { GlConnection } from '@/types/glsync';
 
 interface EditConnectionDialogProps {
   open: boolean;

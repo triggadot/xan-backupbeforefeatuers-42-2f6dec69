@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { InvoiceWithAccount } from '@/types/invoices/invoice';
+import { InvoiceWithAccount } from '@/types/new/invoice';
 import { InvoiceCard } from './InvoiceCard';
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from 'lucide-react';

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="white"/>
+  
+  <!-- System Boxes -->
+  <rect x="50" y="50" width="200" height="100" rx="10" fill="#e6f7ff" stroke="#1890ff" stroke-width="2"/>
+  <text x="150" y="100" font-family="Arial" font-size="16" text-anchor="middle" fill="#0050b3">Telegram Media</text>
+  
+  <rect x="300" y="50" width="200" height="100" rx="10" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="400" y="100" font-family="Arial" font-size="16" text-anchor="middle" fill="#237804">Caption Parser</text>
+  
+  <rect x="550" y="50" width="200" height="100" rx="10" fill="#fff2e8" stroke="#fa8c16" stroke-width="2"/>
+  <text x="650" y="100" font-family="Arial" font-size="16" text-anchor="middle" fill="#873800">messages Table</text>
+  
+  <rect x="300" y="200" width="200" height="100" rx="10" fill="#f9f0ff" stroke="#722ed1" stroke-width="2"/>
+  <text x="400" y="250" font-family="Arial" font-size="16" text-anchor="middle" fill="#391085">Product Matching</text>
+  
+  <rect x="50" y="350" width="200" height="100" rx="10" fill="#fcffe6" stroke="#a0d911" stroke-width="2"/>
+  <text x="150" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#3f6600">High Confidence</text>
+  <text x="150" y="400" font-family="Arial" font-size="14" text-anchor="middle" fill="#3f6600">(90-100%)</text>
+  
+  <rect x="300" y="350" width="200" height="100" rx="10" fill="#fffbe6" stroke="#fadb14" stroke-width="2"/>
+  <text x="400" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#614700">Medium Confidence</text>
+  <text x="400" y="400" font-family="Arial" font-size="14" text-anchor="middle" fill="#614700">(70-89%)</text>
+  
+  <rect x="550" y="350" width="200" height="100" rx="10" fill="#fff1f0" stroke="#f5222d" stroke-width="2"/>
+  <text x="650" y="380" font-family="Arial" font-size="14" text-anchor="middle" fill="#820014">Low Confidence</text>
+  <text x="650" y="400" font-family="Arial" font-size="14" text-anchor="middle" fill="#820014">(0-69%)</text>
+  
+  <rect x="50" y="500" width="200" height="50" rx="10" fill="#e6fffb" stroke="#13c2c2" stroke-width="2"/>
+  <text x="150" y="530" font-family="Arial" font-size="14" text-anchor="middle" fill="#006d75">Auto-Match</text>
+  
+  <rect x="300" y="500" width="200" height="50" rx="10" fill="#f0f5ff" stroke="#2f54eb" stroke-width="2"/>
+  <text x="400" y="530" font-family="Arial" font-size="14" text-anchor="middle" fill="#10239e">n8n AI Workflow</text>
+  
+  <rect x="550" y="500" width="200" height="50" rx="10" fill="#fff0f6" stroke="#eb2f96" stroke-width="2"/>
+  <text x="650" y="530" font-family="Arial" font-size="14" text-anchor="middle" fill="#9e1068">Admin Dashboard</text>
+  
+  <!-- Arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8c8c8c" />
+    </marker>
+  </defs>
+  
+  <line x1="250" y1="100" x2="300" y2="100" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="500" y1="100" x2="550" y2="100" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="650" y1="150" x2="650" y2="200" stroke="#8c8c8c" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="650" y1="200" x2="500" y2="250" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="400" y1="300" x2="400" y2="350" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="300" x2="150" y2="350" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="300" x2="650" y2="350" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="150" y1="450" x2="150" y2="500" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="450" x2="400" y2="500" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="650" y1="450" x2="650" y2="500" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- gl_products connection -->
+  <rect x="150" y="200" width="100" height="50" rx="5" fill="#f5f5f5" stroke="#d9d9d9" stroke-width="2"/>
+  <text x="200" y="230" font-family="Arial" font-size="12" text-anchor="middle" fill="#434343">gl_products</text>
+  
+  <line x1="250" y1="225" x2="300" y2="225" stroke="#8c8c8c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- n8n callback -->
+  <path d="M 500 530 Q 600 570 700 530" stroke="#8c8c8c" stroke-width="2" fill="transparent" stroke-dasharray="5,5"/>
+  <polygon points="695,535 705,530 695,525" fill="#8c8c8c" />
+</svg>

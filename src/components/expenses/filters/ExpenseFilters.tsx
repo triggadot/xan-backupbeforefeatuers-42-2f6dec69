@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Filter, Calendar, Download, Search } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -81,7 +81,7 @@ export const ExpenseFilterBar = ({ filters, updateFilters, clearFilters }: Expen
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuItem 
-              className="cursor-pointer"
+              className="flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
               onClick={() => clearFilters()}
             >
               Clear filters
@@ -164,5 +164,8 @@ const ActiveFilters = ({ filters, updateFilters, clearFilters }: ActiveFiltersPr
     </div>
   );
 };
+
+// Import Lucide icons that were missing in the initial code
+import { Calendar, Download, Search } from 'lucide-react';
 
 export default ExpenseFilterBar;

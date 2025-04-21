@@ -511,6 +511,19 @@ const mapAllRelationships = async (tableFilter?: string): Promise<{
 };
 ```
 
+## Bidirectional Sync (Future Implementation)
+
+The current implementation only handles sync from Glide to Supabase. A future implementation for Supabase to Glide sync using n8n is planned but not yet fully implemented. See the n8n implementation plan in other documentation for details.
+
+## Troubleshooting Common Errors
+
+1. **Missing `glide_row_id` field**: Ensure all tables being synced have a `glide_row_id` column of type TEXT.
+
+2. **Connection errors**: Check that the API key and app ID are correct in the `gl_connections` table.
+
+3. **Mapping errors**: Verify that column mappings are correctly set up, especially data types.
+
+4. **Relationship errors**: Ensure that `rowid_` fields are correctly referencing `glide_row_id` values in related tables.
 
 ## Conclusion
 

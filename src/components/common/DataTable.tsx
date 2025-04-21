@@ -6,33 +6,37 @@ import {
   TableCell, 
   TableRow 
 } from '@/components/ui/table';
-import { ColumnDef, SortOption } from '@/types';
+import { ColumnDef, SortOption } from '@/types/base';
 import { TableHeader } from './table/TableHeader';
-import { TableActions } from './table/TableActions';
 import { TableToolbar } from './table/TableToolbar';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface DataTableProps<T> {
+interface DataTableProps<T extends { id: string }> {
   data: T[];
-  columns: ColumnDef[];
-  title: string;
+  columns: ColumnDef<T>[];
+  title?: string;
   searchPlaceholder?: string;
   createButtonLabel?: string;
   onCreateClick?: () => void;
   onRowClick?: (row: T) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  isLoading?: boolean;
+  emptyMessage?: string;
 }
 
-function DataTable<T extends { id: string }>({
+export function DataTable<T extends { id: string }>({
   data,
   columns,
   title,
   searchPlaceholder = 'Search...',
-  createButtonLabel = 'Create New',
+  createButtonLabel,
   onCreateClick,
   onRowClick,
   onEdit,
   onDelete,
+  isLoading = false,
+  emptyMessage = 'No data found'
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOptions, setSortOptions] = useState<SortOption | null>(null);
@@ -95,19 +99,40 @@ function DataTable<T extends { id: string }>({
       setSortOptions({ field: columnId, direction: 'asc' });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {title && <Skeleton className="h-9 w-[200px]" />}
+        <div className="rounded-lg border shadow-sm">
+          <div className="p-4">
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="animate-enter-bottom">
-      <TableToolbar
-        title={title}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder={searchPlaceholder}
-        createButtonLabel={createButtonLabel}
-        onCreateClick={onCreateClick}
-      />
+    <div className="space-y-4">
+      {(title || onCreateClick) && (
+        <TableToolbar
+          title={title}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={searchPlaceholder}
+          createButtonLabel={createButtonLabel}
+          onCreateClick={onCreateClick}
+        />
+      )}
       
-      <div className="rounded-lg border bg-card overflow-hidden shadow-subtle">
+      <div className="rounded-lg border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader
@@ -120,14 +145,14 @@ function DataTable<T extends { id: string }>({
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length + (onEdit || onDelete ? 1 : 0)} className="h-24 text-center">
-                    No results found.
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedData.map((row) => (
                   <TableRow 
                     key={row.id} 
-                    className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
+                    className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                   >
                     {columns.map((column) => (
@@ -142,11 +167,30 @@ function DataTable<T extends { id: string }>({
                     
                     {(onEdit || onDelete) && (
                       <TableCell className="text-right">
-                        <TableActions
-                          row={row}
-                          onEdit={onEdit}
-                          onDelete={onDelete}
-                        />
+                        <div className="flex justify-end space-x-1">
+                          {onEdit && (
+                            <button 
+                              className="rounded p-1 hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(row);
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button 
+                              className="rounded p-1 hover:bg-muted text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(row);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

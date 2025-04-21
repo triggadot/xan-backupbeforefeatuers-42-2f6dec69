@@ -1,9 +1,9 @@
 
-import { ModeToggle } from "@/components/utils/mode-toggle"
+import { ModeToggle } from "@/components/mode-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useActiveBreakpoint } from "@/hooks/utils/use-mobile"
+import { useActiveBreakpoint } from "@/hooks/use-mobile"
 import { motion } from "framer-motion"
 import { BarChart3, Bell, ChevronLeft, Menu, Search, X } from "lucide-react"
 import { useState } from "react"

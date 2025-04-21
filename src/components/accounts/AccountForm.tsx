@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Account, AccountFormData } from '@/types/accounts';
+import { AccountType, EntityStatus } from '@/types/base';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -22,10 +23,21 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
+export interface AccountFormData {
+  name: string;
+  type: AccountType;
+  status: 'active' | 'inactive';
+  email?: string;
+  phone?: string;
+  website?: string;
+  address?: string;
+  notes?: string;
+}
+
 const accountSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  type: z.enum(['Customer', 'Vendor', 'Customer & Vendor']),
-  status: z.enum(['active', 'inactive']),
+  type: z.enum(['Customer', 'Vendor', 'Customer & Vendor'] as const),
+  status: z.enum(['active', 'inactive'] as const),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   website: z.string().optional().or(z.literal('')),
@@ -34,7 +46,7 @@ const accountSchema = z.object({
 });
 
 interface AccountFormProps {
-  defaultValues?: Partial<Account>;
+  defaultValues?: Partial<AccountFormData>;
   onSubmit: (data: AccountFormData) => void;
   isSubmitting: boolean;
 }

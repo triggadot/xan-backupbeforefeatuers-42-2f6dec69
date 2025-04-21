@@ -7,7 +7,7 @@ import { useGlSyncStatus } from '@/hooks/gl-sync';
 import { useGlSync } from '@/hooks/gl-sync';
 import { useIsMobile } from '@/hooks/utils/use-is-mobile';
 // Remove SyncStatusBadge import as it's not used
-import { GlSyncStatus } from '@/types/glide-sync/glsync';
+import { GlSyncStatus } from '@/types/glsync';
 import { debounce } from '@/utils/debounce-utils';
 import { useToast } from '@/hooks/utils/use-toast';
 import { RefreshCw, ExternalLink, AlertCircle, CheckCircle2, XCircle, Loader2, Database, Info, BarChart2 } from 'lucide-react';

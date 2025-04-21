@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Share2 } from 'lucide-react';
 import { StandardPDFButton } from '@/components/pdf/StandardPDFButton';
-import { DocumentType } from '@/types/documents/pdf.unified';
+import { DocumentType } from '@/types/pdf.unified';
 import { usePDF } from '@/hooks/pdf/usePDF';
 import { PDFPreviewModal } from '@/components/pdf/PDFPreviewModal';
 import { PDFShareModal } from '@/components/pdf/PDFShareModal';

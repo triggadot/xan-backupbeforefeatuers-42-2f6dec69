@@ -1,87 +1,151 @@
-
-import { useQuery } from '@tanstack/react-query';
-import { getEstimateWithDetails } from '@/services/supabase/tables/estimateService';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/utils/use-toast';
-import { EstimateWithDetails, EstimateFilters } from '@/types/estimates/estimate';
+import { EstimateWithDetails, EstimateFilters } from '@/types/estimate';
+import { GlAccount } from '@/types';
 
-/**
- * Hook for fetching and filtering estimates
- * @param filters - Optional filters to apply to the estimates query
- */
-export function useEstimates(filters: EstimateFilters = {}) {
-  const { toast } = useToast();
-  
-  return useQuery({
-    queryKey: ['estimates', filters],
-    queryFn: async (): Promise<EstimateWithDetails[]> => {
-      try {
-        let query = supabase
-          .from('gl_estimates')
-          .select(`
-            *,
-            account:rowid_accounts(*)
-          `);
-        
-        // Apply filters
+export function useEstimates(filters?: EstimateFilters) {
+  const [estimates, setEstimates] = useState<EstimateWithDetails[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchEstimates();
+  }, [filters]);
+
+  const fetchEstimates = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch estimates
+      const { data: estimateData, error: estimateError } = await supabase
+        .from('gl_estimates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (estimateError) throw estimateError;
+
+      if (!estimateData || estimateData.length === 0) {
+        setEstimates([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch accounts to join with estimates
+      const { data: accountData, error: accountError } = await supabase
+        .from('gl_accounts')
+        .select('*');
+
+      if (accountError) throw accountError;
+
+      // Fetch estimate lines
+      const { data: lineData, error: lineError } = await supabase
+        .from('gl_estimate_lines')
+        .select('*');
+
+      if (lineError) throw lineError;
+
+      // Fetch credits
+      const { data: creditData, error: creditError } = await supabase
+        .from('gl_customer_credits')
+        .select('*');
+
+      if (creditError) throw creditError;
+
+      // Create lookup maps for related data
+      const accountMap = new Map();
+      if (accountData) {
+        accountData.forEach((account: GlAccount) => {
+          accountMap.set(account.glide_row_id, account);
+        });
+      }
+
+      // Group lines and credits by estimate
+      const lineMap = new Map();
+      if (lineData) {
+        lineData.forEach((line) => {
+          const lines = lineMap.get(line.rowid_estimates) || [];
+          lines.push(line);
+          lineMap.set(line.rowid_estimates, lines);
+        });
+      }
+
+      const creditMap = new Map();
+      if (creditData) {
+        creditData.forEach((credit) => {
+          if (credit.rowid_estimates) {
+            const credits = creditMap.get(credit.rowid_estimates) || [];
+            credits.push(credit);
+            creditMap.set(credit.rowid_estimates, credits);
+          }
+        });
+      }
+
+      // Combine data
+      const combinedEstimates = estimateData.map((estimate) => {
+        const estimateWithDetails: EstimateWithDetails = {
+          ...estimate,
+          estimateLines: lineMap.get(estimate.glide_row_id) || [],
+          credits: creditMap.get(estimate.glide_row_id) || []
+        };
+
+        // Add account information
+        if (estimate.rowid_accounts) {
+          const account = accountMap.get(estimate.rowid_accounts);
+          if (account) {
+            estimateWithDetails.account = account;
+          }
+        }
+
+        return estimateWithDetails;
+      });
+
+      // Apply filters if provided
+      let filteredEstimates = combinedEstimates;
+      
+      if (filters) {
         if (filters.status) {
-          query = query.eq('status', filters.status);
+          filteredEstimates = filteredEstimates.filter(
+            (estimate) => estimate.status === filters.status
+          );
         }
         
         if (filters.accountId) {
-          query = query.eq('rowid_accounts', filters.accountId);
+          filteredEstimates = filteredEstimates.filter(
+            (estimate) => estimate.account?.id === filters.accountId
+          );
         }
         
         if (filters.fromDate) {
-          query = query.gte('estimate_date', filters.fromDate);
+          const fromDate = new Date(filters.fromDate);
+          filteredEstimates = filteredEstimates.filter((estimate) => {
+            if (!estimate.estimate_date) return true;
+            return new Date(estimate.estimate_date) >= fromDate;
+          });
         }
         
         if (filters.toDate) {
-          query = query.lte('estimate_date', filters.toDate);
+          const toDate = new Date(filters.toDate);
+          filteredEstimates = filteredEstimates.filter((estimate) => {
+            if (!estimate.estimate_date) return true;
+            return new Date(estimate.estimate_date) <= toDate;
+          });
         }
-        
-        // Order by date descending so latest estimates appear first
-        query = query.order('created_at', { ascending: false });
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          throw error;
-        }
-        
-        // For each estimate, fetch its lines and credits
-        const estimatesWithDetails = await Promise.all(
-          (data || []).map(async (estimate): Promise<EstimateWithDetails> => {
-            // Fetch lines and credits for this estimate
-            const [linesResult, creditsResult] = await Promise.all([
-              supabase
-                .from('gl_estimate_lines')
-                .select('*')
-                .eq('rowid_estimates', estimate.glide_row_id),
-              supabase
-                .from('gl_customer_credits')
-                .select('*')
-                .eq('rowid_estimates', estimate.glide_row_id)
-            ]);
-            
-            return {
-              ...estimate,
-              estimateLines: linesResult.data || [],
-              credits: creditsResult.data || [],
-            } as EstimateWithDetails;
-          })
-        );
-        
-        return estimatesWithDetails;
-      } catch (err) {
-        console.error('Error fetching estimates:', err);
-        toast({
-          title: 'Error',
-          description: err instanceof Error ? err.message : 'Failed to fetch estimates',
-          variant: 'destructive',
-        });
-        return [];
       }
+
+      setEstimates(filteredEstimates);
+    } catch (err) {
+      console.error('Error fetching estimates:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while fetching estimates');
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
+
+  return {
+    estimates,
+    isLoading,
+    error,
+    fetchEstimates
+  };
 }

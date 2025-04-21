@@ -1,150 +1,3 @@
-# Project Development Standards and Conventions
-
-## Development Conventions
-
-### Core Principles
-
-- **File & Directory Names:** Use kebab-case
-- **React Components:** Use PascalCase
-- **Variables, Functions, Methods:** Use camelCase
-- **Environment Variables:** Use UPPERCASE
-- **Barrel File:** Each component directory should have an index.ts
-- **Imports:** Use barrel imports whenever possible
-
-### File & Directory Structure
-
-#### Directory Structure
-```
-src/components/feature-name/                # kebab-case directory
-  ├── component-name.tsx                    # kebab-case file
-  ├── another-component.tsx                 # kebab-case file
-  └── index.ts                              # barrel export file
-```
-
-#### Component File
-```tsx
-// src/components/feature-name/component-name.tsx
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-
-export interface ComponentNameProps {       // PascalCase interface
-  // Props definition
-}
-
-export function ComponentName({             // PascalCase component
-  prop1,                                    // camelCase props
-  prop2,
-}: ComponentNameProps) {
-  const [localState, setLocalState] = useState(false);  // camelCase variables
-  
-  const handleAction = () => {              // camelCase functions
-    // Function logic
-  };
-  
-  return (
-    <div className="component-wrapper">
-      {/* Component JSX */}
-    </div>
-  );
-}
-```
-
-### Importing Components
-
-#### Preferred: Use Barrel Imports
-```tsx
-// Good - Using barrel imports
-import { ComponentName, AnotherComponent } from '@/components/feature-name';
-```
-
-#### Avoid: Direct Path Imports
-```tsx
-// Avoid - Direct imports bypassing barrel files
-import { ComponentName } from '@/components/feature-name/component-name';
-```
-
-### Technology Stack
-
-- **Frontend Framework:** React + Vite with TypeScript
-- **Styling:** Tailwind CSS
-- **UI Components:** 
-  - Shadcn UI (`@/components/ui/`)
-  - Tremor for data visualization (`@/components/tremor/`)
-- **Data Fetching:** TanStack Query (React Query)
-- **Form Handling:** React Hook Form + Zod
-- **State Management:** React Context
-
-### Documentation Standards
-
-#### Documentation Approach
-
-The project uses a hybrid documentation approach that balances inline code documentation with external markdown files:
-
-1. **Component & Hook Documentation**: Use JSDoc comments directly in source files
-   - Document props, return values, and usage examples
-   - Include edge cases and performance considerations
-
-2. **External Documentation Files**: Used for:
-   - Cross-cutting architectural concerns
-   - Business logic documentation
-   - Comprehensive guides to features or modules
-   - Complex data relationships
-   - Database schema documentation
-
-3. **README Files**: Limited to:
-   - Main project README.md (project overview and setup)
-   - Key module directories with specific implementation patterns
-   - Do NOT create README files for individual components
-
-This approach ensures that documentation stays close to the code while still providing comprehensive overviews in centralized locations.
-
-#### JSDoc Standards
-
-All complex components or those with non-obvious props should include JSDoc comments:
-
-```typescript
-/**
- * Displays a filterable list of invoices with pagination
- * 
- * @example
- * <InvoiceList 
- *   invoices={invoices} 
- *   isLoading={isLoading} 
- *   onInvoiceClick={handleInvoiceClick} 
- * />
- */
-export function InvoiceList({ invoices, isLoading, onInvoiceClick }: InvoiceListProps) {
-  // ...
-}
-```
-
-#### Supabase Service Layer
-
-When using the Supabase service layer:
-
-- Use table-specific service modules in `src/services/supabase/` to interact with Supabase tables
-- Format service objects as `gl[TableNamePlural]Service` (e.g., `glInvoicesService`)
-- Use method names:
-  - Retrieve multiple: `get[TableNamePlural]()`
-  - Retrieve single: `get[TableNameSingular]()`
-  - Create: `create[TableNameSingular]()`
-  - Update: `update[TableNameSingular]()`
-  - Delete: `delete[TableNameSingular]()`
-  - Subscribe: `subscribeTo[TableNamePlural]Changes()`
-- Use types:
-  - Record types: `GL[TableNameSingular]` 
-  - Form types: `GL[TableNameSingular]Form`
-
-### Migration Plan
-
-1. **New components** follow conventions immediately
-2. **Existing components:**
-   - Update barrel exports first
-   - Update import statements
-   - Rename files gradually (kebab-case)
-   - Remove duplicate components
-
-## Business Logic and Data Relationships
 
 # Comprehensive Documentation: Business Logic Flow and Data Relationships
 
@@ -198,6 +51,7 @@ The function includes triggers on all relevant tables to maintain up-to-date bal
 ### Current Implementation:
 - Products track original purchase quantity via `total_qty_purchased`
 - Products are linked to Purchase Orders via `rowid_purchase_orders`
+- Products are displayed via materialized view `mv_product_vendor_details`
 - Display name is set via `handle_po_product_changes()` function and trigger
 - Inventory levels now calculated via `gl_calculate_product_inventory()` function
 
@@ -205,11 +59,13 @@ The function includes triggers on all relevant tables to maintain up-to-date bal
 - Current Inventory = Original Purchase Quantity - Sold Quantity - Sample Quantity
 - Sold Quantity = Sum of quantities from invoice lines
 - Sample Quantity = Sum of quantities from sample-marked estimate lines
+- Special tracking for sample and fronted products via `payment_status` field in materialized view
 - Unpaid inventory view `gl_unpaid_inventory` provides quick access to samples and fronted products
 - Function `gl_update_product_payment_status()` allows changing product status (pay for or return samples)
 
 ### Database Objects Created:
 - Function `gl_calculate_product_inventory()` - Calculates current inventory levels
+- Enhanced materialized view `mv_product_vendor_details` with inventory calculations
 - View `gl_unpaid_inventory` for tracking unpaid inventory (samples and fronted products)
 - Function `gl_update_product_payment_status()` for handling payments or returns
 - Indexes on relevant foreign key columns for better performance
@@ -234,6 +90,7 @@ The function includes triggers on all relevant tables to maintain up-to-date bal
 - Payment handling uses `handle_customer_payment_changes()` function
 - Invoice balance = total_amount - total_paid
 - Invoice status is determined by payment status
+- Materialized view `mv_invoice_customer_details` reflects customer details
 - UID generation via `generate_invoice_uid_trigger()` function
 
 ### Payment Status Logic:
@@ -249,6 +106,12 @@ The function includes triggers on all relevant tables to maintain up-to-date bal
 - `handle_customer_payment_changes` - Updates invoice totals when payments change
 - `generate_invoice_uid` - Generates unique invoice ID
 
+### What Works:
+- The trigger functions for invoice line changes and payment changes
+- The automatic calculation of invoice totals and balances
+- Correct status determination
+- Materialized view refresh on changes
+
 ## 4. Estimate and Credit Processing
 
 ### Current Implementation:
@@ -257,6 +120,7 @@ The function includes triggers on all relevant tables to maintain up-to-date bal
 - Customer credits linked via `rowid_estimates`
 - Credit handling via `handle_customer_credit_changes()` function
 - Estimate balance = total_amount - total_credits
+- Materialized view `mv_estimate_customer_details` reflects customer details
 - Estimate status logic is based on conversion status and amounts
 
 ### Status Logic:
@@ -294,7 +158,7 @@ BEGIN
     -- Create new invoice
     INSERT INTO gl_invoices (
         rowid_accounts,
-        date_of_invoice,
+        invoice_order_date,
         notes
     ) VALUES (
         v_estimate.rowid_accounts,
@@ -346,6 +210,7 @@ $$ LANGUAGE plpgsql;
 - Payment handling via `handle_vendor_payment_changes()` function
 - PO balance = total_amount - total_paid
 - Status is determined based on payment status
+- Materialized view `mv_purchase_order_vendor_details` reflects vendor details
 - PO UID generation via `generate_po_uid_trigger()` function
 
 ### Status Logic:
@@ -385,6 +250,33 @@ $$ LANGUAGE plpgsql;
 - Improved error handling with specific error messages
 - Added defensive programming approaches to handle empty arrays and optional fields
 - Updated interface definitions to accurately reflect database schema
+
+## 6. Materialized Views and Data Relationships
+
+### Current Implementation:
+The following materialized views exist:
+- `mv_account_details` - Account information with balances
+- `mv_product_vendor_details` - Products with vendor information (enhanced with inventory data)
+- `mv_purchase_order_vendor_details` - Purchase orders with vendor details
+- `mv_invoice_customer_details` - Invoices with customer information
+- `mv_estimate_customer_details` - Estimates with customer information
+
+### Refresh Triggers:
+- `refresh_account_views_trigger` - Refreshes account views on changes
+- `refresh_product_views_trigger` - Refreshes product views on changes
+- `refresh_po_views_trigger` - Refreshes PO views on changes
+- `refresh_invoice_views_trigger` - Refreshes invoice views on changes
+- `refresh_estimate_views_trigger` - Refreshes estimate views on changes
+
+### Implemented Enhancements:
+- Enhanced `mv_product_vendor_details` with inventory calculations:
+  - current_inventory - Current inventory level
+  - total_sold - Total quantity sold through invoices
+  - total_sampled - Total quantity given as samples
+  - sample_value - Calculated value of sample products
+  - fronted_value - Calculated value of fronted products
+  - payment_status - Status indicator for product payment (Sample/Fronted/Paid)
+  - inventory_value - Calculated value of current inventory
 
 - New view `gl_unpaid_inventory` for easy access to sample and fronted products
 
@@ -484,3 +376,25 @@ The next critical steps are:
 
 ## 12. Recent Frontend Improvements
 
+### Type Safety and Error Handling:
+- Enhanced null checking in purchase order components and hooks
+- Default values for all nullable fields to prevent runtime errors
+- Consistent type casting for status fields and other enumerations
+- Better error messaging and handling throughout the purchase order flow
+- Defensive programming to handle edge cases like empty arrays and missing fields
+- Updated TypeScript interface definitions to accurately reflect database schema
+
+### User Interface Improvements:
+- Improved loading states with appropriate skeleton loaders
+- Clear status indicators with proper color coding
+- Responsive design for all purchase order components
+- Better organization of purchase order information with tabs and cards
+- Enhanced table displays for better readability of line items and payments
+- Consistent error messages and toast notifications
+
+### Performance Optimizations:
+- Reduced unnecessary re-renders in purchase order components
+- Optimized database queries with proper filtering
+- Implemented memoization for expensive calculations
+- Added proper indexes for commonly queried fields
+- Improved data loading patterns for better user experience

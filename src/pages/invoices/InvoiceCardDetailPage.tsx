@@ -1,9 +1,10 @@
-import { InvoiceCardDetail } from "@/components/invoices/functions";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useInvoiceDetail } from "@/hooks/invoices";
-import { AlertCircle } from "lucide-react";
-import React from "react";
-import { useParams } from "react-router-dom";
+
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import { useInvoiceDetail } from '@/hooks/invoices';
+import { InvoiceCardDetail } from '@/components/invoices/cards';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const InvoiceCardDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,8 +36,7 @@ const InvoiceCardDetailPage: React.FC = () => {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Not Found</AlertTitle>
         <AlertDescription>
-          Invoice not found. The invoice may have been deleted or you may not
-          have permission to view it.
+          Invoice not found. The invoice may have been deleted or you may not have permission to view it.
         </AlertDescription>
       </Alert>
     );
