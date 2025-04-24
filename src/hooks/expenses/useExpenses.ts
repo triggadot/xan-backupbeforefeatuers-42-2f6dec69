@@ -1,19 +1,9 @@
-/**
- * Hook for fetching and managing expenses data
- * 
- * @module hooks/expenses
- */
+
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GlExpense, ExpenseFilters, Expense } from '@/types/expenses';
+import { Expense, ExpenseFilters } from '@/types/expenses';
 
-/**
- * Hook for fetching and filtering expense data
- * 
- * @param initialFilters - Initial filter values for the expenses query
- * @returns Object containing expenses data, loading state, error state, and filter management functions
- */
 export const useExpenses = (initialFilters?: ExpenseFilters) => {
   const [filters, setFilters] = useState<ExpenseFilters>(initialFilters || {});
   
@@ -30,17 +20,8 @@ export const useExpenses = (initialFilters?: ExpenseFilters) => {
         .from('gl_expenses')
         .select('*');
       
-      // Apply filters
       if (filters.category) {
         query = query.eq('category', filters.category);
-      }
-      
-      if (filters.startDate) {
-        query = query.gte('date', filters.startDate);
-      }
-      
-      if (filters.endDate) {
-        query = query.lte('date', filters.endDate);
       }
       
       if (filters.minAmount) {
@@ -55,45 +36,36 @@ export const useExpenses = (initialFilters?: ExpenseFilters) => {
         query = query.or(`notes.ilike.%${filters.searchTerm}%,category.ilike.%${filters.searchTerm}%,expense_supplier_name.ilike.%${filters.searchTerm}%`);
       }
       
-      // Sort by date, newest first
-      query = query.order('date', { ascending: false });
-      
-      const { data, error } = await query;
+      const { data, error } = await query.order('date', { ascending: false });
       
       if (error) {
         throw new Error(`Error fetching expenses: ${error.message}`);
       }
       
-      // Process the data
-      return (data as GlExpense[]).map(expense => ({
-        ...expense,
-        formattedAmount: expense.amount ? 
-          new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(expense.amount)) 
-          : '$0.00',
-        formattedDate: expense.date ? 
-          new Date(expense.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) 
-          : ''
-      }));
+      return data.map(expense => ({
+        id: expense.id,
+        glideRowId: expense.glide_row_id,
+        submittedBy: expense.submitted_by,
+        notes: expense.notes,
+        amount: expense.amount,
+        category: expense.category,
+        date: expense.date,
+        expenseReceiptImage: expense.expense_receipt_image,
+        expenseSupplierName: expense.expense_supplier_name,
+        createdAt: expense.created_at,
+        updatedAt: expense.updated_at,
+      } as Expense));
     },
-    // Enable query by default
     enabled: true
   });
   
-  /**
-   * Updates the current filters
-   * 
-   * @param newFilters - New filter values to apply
-   */
-  const updateFilters = (newFilters: ExpenseFilters) => {
+  const updateFilters = (newFilters: Partial<ExpenseFilters>) => {
     setFilters(prev => ({
       ...prev,
       ...newFilters
     }));
   };
   
-  /**
-   * Clears all active filters
-   */
   const clearFilters = () => {
     setFilters({});
   };
